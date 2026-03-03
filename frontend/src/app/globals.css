@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 35% 16%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 35% 16%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 35% 16%;
+    --primary: 18 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 220 35% 18%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 42%;
+    --accent: 18 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 30% 90%;
+    --input: 214 30% 90%;
+    --ring: 18 100% 50%;
+    --radius: 0.9rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-white text-slate-900;
+    font-family: var(--font-geist-sans), "Inter", sans-serif;
+    letter-spacing: -0.01em;
+    background-image:
+      radial-gradient(45% 35% at 15% 0%, rgba(255, 77, 0, 0.14), transparent),
+      radial-gradient(45% 32% at 100% 8%, rgba(255, 77, 0, 0.1), transparent),
+      linear-gradient(180deg, #ffffff 0%, #fff9f5 100%);
+    background-attachment: fixed;
+  }
+}
+
+@layer components {
+  .luxury-title {
+    @apply tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-400;
+  }
+
+  .premium-card {
+    @apply rounded-[24px] border border-white/20 bg-white/70 shadow-[0_20px_50px_rgba(255,77,0,0.15)] backdrop-blur-xl;
+  }
+
+  .primary-glow-btn {
+    @apply relative overflow-hidden border-0 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-400 text-white shadow-[0_20px_50px_rgba(255,77,0,0.25)];
+  }
+
+  .shine-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-130%) skewX(-18deg);
+    background: linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0) 20%,
+      rgba(255, 255, 255, 0.35) 50%,
+      rgba(255, 255, 255, 0) 80%
+    );
+    animation: amazer-shine 5s linear infinite;
+    pointer-events: none;
+  }
+
+  .hover-lift-glow {
+    @apply transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-[0_28px_60px_rgba(255,77,0,0.28)];
+  }
+}
+
+@keyframes amazer-shine {
+  0% {
+    transform: translateX(-130%) skewX(-18deg);
+  }
+  12% {
+    transform: translateX(130%) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(130%) skewX(-18deg);
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "build:mobile": "cross-env NEXT_STATIC_EXPORT=true next build --webpack",
+    "start": "next start",
+    "lint": "eslint .",
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/core": "^7.4.3",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@reduxjs/toolkit": "^2.11.2",
+    "@tanstack/react-query": "^5.90.21",
+    "@tanstack/react-query-devtools": "^5.91.3",
+    "axios": "^1.13.6",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.34.3",
+    "html2canvas": "^1.4.1",
+    "html5-qrcode": "^2.3.8",
+    "immer": "^11.1.4",
+    "lucide-react": "^0.575.0",
+    "next": "16.1.6",
+    "qrcode.react": "^4.2.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-redux": "^9.2.0",
+    "recharts": "^2.15.4",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss-animate": "^1.0.7",
+    "vaul": "^1.1.2",
+    "victory-vendor": "^37.3.6",
+    "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.3",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "cross-env": "^10.1.0",
+    "eslint": "^9.39.0",
+    "eslint-config-next": "16.1.6",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}

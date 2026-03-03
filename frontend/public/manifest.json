@@ -1,0 +1,37 @@
+{
+  "name": "AMAZER Titan Business",
+  "short_name": "AMAZER",
+  "description": "AMAZER Luxe & Energie - Commerce, Restaurant et Livraison intelligente au Niger.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFF7ED",
+  "theme_color": "#FF4D00",
+  "lang": "fr-NE",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Commander",
+      "short_name": "Panier",
+      "url": "/cart"
+    },
+    {
+      "name": "Restaurant",
+      "short_name": "Resto",
+      "url": "/restaurant"
+    },
+    {
+      "name": "Espace vendeur",
+      "short_name": "Vendeur",
+      "url": "/seller"
+    }
+  ]
+}

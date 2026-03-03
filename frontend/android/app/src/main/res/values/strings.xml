@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AMAZER</string>
+    <string name="title_activity_main">AMAZER</string>
+    <string name="package_name">ne.amazer.app</string>
+    <string name="custom_url_scheme">ne.amazer.app</string>
+</resources>
