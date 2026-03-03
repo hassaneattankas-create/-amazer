@@ -38,7 +38,9 @@ app.add_middleware(
 
 @app.on_event("startup")
 def on_startup() -> None:
-    Base.metadata.create_all(bind=engine)
+    # In production we rely on migrations; create_all can fail on managed DB extensions.
+    if settings.app_env.lower() != "production":
+        Base.metadata.create_all(bind=engine)
 
 
 @app.exception_handler(DomainError)
