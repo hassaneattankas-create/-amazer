@@ -1,0 +1,384 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { Button } from "@/components/ui/button";
+import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
+import {
+  deleteAdminSeller,
+  downloadAuditCsv,
+  getAdminFinanceSettings,
+  listAdminAuditHistory,
+  listAdminSellers,
+  restoreAdminSeller,
+  toggleLaunchMode,
+  updateAdminFinanceSettings,
+  verifyAdminFinancePin,
+  verifyAdminSeller,
+} from "@/services/finance-service";
+import { FinanceSettings } from "@/types/finance";
+
+export default function AdminTarifsPage() {
+  const queryClient = useQueryClient();
+  const [pin, setPin] = useState("");
+  const [pinVerified, setPinVerified] = useState(false);
+  const [status, setStatus] = useState("");
+  const [draft, setDraft] = useState<FinanceSettings | null>(null);
+
+  const pinMutation = useMutation({
+    mutationFn: verifyAdminFinancePin,
+    onSuccess: () => {
+      setPinVerified(true);
+      setStatus("PIN valide. Acces tarifs autorise.");
+    },
+    onError: () => setStatus("PIN invalide."),
+  });
+
+  const { data: settings, isPending } = useQuery({
+    queryKey: ["admin-tarifs-settings"],
+    queryFn: getAdminFinanceSettings,
+    enabled: pinVerified,
+  });
+  const { data: auditHistory } = useQuery({
+    queryKey: ["admin-audit-history"],
+    queryFn: () => listAdminAuditHistory(80),
+    enabled: pinVerified,
+  });
+  const { data: sellers } = useQuery({
+    queryKey: ["admin-sellers"],
+    queryFn: listAdminSellers,
+    enabled: pinVerified,
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: updateAdminFinanceSettings,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-tarifs-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["public-finance-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
+      setStatus("Tarifs enregistres.");
+    },
+    onError: () => setStatus("Erreur enregistrement tarifs."),
+  });
+
+  const launchModeMutation = useMutation({
+    mutationFn: toggleLaunchMode,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-tarifs-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["public-finance-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
+      setStatus("Mode lancement mis a jour.");
+    },
+    onError: () => setStatus("Erreur mode lancement."),
+  });
+
+  const deleteSellerMutation = useMutation({
+    mutationFn: deleteAdminSeller,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
+      setStatus("Vendeur desactive.");
+    },
+    onError: () => setStatus("Suppression vendeur impossible."),
+  });
+  const restoreSellerMutation = useMutation({
+    mutationFn: restoreAdminSeller,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
+      setStatus("Vendeur restaure.");
+    },
+    onError: () => setStatus("Restauration vendeur impossible."),
+  });
+
+  const verifySellerMutation = useMutation({
+    mutationFn: ({ profileId, verified }: { profileId: string; verified: boolean }) =>
+      verifyAdminSeller(profileId, verified),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
+      setStatus("Statut vendeur mis a jour.");
+    },
+    onError: () => setStatus("Verification vendeur impossible."),
+  });
+
+  async function onExportAuditCsv() {
+    try {
+      const blob = await downloadAuditCsv(1000);
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = "amazer_audit_history.csv";
+      anchor.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      setStatus("Export CSV impossible.");
+    }
+  }
+
+  const effective = useMemo(() => draft ?? settings ?? null, [draft, settings]);
+
+  if (!pinVerified) {
+    return (
+      <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
+        <article className="premium-card border border-slate-200 bg-white p-6">
+          <h1 className="luxury-title text-2xl font-semibold">Panneau Tarifs Admin</h1>
+          <p className="mt-2 text-sm text-slate-600">Acces protege par MFA + PIN.</p>
+          <div className="mt-4 flex gap-3">
+            <input
+              type="password"
+              value={pin}
+              onChange={(event) => setPin(event.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="PIN secret (7391)"
+            />
+            <Button onClick={() => pinMutation.mutate({ pin })} disabled={!pin}>
+              Verifier
+            </Button>
+          </div>
+          {status ? <p className="mt-2 text-sm text-slate-700">{status}</p> : null}
+        </article>
+      </section>
+    );
+  }
+
+  if (isPending || !effective) {
+    return (
+      <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
+        <ProductCardSkeleton />
+      </section>
+    );
+  }
+
+  return (
+    <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
+      <header className="premium-card border border-slate-200 bg-white p-6">
+        <h1 className="luxury-title text-3xl font-semibold">Controle Financier Dynamique</h1>
+        <p className="mt-2 text-sm text-slate-600">Commission, frais, livraison, boosts et controle vendeurs.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link
+            href="/admin/catalog"
+            className="inline-flex rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+          >
+            Rubriques & Categories
+          </Link>
+          <Link
+            href="/admin/sections"
+            className="inline-flex rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+          >
+            Sections Dynamiques
+          </Link>
+        </div>
+      </header>
+
+      <article className="premium-card border border-slate-200 bg-white p-6">
+        <div className="space-y-5">
+          <div>
+            <p className="text-sm font-medium text-slate-800">
+              Taux Commission: {(effective.commission_rate * 100).toFixed(1)}%
+            </p>
+            <input
+              type="range"
+              min={0}
+              max={20}
+              value={effective.commission_rate * 100}
+              onChange={(event) =>
+                setDraft({ ...effective, commission_rate: Number(event.target.value) / 100 })
+              }
+              className="mt-2 w-full"
+            />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-800">Frais plateforme: {Math.round(effective.service_fee)} XOF</p>
+            <input
+              type="range"
+              min={0}
+              max={2000}
+              step={50}
+              value={effective.service_fee}
+              onChange={(event) => setDraft({ ...effective, service_fee: Number(event.target.value) })}
+              className="mt-2 w-full"
+            />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <p className="text-sm font-medium text-slate-800">Livraison urbaine: {Math.round(effective.urban_delivery_fee)} XOF</p>
+              <input
+                type="range"
+                min={0}
+                max={6000}
+                step={100}
+                value={effective.urban_delivery_fee}
+                onChange={(event) =>
+                  setDraft({
+                    ...effective,
+                    urban_delivery_fee: Number(event.target.value),
+                    default_delivery_fee: Number(event.target.value),
+                  })
+                }
+                className="mt-2 w-full"
+              />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-800">Livraison peripherique: {Math.round(effective.peripheral_delivery_fee)} XOF</p>
+              <input
+                type="range"
+                min={0}
+                max={10000}
+                step={100}
+                value={effective.peripheral_delivery_fee}
+                onChange={(event) =>
+                  setDraft({ ...effective, peripheral_delivery_fee: Number(event.target.value) })
+                }
+                className="mt-2 w-full"
+              />
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <p className="text-sm font-medium text-slate-800">Boost 24h: {Math.round(effective.ad_boost_price_24h)} XOF</p>
+              <input
+                type="range"
+                min={0}
+                max={20000}
+                step={100}
+                value={effective.ad_boost_price_24h}
+                onChange={(event) => setDraft({ ...effective, ad_boost_price_24h: Number(event.target.value) })}
+                className="mt-2 w-full"
+              />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-800">Boost 7 jours: {Math.round(effective.ad_boost_price_7d)} XOF</p>
+              <input
+                type="range"
+                min={0}
+                max={50000}
+                step={100}
+                value={effective.ad_boost_price_7d}
+                onChange={(event) =>
+                  setDraft({
+                    ...effective,
+                    ad_boost_price_7d: Number(event.target.value),
+                    ad_boost_price: Number(event.target.value),
+                    ad_boost_duration_days: 7,
+                  })
+                }
+                className="mt-2 w-full"
+              />
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <p className="text-sm font-medium text-slate-800">Email support</p>
+              <input
+                type="email"
+                value={effective.support_email ?? ""}
+                onChange={(event) => setDraft({ ...effective, support_email: event.target.value || null })}
+                className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+                placeholder="support@amazer.ne"
+              />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-800">Telephone support</p>
+              <input
+                value={effective.support_phone ?? ""}
+                onChange={(event) => setDraft({ ...effective, support_phone: event.target.value || null })}
+                className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+                placeholder="+227 xx xx xx xx"
+              />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-800">WhatsApp support</p>
+              <input
+                value={effective.support_whatsapp ?? ""}
+                onChange={(event) => setDraft({ ...effective, support_whatsapp: event.target.value || null })}
+                className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+                placeholder="+227 xx xx xx xx"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button onClick={() => saveMutation.mutate(effective)} className="bg-[#FF4D00] text-white hover:bg-[#e74700]">
+            Enregistrer
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => launchModeMutation.mutate(!effective.launch_mode_zero_commission)}
+          >
+            {effective.launch_mode_zero_commission ? "Desactiver 0% Commission" : "Activer 0% Commission"}
+          </Button>
+        </div>
+      </article>
+
+      <article className="premium-card border border-slate-200 bg-white p-6">
+        <h2 className="text-lg font-semibold text-slate-900">Vendeurs</h2>
+        <div className="mt-3 space-y-2">
+          {(sellers ?? []).slice(0, 120).map((seller) => (
+            <div key={seller.profile_id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3">
+              <p className="text-sm text-slate-800">
+                {seller.business_name} - {seller.city} - {seller.is_verified ? "Verifie" : "Non verifie"} - {seller.is_active ? "Actif" : "Desactive"}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    verifySellerMutation.mutate({
+                      profileId: seller.profile_id,
+                      verified: !seller.is_verified,
+                    })
+                  }
+                >
+                  {seller.is_verified ? "Retirer badge" : "Verifier"}
+                </Button>
+                <Button
+                  size="sm"
+                  className="border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                  onClick={() => deleteSellerMutation.mutate(seller.profile_id)}
+                >
+                  Supprimer vendeur
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => restoreSellerMutation.mutate(seller.profile_id)}
+                >
+                  Restaurer
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <article className="premium-card border border-slate-200 bg-white p-6">
+        <h2 className="text-lg font-semibold text-slate-900">Historique des modifications</h2>
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={onExportAuditCsv}
+            className="inline-flex rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+          >
+            Export CSV
+          </button>
+        </div>
+        <div className="mt-3 space-y-2">
+          {(auditHistory ?? []).map((item) => (
+            <div key={item.id} className="rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
+              <p className="font-medium">{item.event_type}</p>
+              <p>
+                {new Date(item.created_at).toLocaleString("fr-FR")} | {item.actor_email ?? "system"} | IP {item.ip_address ?? "-"}
+              </p>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      {status ? <p className="text-sm text-slate-700">{status}</p> : null}
+    </section>
+  );
+}

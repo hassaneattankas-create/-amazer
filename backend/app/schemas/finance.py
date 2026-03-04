@@ -12,6 +12,14 @@ class FinanceSettingsResponse(BaseModel):
     seller_subscription_fee: float
     ad_boost_price: float
     ad_boost_duration_days: int
+    urban_delivery_fee: float
+    peripheral_delivery_fee: float
+    ad_boost_price_24h: float
+    ad_boost_price_7d: float
+    launch_mode_zero_commission: bool
+    support_email: str | None = None
+    support_phone: str | None = None
+    support_whatsapp: str | None = None
 
 
 class FinanceSettingsUpdateRequest(BaseModel):
@@ -23,6 +31,22 @@ class FinanceSettingsUpdateRequest(BaseModel):
     seller_subscription_fee: float = Field(ge=0)
     ad_boost_price: float = Field(ge=0)
     ad_boost_duration_days: int = Field(ge=1, le=365)
+    urban_delivery_fee: float = Field(ge=0)
+    peripheral_delivery_fee: float = Field(ge=0)
+    ad_boost_price_24h: float = Field(ge=0)
+    ad_boost_price_7d: float = Field(ge=0)
+    launch_mode_zero_commission: bool = False
+    support_email: str | None = Field(default=None, max_length=255)
+    support_phone: str | None = Field(default=None, max_length=40)
+    support_whatsapp: str | None = Field(default=None, max_length=40)
+
+
+class PublicContactInfoResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    support_email: str | None = None
+    support_phone: str | None = None
+    support_whatsapp: str | None = None
 
 
 class RevenuePoint(BaseModel):
@@ -110,3 +134,30 @@ class DistrictFeeItem(BaseModel):
 
     district_name: str = Field(min_length=2, max_length=120)
     delivery_fee: float = Field(ge=0)
+
+
+class AuditLogResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    event_type: str
+    actor_email: str | None
+    ip_address: str | None
+    entity_type: str | None
+    entity_id: str | None
+    details: dict
+    created_at: str
+
+
+class AdminSellerResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    profile_id: str
+    user_id: str
+    vendor_id: str
+    business_name: str
+    city: str
+    phone: str | None
+    is_verified: bool
+    is_active: bool
+    created_at: str

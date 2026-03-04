@@ -11,6 +11,7 @@ export type Vendor = {
   name: string;
   slug: string;
   is_active: boolean;
+  is_verified: boolean;
 };
 
 export type RankingBreakdown = {

@@ -10,12 +10,16 @@ type OrderStepperProps = {
 
 export function OrderStepper({ order }: OrderStepperProps) {
   const steps = ["commande", "preparation", "livraison", "recu"] as const;
-  const normalizedStatus = order.status === "CLAIMED" ? "recu" : order.status;
+  const normalizedStatus =
+    order.status === "CLAIMED" ? "recu" : order.status === "payment_pending" ? "commande" : order.status;
   const activeIndex = steps.indexOf(normalizedStatus);
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
       <p className="text-xs text-slate-500">Commande #{order.id.slice(0, 8)}</p>
+      {order.status === "payment_pending" ? (
+        <p className="mt-2 text-xs text-amber-700">Paiement en attente de confirmation.</p>
+      ) : null}
       <div className="mt-3 grid grid-cols-4 gap-2 text-center">
         {steps.map((step, index) => {
           const done = index <= activeIndex;

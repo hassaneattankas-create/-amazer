@@ -45,4 +45,4 @@ class SellerProfile(Base):
     )
 
     user: Mapped[User] = relationship("User")
-    vendor: Mapped[Vendor] = relationship("Vendor")
+    vendor: Mapped[Vendor] = relationship("Vendor", back_populates="seller_profile")

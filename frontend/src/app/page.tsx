@@ -18,6 +18,7 @@ import { formatMoney } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { getHomeContent, trackAdClick } from "@/services/content-service";
+import { getPublicContactInfo } from "@/services/finance-service";
 import { useAuthStore } from "@/store/auth-store";
 import { useProductSearch } from "@/hooks/use-product-search";
 import { HomeContentProduct } from "@/types/content";
@@ -70,6 +71,11 @@ export default function HomePage() {
     queryKey: ["home-content"],
     queryFn: getHomeContent,
     staleTime: 15_000,
+  });
+  const { data: contactInfo } = useQuery({
+    queryKey: ["public-contact-info"],
+    queryFn: getPublicContactInfo,
+    staleTime: 60_000,
   });
   const { data, isPending, isFetching, isError, error } = useProductSearch({
     query: debouncedBarcode ? "" : debouncedQuery,
@@ -400,6 +406,17 @@ export default function HomePage() {
             );
           })}
         </div>
+      ) : null}
+
+      {contactInfo && (contactInfo.support_email || contactInfo.support_phone || contactInfo.support_whatsapp) ? (
+        <article className="premium-card mt-10 border border-slate-200 bg-white p-5">
+          <h3 className="text-base font-semibold text-slate-900">Contact AMAZER</h3>
+          <div className="mt-2 space-y-1 text-sm text-slate-600">
+            {contactInfo.support_email ? <p>Email: {contactInfo.support_email}</p> : null}
+            {contactInfo.support_phone ? <p>Telephone: {contactInfo.support_phone}</p> : null}
+            {contactInfo.support_whatsapp ? <p>WhatsApp: {contactInfo.support_whatsapp}</p> : null}
+          </div>
+        </article>
       ) : null}
     </section>
   );

@@ -98,7 +98,11 @@ export default function CartPage() {
         transaction_code: transactionCode || undefined,
         currency: "XOF",
       });
-      router.push(`/order/success/${order.id}`);
+      if (order.payment_status === "paid") {
+        router.push(`/order/success/${order.id}`);
+      } else {
+        router.push(`/order/pay/${order.id}`);
+      }
       return;
     } catch {
       setShareMessage("Echec creation commande. Verifie ta connexion.");
@@ -254,7 +258,7 @@ export default function CartPage() {
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="luxury-title text-lg font-semibold">Mode de paiement</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Choisis ton mode puis renseigne le numero de transaction/depot.
+          Choisis ton mode. Le paiement se confirme ensuite avec une reference courte.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <button
@@ -286,7 +290,7 @@ export default function CartPage() {
           <Input
             value={transactionCode}
             onChange={(event) => setTransactionCode(event.target.value)}
-            placeholder="Numero de transaction ou code de depot"
+            placeholder="Code transaction (optionnel)"
             className="h-11 border-slate-200"
           />
         </div>

@@ -1,5 +1,11 @@
 import { api } from "@/lib/api";
-import { AdClickStats, DynamicSection, HomeContent, SectionItemInput } from "@/types/content";
+import {
+  AdClickStats,
+  AdminCategory,
+  DynamicSection,
+  HomeContent,
+  SectionItemInput,
+} from "@/types/content";
 
 export async function getHomeContent(): Promise<HomeContent> {
   const response = await api.get<HomeContent>("/api/v1/home-content");
@@ -55,5 +61,28 @@ export async function replaceAdminSectionItems(
 
 export async function getAdminAdClickStats(): Promise<AdClickStats> {
   const response = await api.get<AdClickStats>("/api/v1/admin/content/ad-click-stats");
+  return response.data;
+}
+
+export async function listAdminCategories(): Promise<AdminCategory[]> {
+  const response = await api.get<AdminCategory[]>("/api/v1/admin/content/categories");
+  return response.data;
+}
+
+export async function createAdminCategory(payload: {
+  name: string;
+  slug: string;
+  parent_id?: string | null;
+  is_active: boolean;
+}): Promise<AdminCategory> {
+  const response = await api.post<AdminCategory>("/api/v1/admin/content/categories", payload);
+  return response.data;
+}
+
+export async function updateAdminCategory(
+  categoryId: string,
+  payload: { name: string; slug: string; parent_id?: string | null; is_active: boolean }
+): Promise<AdminCategory> {
+  const response = await api.put<AdminCategory>(`/api/v1/admin/content/categories/${categoryId}`, payload);
   return response.data;
 }

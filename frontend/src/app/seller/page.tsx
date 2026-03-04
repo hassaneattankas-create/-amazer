@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatXOF } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
+import { listCatalogCategories } from "@/services/catalog-service";
 import { createRestaurantMenuItem, listRestaurantMenu } from "@/services/restaurant-service";
 import {
   createSellerProduct,
@@ -29,6 +30,7 @@ export default function SellerPage() {
   const [productForm, setProductForm] = useState({
     name: "",
     brand: "",
+    category_id: "",
     amount: "",
     stock_quantity: "1",
     description: "",
@@ -52,6 +54,10 @@ export default function SellerPage() {
     queryKey: ["seller-restaurant-menu", profile?.vendor_id],
     queryFn: () => listRestaurantMenu(profile?.vendor_id),
     enabled: Boolean(profile?.vendor_id),
+  });
+  const { data: categories = [] } = useQuery({
+    queryKey: ["catalog-categories"],
+    queryFn: listCatalogCategories,
   });
 
   const profileMutation = useMutation({
@@ -111,7 +117,8 @@ export default function SellerPage() {
           </h2>
           {profile ? (
             <p className="mt-2 text-sm text-emerald-700">
-              Profil actif: {profile.business_name} ({profile.city})
+              Profil actif: {profile.business_name} ({profile.city}) -{" "}
+              {profile.is_verified ? "Badge Confiance actif" : "En attente de verification admin"}
             </p>
           ) : (
             <p className="mt-2 text-sm text-slate-600">Aucun profil active pour ce compte.</p>
@@ -168,6 +175,20 @@ export default function SellerPage() {
             value={productForm.brand}
             onChange={(event) => setProductForm((prev) => ({ ...prev, brand: event.target.value }))}
           />
+          <select
+            className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900"
+            value={productForm.category_id}
+            onChange={(event) =>
+              setProductForm((prev) => ({ ...prev, category_id: event.target.value }))
+            }
+          >
+            <option value="">Categorie (optionnel)</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
           <Input
             placeholder="Prix XOF"
             type="number"
@@ -207,6 +228,7 @@ export default function SellerPage() {
               stock_quantity: Number(productForm.stock_quantity || 0),
               description: productForm.description || undefined,
               main_image_url: normalizeImageInput(productForm.main_image_url),
+              category_id: productForm.category_id || undefined,
               currency: "XOF",
             })
           }
@@ -221,7 +243,7 @@ export default function SellerPage() {
           Boutique Restaurant (Plats & Boissons)
         </h2>
         <p className="mt-2 text-sm text-slate-600">
-          Ajoutez vos plats, boissons, prix et marquez vos offres en "Plat du Jour".
+          Ajoutez vos plats, boissons, prix et marquez vos offres en &quot;Plat du Jour&quot;.
         </p>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">

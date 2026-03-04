@@ -89,6 +89,11 @@ export function ProductCard({ product }: ProductCardProps) {
         <p className="inline-flex items-center gap-1 text-xs text-slate-500">
           <Store className="h-3.5 w-3.5 text-[#FF4D00]" />
           {vendor.name}
+          {vendor.is_verified ? (
+            <span className="rounded-full border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+              Verifie
+            </span>
+          ) : null}
         </p>
 
         <Button

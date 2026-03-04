@@ -40,6 +40,9 @@ class OrderResponse(BaseModel):
     status: str
     payment_mode: str
     delivery_type: str
+    payment_reference: str | None
+    payment_status: str
+    payment_confirmed_at: datetime | None
     transaction_code: str | None
     tracking_code: str | None
     estimated_minutes: int
@@ -74,6 +77,8 @@ class ReceiptResponse(BaseModel):
     order_id: str
     customer_name: str
     payment_mode: str
+    payment_reference: str | None
+    payment_status: str
     currency: str
     total_amount: float
     transaction_code_masked: str | None
@@ -99,3 +104,32 @@ class ReceiptVerifyResponse(BaseModel):
     status: str
     message: str
     scanned_at: datetime | None
+
+
+class PaymentIntentResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    order_id: str
+    payment_mode: str
+    payment_reference: str
+    amount: float
+    currency: str
+    payment_url: str
+    qr_payload: str
+    expires_in_seconds: int
+
+
+class PaymentConfirmRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    provider_reference: str | None = Field(default=None, min_length=4, max_length=120)
+    code_last4: str | None = Field(default=None, min_length=4, max_length=4, pattern="^[A-Za-z0-9]{4}$")
+
+
+class PaymentConfirmResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    order_id: str
+    payment_status: str
+    order_status: str
+    message: str

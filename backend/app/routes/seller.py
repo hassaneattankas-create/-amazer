@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_admin_user, get_seller_user_with_mfa
+from app.core.deps import get_admin_user, get_current_user
+from app.core.csrf import enforce_csrf
 from app.core.exceptions import ConflictError, NotFoundError
 from app.database import get_db
 from app.models.price_history import PriceHistory
@@ -63,7 +64,7 @@ def _sync_product_flags(product: Product) -> tuple[float | None, datetime | None
 @router.get("/profile", response_model=SellerProfileResponse | None)
 def get_profile(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> SellerProfileResponse | None:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -84,9 +85,11 @@ def get_profile(
 @router.post("/profile", response_model=SellerProfileResponse, status_code=status.HTTP_201_CREATED)
 def upsert_profile(
     payload: SellerProfileRequest,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> SellerProfileResponse:
+    enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
         slug_base = _slugify(payload.business_name) or f"vendor-{current_user.id[:8]}"
@@ -139,8 +142,9 @@ def create_product_listing(
     payload: SellerProductCreateRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> SellerProductCreateResponse:
+    enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
         raise NotFoundError("Create a seller profile first")
@@ -205,7 +209,7 @@ def create_product_listing(
 @router.get("/inventory", response_model=list[SellerInventoryItemResponse])
 def list_inventory(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> list[SellerInventoryItemResponse]:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -242,8 +246,9 @@ def update_inventory_item(
     payload: SellerInventoryUpdateRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> SellerInventoryItemResponse:
+    enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
         raise NotFoundError("Seller profile not found")

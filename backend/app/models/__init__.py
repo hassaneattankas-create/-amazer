@@ -13,10 +13,12 @@ from app.models.security_event import SecurityEvent
 from app.models.receipt_scan import ReceiptScan
 from app.models.dynamic_section import DynamicSection, DynamicSectionItem
 from app.models.ad_click import AdClick
+from app.models.customer_feedback import CustomerFeedback
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.models.user_mfa import UserMfa
 from app.models.audit_log import AuditLog
+from app.models.global_settings import GlobalSettings
 from app.models.vendor import Vendor
 
 __all__ = [
@@ -24,6 +26,7 @@ __all__ = [
     "RefreshToken",
     "UserMfa",
     "AuditLog",
+    "GlobalSettings",
     "Product",
     "ProductImage",
     "Price",
@@ -47,6 +50,7 @@ __all__ = [
     "DynamicSection",
     "DynamicSectionItem",
     "AdClick",
+    "CustomerFeedback",
     "Cart",
     "CartItem",
 ]

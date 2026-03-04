@@ -9,9 +9,12 @@ export type OrderItem = {
 
 export type Order = {
   id: string;
-  status: "commande" | "preparation" | "livraison" | "recu" | "CLAIMED";
+  status: "payment_pending" | "commande" | "preparation" | "livraison" | "recu" | "CLAIMED";
   payment_mode: "nita" | "amana";
   delivery_type: "standard" | "express_niamey";
+  payment_reference: string | null;
+  payment_status: "pending" | "paid";
+  payment_confirmed_at: string | null;
   transaction_code: string | null;
   tracking_code: string | null;
   estimated_minutes: number;
@@ -53,6 +56,8 @@ export type Receipt = {
   order_id: string;
   customer_name: string;
   payment_mode: "nita" | "amana";
+  payment_reference: string | null;
+  payment_status: "pending" | "paid";
   currency: string;
   total_amount: number;
   transaction_code_masked: string | null;
@@ -74,4 +79,27 @@ export type ReceiptVerifyResult = {
   status: "claimed" | "blocked";
   message: string;
   scanned_at: string | null;
+};
+
+export type PaymentIntent = {
+  order_id: string;
+  payment_mode: "nita" | "amana";
+  payment_reference: string;
+  amount: number;
+  currency: string;
+  payment_url: string;
+  qr_payload: string;
+  expires_in_seconds: number;
+};
+
+export type PaymentConfirmPayload = {
+  provider_reference?: string;
+  code_last4?: string;
+};
+
+export type PaymentConfirmResult = {
+  order_id: string;
+  payment_status: "pending" | "paid";
+  order_status: Order["status"];
+  message: string;
 };

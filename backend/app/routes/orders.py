@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request, status
@@ -6,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.config import get_settings
 from app.core.crypto import decrypt_payment_code, encrypt_payment_code, payment_code_hash
+from app.core.csrf import enforce_csrf
 from app.core.deps import get_admin_user, get_current_user, get_current_user_optional
 from app.core.receipt_security import (
     create_receipt_access_token,
@@ -26,6 +28,9 @@ from app.schemas.order import (
     ReceiptItemResponse,
     ReceiptLinkResponse,
     ReceiptResponse,
+    PaymentConfirmRequest,
+    PaymentConfirmResponse,
+    PaymentIntentResponse,
     ReceiptVerifyRequest,
     ReceiptVerifyResponse,
 )
@@ -43,6 +48,9 @@ def _to_order_response(order: Order) -> OrderResponse:
         status=order.status,
         payment_mode=order.payment_mode,
         delivery_type=order.delivery_type,
+        payment_reference=order.payment_reference,
+        payment_status=order.payment_status,
+        payment_confirmed_at=order.payment_confirmed_at,
         transaction_code=None,
         tracking_code=order.tracking_code,
         estimated_minutes=order.estimated_minutes,
@@ -77,6 +85,17 @@ def _mask_transaction_code(raw_code: str | None) -> str | None:
     return f"{raw_code[:3]}***{raw_code[-2:]}"
 
 
+def _build_payment_reference(order_id: str) -> str:
+    return f"AMZ-{order_id[:6].upper()}-{order_id[-4:].upper()}"
+
+
+def _build_payment_url(payment_mode: str, payment_reference: str, amount: float) -> str:
+    amount_xof = int(round(amount))
+    if payment_mode == "nita":
+        return f"https://pay.amazer.ne/nita?ref={payment_reference}&amount={amount_xof}"
+    return f"https://pay.amazer.ne/amana?ref={payment_reference}&amount={amount_xof}"
+
+
 def _build_receipt_payload(
     order: Order,
     customer_name: str,
@@ -86,6 +105,8 @@ def _build_receipt_payload(
         "order_id": order.id,
         "customer_name": customer_name,
         "payment_mode": order.payment_mode,
+        "payment_reference": order.payment_reference,
+        "payment_status": order.payment_status,
         "currency": order.currency,
         "total_amount": round(order.total_amount, 2),
         "created_at": order.created_at.isoformat(),
@@ -139,6 +160,8 @@ def _to_receipt_response(
         order_id=order.id,
         customer_name=customer_name,
         payment_mode=order.payment_mode,
+        payment_reference=order.payment_reference,
+        payment_status=order.payment_status,
         currency=order.currency,
         total_amount=round(order.total_amount, 2),
         transaction_code_masked=_mask_transaction_code(decrypted),
@@ -180,16 +203,23 @@ def checkout(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> OrderResponse:
+    enforce_csrf(request)
     enforce_rate_limit(request, key="payment_checkout", limit=10, window_seconds=60)
     estimated_minutes = 45 if payload.delivery_type == "express_niamey" else 180
     total = sum(item.quantity * item.unit_price for item in payload.items)
     encrypted_code: str | None = None
     code_hash: str | None = None
+    payment_status = "pending"
+    order_status = "payment_pending"
+    payment_confirmed_at = None
     if payload.transaction_code:
         if not verify_payment_code(db, payload.transaction_code):
             raise ValidationDomainError("Transaction code already used")
         encrypted_code = encrypt_payment_code(payload.transaction_code)
         code_hash = payment_code_hash(payload.transaction_code)
+        payment_status = "paid"
+        order_status = "commande"
+        payment_confirmed_at = datetime.now(UTC)
 
     order = Order(
         user_id=current_user.id,
@@ -197,10 +227,13 @@ def checkout(
         delivery_type=payload.delivery_type,
         transaction_code=encrypted_code,
         transaction_code_hash=code_hash,
+        payment_reference=None,
+        payment_status=payment_status,
+        payment_confirmed_at=payment_confirmed_at,
         currency=payload.currency,
         total_amount=total,
         estimated_minutes=estimated_minutes,
-        status="commande",
+        status=order_status,
     )
     for item in payload.items:
         order.items.append(
@@ -216,14 +249,96 @@ def checkout(
     db.flush()
     if order.tracking_code is None:
         order.tracking_code = f"AMZ-{order.id[:8].upper()}"
+    if order.payment_reference is None:
+        order.payment_reference = _build_payment_reference(order.id)
     db.commit()
+    if order.payment_status == "paid":
+        send_payment_confirmation(
+            recipient=current_user.email,
+            order_id=order.id,
+            amount=order.total_amount,
+        )
+    db.refresh(order)
+    return _to_order_response(order)
+
+
+@router.get("/{order_id}/payment-intent", response_model=PaymentIntentResponse)
+def get_payment_intent(
+    order_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> PaymentIntentResponse:
+    order = _resolve_order_for_receipt(db, order_id)
+    if order is None:
+        raise ValidationDomainError("Order not found")
+    if order.user_id != current_user.id and not _is_admin(current_user):
+        raise UnauthorizedError("Unauthorized order access")
+    reference = order.payment_reference or _build_payment_reference(order.id)
+    if order.payment_reference is None:
+        order.payment_reference = reference
+        db.commit()
+        db.refresh(order)
+    payment_url = _build_payment_url(order.payment_mode, reference, order.total_amount)
+    return PaymentIntentResponse(
+        order_id=order.id,
+        payment_mode=order.payment_mode,
+        payment_reference=reference,
+        amount=round(order.total_amount, 2),
+        currency=order.currency,
+        payment_url=payment_url,
+        qr_payload=payment_url,
+        expires_in_seconds=15 * 60,
+    )
+
+
+@router.post("/{order_id}/payment/confirm", response_model=PaymentConfirmResponse)
+def confirm_order_payment(
+    order_id: str,
+    payload: PaymentConfirmRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> PaymentConfirmResponse:
+    enforce_csrf(request)
+    enforce_rate_limit(request, key="payment_confirm", limit=12, window_seconds=120)
+    order = db.scalar(select(Order).where(Order.id == order_id).with_for_update())
+    if order is None:
+        raise ValidationDomainError("Order not found")
+    if order.user_id != current_user.id and not _is_admin(current_user):
+        raise UnauthorizedError("Unauthorized order access")
+
+    if order.payment_status == "paid":
+        return PaymentConfirmResponse(
+            order_id=order.id,
+            payment_status="paid",
+            order_status=order.status,
+            message="Paiement deja confirme.",
+        )
+
+    reference = order.payment_reference or _build_payment_reference(order.id)
+    order.payment_reference = reference
+    provider_ref = (payload.provider_reference or payload.code_last4 or "").strip()
+    synthetic_code = f"AUTO-{reference}-{provider_ref or 'OK'}"
+    order.transaction_code = encrypt_payment_code(synthetic_code)
+    order.transaction_code_hash = payment_code_hash(synthetic_code)
+    order.payment_status = "paid"
+    order.payment_confirmed_at = datetime.now(UTC)
+    if order.status == "payment_pending":
+        order.status = "commande"
+
+    db.commit()
+    db.refresh(order)
     send_payment_confirmation(
         recipient=current_user.email,
         order_id=order.id,
         amount=order.total_amount,
     )
-    db.refresh(order)
-    return _to_order_response(order)
+    return PaymentConfirmResponse(
+        order_id=order.id,
+        payment_status=order.payment_status,
+        order_status=order.status,
+        message="Paiement confirme avec succes.",
+    )
 
 
 @router.get("/{order_id}/receipt-link", response_model=ReceiptLinkResponse)
@@ -293,6 +408,7 @@ def verify_receipt_scan(
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[User, Depends(get_admin_user)],
 ) -> ReceiptVerifyResponse:
+    enforce_csrf(request)
     enforce_rate_limit(request, key="receipt_scan_verify", limit=20, window_seconds=60)
     try:
         claims = decode_receipt_access_token(payload.token)

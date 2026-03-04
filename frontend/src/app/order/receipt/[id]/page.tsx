@@ -118,16 +118,32 @@ export default function OrderReceiptPage() {
 
   return (
     <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
-      <article ref={receiptRef} className="premium-card border border-slate-200 bg-white p-6">
+      <article
+        ref={receiptRef}
+        className="premium-card overflow-hidden border border-orange-200 bg-gradient-to-br from-white via-orange-50/40 to-amber-50/60 p-6 shadow-[0_20px_60px_rgba(255,77,0,0.16)]"
+      >
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="luxury-title text-2xl font-semibold">Recu securise AMAZER</h1>
+            <h1 className="luxury-title bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-400 bg-clip-text text-2xl font-semibold text-transparent">
+              Recu securise AMAZER
+            </h1>
             <p className="mt-1 text-sm text-slate-600">Commande #{data.order_id}</p>
           </div>
-          <p className="luxury-title text-xl font-semibold">AMAZER</p>
+          <div className="text-right">
+            <p className="luxury-title text-xl font-semibold text-[#FF4D00]">AMAZER</p>
+            <p
+              className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                data.payment_status === "paid"
+                  ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
+                  : "border border-amber-300 bg-amber-50 text-amber-700"
+              }`}
+            >
+              {data.payment_status === "paid" ? "Paiement confirme" : "Paiement en attente"}
+            </p>
+          </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-2 text-sm text-slate-700 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-2 rounded-2xl border border-orange-100 bg-white/80 p-3 text-sm text-slate-700 sm:grid-cols-2">
           <p>
             <span className="font-semibold text-slate-900">Client:</span> {data.customer_name}
           </p>
@@ -143,6 +159,10 @@ export default function OrderReceiptPage() {
             {new Date(data.created_at).toLocaleTimeString("fr-FR", { hour12: false })}
           </p>
           <p>
+            <span className="font-semibold text-slate-900">Reference:</span>{" "}
+            {data.payment_reference ?? "-"}
+          </p>
+          <p>
             <span className="font-semibold text-slate-900">Code transaction:</span>{" "}
             {data.transaction_code_masked ?? "-"}
           </p>
@@ -151,7 +171,7 @@ export default function OrderReceiptPage() {
           </p>
         </div>
 
-        <div className="mt-5 overflow-x-auto">
+        <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200 bg-white/90 p-3">
           <table className="w-full text-left text-sm">
             <thead className="text-xs uppercase tracking-[0.12em] text-slate-500">
               <tr>
@@ -174,14 +194,14 @@ export default function OrderReceiptPage() {
           </table>
         </div>
 
-        <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <div className="mt-4 flex items-center justify-between rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-3">
           <p className="text-sm font-semibold text-slate-900">Total</p>
           <p className="text-xl font-semibold text-[#FF4D00]">{formatXOF(data.total_amount)}</p>
         </div>
 
-        <div ref={qrRef} className="mt-5 flex flex-col items-center gap-2">
+        <div ref={qrRef} className="mt-5 flex flex-col items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4">
           <QRCodeCanvas value={qrPayload} size={180} includeMargin />
-          <p className="text-xs text-slate-500">QR de verification securisee (admin uniquement).</p>
+          <p className="text-xs text-slate-500">QR de verification securisee (admin uniquement)</p>
         </div>
       </article>
 

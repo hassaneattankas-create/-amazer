@@ -61,3 +61,12 @@ export type AdClickStats = {
     clicks: number;
   }>;
 };
+
+export type AdminCategory = {
+  id: string;
+  name: string;
+  slug: string;
+  parent_id: string | null;
+  is_active: boolean;
+  created_at: string;
+};

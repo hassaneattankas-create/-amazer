@@ -11,6 +11,7 @@ from app.core.deps import get_admin_user
 from app.core.exceptions import ValidationDomainError
 from app.database import get_db
 from app.models.ad_click import AdClick
+from app.models.category import Category
 from app.models.dynamic_section import DynamicSection, DynamicSectionItem
 from app.models.product import Price, Product
 from app.models.user import User
@@ -19,6 +20,9 @@ from app.schemas.content import (
     AdClickProductStat,
     AdClickRequest,
     AdClickStatsResponse,
+    AdminCategoryCreateRequest,
+    AdminCategoryResponse,
+    AdminCategoryUpdateRequest,
     DynamicSectionCreateRequest,
     DynamicSectionItemRequest,
     DynamicSectionItemResponse,
@@ -81,6 +85,17 @@ def _to_dynamic_section_response(section: DynamicSection) -> DynamicSectionRespo
     )
 
 
+def _to_category_response(category: Category) -> AdminCategoryResponse:
+    return AdminCategoryResponse(
+        id=category.id,
+        name=category.name,
+        slug=category.slug,
+        parent_id=category.parent_id,
+        is_active=category.is_active,
+        created_at=category.created_at,
+    )
+
+
 @admin_router.get("/sections", response_model=list[DynamicSectionResponse])
 def list_sections(
     db: Annotated[Session, Depends(get_db)],
@@ -92,6 +107,60 @@ def list_sections(
         .order_by(DynamicSection.sort_order.asc(), DynamicSection.created_at.desc())
     ).all()
     return [_to_dynamic_section_response(section) for section in sections]
+
+
+@admin_router.get("/categories", response_model=list[AdminCategoryResponse])
+def list_categories_admin(
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(get_admin_user)],
+) -> list[AdminCategoryResponse]:
+    rows = db.scalars(select(Category).order_by(Category.name.asc())).all()
+    return [_to_category_response(row) for row in rows]
+
+
+@admin_router.post("/categories", response_model=AdminCategoryResponse)
+def create_category_admin(
+    payload: AdminCategoryCreateRequest,
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(get_admin_user)],
+) -> AdminCategoryResponse:
+    exists = db.scalar(select(Category.id).where(Category.slug == payload.slug))
+    if exists:
+        raise ValidationDomainError("Category slug already exists")
+    row = Category(
+        name=payload.name,
+        slug=payload.slug,
+        parent_id=payload.parent_id,
+        is_active=payload.is_active,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _to_category_response(row)
+
+
+@admin_router.put("/categories/{category_id}", response_model=AdminCategoryResponse)
+def update_category_admin(
+    category_id: str,
+    payload: AdminCategoryUpdateRequest,
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(get_admin_user)],
+) -> AdminCategoryResponse:
+    row = db.get(Category, category_id)
+    if row is None:
+        raise ValidationDomainError("Category not found")
+    exists = db.scalar(
+        select(Category.id).where(Category.slug == payload.slug).where(Category.id != category_id)
+    )
+    if exists:
+        raise ValidationDomainError("Category slug already exists")
+    row.name = payload.name
+    row.slug = payload.slug
+    row.parent_id = payload.parent_id
+    row.is_active = payload.is_active
+    db.commit()
+    db.refresh(row)
+    return _to_category_response(row)
 
 
 @admin_router.post("/sections", response_model=DynamicSectionResponse)

@@ -34,6 +34,14 @@ class Order(Base):
         index=True,
         unique=True,
     )
+    payment_reference: Mapped[str | None] = mapped_column(
+        String(40),
+        nullable=True,
+        index=True,
+        unique=True,
+    )
+    payment_status: Mapped[str] = mapped_column(String(20), nullable=False, default="paid")
+    payment_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     tracking_code: Mapped[str | None] = mapped_column(String(120), nullable=True)
     estimated_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=180)
     total_amount: Mapped[float] = mapped_column(Float, nullable=False, default=0)

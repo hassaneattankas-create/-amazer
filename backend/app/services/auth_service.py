@@ -59,7 +59,7 @@ class AuthService:
 
         sensitive_account = self._is_sensitive_account(user)
         mfa = self.db.scalar(select(UserMfa).where(UserMfa.user_id == user.id))
-        if sensitive_account and mfa and mfa.enabled:
+        if sensitive_account and mfa and getattr(mfa, "enabled", False) is True:
             secret = decrypt_payment_code(mfa.secret_encrypted)
             if not mfa_code or not verify_totp_code(secret=secret, code=mfa_code):
                 raise UnauthorizedError("Invalid MFA code")
@@ -149,7 +149,8 @@ class AuthService:
 
     def _is_sensitive_account(self, user: User) -> bool:
         settings = get_settings()
-        if user.email.lower() == settings.admin_email.lower():
+        user_email = str(getattr(user, "email", "") or "").lower()
+        if user_email and user_email == settings.admin_email.lower():
             return True
         return (
             self.db.scalar(select(SellerProfile.id).where(SellerProfile.user_id == user.id).limit(1))

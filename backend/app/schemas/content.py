@@ -115,3 +115,32 @@ class AdClickStatsResponse(BaseModel):
     total_clicks: int
     clicks_last_7_days: int
     by_product: list[AdClickProductStat]
+
+
+class AdminCategoryCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    name: str = Field(min_length=2, max_length=120)
+    slug: str = Field(min_length=2, max_length=140, pattern="^[a-z0-9-]+$")
+    parent_id: str | None = Field(default=None, max_length=36)
+    is_active: bool = True
+
+
+class AdminCategoryUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    name: str = Field(min_length=2, max_length=120)
+    slug: str = Field(min_length=2, max_length=140, pattern="^[a-z0-9-]+$")
+    parent_id: str | None = Field(default=None, max_length=36)
+    is_active: bool = True
+
+
+class AdminCategoryResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    slug: str
+    parent_id: str | None
+    is_active: bool
+    created_at: datetime

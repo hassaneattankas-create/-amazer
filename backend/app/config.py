@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     payment_encryption_key: str = Field(
         default="REPLACE_WITH_BASE64URL_32BYTE_KEY_REPLACE_WITH_KEY_1234="
     )
+    redis_url: str | None = Field(default=None)
 
     def get_cors_origins(self) -> list[str]:
         if self.app_env.lower() == "development":

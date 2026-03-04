@@ -230,6 +230,9 @@ class ProductService:
                 name=offer.row.price.vendor.name,
                 slug=offer.row.price.vendor.slug,
                 is_active=offer.row.price.vendor.is_active,
+                is_verified=bool(
+                    getattr(getattr(offer.row.price.vendor, "seller_profile", None), "is_verified", False)
+                ),
             ),
             currency=offer.row.price.currency,
             amount=offer.row.price.amount,

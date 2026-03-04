@@ -11,6 +11,7 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.product import Price
+    from app.models.seller_profile import SellerProfile
 
 
 class Vendor(Base):
@@ -28,3 +29,8 @@ class Vendor(Base):
     )
 
     prices: Mapped[list[Price]] = relationship("Price", back_populates="vendor")
+    seller_profile: Mapped["SellerProfile | None"] = relationship(
+        "SellerProfile",
+        back_populates="vendor",
+        uselist=False,
+    )

@@ -8,11 +8,16 @@ import { useCartStore } from "@/store/cartStore";
 
 const navItems = [
   { href: "/", label: "Accueil" },
+  { href: "/boutiques", label: "Boutiques" },
+  { href: "/promotions", label: "Promotions" },
+  { href: "/avis", label: "Avis" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/profile", label: "Profil" },
   { href: "/cart", label: "Panier" },
   { href: "/restaurant", label: "Restaurant" },
   { href: "/vendre", label: "Devenir Vendeur" },
+  { href: "/admin/tarifs", label: "Admin Tarifs" },
+  { href: "/admin/catalog", label: "Admin Catalog" },
 ];
 
 export function FloatingNavbar() {

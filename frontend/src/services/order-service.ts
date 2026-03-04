@@ -2,6 +2,9 @@ import { api } from "@/lib/api";
 import {
   CheckoutPayload,
   Order,
+  PaymentConfirmPayload,
+  PaymentConfirmResult,
+  PaymentIntent,
   Receipt,
   ReceiptLink,
   ReceiptVerifyPayload,
@@ -32,5 +35,15 @@ export async function getSecureReceipt(orderId: string, token?: string): Promise
 
 export async function verifyReceipt(payload: ReceiptVerifyPayload): Promise<ReceiptVerifyResult> {
   const response = await api.post<ReceiptVerifyResult>("/api/v1/orders/receipt/verify", payload);
+  return response.data;
+}
+
+export async function getPaymentIntent(orderId: string): Promise<PaymentIntent> {
+  const response = await api.get<PaymentIntent>(`/api/v1/orders/${orderId}/payment-intent`);
+  return response.data;
+}
+
+export async function confirmPayment(orderId: string, payload: PaymentConfirmPayload): Promise<PaymentConfirmResult> {
+  const response = await api.post<PaymentConfirmResult>(`/api/v1/orders/${orderId}/payment/confirm`, payload);
   return response.data;
 }

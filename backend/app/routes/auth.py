@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request, Response, status
 
 from app.core.deps import get_auth_service, get_current_user
+from app.core.csrf import generate_csrf_token
 from app.config import get_settings
 from app.core.mfa import build_provisioning_uri, generate_totp_secret, verify_totp_code
 from app.core.exceptions import UnauthorizedError
@@ -26,11 +27,13 @@ settings = get_settings()
 
 
 def _set_auth_cookies(response: Response, tokens: dict[str, str]) -> None:
+    secure_cookie = settings.is_production()
+    csrf_token = generate_csrf_token()
     response.set_cookie(
         key="access_token",
         value=tokens["access_token"],
         httponly=True,
-        secure=True,
+        secure=secure_cookie,
         samesite="strict",
         max_age=15 * 60,
         path="/",
@@ -39,7 +42,16 @@ def _set_auth_cookies(response: Response, tokens: dict[str, str]) -> None:
         key="refresh_token",
         value=tokens["refresh_token"],
         httponly=True,
-        secure=True,
+        secure=secure_cookie,
+        samesite="strict",
+        max_age=7 * 24 * 60 * 60,
+        path="/",
+    )
+    response.set_cookie(
+        key="csrf_token",
+        value=csrf_token,
+        httponly=False,
+        secure=secure_cookie,
         samesite="strict",
         max_age=7 * 24 * 60 * 60,
         path="/",
@@ -117,8 +129,10 @@ def health() -> dict[str, str]:
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(response: Response) -> None:
-    response.delete_cookie("access_token", path="/", secure=True, httponly=True, samesite="strict")
-    response.delete_cookie("refresh_token", path="/", secure=True, httponly=True, samesite="strict")
+    secure_cookie = settings.is_production()
+    response.delete_cookie("access_token", path="/", secure=secure_cookie, httponly=True, samesite="strict")
+    response.delete_cookie("refresh_token", path="/", secure=secure_cookie, httponly=True, samesite="strict")
+    response.delete_cookie("csrf_token", path="/", secure=secure_cookie, httponly=False, samesite="strict")
 
 
 @router.get("/mfa/status", response_model=MfaStatusResponse)

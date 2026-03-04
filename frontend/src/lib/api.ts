@@ -41,6 +41,20 @@ function getRefreshToken(): string | null {
   return readStoredToken(REFRESH_TOKEN_KEY);
 }
 
+function getCookieValue(name: string): string | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+  const cookies = document.cookie ? document.cookie.split(";") : [];
+  for (const cookie of cookies) {
+    const [rawName, ...rest] = cookie.trim().split("=");
+    if (rawName === name) {
+      return decodeURIComponent(rest.join("="));
+    }
+  }
+  return null;
+}
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
@@ -53,6 +67,14 @@ api.interceptors.request.use((config) => {
     config.headers = config.headers || {};
     if (!config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+  }
+  const method = (config.method || "get").toLowerCase();
+  if (["post", "put", "patch", "delete"].includes(method)) {
+    const csrfToken = getCookieValue("csrf_token");
+    if (csrfToken) {
+      config.headers = config.headers || {};
+      config.headers["X-CSRF-Token"] = csrfToken;
     }
   }
   return config;

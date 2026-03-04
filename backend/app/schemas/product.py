@@ -21,6 +21,7 @@ class VendorResponse(BaseModel):
     name: str
     slug: str
     is_active: bool
+    is_verified: bool = False
 
 
 class ProductImageResponse(BaseModel):

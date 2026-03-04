@@ -2,9 +2,23 @@ export type FinanceSettings = {
   commission_rate: number;
   service_fee: number;
   default_delivery_fee: number;
+  urban_delivery_fee: number;
+  peripheral_delivery_fee: number;
   seller_subscription_fee: number;
   ad_boost_price: number;
   ad_boost_duration_days: number;
+  ad_boost_price_24h: number;
+  ad_boost_price_7d: number;
+  launch_mode_zero_commission: boolean;
+  support_email: string | null;
+  support_phone: string | null;
+  support_whatsapp: string | null;
+};
+
+export type PublicContactInfo = {
+  support_email: string | null;
+  support_phone: string | null;
+  support_whatsapp: string | null;
 };
 
 export type FinanceSummary = {
@@ -66,4 +80,27 @@ export type AdminOrderTracking = {
 export type DistrictFeeItem = {
   district_name: string;
   delivery_fee: number;
+};
+
+export type AuditLogItem = {
+  id: string;
+  event_type: string;
+  actor_email: string | null;
+  ip_address: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  details: Record<string, unknown>;
+  created_at: string;
+};
+
+export type AdminSeller = {
+  profile_id: string;
+  user_id: string;
+  vendor_id: string;
+  business_name: string;
+  city: string;
+  phone: string | null;
+  is_verified: boolean;
+  is_active: boolean;
+  created_at: string;
 };
