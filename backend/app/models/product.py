@@ -33,18 +33,6 @@ class Product(Base):
     __table_args__ = (
         Index("ix_products_specs_gin", "specs", postgresql_using="gin"),
         Index(
-            "ix_products_name_trgm",
-            "name",
-            postgresql_using="gin",
-            postgresql_ops={"name": "gin_trgm_ops"},
-        ),
-        Index(
-            "ix_products_brand_trgm",
-            "brand",
-            postgresql_using="gin",
-            postgresql_ops={"brand": "gin_trgm_ops"},
-        ),
-        Index(
             "ix_products_search_tsv",
             text(
                 "to_tsvector('simple'::regconfig, (COALESCE(name, ''::character varying)::text "

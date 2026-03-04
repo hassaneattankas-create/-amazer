@@ -1,16 +1,20 @@
 from collections.abc import Awaitable, Callable
+import logging
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
+from sqlalchemy import func, select, text
 
 from app import models as _models  # noqa: F401
 from app.config import get_settings
 from app.core.exceptions import DomainError
 from app.database import Base, engine
 from app.database import SessionLocal
+from app.models.product import Price, Product
+from app.models.vendor import Vendor
 from app.routes.alerts import router as alerts_router
 from app.routes.auth import router as auth_router
 from app.routes.cart import router as cart_router
@@ -26,6 +30,7 @@ from app.services.security_log_service import log_security_event
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version=settings.app_version)
+logger = logging.getLogger(__name__)
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,11 +41,37 @@ app.add_middleware(
 )
 
 
+def _bootstrap_database_if_needed() -> None:
+    """Initialize schema and seed base marketplace data when DB is empty."""
+    try:
+        with engine.begin() as conn:
+            # Optional extension for text search improvements (safe if unavailable).
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+    except Exception as exc:  # pragma: no cover - depends on managed DB privileges
+        logger.warning("pg_trgm extension initialization skipped: %s", exc)
+
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        product_count = db.scalar(select(func.count()).select_from(Product)) or 0
+        vendor_count = db.scalar(select(func.count()).select_from(Vendor)) or 0
+        price_count = db.scalar(select(func.count()).select_from(Price)) or 0
+    finally:
+        db.close()
+
+    if product_count > 0 and vendor_count > 0 and price_count > 0:
+        return
+
+    from seed_niger_market import main as seed_market_main
+
+    logger.info("Database empty detected, running Niger market seed bootstrap.")
+    seed_market_main()
+
+
 @app.on_event("startup")
 def on_startup() -> None:
-    # In production we rely on migrations; create_all can fail on managed DB extensions.
-    if settings.app_env.lower() != "production":
-        Base.metadata.create_all(bind=engine)
+    _bootstrap_database_if_needed()
 
 
 @app.exception_handler(DomainError)
