@@ -4,6 +4,7 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:8000";
 const ACCESS_TOKEN_KEY = "amazer_access_token";
 const REFRESH_TOKEN_KEY = "amazer_refresh_token";
+const ACCESS_TOKEN_COOKIE_KEY = "amazer_access_token";
 
 type TokenPair = {
   access_token: string;
@@ -23,6 +24,8 @@ export function persistAuthTokens(tokens: TokenPair): void {
   }
   window.sessionStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
   window.sessionStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+  const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=${encodeURIComponent(tokens.access_token)}; Path=/; SameSite=Lax${secureFlag}`;
 }
 
 export function clearAuthTokens(): void {
@@ -31,6 +34,7 @@ export function clearAuthTokens(): void {
   }
   window.sessionStorage.removeItem(ACCESS_TOKEN_KEY);
   window.sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
 function getAccessToken(): string | null {

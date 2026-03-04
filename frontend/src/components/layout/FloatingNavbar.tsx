@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { ShoppingCart, User } from "lucide-react";
 
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { isAdminEmail } from "@/lib/admin";
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/store/cartStore";
 
@@ -16,13 +18,13 @@ const navItems = [
   { href: "/cart", label: "Panier" },
   { href: "/restaurant", label: "Restaurant" },
   { href: "/vendre", label: "Devenir Vendeur" },
-  { href: "/admin/tarifs", label: "Admin Tarifs" },
-  { href: "/admin/catalog", label: "Admin Catalog" },
 ];
 
 export function FloatingNavbar() {
   const items = useCartStore((state) => state.items);
   const cartCount = items.reduce((total, item) => total + item.quantity, 0);
+  const { data: user } = useCurrentUser();
+  const showAdminLink = isAdminEmail(user?.email);
 
   return (
     <header className="fixed left-1/2 top-3 z-50 w-[min(1160px,calc(100%-1rem))] -translate-x-1/2 rounded-3xl border border-white/20 bg-white/70 shadow-[0_20px_50px_rgba(255,77,0,0.15)] backdrop-blur-xl">
@@ -40,6 +42,14 @@ export function FloatingNavbar() {
         </nav>
 
         <div className="flex items-center gap-2">
+          {showAdminLink ? (
+            <Link
+              href="/admin"
+              className="hidden items-center gap-2 rounded-md border border-[#FF4D00]/35 bg-[#FF4D00]/10 px-3 py-2 text-sm text-[#FF4D00] hover:bg-[#FF4D00]/15 sm:inline-flex"
+            >
+              Espace Admin
+            </Link>
+          ) : null}
           <Link
             href="/register"
             className="hidden items-center gap-2 rounded-md border border-white/20 bg-white/70 px-3 py-2 text-sm text-slate-700 backdrop-blur-xl hover:bg-white sm:inline-flex"
@@ -81,6 +91,14 @@ export function FloatingNavbar() {
             {item.label}
           </Link>
         ))}
+        {showAdminLink ? (
+          <Link
+            href="/admin"
+            className="whitespace-nowrap rounded-xl border border-[#FF4D00]/35 bg-[#FF4D00]/10 px-3 py-1.5 text-xs text-[#FF4D00] hover:bg-[#FF4D00]/15"
+          >
+            Espace Admin
+          </Link>
+        ) : null}
       </nav>
     </header>
   );

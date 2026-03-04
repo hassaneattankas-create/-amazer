@@ -18,7 +18,7 @@ type TokenPair = {
   token_type: string;
 };
 
-type UserResponse = {
+export type UserResponse = {
   id: string;
   email: string;
   full_name: string;

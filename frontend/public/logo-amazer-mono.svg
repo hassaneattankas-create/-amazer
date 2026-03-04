@@ -1,0 +1,11 @@
+<svg width="640" height="180" viewBox="0 0 640 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="10" y="10" width="160" height="160" rx="46" fill="#FFFFFF" stroke="#0F172A" stroke-width="3"/>
+  <path d="M44 133L86 38H96L137 133H117L108 112H72L63 133H44Z" fill="#0F172A"/>
+  <path d="M89 68L100 93H78L89 68Z" fill="#FFFFFF"/>
+  <path d="M124 31C133 36 141 44 146 54" stroke="#0F172A" stroke-width="4" stroke-linecap="round"/>
+
+  <text x="196" y="92" fill="#0F172A" font-family="Geist, Inter, Arial, sans-serif" font-size="66" font-weight="800" letter-spacing="2">AMAZER</text>
+  <text x="200" y="124" fill="#334155" font-family="Geist, Inter, Arial, sans-serif" font-size="20" font-weight="600" letter-spacing="1.2">
+    Comparer. Economiser. Acheter malin.
+  </text>
+</svg>

@@ -18,7 +18,8 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const accessToken = request.cookies.get("access_token")?.value;
+  const accessToken =
+    request.cookies.get("access_token")?.value || request.cookies.get("amazer_access_token")?.value;
   if (accessToken) {
     return NextResponse.next();
   }

@@ -21,8 +21,8 @@ export const metadata: Metadata = {
   description: "AMAZER light commerce experience",
   manifest: "/manifest.json",
   icons: {
-    icon: "/logo-amazer.svg",
-    apple: "/logo-amazer.svg",
+    icon: "/logo-amazer-mark.svg",
+    apple: "/logo-amazer-mark.svg",
   },
   appleWebApp: {
     capable: true,
