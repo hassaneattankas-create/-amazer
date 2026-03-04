@@ -212,6 +212,9 @@ export default function AdminFinancePage() {
         <p className="mt-2 text-sm text-slate-600">
           Wallet prive: Nita/Amana, commission automatique, historique chiffre et virement simule.
         </p>
+        <p className="mt-1 text-sm text-slate-500">
+          Note: les prix des produits sont definis par les vendeurs. Ici vous gerez uniquement les pourcentages et frais AMAZER.
+        </p>
       </header>
 
       <article className="premium-card border border-slate-200 bg-white p-6">

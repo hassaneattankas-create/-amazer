@@ -10,6 +10,7 @@ from app.database import Base
 if TYPE_CHECKING:
     from app.models.cart import Cart
     from app.models.refresh_token import RefreshToken
+    from app.models.user_mfa import UserMfa
 
 
 class User(Base):
@@ -32,6 +33,12 @@ class User(Base):
     )
     cart: Mapped["Cart | None"] = relationship(
         "Cart",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    mfa: Mapped["UserMfa | None"] = relationship(
+        "UserMfa",
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan",

@@ -8,6 +8,7 @@ import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { resolveImageUrl } from "@/lib/image";
 import {
   createRestaurantMenuItem,
   listSellerRestaurantOrders,
@@ -94,6 +95,7 @@ export default function SellerDashboardPage() {
         return { name: (name || "").trim(), price: Number(priceText || 0) };
       })
       .filter((entry) => entry.name && Number.isFinite(entry.price));
+  const normalizeImageInput = (raw: string): string | undefined => resolveImageUrl(raw) ?? undefined;
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
@@ -156,7 +158,7 @@ export default function SellerDashboardPage() {
             dishMutation.mutate({
               name: dishForm.name,
               description: dishForm.description || undefined,
-              image_url: dishForm.image_url || undefined,
+              image_url: normalizeImageInput(dishForm.image_url),
               base_price: Number(dishForm.base_price || 0),
               currency: "XOF",
               tags: dishForm.tags

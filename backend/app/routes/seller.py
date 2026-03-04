@@ -2,11 +2,11 @@ import re
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_admin_user, get_current_user
+from app.core.deps import get_admin_user, get_seller_user_with_mfa
 from app.core.exceptions import ConflictError, NotFoundError
 from app.database import get_db
 from app.models.price_history import PriceHistory
@@ -24,6 +24,7 @@ from app.schemas.seller import (
     SellerProfileResponse,
 )
 from app.schemas.seller_lead import SellerLeadCreateRequest, SellerLeadResponse
+from app.services.audit_log_service import append_audit_log
 
 router = APIRouter(prefix="/seller", tags=["seller"])
 
@@ -62,7 +63,7 @@ def _sync_product_flags(product: Product) -> tuple[float | None, datetime | None
 @router.get("/profile", response_model=SellerProfileResponse | None)
 def get_profile(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
 ) -> SellerProfileResponse | None:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -84,7 +85,7 @@ def get_profile(
 def upsert_profile(
     payload: SellerProfileRequest,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
 ) -> SellerProfileResponse:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -136,8 +137,9 @@ def upsert_profile(
 @router.post("/products", response_model=SellerProductCreateResponse, status_code=status.HTTP_201_CREATED)
 def create_product_listing(
     payload: SellerProductCreateRequest,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
 ) -> SellerProductCreateResponse:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -176,6 +178,21 @@ def create_product_listing(
             reason="seller_listing_created",
         )
     )
+    append_audit_log(
+        db,
+        event_type="seller_price_created",
+        actor=current_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="price",
+        entity_id=price.id,
+        details={
+            "product_id": product.id,
+            "amount": float(price.amount),
+            "currency": price.currency,
+            "stock_quantity": int(price.stock_quantity),
+        },
+    )
 
     db.commit()
     return SellerProductCreateResponse(
@@ -188,7 +205,7 @@ def create_product_listing(
 @router.get("/inventory", response_model=list[SellerInventoryItemResponse])
 def list_inventory(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
 ) -> list[SellerInventoryItemResponse]:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -223,8 +240,9 @@ def list_inventory(
 def update_inventory_item(
     price_id: str,
     payload: SellerInventoryUpdateRequest,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
 ) -> SellerInventoryItemResponse:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -262,6 +280,24 @@ def update_inventory_item(
             new_stock_quantity=price.stock_quantity,
             reason="seller_inventory_update",
         )
+    )
+    append_audit_log(
+        db,
+        event_type="seller_price_updated",
+        actor=current_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="price",
+        entity_id=price.id,
+        details={
+            "previous_amount": float(previous_amount),
+            "new_amount": float(price.amount),
+            "previous_stock": int(previous_stock),
+            "new_stock": int(price.stock_quantity),
+            "is_active": bool(price.is_active),
+            "boosted": bool(price.product.is_boosted),
+            "promo_amount": payload.promo_amount,
+        },
     )
     db.commit()
     db.refresh(price)

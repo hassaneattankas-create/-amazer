@@ -2,16 +2,19 @@
 
 import { motion } from "framer-motion";
 
+import { formatMoney, SupportedCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
-import { formatXOF } from "@/lib/currency";
+import { useAuthStore } from "@/store/auth-store";
 
 type AnimatedPriceProps = {
   value: number;
   className?: string;
+  currency?: SupportedCurrency;
 };
 
-export function AnimatedPrice({ value, className }: AnimatedPriceProps) {
-  const formatted = formatXOF(value);
+export function AnimatedPrice({ value, className, currency }: AnimatedPriceProps) {
+  const preferredCurrency = useAuthStore((state) => state.preferredCurrency);
+  const formatted = formatMoney(value, currency ?? preferredCurrency);
 
   return (
     <span className={cn("inline-flex overflow-hidden", className)}>

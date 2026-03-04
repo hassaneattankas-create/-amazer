@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_seller_user_with_mfa
 from app.core.crypto import encrypt_payment_code, payment_code_hash
 from app.core.exceptions import NotFoundError, ValidationDomainError
 from app.core.rate_limit import enforce_rate_limit
@@ -102,7 +102,7 @@ def list_restaurant_menu(
 def create_restaurant_menu_item(
     payload: RestaurantMenuCreateRequest,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
 ) -> RestaurantMenuItemResponse:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -211,7 +211,7 @@ def create_restaurant_order(
 @router.get("/seller/orders", response_model=list[RestaurantOrderResponse])
 def list_seller_restaurant_orders(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> list[RestaurantOrderResponse]:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
@@ -238,7 +238,7 @@ def update_seller_restaurant_order_status(
     order_id: str,
     payload: RestaurantOrderStatusUpdateRequest,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
 ) -> RestaurantOrderResponse:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:

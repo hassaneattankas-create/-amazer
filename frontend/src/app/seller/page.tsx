@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, PlusCircle } from "lucide-react";
+import { Building2, PlusCircle, UtensilsCrossed } from "lucide-react";
 
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatXOF } from "@/lib/currency";
+import { resolveImageUrl } from "@/lib/image";
+import { createRestaurantMenuItem, listRestaurantMenu } from "@/services/restaurant-service";
 import {
   createSellerProduct,
   getSellerProfile,
@@ -31,10 +34,24 @@ export default function SellerPage() {
     description: "",
     main_image_url: "",
   });
+  const [restaurantForm, setRestaurantForm] = useState({
+    name: "",
+    description: "",
+    image_url: "",
+    base_price: "",
+    estimated_prep_minutes: "20",
+    category: "plat" as "plat" | "boisson",
+    is_plat_du_jour: false,
+  });
 
   const { data: profile, isPending } = useQuery({
     queryKey: ["seller-profile"],
     queryFn: getSellerProfile,
+  });
+  const { data: restaurantItems = [] } = useQuery({
+    queryKey: ["seller-restaurant-menu", profile?.vendor_id],
+    queryFn: () => listRestaurantMenu(profile?.vendor_id),
+    enabled: Boolean(profile?.vendor_id),
   });
 
   const profileMutation = useMutation({
@@ -51,6 +68,26 @@ export default function SellerPage() {
     onSuccess: () => setStatus("Produit liste avec succes."),
     onError: () => setStatus("Erreur lors de la creation du produit."),
   });
+
+  const restaurantMutation = useMutation({
+    mutationFn: createRestaurantMenuItem,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seller-restaurant-menu", profile?.vendor_id] });
+      setStatus("Article restaurant publie avec succes.");
+      setRestaurantForm({
+        name: "",
+        description: "",
+        image_url: "",
+        base_price: "",
+        estimated_prep_minutes: "20",
+        category: "plat",
+        is_plat_du_jour: false,
+      });
+    },
+    onError: () => setStatus("Erreur lors de la publication de l'article restaurant."),
+  });
+
+  const normalizeImageInput = (raw: string): string | undefined => resolveImageUrl(raw) ?? undefined;
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
@@ -117,6 +154,9 @@ export default function SellerPage() {
           <PlusCircle className="h-5 w-5 text-[#FF4D00]" />
           Lister un produit
         </h2>
+        <p className="mt-2 text-sm text-slate-600">
+          Le prix de vos produits est defini par vous. AMAZER applique uniquement sa commission/frais au checkout.
+        </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <Input
             placeholder="Nom produit"
@@ -166,13 +206,118 @@ export default function SellerPage() {
               amount: Number(productForm.amount || 0),
               stock_quantity: Number(productForm.stock_quantity || 0),
               description: productForm.description || undefined,
-              main_image_url: productForm.main_image_url || undefined,
+              main_image_url: normalizeImageInput(productForm.main_image_url),
               currency: "XOF",
             })
           }
         >
           Publier mon produit
         </Button>
+      </article>
+
+      <article className="premium-card border border-slate-200 bg-white p-6">
+        <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
+          <UtensilsCrossed className="h-5 w-5 text-[#FF4D00]" />
+          Boutique Restaurant (Plats & Boissons)
+        </h2>
+        <p className="mt-2 text-sm text-slate-600">
+          Ajoutez vos plats, boissons, prix et marquez vos offres en "Plat du Jour".
+        </p>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Input
+            placeholder="Nom (ex: Shawarma Poulet / Jus d'ananas)"
+            value={restaurantForm.name}
+            onChange={(event) => setRestaurantForm((prev) => ({ ...prev, name: event.target.value }))}
+          />
+          <Input
+            placeholder="Prix XOF"
+            type="number"
+            value={restaurantForm.base_price}
+            onChange={(event) => setRestaurantForm((prev) => ({ ...prev, base_price: event.target.value }))}
+          />
+          <Input
+            placeholder="Description"
+            value={restaurantForm.description}
+            onChange={(event) => setRestaurantForm((prev) => ({ ...prev, description: event.target.value }))}
+          />
+          <Input
+            placeholder="Image URL"
+            value={restaurantForm.image_url}
+            onChange={(event) => setRestaurantForm((prev) => ({ ...prev, image_url: event.target.value }))}
+          />
+          <Input
+            placeholder="Temps de preparation (minutes)"
+            type="number"
+            value={restaurantForm.estimated_prep_minutes}
+            onChange={(event) =>
+              setRestaurantForm((prev) => ({ ...prev, estimated_prep_minutes: event.target.value }))
+            }
+          />
+          <select
+            value={restaurantForm.category}
+            onChange={(event) =>
+              setRestaurantForm((prev) => ({ ...prev, category: event.target.value as "plat" | "boisson" }))
+            }
+            className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900"
+          >
+            <option value="plat">Plat</option>
+            <option value="boisson">Boisson</option>
+          </select>
+        </div>
+
+        <label className="mt-3 inline-flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={restaurantForm.is_plat_du_jour}
+            onChange={(event) =>
+              setRestaurantForm((prev) => ({ ...prev, is_plat_du_jour: event.target.checked }))
+            }
+          />
+          Marquer comme Plat du Jour
+        </label>
+
+        <Button
+          className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
+          onClick={() => {
+            const tags = [restaurantForm.category === "boisson" ? "Boisson" : "Plat"];
+            if (restaurantForm.is_plat_du_jour) {
+              tags.push("Plat du Jour");
+            }
+            restaurantMutation.mutate({
+              name: restaurantForm.name,
+              description: restaurantForm.description || undefined,
+              image_url: normalizeImageInput(restaurantForm.image_url),
+              base_price: Number(restaurantForm.base_price || 0),
+              currency: "XOF",
+              estimated_prep_minutes: Number(restaurantForm.estimated_prep_minutes || 20),
+              tags,
+              options: [],
+            });
+          }}
+        >
+          Publier article restaurant
+        </Button>
+
+        <div className="mt-5 space-y-2">
+          <p className="text-sm font-medium text-slate-800">Articles deja publies</p>
+          {restaurantItems.length ? (
+            restaurantItems.slice(0, 8).map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+              >
+                <div>
+                  <p className="font-medium text-slate-900">{item.name}</p>
+                  <p className="text-xs text-slate-500">{item.tags.join(" • ") || "Sans tag"}</p>
+                </div>
+                <p className="font-semibold text-[#FF4D00]">{formatXOF(item.base_price)}</p>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-slate-500">Aucun article restaurant pour le moment.</p>
+          )}
+        </div>
       </article>
 
       {status ? <p className="text-sm text-slate-700">{status}</p> : null}

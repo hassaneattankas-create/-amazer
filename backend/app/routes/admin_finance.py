@@ -32,6 +32,7 @@ from app.schemas.finance import (
     TreasuryTransactionResponse,
     WalletSummaryResponse,
 )
+from app.services.audit_log_service import append_audit_log
 
 router = APIRouter(prefix="/admin/finance", tags=["admin-finance"])
 settings = get_settings()
@@ -84,13 +85,26 @@ def _safe_decrypt_code(token: str | None) -> str | None:
         return None
 
 
+def _audit_admin_access(db: Session, request: Request, user: User, event_type: str) -> None:
+    append_audit_log(
+        db,
+        event_type=event_type,
+        actor=user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="admin_finance",
+        details={"method": request.method},
+    )
+    db.commit()
+
+
 @router.post("/pin/verify", status_code=204)
 def verify_admin_finance_pin(
     payload: PinVerifyRequest,
     request: Request,
     response: Response,
     db: Annotated[Session, Depends(get_db)],
-    _: Annotated[User, Depends(get_admin_user)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> None:
     enforce_rate_limit(request, key="admin_finance_pin", limit=5, window_seconds=300)
     if payload.pin != settings.admin_finance_pin:
@@ -99,20 +113,31 @@ def verify_admin_finance_pin(
         key="finance_pin_verified",
         value="1",
         httponly=True,
-        secure=settings.is_production(),
+        secure=True,
         samesite="strict",
         max_age=30 * 60,
         path="/",
     )
+    append_audit_log(
+        db,
+        event_type="admin_finance_pin_verified",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="admin_finance",
+        details={},
+    )
+    db.commit()
 
 
 @router.get("/settings", response_model=FinanceSettingsResponse)
 def get_finance_settings(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    _: Annotated[User, Depends(get_admin_user)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> FinanceSettingsResponse:
     _require_finance_pin(request)
+    _audit_admin_access(db, request, admin_user, "admin_finance_settings_read")
     settings = _get_or_create_settings(db)
     return _to_response(settings)
 
@@ -122,7 +147,7 @@ def update_finance_settings(
     payload: FinanceSettingsUpdateRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    _: Annotated[User, Depends(get_admin_user)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> FinanceSettingsResponse:
     _require_finance_pin(request)
     settings = _get_or_create_settings(db)
@@ -132,6 +157,15 @@ def update_finance_settings(
     settings.seller_subscription_fee = payload.seller_subscription_fee
     settings.ad_boost_price = payload.ad_boost_price
     settings.ad_boost_duration_days = payload.ad_boost_duration_days
+    append_audit_log(
+        db,
+        event_type="admin_finance_settings_updated",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="finance_settings",
+        details=payload.model_dump(),
+    )
     db.commit()
     db.refresh(settings)
     return _to_response(settings)
@@ -141,9 +175,10 @@ def update_finance_settings(
 def get_finance_summary(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    _: Annotated[User, Depends(get_admin_user)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> FinanceSummaryResponse:
     _require_finance_pin(request)
+    _audit_admin_access(db, request, admin_user, "admin_finance_summary_read")
     settings = _get_or_create_settings(db)
     today = datetime.now(UTC).date()
     start_date = today - timedelta(days=29)
@@ -184,9 +219,10 @@ def get_finance_summary(
 def get_wallet_summary(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    _: Annotated[User, Depends(get_admin_user)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> WalletSummaryResponse:
     _require_finance_pin(request)
+    _audit_admin_access(db, request, admin_user, "admin_finance_wallet_read")
     finance = _get_or_create_settings(db)
 
     platform_orders = db.scalars(select(Order)).all()
@@ -216,10 +252,11 @@ def get_wallet_summary(
 def get_treasury_history(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    _: Annotated[User, Depends(get_admin_user)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
     limit: int = 80,
 ) -> list[TreasuryTransactionResponse]:
     _require_finance_pin(request)
+    _audit_admin_access(db, request, admin_user, "admin_finance_treasury_read")
     history: list[TreasuryTransactionResponse] = []
     platform_orders = db.scalars(select(Order).order_by(Order.created_at.desc()).limit(limit)).all()
     restaurant_orders = db.scalars(
@@ -258,10 +295,10 @@ def create_fund_transfer(
     payload: TransferRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    _: Annotated[User, Depends(get_admin_user)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> TransferResponse:
     _require_finance_pin(request)
-    wallet = get_wallet_summary(request, db, _)
+    wallet = get_wallet_summary(request, db, admin_user)
     available = wallet.total_all - wallet.amazer_commission_total - wallet.service_fee_total
     if payload.amount > available:
         raise ValidationDomainError("Transfer amount exceeds available balance")
@@ -281,6 +318,16 @@ def create_fund_transfer(
         encrypted_snapshot=encrypt_payment_code(snapshot),
     )
     db.add(transfer)
+    append_audit_log(
+        db,
+        event_type="admin_fund_transfer_created",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="finance_transfer",
+        entity_id=transfer.id,
+        details={"amount": payload.amount, "currency": "XOF", "bank_name": payload.bank_name},
+    )
     db.commit()
     db.refresh(transfer)
     return TransferResponse(
@@ -305,9 +352,10 @@ def get_public_finance_settings(
 def list_district_fees(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    _: Annotated[User, Depends(get_admin_user)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> list[DistrictFeeItem]:
     _require_finance_pin(request)
+    _audit_admin_access(db, request, admin_user, "admin_district_fees_read")
     rows = db.scalars(select(FinanceDistrictFee).order_by(FinanceDistrictFee.district_name.asc())).all()
     return [DistrictFeeItem(district_name=row.district_name, delivery_fee=row.delivery_fee) for row in rows]
 
@@ -317,12 +365,21 @@ def replace_district_fees(
     payload: list[DistrictFeeItem],
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    _: Annotated[User, Depends(get_admin_user)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> list[DistrictFeeItem]:
     _require_finance_pin(request)
     db.query(FinanceDistrictFee).delete()
     for item in payload:
         db.add(FinanceDistrictFee(district_name=item.district_name, delivery_fee=item.delivery_fee))
+    append_audit_log(
+        db,
+        event_type="admin_district_fees_updated",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="district_fee",
+        details={"count": len(payload)},
+    )
     db.commit()
     rows = db.scalars(select(FinanceDistrictFee).order_by(FinanceDistrictFee.district_name.asc())).all()
     return [DistrictFeeItem(district_name=row.district_name, delivery_fee=row.delivery_fee) for row in rows]
@@ -332,10 +389,11 @@ def replace_district_fees(
 def list_admin_orders(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    _: Annotated[User, Depends(get_admin_user)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
     limit: int = 40,
 ) -> list[AdminOrderTrackingResponse]:
     _require_finance_pin(request)
+    _audit_admin_access(db, request, admin_user, "admin_orders_read")
     orders = db.scalars(select(Order).order_by(Order.created_at.desc()).limit(limit)).all()
     payload: list[AdminOrderTrackingResponse] = []
     for order in orders:
@@ -359,13 +417,23 @@ def dispatch_order_to_delivery(
     payload: AdminOrderStatusUpdateRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    _: Annotated[User, Depends(get_admin_user)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> AdminOrderTrackingResponse:
     _require_finance_pin(request)
     order = db.get(Order, order_id)
     if order is None:
         raise ValidationDomainError("Order not found")
     order.status = payload.status
+    append_audit_log(
+        db,
+        event_type="admin_order_status_updated",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="order",
+        entity_id=order.id,
+        details={"status": payload.status},
+    )
     db.commit()
     db.refresh(order)
     return AdminOrderTrackingResponse(

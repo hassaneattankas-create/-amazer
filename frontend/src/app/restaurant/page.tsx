@@ -9,8 +9,10 @@ import { Flame, ForkKnife, Sparkles } from "lucide-react";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatXOF } from "@/lib/currency";
+import { formatMoney } from "@/lib/currency";
+import { resolveImageUrl } from "@/lib/image";
 import { createRestaurantOrder, listRestaurantMenu } from "@/services/restaurant-service";
+import { useAuthStore } from "@/store/auth-store";
 import { RestaurantMenuItem, RestaurantMenuOption } from "@/types/restaurant";
 
 type SelectedItem = {
@@ -35,6 +37,7 @@ function badgeColor(tag: string): string {
 }
 
 export default function RestaurantPage() {
+  const preferredCurrency = useAuthStore((state) => state.preferredCurrency);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -159,7 +162,10 @@ export default function RestaurantPage() {
             >
               <div className="relative h-52 w-full">
                 <Image
-                  src={dish.image_url || dishImageFallbacks[index % dishImageFallbacks.length]}
+                  src={
+                    resolveImageUrl(dish.image_url) ||
+                    dishImageFallbacks[index % dishImageFallbacks.length]
+                  }
                   alt={dish.name}
                   fill
                   className="object-cover"
@@ -172,7 +178,9 @@ export default function RestaurantPage() {
                     <p className="text-xs uppercase tracking-wide text-[#FF4D00]">{dish.vendor_name}</p>
                     <h2 className="text-lg font-semibold text-slate-900">{dish.name}</h2>
                   </div>
-                  <p className="text-sm font-semibold text-[#FF4D00]">{formatXOF(dish.base_price)}</p>
+                  <p className="text-sm font-semibold text-[#FF4D00]">
+                    {formatMoney(dish.base_price, preferredCurrency)}
+                  </p>
                 </div>
                 {dish.description ? <p className="text-sm text-slate-600">{dish.description}</p> : null}
 
@@ -204,7 +212,7 @@ export default function RestaurantPage() {
                           onClick={() => toggleOption(dish.id, option)}
                           className="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
                         >
-                          {option.name} (+{formatXOF(option.price)})
+                          {option.name} (+{formatMoney(option.price, preferredCurrency)})
                         </button>
                       ))}
                     </div>
@@ -265,7 +273,7 @@ export default function RestaurantPage() {
             <Sparkles className="h-4 w-4 text-amber-600" />
             Livraison Express Niamey estimee: {estimatedMinutes} min
           </p>
-          <p className="mt-1">Total panier repas: {formatXOF(total)}</p>
+          <p className="mt-1">Total panier repas: {formatMoney(total, preferredCurrency)}</p>
           <p className="mt-1">Articles: {selectedItems.length}</p>
         </div>
 

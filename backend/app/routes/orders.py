@@ -293,6 +293,7 @@ def verify_receipt_scan(
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[User, Depends(get_admin_user)],
 ) -> ReceiptVerifyResponse:
+    enforce_rate_limit(request, key="receipt_scan_verify", limit=20, window_seconds=60)
     try:
         claims = decode_receipt_access_token(payload.token)
     except ValueError as exc:

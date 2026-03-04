@@ -2,10 +2,12 @@
 
 import { FormEvent, useState } from "react";
 import { Suspense } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { login } from "@/services/auth-service";
 
 function LoginPageContent() {
@@ -13,6 +15,7 @@ function LoginPageContent() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -23,11 +26,11 @@ function LoginPageContent() {
     setStatus("");
     setIsLoading(true);
     try {
-      await login({ email, password });
+      await login({ email, password, mfa_code: mfaCode.trim() || undefined });
       router.push(next);
       router.refresh();
-    } catch {
-      setStatus("Identifiants invalides ou session indisponible.");
+    } catch (error) {
+      setStatus(getApiErrorMessage(error, "Identifiants invalides ou session indisponible."));
     } finally {
       setIsLoading(false);
     }
@@ -70,6 +73,20 @@ function LoginPageContent() {
             />
           </div>
 
+          <div>
+            <label className="text-sm font-medium text-slate-800" htmlFor="mfa-code">
+              Code MFA (si active)
+            </label>
+            <input
+              id="mfa-code"
+              inputMode="numeric"
+              value={mfaCode}
+              onChange={(event) => setMfaCode(event.target.value)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="123456"
+            />
+          </div>
+
           <Button
             type="submit"
             disabled={isLoading || !email || !password}
@@ -77,6 +94,12 @@ function LoginPageContent() {
           >
             {isLoading ? "Connexion..." : "Se connecter"}
           </Button>
+          <p className="text-sm text-slate-600">
+            Pas encore de compte ?{" "}
+            <Link href="/register" className="font-medium text-[#FF4D00] hover:underline">
+              Creer un compte
+            </Link>
+          </p>
           {status ? <p className="text-sm text-slate-700">{status}</p> : null}
         </form>
       </article>

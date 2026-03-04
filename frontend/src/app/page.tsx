@@ -14,9 +14,11 @@ import { ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatXOF } from "@/lib/currency";
+import { formatMoney } from "@/lib/currency";
+import { resolveImageUrl } from "@/lib/image";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { getHomeContent, trackAdClick } from "@/services/content-service";
+import { useAuthStore } from "@/store/auth-store";
 import { useProductSearch } from "@/hooks/use-product-search";
 import { HomeContentProduct } from "@/types/content";
 import { ProductSearchItem } from "@/types/product";
@@ -59,6 +61,7 @@ export default function HomePage() {
   const [query, setQuery] = useState("");
   const [barcode, setBarcode] = useState("");
   const [activeShelf, setActiveShelf] = useState<ShelfSlug>("all");
+  const preferredCurrency = useAuthStore((state) => state.preferredCurrency);
   const debouncedQuery = useDebouncedValue(query, DEBOUNCE_MS);
   const debouncedBarcode = useDebouncedValue(barcode, DEBOUNCE_MS);
 
@@ -156,7 +159,9 @@ export default function HomePage() {
                 </span>
                 <p className="mt-2 line-clamp-2 text-sm font-semibold text-slate-900">{item.name}</p>
                 <p className="text-xs text-slate-500">{item.brand}</p>
-                <p className="mt-2 text-base font-semibold text-[#FF4D00]">{formatXOF(item.amount)}</p>
+                <p className="mt-2 text-base font-semibold text-[#FF4D00]">
+                  {formatMoney(item.amount, preferredCurrency)}
+                </p>
               </Link>
             ))}
           </div>
@@ -170,7 +175,7 @@ export default function HomePage() {
         >
           <div className="relative h-36 w-full sm:h-48">
             <Image
-              src={homeContent.top_banner_url}
+              src={resolveImageUrl(homeContent.top_banner_url) || homeContent.top_banner_url}
               alt="Banniere publicitaire AMAZER"
               fill
               unoptimized
@@ -352,7 +357,9 @@ export default function HomePage() {
                           </span>
                         )}
                         <h3 className="mt-2 line-clamp-2 text-base font-semibold text-slate-900">{item.name}</h3>
-                        <p className="mt-2 text-lg font-semibold text-[#FF4D00]">{formatXOF(item.amount)}</p>
+                        <p className="mt-2 text-lg font-semibold text-[#FF4D00]">
+                          {formatMoney(item.amount, preferredCurrency)}
+                        </p>
                         <Button
                           asChild
                           className="primary-glow-btn mt-3 w-full bg-[#FF4D00] text-white hover:bg-[#e74700]"

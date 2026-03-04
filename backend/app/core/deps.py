@@ -2,12 +2,15 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import DomainError, UnauthorizedError
 from app.config import get_settings
 from app.database import get_db
+from app.models.seller_profile import SellerProfile
 from app.models.user import User
+from app.models.user_mfa import UserMfa
 from app.services.auth_service import AuthService
 
 http_bearer = HTTPBearer(auto_error=False)
@@ -47,8 +50,33 @@ def get_current_user_optional(
         return None
 
 
-def get_admin_user(current_user: Annotated[User, Depends(get_current_user)]) -> User:
+def _require_admin_with_mfa(current_user: User, db: Session) -> User:
     settings = get_settings()
     if current_user.email.lower() != settings.admin_email.lower():
         raise UnauthorizedError("Admin access required")
+    mfa_enabled = db.scalar(select(UserMfa.enabled).where(UserMfa.user_id == current_user.id))
+    if not mfa_enabled:
+        raise UnauthorizedError("Admin MFA is required")
+    return current_user
+
+
+def get_admin_user(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> User:
+    return _require_admin_with_mfa(current_user, db)
+
+
+def get_seller_user_with_mfa(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> User:
+    has_seller_profile = db.scalar(
+        select(SellerProfile.id).where(SellerProfile.user_id == current_user.id).limit(1)
+    )
+    if has_seller_profile is None:
+        return current_user
+    mfa_enabled = db.scalar(select(UserMfa.enabled).where(UserMfa.user_id == current_user.id))
+    if not mfa_enabled:
+        raise UnauthorizedError("Seller MFA is required")
     return current_user

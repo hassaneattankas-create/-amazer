@@ -100,9 +100,14 @@ export default function VendrePage() {
         {status ? <p className="mt-2 text-sm text-slate-700">{status}</p> : null}
       </article>
 
-      <Button asChild variant="outline">
-        <Link href="/seller">J&apos;ai deja un compte vendeur</Link>
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild variant="outline">
+          <Link href="/register">Creer mon compte vendeur</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/seller">J&apos;ai deja un compte vendeur</Link>
+        </Button>
+      </div>
     </section>
   );
 }

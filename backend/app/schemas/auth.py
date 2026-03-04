@@ -28,6 +28,7 @@ class LoginRequest(BaseModel):
 
     email: EmailStr
     password: SecretStr = Field(min_length=8, max_length=72)
+    mfa_code: str | None = Field(default=None, min_length=6, max_length=8)
 
 
 class RefreshTokenRequest(BaseModel):
@@ -40,3 +41,19 @@ class TokenPair(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+
+class MfaSetupResponse(BaseModel):
+    secret_key: str
+    otpauth_url: str
+    issuer: str
+    account: str
+
+
+class MfaEnableRequest(BaseModel):
+    code: str = Field(min_length=6, max_length=8)
+
+
+class MfaStatusResponse(BaseModel):
+    enabled: bool
+    required_for_account: bool

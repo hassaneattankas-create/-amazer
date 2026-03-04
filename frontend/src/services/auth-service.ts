@@ -1,8 +1,9 @@
-import { api } from "@/lib/api";
+import { api, clearAuthTokens, persistAuthTokens } from "@/lib/api";
 
 type LoginPayload = {
   email: string;
   password: string;
+  mfa_code?: string;
 };
 
 type RegisterPayload = {
@@ -25,8 +26,21 @@ type UserResponse = {
   created_at: string;
 };
 
+type MfaStatusResponse = {
+  enabled: boolean;
+  required_for_account: boolean;
+};
+
+type MfaSetupResponse = {
+  secret_key: string;
+  otpauth_url: string;
+  issuer: string;
+  account: string;
+};
+
 export async function login(payload: LoginPayload) {
   const response = await api.post<TokenPair>("/api/v1/auth/login", payload);
+  persistAuthTokens(response.data);
   return response.data;
 }
 
@@ -37,14 +51,33 @@ export async function register(payload: RegisterPayload) {
 
 export async function refreshToken() {
   const response = await api.post<TokenPair>("/api/v1/auth/refresh", {});
+  persistAuthTokens(response.data);
   return response.data;
 }
 
 export async function logout() {
-  await api.post("/api/v1/auth/logout");
+  try {
+    await api.post("/api/v1/auth/logout");
+  } finally {
+    clearAuthTokens();
+  }
 }
 
 export async function getCurrentUser() {
   const response = await api.get<UserResponse>("/api/v1/auth/me");
   return response.data;
+}
+
+export async function getMfaStatus() {
+  const response = await api.get<MfaStatusResponse>("/api/v1/auth/mfa/status");
+  return response.data;
+}
+
+export async function setupMfa() {
+  const response = await api.post<MfaSetupResponse>("/api/v1/auth/mfa/setup");
+  return response.data;
+}
+
+export async function enableMfa(code: string) {
+  await api.post("/api/v1/auth/mfa/enable", { code });
 }

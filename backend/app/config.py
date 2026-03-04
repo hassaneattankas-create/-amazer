@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     admin_email: str = Field(default="owner@amazer.ne")
     admin_finance_pin: str = Field(default="7391")
     cors_allowed_origins: str = Field(
-        default="https://amazer.vercel.app,https://www.amazer.vercel.app"
+        default="https://amazer.vercel.app,https://www.amazer.vercel.app,https://amazerniger.vercel.app,https://www.amazerniger.vercel.app"
     )
     payment_encryption_key: str = Field(
         default="REPLACE_WITH_BASE64URL_32BYTE_KEY_REPLACE_WITH_KEY_1234="

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
@@ -125,7 +124,7 @@ export default function OrderReceiptPage() {
             <h1 className="luxury-title text-2xl font-semibold">Recu securise AMAZER</h1>
             <p className="mt-1 text-sm text-slate-600">Commande #{data.order_id}</p>
           </div>
-          <Image src="/logo-amazer.svg" alt="Logo AMAZER" width={96} height={96} />
+          <p className="luxury-title text-xl font-semibold">AMAZER</p>
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-2 text-sm text-slate-700 sm:grid-cols-2">

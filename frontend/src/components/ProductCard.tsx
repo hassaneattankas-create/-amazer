@@ -4,9 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Package, Store } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AnimatedPrice } from "@/components/AnimatedPrice";
+import { resolveImageUrl } from "@/lib/image";
 import { trackAdClick } from "@/services/content-service";
 import { ProductSearchItem } from "@/types/product";
 
@@ -15,6 +17,7 @@ type ProductCardProps = {
 };
 
 export function ProductCard({ product }: ProductCardProps) {
+  const [imageError, setImageError] = useState(false);
   const {
     name,
     brand,
@@ -26,6 +29,7 @@ export function ProductCard({ product }: ProductCardProps) {
   } = product;
 
   const adBadge = is_boosted ? "Sponsorise" : is_sponsored ? "Annonce" : null;
+  const resolvedImageUrl = useMemo(() => resolveImageUrl(main_image_url), [main_image_url]);
 
   const onOpenDetail = () => {
     if (is_boosted || is_sponsored) {
@@ -44,9 +48,9 @@ export function ProductCard({ product }: ProductCardProps) {
       }`}
     >
       <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100">
-        {main_image_url ? (
+        {resolvedImageUrl && !imageError ? (
           <Image
-            src={main_image_url}
+            src={resolvedImageUrl}
             alt={name}
             width={640}
             height={480}
@@ -54,6 +58,7 @@ export function ProductCard({ product }: ProductCardProps) {
             loading="lazy"
             sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
             className="h-full w-full object-cover"
+            onError={() => setImageError(true)}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-slate-400">

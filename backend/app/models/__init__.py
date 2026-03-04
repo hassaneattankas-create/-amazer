@@ -15,11 +15,15 @@ from app.models.dynamic_section import DynamicSection, DynamicSectionItem
 from app.models.ad_click import AdClick
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
+from app.models.user_mfa import UserMfa
+from app.models.audit_log import AuditLog
 from app.models.vendor import Vendor
 
 __all__ = [
     "User",
     "RefreshToken",
+    "UserMfa",
+    "AuditLog",
     "Product",
     "ProductImage",
     "Price",

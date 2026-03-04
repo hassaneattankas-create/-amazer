@@ -16,6 +16,7 @@ import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { ReviewSystem } from "@/components/ReviewSystem";
 import { VendorOffer } from "@/components/VendorOffer";
 import { Button } from "@/components/ui/button";
+import { resolveImageUrl } from "@/lib/image";
 import { getProductDetailById, getProductRecommendations } from "@/services/product-service";
 import { useCartStore } from "@/store/cartStore";
 
@@ -47,6 +48,7 @@ export default function ProductDetailPage() {
   const productId = params.id;
   const addItem = useCartStore((state) => state.addItem);
   const [cartMessage, setCartMessage] = useState("");
+  const [imageError, setImageError] = useState(false);
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["product-detail", productId],
@@ -76,6 +78,10 @@ export default function ProductDetailPage() {
         }),
       })),
     [priceHistory]
+  );
+  const detailImageUrl = useMemo(
+    () => resolveImageUrl(data?.product.main_image_url),
+    [data?.product.main_image_url]
   );
 
   if (isPending) {
@@ -122,14 +128,15 @@ export default function ProductDetailPage() {
         <article className="premium-card lg:col-span-2 border border-slate-200 bg-white p-6">
           <div className="flex items-start gap-5">
             <div className="h-28 w-28 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-              {data.product.main_image_url ? (
+              {detailImageUrl && !imageError ? (
                 <Image
-                  src={data.product.main_image_url}
+                  src={detailImageUrl}
                   alt={data.product.name}
                   width={224}
                   height={224}
                   unoptimized
                   className="h-full w-full object-cover"
+                  onError={() => setImageError(true)}
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-slate-400">
