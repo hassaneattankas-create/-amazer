@@ -16,7 +16,7 @@ import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { ReviewSystem } from "@/components/ReviewSystem";
 import { VendorOffer } from "@/components/VendorOffer";
 import { Button } from "@/components/ui/button";
-import { resolveImageUrl } from "@/lib/image";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { getProductDetailById, getProductRecommendations } from "@/services/product-service";
 import { useCartStore } from "@/store/cartStore";
 
@@ -80,8 +80,12 @@ export default function ProductDetailPage() {
     [priceHistory]
   );
   const detailImageUrl = useMemo(
-    () => resolveImageUrl(data?.product.main_image_url),
-    [data?.product.main_image_url]
+    () =>
+      resolveProductImageUrl({
+        raw: data?.product.main_image_url,
+        categorySlug: data?.product.category?.slug,
+      }),
+    [data?.product.category?.slug, data?.product.main_image_url]
   );
 
   if (isPending) {

@@ -25,9 +25,9 @@ type SelectedItem = {
 };
 
 const dishImageFallbacks = [
-  "https://images.unsplash.com/photo-1604908176997-431eb4ed4d5f?auto=format&fit=crop&w=1400&q=80",
-  "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=1400&q=80",
-  "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1400&q=80",
+  "/images/placeholders/restaurant.svg",
+  "/images/placeholders/alimentation.svg",
+  "/images/placeholders/default.svg",
 ];
 
 function badgeColor(tag: string): string {

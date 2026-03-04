@@ -8,7 +8,7 @@ import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AnimatedPrice } from "@/components/AnimatedPrice";
-import { resolveImageUrl } from "@/lib/image";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { trackAdClick } from "@/services/content-service";
 import { ProductSearchItem } from "@/types/product";
 
@@ -29,7 +29,14 @@ export function ProductCard({ product }: ProductCardProps) {
   } = product;
 
   const adBadge = is_boosted ? "Sponsorise" : is_sponsored ? "Annonce" : null;
-  const resolvedImageUrl = useMemo(() => resolveImageUrl(main_image_url), [main_image_url]);
+  const resolvedImageUrl = useMemo(
+    () =>
+      resolveProductImageUrl({
+        raw: main_image_url,
+        categorySlug: product.category?.slug,
+      }),
+    [main_image_url, product.category?.slug]
+  );
 
   const onOpenDetail = () => {
     if (is_boosted || is_sponsored) {
