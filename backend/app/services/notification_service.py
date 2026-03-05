@@ -105,13 +105,16 @@ def _send_email_detailed(
         except Exception as exc:
             errors.append(f"mode={mode} port={port} error={exc}")
 
-    logger.warning("EMAIL_SEND_FAILED recipient=%s attempts=%s", recipient, " | ".join(errors))
-    lowered = " | ".join(errors).lower()
+    attempts_text = " | ".join(errors)
+    logger.warning("EMAIL_SEND_FAILED recipient=%s attempts=%s", recipient, attempts_text)
+    lowered = attempts_text.lower()
     if "auth" in lowered:
         return False, "auth_error"
     if "timed out" in lowered or "timeout" in lowered:
         return False, "timeout"
-    return False, "send_failed"
+    if "network is unreachable" in lowered or "connection refused" in lowered or "name or service not known" in lowered:
+        return False, "network_error"
+    return False, f"send_failed:{attempts_text[:220]}"
 
 
 def send_login_verification_code(*, destination: str, code: str) -> bool:
