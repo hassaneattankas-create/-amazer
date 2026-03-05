@@ -34,7 +34,6 @@ from app.schemas.order import (
     ReceiptVerifyRequest,
     ReceiptVerifyResponse,
 )
-from app.services.notification_service import send_payment_confirmation
 from app.services.payment_security_service import verify_payment_code
 from app.services.security_log_service import log_security_event
 
@@ -182,22 +181,6 @@ def _to_receipt_response(
     )
 
 
-def _build_receipt_notification_links(
-    request: Request,
-    db: Session,
-    order: Order,
-) -> tuple[str, str]:
-    customer_name = order.user.full_name if order.user else "Client AMAZER"
-    names = _product_names(db, order)
-    payload = _build_receipt_payload(order, customer_name, names)
-    digest = receipt_integrity_hash(payload)
-    token = create_receipt_access_token(order_id=order.id, digest=digest)
-    base = str(request.base_url).rstrip("/")
-    receipt_url = f"{base}/order/receipt/{order.id}?token={token}"
-    verify_url = f"{base}{settings.api_prefix}/orders/receipt/verify?token={token}"
-    return receipt_url, verify_url
-
-
 @router.get("/me", response_model=list[OrderResponse])
 def list_my_orders(
     db: Annotated[Session, Depends(get_db)],
@@ -269,16 +252,6 @@ def checkout(
         order.payment_reference = _build_payment_reference(order.id)
     db.commit()
     db.refresh(order)
-    if order.payment_status == "paid":
-        receipt_url, verify_url = _build_receipt_notification_links(request, db, order)
-        if current_user.whatsapp_phone:
-            send_payment_confirmation(
-                recipient=current_user.whatsapp_phone,
-                order_id=order.id,
-                amount=order.total_amount,
-                receipt_url=receipt_url,
-                qr_payload=verify_url,
-            )
     return _to_order_response(order)
 
 
@@ -348,15 +321,6 @@ def confirm_order_payment(
 
     db.commit()
     db.refresh(order)
-    receipt_url, verify_url = _build_receipt_notification_links(request, db, order)
-    if current_user.whatsapp_phone:
-        send_payment_confirmation(
-            recipient=current_user.whatsapp_phone,
-            order_id=order.id,
-            amount=order.total_amount,
-            receipt_url=receipt_url,
-            qr_payload=verify_url,
-        )
     return PaymentConfirmResponse(
         order_id=order.id,
         payment_status=order.payment_status,

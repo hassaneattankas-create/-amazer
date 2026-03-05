@@ -33,13 +33,15 @@ settings = get_settings()
 def _set_auth_cookies(response: Response, tokens: dict[str, str]) -> None:
     secure_cookie = settings.is_production()
     csrf_token = generate_csrf_token()
+    access_max_age = settings.jwt_access_token_expire_minutes * 60
+    refresh_max_age = settings.jwt_refresh_token_expire_days * 24 * 60 * 60
     response.set_cookie(
         key="access_token",
         value=tokens["access_token"],
         httponly=True,
         secure=secure_cookie,
         samesite="strict",
-        max_age=15 * 60,
+        max_age=access_max_age,
         path="/",
     )
     response.set_cookie(
@@ -48,7 +50,7 @@ def _set_auth_cookies(response: Response, tokens: dict[str, str]) -> None:
         httponly=True,
         secure=secure_cookie,
         samesite="strict",
-        max_age=7 * 24 * 60 * 60,
+        max_age=refresh_max_age,
         path="/",
     )
     response.set_cookie(
@@ -70,10 +72,9 @@ def register(
 ) -> User:
     enforce_rate_limit(request, key="auth_register", limit=5, window_seconds=300)
     user = auth_service.register(
-        email=payload.email,
+        identifier=payload.identifier,
         full_name=payload.full_name,
         password=payload.password.get_secret_value(),
-        whatsapp_phone=payload.whatsapp_phone,
     )
     return user
 
@@ -88,9 +89,8 @@ def login(
     enforce_rate_limit(request, key="auth_login", limit=6, window_seconds=60)
     try:
         tokens = auth_service.login(
-            email=payload.email,
+            identifier=payload.identifier,
             password=payload.password.get_secret_value(),
-            mfa_code=payload.mfa_code,
         )
         _set_auth_cookies(response, tokens)
         return tokens
@@ -100,7 +100,7 @@ def login(
             event_type="login_failed",
             ip_address=request.client.host if request.client else None,
             path=str(request.url.path),
-            details={"email": payload.email},
+            details={"identifier": payload.identifier},
         )
         auth_service.db.commit()
         raise

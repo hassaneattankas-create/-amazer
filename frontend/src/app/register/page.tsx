@@ -12,16 +12,13 @@ const PASSWORD_POLICY = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [whatsappPhone, setWhatsappPhone] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [isSeller, setIsSeller] = useState(false);
   const [businessName, setBusinessName] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("Niamey");
   const [address, setAddress] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
-  const [requiresVerificationCode, setRequiresVerificationCode] = useState(false);
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -44,48 +41,14 @@ export default function RegisterPage() {
     setStatus("");
     setIsLoading(true);
     try {
-      const normalizedEmail = email.trim();
-      if (!requiresVerificationCode) {
-        try {
-          await register({
-            email: normalizedEmail,
-            full_name: fullName.trim(),
-            whatsapp_phone: whatsappPhone.trim(),
-            password,
-          });
-        } catch (registerError) {
-          const registerMessage = getApiErrorMessage(registerError, "Inscription impossible.");
-          if (!registerMessage.toLowerCase().includes("already registered")) {
-            throw registerError;
-          }
-        }
-
-        try {
-          await login({ email: normalizedEmail, password });
-          await finalizeRedirect();
-          return;
-        } catch (loginChallengeError) {
-          const challengeMessage = getApiErrorMessage(
-            loginChallengeError,
-            "Code de connexion requis."
-          );
-          const normalizedChallenge = challengeMessage.toLowerCase();
-          if (
-            !normalizedChallenge.includes("verification code sent") &&
-            !normalizedChallenge.includes("code de connexion")
-          ) {
-            throw loginChallengeError;
-          }
-          setRequiresVerificationCode(true);
-          setStatus(challengeMessage);
-          return;
-        }
-      }
-
-      await login({
-        email: normalizedEmail,
+      await register({
+        identifier: identifier.trim(),
+        full_name: fullName.trim(),
         password,
-        mfa_code: verificationCode.trim() || undefined,
+      });
+      await login({
+        identifier: identifier.trim(),
+        password,
       });
       await finalizeRedirect();
     } catch (error) {
@@ -97,8 +60,7 @@ export default function RegisterPage() {
 
   const canSubmit =
     fullName.trim().length >= 2 &&
-    email.trim().length >= 5 &&
-    whatsappPhone.trim().length >= 8 &&
+    identifier.trim().length >= 6 &&
     PASSWORD_POLICY.test(password) &&
     (!isSeller || businessName.trim().length >= 2);
 
@@ -125,16 +87,17 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-slate-800" htmlFor="email">
-              Email
+            <label className="text-sm font-medium text-slate-800" htmlFor="identifier">
+              E-mail ou WhatsApp (+227)
             </label>
             <input
-              id="email"
-              type="email"
+              id="identifier"
+              type="text"
               required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              value={identifier}
+              onChange={(event) => setIdentifier(event.target.value)}
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="email@domaine.com ou +22790000000"
             />
           </div>
 
@@ -155,36 +118,6 @@ export default function RegisterPage() {
               Minimum 8 caracteres avec majuscule, minuscule, chiffre et caractere special.
             </p>
           </div>
-
-          <div>
-            <label className="text-sm font-medium text-slate-800" htmlFor="whatsapp-phone">
-              WhatsApp (obligatoire)
-            </label>
-            <input
-              id="whatsapp-phone"
-              required
-              value={whatsappPhone}
-              onChange={(event) => setWhatsappPhone(event.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="+22790000000"
-            />
-          </div>
-
-          {requiresVerificationCode ? (
-            <div>
-              <label className="text-sm font-medium text-slate-800" htmlFor="verification-code">
-                Code de connexion
-              </label>
-              <input
-                id="verification-code"
-                inputMode="numeric"
-                value={verificationCode}
-                onChange={(event) => setVerificationCode(event.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                placeholder="123456"
-              />
-            </div>
-          ) : null}
 
           <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
             <input
@@ -247,14 +180,10 @@ export default function RegisterPage() {
 
           <Button
             type="submit"
-            disabled={isLoading || !canSubmit || (requiresVerificationCode && !verificationCode.trim())}
+            disabled={isLoading || !canSubmit}
             className="primary-glow-btn w-full text-white"
           >
-            {isLoading
-              ? "Traitement..."
-              : requiresVerificationCode
-                ? "Valider le code et me connecter"
-                : "Creer mon compte"}
+            {isLoading ? "Traitement..." : "Creer mon compte"}
           </Button>
 
           <p className="text-sm text-slate-600">

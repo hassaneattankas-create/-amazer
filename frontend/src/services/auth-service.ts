@@ -1,15 +1,13 @@
 import { api, clearAuthTokens, persistAuthTokens } from "@/lib/api";
 
 type LoginPayload = {
-  email: string;
+  identifier: string;
   password: string;
-  mfa_code?: string;
 };
 
 type RegisterPayload = {
-  email: string;
+  identifier: string;
   full_name: string;
-  whatsapp_phone: string;
   password: string;
 };
 
@@ -48,6 +46,14 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+function normalizeIdentifier(identifier: string): string {
+  const trimmed = identifier.trim();
+  if (trimmed.includes("@")) {
+    return normalizeEmail(trimmed);
+  }
+  return trimmed.replace(/\s+/g, "");
+}
+
 function getResponseStatus(error: unknown): number | null {
   const maybe = error as { response?: { status?: unknown } };
   const status = maybe?.response?.status;
@@ -56,8 +62,8 @@ function getResponseStatus(error: unknown): number | null {
 
 export async function login(payload: LoginPayload) {
   const response = await api.post<TokenPair>("/api/v1/auth/login", {
-    ...payload,
-    email: normalizeEmail(payload.email),
+    identifier: normalizeIdentifier(payload.identifier),
+    password: payload.password,
   });
   persistAuthTokens(response.data);
   return response.data;
@@ -65,8 +71,9 @@ export async function login(payload: LoginPayload) {
 
 export async function register(payload: RegisterPayload) {
   const response = await api.post<UserResponse>("/api/v1/auth/register", {
-    ...payload,
-    email: normalizeEmail(payload.email),
+    identifier: normalizeIdentifier(payload.identifier),
+    full_name: payload.full_name,
+    password: payload.password,
   });
   return response.data;
 }
@@ -80,7 +87,7 @@ export async function registerAndLogin(payload: RegisterPayload): Promise<TokenP
     }
   }
   return login({
-    email: payload.email,
+    identifier: payload.identifier,
     password: payload.password,
   });
 }

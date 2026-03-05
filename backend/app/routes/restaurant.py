@@ -24,7 +24,6 @@ from app.schemas.restaurant import (
     RestaurantStorefrontListResponse,
     RestaurantStorefrontResponse,
 )
-from app.services.notification_service import send_payment_confirmation
 from app.services.payment_security_service import verify_payment_code
 
 router = APIRouter(prefix="/restaurant", tags=["restaurant"])
@@ -272,15 +271,6 @@ def create_restaurant_order(
     db.add(order)
     db.commit()
     db.refresh(order)
-    receipt_url = f"{str(request.base_url).rstrip('/')}/restaurant"
-    qr_payload = f"RESTAURANT_ORDER:{order.id}"
-    send_payment_confirmation(
-        recipient=order.customer_phone,
-        order_id=order.id,
-        amount=order.total_amount,
-        receipt_url=receipt_url,
-        qr_payload=qr_payload,
-    )
 
     dish_map = {item.id: item.name for item in menu_rows}
     return _order_response(order, vendor.name, dish_map)

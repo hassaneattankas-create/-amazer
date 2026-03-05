@@ -6,6 +6,7 @@ const ACCESS_TOKEN_KEY = "amazer_access_token";
 const REFRESH_TOKEN_KEY = "amazer_refresh_token";
 const ACCESS_TOKEN_COOKIE_KEY = "amazer_access_token";
 export const AUTH_CHANGE_EVENT = "amazer-auth-changed";
+const AUTH_COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 type TokenPair = {
   access_token: string;
@@ -51,7 +52,7 @@ export function persistAuthTokens(tokens: TokenPair): void {
   writeStoredToken(ACCESS_TOKEN_KEY, tokens.access_token);
   writeStoredToken(REFRESH_TOKEN_KEY, tokens.refresh_token);
   const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=${encodeURIComponent(tokens.access_token)}; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}${secureFlag}`;
+  document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=${encodeURIComponent(tokens.access_token)}; Path=/; SameSite=Lax; Max-Age=${AUTH_COOKIE_MAX_AGE_SECONDS}${secureFlag}`;
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
 

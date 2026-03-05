@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(..., min_length=16)
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = Field(default=15, ge=1, le=1440)
-    jwt_refresh_token_expire_days: int = Field(default=7, ge=1, le=30)
+    jwt_refresh_token_expire_days: int = Field(default=30, ge=1, le=30)
     admin_email: str = Field(default="owner@amazer.ne")
     admin_finance_pin: str = Field(default="7391")
     cors_allowed_origins: str = Field(
@@ -27,10 +27,6 @@ class Settings(BaseSettings):
         default="REPLACE_WITH_BASE64URL_32BYTE_KEY_REPLACE_WITH_KEY_1234="
     )
     redis_url: str | None = Field(default=None)
-    whatsapp_api_token: str | None = Field(default=None)
-    whatsapp_phone_number_id: str | None = Field(default=None)
-    whatsapp_api_version: str = Field(default="v20.0")
-    whatsapp_template_otp: str | None = Field(default=None)
 
     def get_cors_origins(self) -> list[str]:
         if self.app_env.lower() == "development":

@@ -12,6 +12,10 @@ class UserRepository:
         stmt = select(User).where(User.email == email.lower())
         return self.db.scalar(stmt)
 
+    def get_by_whatsapp_phone(self, whatsapp_phone: str) -> User | None:
+        stmt = select(User).where(User.whatsapp_phone == whatsapp_phone)
+        return self.db.scalar(stmt)
+
     def get_by_id(self, user_id: str) -> User | None:
         stmt = select(User).where(User.id == user_id)
         return self.db.scalar(stmt)

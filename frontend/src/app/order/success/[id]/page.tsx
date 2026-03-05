@@ -37,6 +37,9 @@ export default function OrderSuccessPage() {
         </p>
         {isPending ? <p className="mt-3 text-sm text-slate-600">Preparation du recu securise...</p> : null}
         {isError ? <p className="mt-3 text-sm text-rose-600">Impossible de generer le lien de recu.</p> : null}
+        <p className="mt-4 text-sm font-bold text-slate-900">
+          📸 VEUILLEZ CAPTURER VOTRE REÇU OU LE PARTAGER SUR WHATSAPP POUR LE PRÉSENTER AU VENDEUR
+        </p>
         <div className="mt-5 flex flex-wrap gap-2">
           <Button asChild className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]">
             <Link href={receiptUrl}>Voir mon recu securise</Link>
@@ -46,7 +49,7 @@ export default function OrderSuccessPage() {
             className="min-h-12 border border-[#1da851] bg-[#25D366] px-6 text-base font-semibold text-white hover:bg-[#1fb857]"
           >
             <a href={whatsappDeepLink} target="_blank" rel="noreferrer">
-              Envoyer mon recu sur WhatsApp
+              Partager sur WhatsApp
             </a>
           </Button>
         </div>

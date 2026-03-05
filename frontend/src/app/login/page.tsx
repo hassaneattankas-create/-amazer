@@ -12,10 +12,8 @@ import { login } from "@/services/auth-service";
 
 function LoginPageContent() {
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [mfaCode, setMfaCode] = useState("");
-  const [requiresMfaCode, setRequiresMfaCode] = useState(false);
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -27,20 +25,12 @@ function LoginPageContent() {
     setIsLoading(true);
     try {
       await login({
-        email,
+        identifier,
         password,
-        mfa_code: requiresMfaCode ? mfaCode.trim() || undefined : undefined,
       });
       window.location.assign(next);
     } catch (error) {
-      const message = getApiErrorMessage(error, "Identifiants invalides ou session indisponible.");
-      const normalized = message.toLowerCase();
-      if (normalized.includes("verification code sent") || normalized.includes("code de connexion")) {
-        setRequiresMfaCode(true);
-        setStatus(message);
-      } else {
-        setStatus(message);
-      }
+      setStatus(getApiErrorMessage(error, "Identifiants invalides ou session indisponible."));
     } finally {
       setIsLoading(false);
     }
@@ -56,16 +46,17 @@ function LoginPageContent() {
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div>
-            <label className="text-sm font-medium text-slate-800" htmlFor="email">
-              Email
+            <label className="text-sm font-medium text-slate-800" htmlFor="identifier">
+              E-mail ou WhatsApp (+227)
             </label>
             <input
-              id="email"
-              type="email"
+              id="identifier"
+              type="text"
               required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              value={identifier}
+              onChange={(event) => setIdentifier(event.target.value)}
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="email@domaine.com ou +22790000000"
             />
           </div>
 
@@ -83,25 +74,9 @@ function LoginPageContent() {
             />
           </div>
 
-          {requiresMfaCode ? (
-            <div>
-              <label className="text-sm font-medium text-slate-800" htmlFor="mfa-code">
-                Code de connexion
-              </label>
-              <input
-                id="mfa-code"
-                inputMode="numeric"
-                value={mfaCode}
-                onChange={(event) => setMfaCode(event.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                placeholder="123456"
-              />
-            </div>
-          ) : null}
-
           <Button
             type="submit"
-            disabled={isLoading || !email || !password || (requiresMfaCode && !mfaCode.trim())}
+            disabled={isLoading || !identifier.trim() || !password}
             className="primary-glow-btn w-full bg-[#FF4D00] text-white hover:bg-[#e74700]"
           >
             {isLoading ? "Connexion..." : "Se connecter"}

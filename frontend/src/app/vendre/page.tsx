@@ -17,11 +17,9 @@ const PASSWORD_POLICY = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}
 export default function VendrePage() {
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [verificationCode, setVerificationCode] = useState("");
-  const [requiresVerificationCode, setRequiresVerificationCode] = useState(false);
   const [form, setForm] = useState({
     full_name: "",
-    email: "",
+    identifier: "",
     password: "",
     business_name: "",
     city: "Niamey",
@@ -39,55 +37,12 @@ export default function VendrePage() {
     setStatus("");
     setIsLoading(true);
     try {
-      const normalizedEmail = form.email.trim();
-      if (!requiresVerificationCode) {
-        try {
-          await register({
-            email: normalizedEmail,
-            full_name: form.full_name.trim(),
-            whatsapp_phone: form.phone.trim(),
-            password: form.password,
-          });
-        } catch (registerError) {
-          const registerMessage = getApiErrorMessage(registerError, "Activation vendeur impossible.");
-          if (!registerMessage.toLowerCase().includes("already registered")) {
-            throw registerError;
-          }
-        }
-        try {
-          await login({ email: normalizedEmail, password: form.password });
-          await upsertSellerProfile({
-            business_name: form.business_name.trim(),
-            city: form.city.trim() || "Niamey",
-            phone: form.phone.trim() || undefined,
-            address: form.address.trim() || undefined,
-          });
-          setStatus("Compte vendeur cree et active. Redirection...");
-          window.location.assign("/seller");
-          return;
-        } catch (loginChallengeError) {
-          const challengeMessage = getApiErrorMessage(
-            loginChallengeError,
-            "Code de connexion requis."
-          );
-          const normalizedChallenge = challengeMessage.toLowerCase();
-          if (
-            !normalizedChallenge.includes("verification code sent") &&
-            !normalizedChallenge.includes("code de connexion")
-          ) {
-            throw loginChallengeError;
-          }
-          setRequiresVerificationCode(true);
-          setStatus(challengeMessage);
-          return;
-        }
-      }
-
-      await login({
-        email: normalizedEmail,
+      await register({
+        identifier: form.identifier.trim(),
+        full_name: form.full_name.trim(),
         password: form.password,
-        mfa_code: verificationCode.trim() || undefined,
       });
+      await login({ identifier: form.identifier.trim(), password: form.password });
       await upsertSellerProfile({
         business_name: form.business_name.trim(),
         city: form.city.trim() || "Niamey",
@@ -105,7 +60,7 @@ export default function VendrePage() {
 
   const canSubmit =
     form.full_name.trim().length >= 2 &&
-    form.email.trim().length >= 5 &&
+    form.identifier.trim().length >= 6 &&
     form.phone.trim().length >= 8 &&
     PASSWORD_POLICY.test(form.password) &&
     form.business_name.trim().length >= 2;
@@ -152,10 +107,10 @@ export default function VendrePage() {
               placeholder="Nom complet"
             />
             <Input
-              type="email"
-              value={form.email}
-              onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
-              placeholder="Email"
+              type="text"
+              value={form.identifier}
+              onChange={(event) => setForm((prev) => ({ ...prev, identifier: event.target.value }))}
+              placeholder="Email ou WhatsApp (+227...)"
             />
             <Input
               type="password"
@@ -163,13 +118,6 @@ export default function VendrePage() {
               onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
               placeholder="Mot de passe fort"
             />
-            {requiresVerificationCode ? (
-              <Input
-                value={verificationCode}
-                onChange={(event) => setVerificationCode(event.target.value)}
-                placeholder="Code de connexion"
-              />
-            ) : null}
             <Input
               value={form.business_name}
               onChange={(event) => setForm((prev) => ({ ...prev, business_name: event.target.value }))}
@@ -195,15 +143,11 @@ export default function VendrePage() {
 
           <Button
             type="submit"
-            disabled={!canSubmit || isLoading || (requiresVerificationCode && !verificationCode.trim())}
+            disabled={!canSubmit || isLoading}
             className="primary-glow-btn mt-2 bg-[#FF4D00] text-white hover:bg-[#e74700]"
           >
             <Rocket className="h-4 w-4" />
-            {isLoading
-              ? "Activation..."
-              : requiresVerificationCode
-                ? "Valider le code et activer"
-                : "Activer ma boutique maintenant"}
+            {isLoading ? "Activation..." : "Activer ma boutique maintenant"}
           </Button>
         </form>
         {status ? <p className="mt-3 text-sm text-slate-700">{status}</p> : null}
