@@ -272,10 +272,14 @@ def create_restaurant_order(
     db.add(order)
     db.commit()
     db.refresh(order)
+    receipt_url = f"{str(request.base_url).rstrip('/')}/restaurant"
+    qr_payload = f"RESTAURANT_ORDER:{order.id}"
     send_payment_confirmation(
         recipient=current_user.email,
         order_id=order.id,
         amount=order.total_amount,
+        receipt_url=receipt_url,
+        qr_payload=qr_payload,
     )
 
     dish_map = {item.id: item.name for item in menu_rows}

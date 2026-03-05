@@ -173,22 +173,18 @@ class AuthService:
             self.db.add(UserPreferences(user_id=user_id, preferred_currency="XOF"))
             self.db.flush()
 
-    def _resolve_login_channel(self, user: User) -> tuple[str, str, str]:
-        profile = self.db.scalar(select(SellerProfile).where(SellerProfile.user_id == user.id))
-        phone = (profile.phone if profile else None) or ""
-        if phone.strip():
-            return "sms", phone.strip(), self._mask_phone(phone.strip())
+    def _resolve_login_destination(self, user: User) -> tuple[str, str]:
         email = str(user.email).strip().lower()
-        return "email", email, self._mask_email(email)
+        return email, self._mask_email(email)
 
     def _issue_login_verification_code(self, user: User) -> tuple[str, str | None]:
         now = datetime.now(UTC)
-        channel, destination, destination_masked = self._resolve_login_channel(user)
+        destination, destination_masked = self._resolve_login_destination(user)
         code = f"{secrets.randbelow(1_000_000):06d}"
         hashed = payment_code_hash(f"{user.id}:{code}")
         row = LoginVerificationCode(
             user_id=user.id,
-            channel=channel,
+            channel="email",
             destination_masked=destination_masked,
             code_hash=hashed,
             attempt_count=0,
@@ -197,7 +193,7 @@ class AuthService:
         )
         self.db.add(row)
         self.db.flush()
-        delivered = send_login_verification_code(channel=channel, destination=destination, code=code)
+        delivered = send_login_verification_code(destination=destination, code=code)
         self.db.commit()
         if not delivered and get_settings().is_production():
             raise UnauthorizedError("Impossible d'envoyer le code de connexion. Contactez le support.")

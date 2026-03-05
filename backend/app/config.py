@@ -35,13 +35,6 @@ class Settings(BaseSettings):
     smtp_from_email: str | None = Field(default=None)
     smtp_use_starttls: bool = Field(default=True)
 
-    sms_provider: str = Field(default="none")
-    twilio_account_sid: str | None = Field(default=None)
-    twilio_auth_token: str | None = Field(default=None)
-    twilio_from_number: str | None = Field(default=None)
-    sms_api_url: str | None = Field(default=None)
-    sms_api_token: str | None = Field(default=None)
-
     def get_cors_origins(self) -> list[str]:
         if self.app_env.lower() == "development":
             return ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", *[
