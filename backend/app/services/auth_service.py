@@ -179,4 +179,4 @@ class AuthService:
 
     def _shadow_email_for_whatsapp(self, whatsapp_phone: str) -> str:
         digits = "".join(ch for ch in whatsapp_phone if ch.isdigit())
-        return f"wa-{digits}@amazer.local"
+        return f"wa-{digits}@users.amazer.ne"
