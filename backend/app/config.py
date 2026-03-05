@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     smtp_username: str | None = Field(default=None)
     smtp_password: str | None = Field(default=None)
     smtp_from_email: str | None = Field(default=None)
+    smtp_use_ssl: bool = Field(default=True)
     smtp_use_starttls: bool = Field(default=True)
 
     def get_cors_origins(self) -> list[str]:

@@ -31,10 +31,28 @@ def _send_email(
     qr_payload: str | None = None,
     qr_filename: str = "amazer-receipt-qr.png",
 ) -> bool:
+    delivered, _ = _send_email_detailed(
+        recipient=recipient,
+        subject=subject,
+        message=message,
+        qr_payload=qr_payload,
+        qr_filename=qr_filename,
+    )
+    return delivered
+
+
+def _send_email_detailed(
+    *,
+    recipient: str,
+    subject: str,
+    message: str,
+    qr_payload: str | None = None,
+    qr_filename: str = "amazer-receipt-qr.png",
+) -> tuple[bool, str]:
     from_email = settings.smtp_from_email or settings.smtp_username
     if not settings.smtp_host or not from_email:
         logger.warning("EMAIL_NOT_CONFIGURED recipient=%s subject=%s", recipient, subject)
-        return False
+        return False, "config_missing"
 
     email = EmailMessage()
     email["Subject"] = subject
@@ -49,19 +67,19 @@ def _send_email(
             filename=qr_filename,
         )
 
-    primary_mode = (settings.smtp_use_starttls, settings.smtp_port)
-    fallback_mode = (
-        (not settings.smtp_use_starttls),
-        465 if settings.smtp_use_starttls else 587,
-    )
-    attempts = [primary_mode]
-    if fallback_mode != primary_mode:
-        attempts.append(fallback_mode)
+    if settings.smtp_use_ssl:
+        primary_mode = ("ssl", settings.smtp_port if settings.smtp_port else 465)
+        fallback_mode = ("starttls", 587)
+    else:
+        primary_mode = ("starttls", settings.smtp_port if settings.smtp_port else 587)
+        fallback_mode = ("ssl", 465)
+
+    attempts = [primary_mode, fallback_mode] if fallback_mode != primary_mode else [primary_mode]
 
     errors: list[str] = []
-    for use_starttls, port in attempts:
+    for mode, port in attempts:
         try:
-            if use_starttls:
+            if mode == "starttls":
                 with smtplib.SMTP(settings.smtp_host, port, timeout=15) as smtp:
                     smtp.starttls()
                     if settings.smtp_username and settings.smtp_password:
@@ -72,24 +90,41 @@ def _send_email(
                     if settings.smtp_username and settings.smtp_password:
                         smtp.login(settings.smtp_username, settings.smtp_password)
                     smtp.send_message(email)
-            if (use_starttls, port) != primary_mode:
+            if (mode, port) != primary_mode:
                 logger.info(
                     "EMAIL_SEND_FALLBACK_SUCCESS recipient=%s mode=%s port=%s",
                     recipient,
-                    "starttls" if use_starttls else "ssl",
+                    mode,
                     port,
                 )
-            return True
+            return True, "ok"
+        except smtplib.SMTPAuthenticationError as exc:
+            errors.append(f"mode={mode} port={port} auth_error={exc}")
+        except TimeoutError as exc:
+            errors.append(f"mode={mode} port={port} timeout={exc}")
         except Exception as exc:
-            errors.append(f"mode={'starttls' if use_starttls else 'ssl'} port={port}: {exc}")
+            errors.append(f"mode={mode} port={port} error={exc}")
 
     logger.warning("EMAIL_SEND_FAILED recipient=%s attempts=%s", recipient, " | ".join(errors))
-    return False
+    lowered = " | ".join(errors).lower()
+    if "auth" in lowered:
+        return False, "auth_error"
+    if "timed out" in lowered or "timeout" in lowered:
+        return False, "timeout"
+    return False, "send_failed"
 
 
 def send_login_verification_code(*, destination: str, code: str) -> bool:
     message = f"Votre code de connexion AMAZER est {code}. Ce code expire dans 5 minutes."
     return _send_email(destination, "Code de connexion AMAZER", message)
+
+
+def send_test_email(*, recipient: str) -> tuple[bool, str]:
+    return _send_email_detailed(
+        recipient=recipient,
+        subject="AMAZER LIVE",
+        message="AMAZER LIVE",
+    )
 
 
 def send_payment_confirmation(
