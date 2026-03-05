@@ -72,7 +72,7 @@ def register(
 ) -> User:
     enforce_rate_limit(request, key="auth_register", limit=5, window_seconds=300)
     user = auth_service.register(
-        identifier=payload.identifier,
+        identifier=payload.identifier or payload.email or payload.whatsapp_phone or "",
         full_name=payload.full_name,
         password=payload.password.get_secret_value(),
     )
@@ -89,7 +89,7 @@ def login(
     enforce_rate_limit(request, key="auth_login", limit=6, window_seconds=60)
     try:
         tokens = auth_service.login(
-            identifier=payload.identifier,
+            identifier=payload.identifier or payload.email or "",
             password=payload.password.get_secret_value(),
         )
         _set_auth_cookies(response, tokens)
