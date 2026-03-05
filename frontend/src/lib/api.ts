@@ -5,6 +5,7 @@ const API_BASE_URL =
 const ACCESS_TOKEN_KEY = "amazer_access_token";
 const REFRESH_TOKEN_KEY = "amazer_refresh_token";
 const ACCESS_TOKEN_COOKIE_KEY = "amazer_access_token";
+export const AUTH_CHANGE_EVENT = "amazer-auth-changed";
 
 type TokenPair = {
   access_token: string;
@@ -15,26 +16,53 @@ function readStoredToken(key: string): string | null {
   if (typeof window === "undefined") {
     return null;
   }
-  return window.sessionStorage.getItem(key);
+  const fromLocalStorage = window.localStorage.getItem(key);
+  if (fromLocalStorage) {
+    return fromLocalStorage;
+  }
+  const fromSessionStorage = window.sessionStorage.getItem(key);
+  if (fromSessionStorage) {
+    window.localStorage.setItem(key, fromSessionStorage);
+    return fromSessionStorage;
+  }
+  return null;
+}
+
+function writeStoredToken(key: string, value: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(key, value);
+  window.sessionStorage.setItem(key, value);
+}
+
+function removeStoredToken(key: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.removeItem(key);
+  window.sessionStorage.removeItem(key);
 }
 
 export function persistAuthTokens(tokens: TokenPair): void {
   if (typeof window === "undefined") {
     return;
   }
-  window.sessionStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
-  window.sessionStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+  writeStoredToken(ACCESS_TOKEN_KEY, tokens.access_token);
+  writeStoredToken(REFRESH_TOKEN_KEY, tokens.refresh_token);
   const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=${encodeURIComponent(tokens.access_token)}; Path=/; SameSite=Lax${secureFlag}`;
+  document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=${encodeURIComponent(tokens.access_token)}; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}${secureFlag}`;
+  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
 
 export function clearAuthTokens(): void {
   if (typeof window === "undefined") {
     return;
   }
-  window.sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-  window.sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  removeStoredToken(ACCESS_TOKEN_KEY);
+  removeStoredToken(REFRESH_TOKEN_KEY);
   document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
+  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
 
 function getAccessToken(): string | null {

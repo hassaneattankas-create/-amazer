@@ -56,3 +56,17 @@ export type RestaurantOrder = {
     subtotal: number;
   }>;
 };
+
+export type RestaurantStorefront = {
+  id: string;
+  name: string;
+  slug: string;
+  business_name: string | null;
+  city: string | null;
+  phone: string | null;
+  address: string | null;
+  is_verified: boolean;
+  menu_item_count: number;
+  plat_du_jour_count: number;
+  cover_image_url: string | null;
+};

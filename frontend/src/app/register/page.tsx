@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -12,7 +11,6 @@ import { upsertSellerProfile } from "@/services/seller-service";
 const PASSWORD_POLICY = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/;
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,37 +19,73 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("Niamey");
   const [address, setAddress] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [requiresVerificationCode, setRequiresVerificationCode] = useState(false);
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  async function finalizeRedirect() {
+    if (isSeller) {
+      await upsertSellerProfile({
+        business_name: businessName.trim(),
+        phone: phone.trim() || undefined,
+        city: city.trim() || "Niamey",
+        address: address.trim() || undefined,
+      });
+      window.location.assign("/seller");
+      return;
+    }
+    window.location.assign("/");
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus("");
     setIsLoading(true);
     try {
-      await register({
-        email: email.trim(),
-        full_name: fullName.trim(),
-        password,
-      });
+      const normalizedEmail = email.trim();
+      if (!requiresVerificationCode) {
+        try {
+          await register({
+            email: normalizedEmail,
+            full_name: fullName.trim(),
+            password,
+          });
+        } catch (registerError) {
+          const registerMessage = getApiErrorMessage(registerError, "Inscription impossible.");
+          if (!registerMessage.toLowerCase().includes("already registered")) {
+            throw registerError;
+          }
+        }
+
+        try {
+          await login({ email: normalizedEmail, password });
+          await finalizeRedirect();
+          return;
+        } catch (loginChallengeError) {
+          const challengeMessage = getApiErrorMessage(
+            loginChallengeError,
+            "Code de connexion requis."
+          );
+          const normalizedChallenge = challengeMessage.toLowerCase();
+          if (
+            !normalizedChallenge.includes("verification code sent") &&
+            !normalizedChallenge.includes("code de connexion")
+          ) {
+            throw loginChallengeError;
+          }
+          setRequiresVerificationCode(true);
+          setStatus(challengeMessage);
+          return;
+        }
+      }
 
       await login({
-        email: email.trim(),
+        email: normalizedEmail,
         password,
+        mfa_code: verificationCode.trim() || undefined,
       });
-
-      if (isSeller) {
-        await upsertSellerProfile({
-          business_name: businessName.trim(),
-          phone: phone.trim() || undefined,
-          city: city.trim() || "Niamey",
-          address: address.trim() || undefined,
-        });
-        router.push("/seller");
-      } else {
-        router.push("/dashboard");
-      }
-      router.refresh();
+      await finalizeRedirect();
     } catch (error) {
       setStatus(getApiErrorMessage(error, "Inscription impossible. Verifiez les informations saisies."));
     } finally {
@@ -119,6 +153,22 @@ export default function RegisterPage() {
             </p>
           </div>
 
+          {requiresVerificationCode ? (
+            <div>
+              <label className="text-sm font-medium text-slate-800" htmlFor="verification-code">
+                Code de connexion
+              </label>
+              <input
+                id="verification-code"
+                inputMode="numeric"
+                value={verificationCode}
+                onChange={(event) => setVerificationCode(event.target.value)}
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                placeholder="123456"
+              />
+            </div>
+          ) : null}
+
           <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
             <input
               type="checkbox"
@@ -180,10 +230,14 @@ export default function RegisterPage() {
 
           <Button
             type="submit"
-            disabled={isLoading || !canSubmit}
+            disabled={isLoading || !canSubmit || (requiresVerificationCode && !verificationCode.trim())}
             className="primary-glow-btn w-full text-white"
           >
-            {isLoading ? "Creation..." : "Creer mon compte"}
+            {isLoading
+              ? "Traitement..."
+              : requiresVerificationCode
+                ? "Valider le code et me connecter"
+                : "Creer mon compte"}
           </Button>
 
           <p className="text-sm text-slate-600">

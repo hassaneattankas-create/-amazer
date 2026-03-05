@@ -10,7 +10,7 @@ type AuthState = {
   setPreferredCurrency: (currency: "XOF" | "EUR" | "USD") => void;
 };
 
-const secureSessionStorage = () => {
+const secureLocalStorage = () => {
   if (typeof window === "undefined") {
     return {
       getItem: () => null,
@@ -18,7 +18,7 @@ const secureSessionStorage = () => {
       removeItem: () => undefined,
     };
   }
-  return window.sessionStorage;
+  return window.localStorage;
 };
 
 export const useAuthStore = create<AuthState>()(
@@ -31,7 +31,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "amazer-auth",
-      storage: createJSONStorage(secureSessionStorage),
+      storage: createJSONStorage(secureLocalStorage),
       partialize: (state) => ({
         cartCount: state.cartCount,
         preferredCurrency: state.preferredCurrency,

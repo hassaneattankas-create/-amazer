@@ -21,6 +21,8 @@ from app.schemas.restaurant import (
     RestaurantOrderItemResponse,
     RestaurantOrderResponse,
     RestaurantOrderStatusUpdateRequest,
+    RestaurantStorefrontListResponse,
+    RestaurantStorefrontResponse,
 )
 from app.services.notification_service import send_payment_confirmation
 from app.services.payment_security_service import verify_payment_code
@@ -78,6 +80,74 @@ def _order_response(order: RestaurantOrder, vendor_name: str, dish_map: dict[str
             for item in order.items
         ],
     )
+
+
+def _is_plat_du_jour(tags: list[str] | None) -> bool:
+    if not tags:
+        return False
+    normalized = {tag.strip().lower() for tag in tags if isinstance(tag, str)}
+    return "plat du jour" in normalized
+
+
+@router.get("/storefronts", response_model=RestaurantStorefrontListResponse)
+def list_restaurant_storefronts(
+    db: Annotated[Session, Depends(get_db)],
+    query: Annotated[str | None, Query(min_length=1, max_length=120)] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 120,
+) -> RestaurantStorefrontListResponse:
+    menu_rows = db.scalars(
+        select(RestaurantMenuItem)
+        .where(RestaurantMenuItem.is_available.is_(True))
+        .order_by(RestaurantMenuItem.created_at.desc())
+    ).all()
+    if not menu_rows:
+        return RestaurantStorefrontListResponse(items=[])
+
+    menu_by_vendor: dict[str, list[RestaurantMenuItem]] = {}
+    for row in menu_rows:
+        menu_by_vendor.setdefault(row.vendor_id, []).append(row)
+
+    vendor_ids = list(menu_by_vendor.keys())
+    vendors = db.scalars(
+        select(Vendor).where(Vendor.id.in_(vendor_ids), Vendor.is_active.is_(True))
+    ).all()
+    profiles = db.scalars(select(SellerProfile).where(SellerProfile.vendor_id.in_(vendor_ids))).all()
+    profile_by_vendor = {profile.vendor_id: profile for profile in profiles}
+
+    needle = query.strip().lower() if query else ""
+    items: list[RestaurantStorefrontResponse] = []
+    for vendor in vendors:
+        vendor_menu = menu_by_vendor.get(vendor.id, [])
+        if not vendor_menu:
+            continue
+        profile = profile_by_vendor.get(vendor.id)
+        business_name = profile.business_name if profile else None
+        city = profile.city if profile else None
+        haystack = " ".join(
+            value.lower()
+            for value in [vendor.name, business_name or "", city or ""]
+            if value
+        )
+        if needle and needle not in haystack:
+            continue
+        items.append(
+            RestaurantStorefrontResponse(
+                id=vendor.id,
+                name=vendor.name,
+                slug=vendor.slug,
+                business_name=business_name,
+                city=city,
+                phone=profile.phone if profile else None,
+                address=profile.address if profile else None,
+                is_verified=bool(profile.is_verified) if profile else False,
+                menu_item_count=len(vendor_menu),
+                plat_du_jour_count=sum(1 for entry in vendor_menu if _is_plat_du_jour(entry.tags)),
+                cover_image_url=next((entry.image_url for entry in vendor_menu if entry.image_url), None),
+            )
+        )
+
+    items.sort(key=lambda row: (-row.plat_du_jour_count, -row.menu_item_count, row.name.lower()))
+    return RestaurantStorefrontListResponse(items=items[:limit])
 
 
 @router.get("/menu", response_model=list[RestaurantMenuItemResponse])

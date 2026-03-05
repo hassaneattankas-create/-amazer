@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response, status
+from sqlalchemy import select
 
 from app.core.deps import get_auth_service, get_current_user
 from app.core.csrf import generate_csrf_token
@@ -9,6 +10,7 @@ from app.core.mfa import build_provisioning_uri, generate_totp_secret, verify_to
 from app.core.exceptions import UnauthorizedError
 from app.core.rate_limit import enforce_rate_limit
 from app.models.user import User
+from app.models.user_preferences import UserPreferences
 from app.schemas.auth import (
     LoginRequest,
     MfaEnableRequest,
@@ -17,6 +19,8 @@ from app.schemas.auth import (
     RefreshTokenRequest,
     RegisterRequest,
     TokenPair,
+    UserPreferencesResponse,
+    UserPreferencesUpdateRequest,
 )
 from app.schemas.user import UserResponse
 from app.services.auth_service import AuthService
@@ -174,3 +178,35 @@ def mfa_enable(
         raise UnauthorizedError("Invalid MFA code")
     auth_service.save_mfa_secret(user, secret, enabled=True)
     auth_service.db.commit()
+
+
+def _get_or_create_preferences(auth_service: AuthService, user: User) -> UserPreferences:
+    row = auth_service.db.scalar(select(UserPreferences).where(UserPreferences.user_id == user.id))
+    if row is None:
+        row = UserPreferences(user_id=user.id, preferred_currency="XOF")
+        auth_service.db.add(row)
+        auth_service.db.commit()
+        auth_service.db.refresh(row)
+    return row
+
+
+@router.get("/preferences", response_model=UserPreferencesResponse)
+def get_preferences(
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    user: Annotated[User, Depends(get_current_user)],
+) -> UserPreferencesResponse:
+    row = _get_or_create_preferences(auth_service, user)
+    return UserPreferencesResponse(preferred_currency=row.preferred_currency)
+
+
+@router.put("/preferences", response_model=UserPreferencesResponse)
+def update_preferences(
+    payload: UserPreferencesUpdateRequest,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    user: Annotated[User, Depends(get_current_user)],
+) -> UserPreferencesResponse:
+    row = _get_or_create_preferences(auth_service, user)
+    row.preferred_currency = payload.preferred_currency.upper()
+    auth_service.db.commit()
+    auth_service.db.refresh(row)
+    return UserPreferencesResponse(preferred_currency=row.preferred_currency)

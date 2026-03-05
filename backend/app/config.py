@@ -28,9 +28,19 @@ class Settings(BaseSettings):
     )
     redis_url: str | None = Field(default=None)
 
+    smtp_host: str | None = Field(default=None)
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str | None = Field(default=None)
+    smtp_password: str | None = Field(default=None)
+    smtp_from_email: str | None = Field(default=None)
+    smtp_use_starttls: bool = Field(default=True)
+
+    sms_api_url: str | None = Field(default=None)
+    sms_api_token: str | None = Field(default=None)
+
     def get_cors_origins(self) -> list[str]:
         if self.app_env.lower() == "development":
-            return ["http://localhost:3000", "http://127.0.0.1:3000", *[
+            return ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", *[
                 origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()
             ]]
         return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]

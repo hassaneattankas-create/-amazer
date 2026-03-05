@@ -9,16 +9,6 @@ type ApiErrorShape = {
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   const maybe = error as ApiErrorShape;
-  const code = maybe?.response?.data?.code;
-  const translatedByCode: Record<string, string> = {
-    unauthorized: "Acces non autorise.",
-    forbidden: "Action interdite.",
-    conflict: "Cette information existe deja.",
-    validation_error: "Certaines donnees sont invalides.",
-  };
-  if (code && translatedByCode[code]) {
-    return translatedByCode[code];
-  }
   const detail = maybe?.response?.data?.detail;
   if (typeof detail === "string" && detail.trim()) {
     return detail;
@@ -28,6 +18,16 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
     if (first?.msg) {
       return first.msg;
     }
+  }
+  const code = maybe?.response?.data?.code;
+  const translatedByCode: Record<string, string> = {
+    unauthorized: "Acces non autorise.",
+    forbidden: "Action interdite.",
+    conflict: "Cette information existe deja.",
+    validation_error: "Certaines donnees sont invalides.",
+  };
+  if (code && translatedByCode[code]) {
+    return translatedByCode[code];
   }
   return fallback;
 }

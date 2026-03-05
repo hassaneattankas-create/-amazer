@@ -11,7 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatMoney } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
-import { createRestaurantOrder, listRestaurantMenu } from "@/services/restaurant-service";
+import {
+  createRestaurantOrder,
+  listRestaurantMenu,
+  listRestaurantStorefronts,
+} from "@/services/restaurant-service";
 import { useAuthStore } from "@/store/auth-store";
 import { RestaurantMenuItem, RestaurantMenuOption } from "@/types/restaurant";
 
@@ -43,12 +47,19 @@ export default function RestaurantPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [distanceKm, setDistanceKm] = useState("3");
+  const [storeQuery, setStoreQuery] = useState("");
+  const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [paymentMode, setPaymentMode] = useState<"nita" | "amana" | "cash_on_delivery">("nita");
   const [status, setStatus] = useState("");
 
+  const { data: storefronts = [] } = useQuery({
+    queryKey: ["restaurant-storefronts", storeQuery],
+    queryFn: () => listRestaurantStorefronts(storeQuery),
+  });
+
   const { data: menu = [], isPending } = useQuery({
-    queryKey: ["restaurant-menu"],
-    queryFn: () => listRestaurantMenu(),
+    queryKey: ["restaurant-menu", selectedVendorId],
+    queryFn: () => listRestaurantMenu(selectedVendorId || undefined),
   });
 
   const orderMutation = useMutation({
@@ -146,6 +157,56 @@ export default function RestaurantPage() {
           Commande appetissante, paiement local et livraison express moto-coursier a Niamey.
         </p>
       </header>
+
+      <article className="premium-card border border-slate-200 bg-white p-6">
+        <h2 className="luxury-title text-xl font-semibold">Restaurants (rubrique boutiques)</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Recherchez vos restaurants preferes et filtrez le menu par boutique.
+        </p>
+        <Input
+          value={storeQuery}
+          onChange={(event) => setStoreQuery(event.target.value)}
+          placeholder="Rechercher une boutique restaurant..."
+          className="mt-4"
+        />
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {storefronts.slice(0, 9).map((store) => (
+            <button
+              key={store.id}
+              type="button"
+              onClick={() => {
+                setSelectedItems([]);
+                setSelectedVendorId((current) => (current === store.id ? "" : store.id));
+              }}
+              className={`rounded-2xl border p-4 text-left transition ${
+                selectedVendorId === store.id
+                  ? "border-[#FF4D00]/40 bg-[#FF4D00]/10"
+                  : "border-slate-200 bg-slate-50 hover:border-[#FF4D00]/25"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">{store.business_name || store.name}</p>
+                  <p className="text-xs text-slate-500">{store.city || "Niamey"}</p>
+                </div>
+                {store.is_verified ? (
+                  <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                    Verifie
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-2 text-xs text-slate-600">
+                {store.menu_item_count} articles | {store.plat_du_jour_count} plat(s) du jour
+              </p>
+            </button>
+          ))}
+        </div>
+        {selectedVendorId ? (
+          <p className="mt-3 text-xs text-[#FF4D00]">
+            Filtre actif: menu d&apos;une seule boutique. Cliquez a nouveau pour afficher tous les restaurants.
+          </p>
+        ) : null}
+      </article>
 
       {isPending ? (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">

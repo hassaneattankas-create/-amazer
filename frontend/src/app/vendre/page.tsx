@@ -1,24 +1,24 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Rocket, Store } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
-import { getPublicFinanceSettings } from "@/services/finance-service";
 import { login, register } from "@/services/auth-service";
+import { getPublicFinanceSettings } from "@/services/finance-service";
 import { upsertSellerProfile } from "@/services/seller-service";
 
 const PASSWORD_POLICY = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/;
 
 export default function VendrePage() {
-  const router = useRouter();
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [requiresVerificationCode, setRequiresVerificationCode] = useState(false);
   const [form, setForm] = useState({
     full_name: "",
     email: "",
@@ -34,16 +34,58 @@ export default function VendrePage() {
     queryFn: getPublicFinanceSettings,
   });
 
-  const onboardingMutation = useMutation({
-    mutationFn: async () => {
-      await register({
-        email: form.email.trim(),
-        full_name: form.full_name.trim(),
-        password: form.password,
-      });
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus("");
+    setIsLoading(true);
+    try {
+      const normalizedEmail = form.email.trim();
+      if (!requiresVerificationCode) {
+        try {
+          await register({
+            email: normalizedEmail,
+            full_name: form.full_name.trim(),
+            password: form.password,
+          });
+        } catch (registerError) {
+          const registerMessage = getApiErrorMessage(registerError, "Activation vendeur impossible.");
+          if (!registerMessage.toLowerCase().includes("already registered")) {
+            throw registerError;
+          }
+        }
+        try {
+          await login({ email: normalizedEmail, password: form.password });
+          await upsertSellerProfile({
+            business_name: form.business_name.trim(),
+            city: form.city.trim() || "Niamey",
+            phone: form.phone.trim() || undefined,
+            address: form.address.trim() || undefined,
+          });
+          setStatus("Compte vendeur cree et active. Redirection...");
+          window.location.assign("/seller");
+          return;
+        } catch (loginChallengeError) {
+          const challengeMessage = getApiErrorMessage(
+            loginChallengeError,
+            "Code de connexion requis."
+          );
+          const normalizedChallenge = challengeMessage.toLowerCase();
+          if (
+            !normalizedChallenge.includes("verification code sent") &&
+            !normalizedChallenge.includes("code de connexion")
+          ) {
+            throw loginChallengeError;
+          }
+          setRequiresVerificationCode(true);
+          setStatus(challengeMessage);
+          return;
+        }
+      }
+
       await login({
-        email: form.email.trim(),
+        email: normalizedEmail,
         password: form.password,
+        mfa_code: verificationCode.trim() || undefined,
       });
       await upsertSellerProfile({
         business_name: form.business_name.trim(),
@@ -51,23 +93,13 @@ export default function VendrePage() {
         phone: form.phone.trim() || undefined,
         address: form.address.trim() || undefined,
       });
-    },
-    onSuccess: () => {
       setStatus("Compte vendeur cree et active. Redirection...");
-      router.push("/seller/dashboard");
-      router.refresh();
-    },
-    onError: (error) => {
+      window.location.assign("/seller");
+    } catch (error) {
       setStatus(getApiErrorMessage(error, "Activation vendeur impossible."));
-    },
-    onSettled: () => setIsLoading(false),
-  });
-
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setStatus("");
-    setIsLoading(true);
-    onboardingMutation.mutate();
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const canSubmit =
@@ -129,6 +161,13 @@ export default function VendrePage() {
               onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
               placeholder="Mot de passe fort"
             />
+            {requiresVerificationCode ? (
+              <Input
+                value={verificationCode}
+                onChange={(event) => setVerificationCode(event.target.value)}
+                placeholder="Code de connexion"
+              />
+            ) : null}
             <Input
               value={form.business_name}
               onChange={(event) => setForm((prev) => ({ ...prev, business_name: event.target.value }))}
@@ -154,11 +193,15 @@ export default function VendrePage() {
 
           <Button
             type="submit"
-            disabled={!canSubmit || isLoading}
+            disabled={!canSubmit || isLoading || (requiresVerificationCode && !verificationCode.trim())}
             className="primary-glow-btn mt-2 bg-[#FF4D00] text-white hover:bg-[#e74700]"
           >
             <Rocket className="h-4 w-4" />
-            {isLoading ? "Activation..." : "Activer ma boutique maintenant"}
+            {isLoading
+              ? "Activation..."
+              : requiresVerificationCode
+                ? "Valider le code et activer"
+                : "Activer ma boutique maintenant"}
           </Button>
         </form>
         {status ? <p className="mt-3 text-sm text-slate-700">{status}</p> : null}

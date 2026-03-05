@@ -57,3 +57,13 @@ class MfaEnableRequest(BaseModel):
 class MfaStatusResponse(BaseModel):
     enabled: bool
     required_for_account: bool
+
+
+class UserPreferencesResponse(BaseModel):
+    preferred_currency: str = Field(min_length=3, max_length=3)
+
+
+class UserPreferencesUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    preferred_currency: str = Field(pattern="^(XOF|EUR|USD)$")

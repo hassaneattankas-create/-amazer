@@ -1,5 +1,17 @@
 import { api } from "@/lib/api";
-import { RestaurantMenuItem, RestaurantOrder, RestaurantOrderRequest } from "@/types/restaurant";
+import {
+  RestaurantMenuItem,
+  RestaurantOrder,
+  RestaurantOrderRequest,
+  RestaurantStorefront,
+} from "@/types/restaurant";
+
+export async function listRestaurantStorefronts(query?: string): Promise<RestaurantStorefront[]> {
+  const response = await api.get<{ items: RestaurantStorefront[] }>("/api/v1/restaurant/storefronts", {
+    params: query?.trim() ? { query: query.trim(), limit: 120 } : { limit: 120 },
+  });
+  return response.data.items;
+}
 
 export async function listRestaurantMenu(vendorId?: string): Promise<RestaurantMenuItem[]> {
   const response = await api.get<RestaurantMenuItem[]>("/api/v1/restaurant/menu", {

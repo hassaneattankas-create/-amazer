@@ -97,3 +97,25 @@ class RestaurantOrderStatusUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     status: str = Field(pattern="^(commande|preparation|livraison|recu)$")
+
+
+class RestaurantStorefrontResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    slug: str
+    business_name: str | None
+    city: str | None
+    phone: str | None
+    address: str | None
+    is_verified: bool
+    menu_item_count: int
+    plat_du_jour_count: int
+    cover_image_url: str | None
+
+
+class RestaurantStorefrontListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[RestaurantStorefrontResponse]

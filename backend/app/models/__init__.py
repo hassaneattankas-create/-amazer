@@ -15,8 +15,10 @@ from app.models.dynamic_section import DynamicSection, DynamicSectionItem
 from app.models.ad_click import AdClick
 from app.models.customer_feedback import CustomerFeedback
 from app.models.refresh_token import RefreshToken
+from app.models.login_verification_code import LoginVerificationCode
 from app.models.user import User
 from app.models.user_mfa import UserMfa
+from app.models.user_preferences import UserPreferences
 from app.models.audit_log import AuditLog
 from app.models.global_settings import GlobalSettings
 from app.models.vendor import Vendor
@@ -24,7 +26,9 @@ from app.models.vendor import Vendor
 __all__ = [
     "User",
     "RefreshToken",
+    "LoginVerificationCode",
     "UserMfa",
+    "UserPreferences",
     "AuditLog",
     "GlobalSettings",
     "Product",

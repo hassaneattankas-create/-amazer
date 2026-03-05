@@ -48,14 +48,33 @@ def test_login_success_issues_tokens_and_commits() -> None:
         hashed_password=hash_password("StrongP@ssw0rd!"),
     )
     service.users.get_by_email.return_value = user
+    service._consume_login_verification_code = Mock(return_value=True)  # type: ignore[attr-defined]
+    service._ensure_default_preferences = Mock()  # type: ignore[attr-defined]
 
-    tokens = service.login("user@example.com", "StrongP@ssw0rd!")
+    tokens = service.login("user@example.com", "StrongP@ssw0rd!", "123456")
 
     assert tokens["token_type"] == "bearer"
     assert "access_token" in tokens
     assert "refresh_token" in tokens
     service.refresh_tokens.create.assert_called_once()
     db.commit.assert_called_once()
+
+
+def test_login_without_code_sends_verification_and_raises() -> None:
+    service, _ = _build_service()
+    user = SimpleNamespace(
+        id="u1",
+        is_active=True,
+        hashed_password=hash_password("StrongP@ssw0rd!"),
+    )
+    service.users.get_by_email.return_value = user
+    service._issue_login_verification_code = Mock(return_value="u***@example.com")  # type: ignore[attr-defined]
+
+    with pytest.raises(UnauthorizedError) as exc:
+        service.login("user@example.com", "StrongP@ssw0rd!")
+
+    assert exc.value.status_code == 401
+    assert "Code de connexion envoye" in exc.value.message
 
 
 def test_login_invalid_credentials_raises() -> None:

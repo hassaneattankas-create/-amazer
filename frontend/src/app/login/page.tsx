@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
@@ -11,26 +11,36 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { login } from "@/services/auth-service";
 
 function LoginPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mfaCode, setMfaCode] = useState("");
+  const [requiresMfaCode, setRequiresMfaCode] = useState(false);
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const next = searchParams.get("next") || "/dashboard";
+  const next = searchParams.get("next") || "/";
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus("");
     setIsLoading(true);
     try {
-      await login({ email, password, mfa_code: mfaCode.trim() || undefined });
-      router.push(next);
-      router.refresh();
+      await login({
+        email,
+        password,
+        mfa_code: requiresMfaCode ? mfaCode.trim() || undefined : undefined,
+      });
+      window.location.assign(next);
     } catch (error) {
-      setStatus(getApiErrorMessage(error, "Identifiants invalides ou session indisponible."));
+      const message = getApiErrorMessage(error, "Identifiants invalides ou session indisponible.");
+      const normalized = message.toLowerCase();
+      if (normalized.includes("verification code sent") || normalized.includes("code de connexion")) {
+        setRequiresMfaCode(true);
+        setStatus(message);
+      } else {
+        setStatus(message);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -73,23 +83,25 @@ function LoginPageContent() {
             />
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-slate-800" htmlFor="mfa-code">
-              Code MFA (si active)
-            </label>
-            <input
-              id="mfa-code"
-              inputMode="numeric"
-              value={mfaCode}
-              onChange={(event) => setMfaCode(event.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="123456"
-            />
-          </div>
+          {requiresMfaCode ? (
+            <div>
+              <label className="text-sm font-medium text-slate-800" htmlFor="mfa-code">
+                Code de connexion
+              </label>
+              <input
+                id="mfa-code"
+                inputMode="numeric"
+                value={mfaCode}
+                onChange={(event) => setMfaCode(event.target.value)}
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                placeholder="123456"
+              />
+            </div>
+          ) : null}
 
           <Button
             type="submit"
-            disabled={isLoading || !email || !password}
+            disabled={isLoading || !email || !password || (requiresMfaCode && !mfaCode.trim())}
             className="primary-glow-btn w-full bg-[#FF4D00] text-white hover:bg-[#e74700]"
           >
             {isLoading ? "Connexion..." : "Se connecter"}
