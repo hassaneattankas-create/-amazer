@@ -27,7 +27,7 @@ export type UserResponse = {
 };
 
 export type UserPreferencesResponse = {
-  preferred_currency: "XOF" | "EUR" | "USD";
+  preferred_currency: "XOF";
 };
 
 type MfaStatusResponse = {

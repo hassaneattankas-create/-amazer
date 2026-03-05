@@ -196,6 +196,10 @@ def get_preferences(
     user: Annotated[User, Depends(get_current_user)],
 ) -> UserPreferencesResponse:
     row = _get_or_create_preferences(auth_service, user)
+    if row.preferred_currency.upper() != "XOF":
+        row.preferred_currency = "XOF"
+        auth_service.db.commit()
+        auth_service.db.refresh(row)
     return UserPreferencesResponse(preferred_currency=row.preferred_currency)
 
 
@@ -206,7 +210,7 @@ def update_preferences(
     user: Annotated[User, Depends(get_current_user)],
 ) -> UserPreferencesResponse:
     row = _get_or_create_preferences(auth_service, user)
-    row.preferred_currency = payload.preferred_currency.upper()
+    row.preferred_currency = "XOF"
     auth_service.db.commit()
     auth_service.db.refresh(row)
     return UserPreferencesResponse(preferred_currency=row.preferred_currency)

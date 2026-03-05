@@ -68,7 +68,7 @@ def test_login_without_code_sends_verification_and_raises() -> None:
         hashed_password=hash_password("StrongP@ssw0rd!"),
     )
     service.users.get_by_email.return_value = user
-    service._issue_login_verification_code = Mock(return_value="u***@example.com")  # type: ignore[attr-defined]
+    service._issue_login_verification_code = Mock(return_value=("u***@example.com", None))  # type: ignore[attr-defined]
 
     with pytest.raises(UnauthorizedError) as exc:
         service.login("user@example.com", "StrongP@ssw0rd!")

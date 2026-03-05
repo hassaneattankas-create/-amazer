@@ -5,9 +5,9 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 type AuthState = {
   cartCount: number;
-  preferredCurrency: "XOF" | "EUR" | "USD";
+  preferredCurrency: "XOF";
   setCartCount: (count: number) => void;
-  setPreferredCurrency: (currency: "XOF" | "EUR" | "USD") => void;
+  setPreferredCurrency: (currency: "XOF") => void;
 };
 
 const secureLocalStorage = () => {
@@ -27,7 +27,7 @@ export const useAuthStore = create<AuthState>()(
       cartCount: 0,
       preferredCurrency: "XOF",
       setCartCount: (count) => set({ cartCount: Math.max(0, count) }),
-      setPreferredCurrency: (currency) => set({ preferredCurrency: currency }),
+      setPreferredCurrency: () => set({ preferredCurrency: "XOF" }),
     }),
     {
       name: "amazer-auth",

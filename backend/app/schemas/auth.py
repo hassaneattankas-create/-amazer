@@ -60,10 +60,10 @@ class MfaStatusResponse(BaseModel):
 
 
 class UserPreferencesResponse(BaseModel):
-    preferred_currency: str = Field(min_length=3, max_length=3)
+    preferred_currency: str = Field(pattern="^(XOF)$")
 
 
 class UserPreferencesUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    preferred_currency: str = Field(pattern="^(XOF|EUR|USD)$")
+    preferred_currency: str = Field(pattern="^(XOF)$")

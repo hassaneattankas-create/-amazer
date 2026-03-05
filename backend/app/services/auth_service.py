@@ -13,6 +13,7 @@ from app.core.exceptions import (
     UnauthorizedError,
 )
 from app.core.crypto import decrypt_payment_code, encrypt_payment_code
+from app.core.crypto import payment_code_hash
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -63,7 +64,11 @@ class AuthService:
             raise ForbiddenError("Inactive user")
 
         if not mfa_code:
-            destination_masked = self._issue_login_verification_code(user)
+            destination_masked, fallback_code = self._issue_login_verification_code(user)
+            if fallback_code:
+                raise UnauthorizedError(
+                    f"Code de connexion envoye a {destination_masked}. Code temporaire: {fallback_code}"
+                )
             raise UnauthorizedError(f"Code de connexion envoye a {destination_masked}")
         if not self._consume_login_verification_code(user, mfa_code):
             raise UnauthorizedError("Invalid verification code")
@@ -176,21 +181,8 @@ class AuthService:
         email = str(user.email).strip().lower()
         return "email", email, self._mask_email(email)
 
-    def _issue_login_verification_code(self, user: User) -> str:
+    def _issue_login_verification_code(self, user: User) -> tuple[str, str | None]:
         now = datetime.now(UTC)
-        latest = self.db.scalar(
-            select(LoginVerificationCode)
-            .where(
-                LoginVerificationCode.user_id == user.id,
-                LoginVerificationCode.consumed_at.is_(None),
-                LoginVerificationCode.expires_at > now,
-            )
-            .order_by(LoginVerificationCode.created_at.desc())
-            .limit(1)
-        )
-        if latest and (now - latest.created_at).total_seconds() < 45:
-            return latest.destination_masked
-
         channel, destination, destination_masked = self._resolve_login_channel(user)
         code = f"{secrets.randbelow(1_000_000):06d}"
         hashed = payment_code_hash(f"{user.id}:{code}")
@@ -205,9 +197,10 @@ class AuthService:
         )
         self.db.add(row)
         self.db.flush()
-        send_login_verification_code(channel=channel, destination=destination, code=code)
+        delivered = send_login_verification_code(channel=channel, destination=destination, code=code)
         self.db.commit()
-        return destination_masked
+        fallback_code = None if delivered else code
+        return destination_masked, fallback_code
 
     def _consume_login_verification_code(self, user: User, code: str) -> bool:
         now = datetime.now(UTC)
