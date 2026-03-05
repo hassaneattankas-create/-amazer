@@ -271,13 +271,14 @@ def checkout(
     db.refresh(order)
     if order.payment_status == "paid":
         receipt_url, verify_url = _build_receipt_notification_links(request, db, order)
-        send_payment_confirmation(
-            recipient=current_user.email,
-            order_id=order.id,
-            amount=order.total_amount,
-            receipt_url=receipt_url,
-            qr_payload=verify_url,
-        )
+        if current_user.whatsapp_phone:
+            send_payment_confirmation(
+                recipient=current_user.whatsapp_phone,
+                order_id=order.id,
+                amount=order.total_amount,
+                receipt_url=receipt_url,
+                qr_payload=verify_url,
+            )
     return _to_order_response(order)
 
 
@@ -348,13 +349,14 @@ def confirm_order_payment(
     db.commit()
     db.refresh(order)
     receipt_url, verify_url = _build_receipt_notification_links(request, db, order)
-    send_payment_confirmation(
-        recipient=current_user.email,
-        order_id=order.id,
-        amount=order.total_amount,
-        receipt_url=receipt_url,
-        qr_payload=verify_url,
-    )
+    if current_user.whatsapp_phone:
+        send_payment_confirmation(
+            recipient=current_user.whatsapp_phone,
+            order_id=order.id,
+            amount=order.total_amount,
+            receipt_url=receipt_url,
+            qr_payload=verify_url,
+        )
     return PaymentConfirmResponse(
         order_id=order.id,
         payment_status=order.payment_status,

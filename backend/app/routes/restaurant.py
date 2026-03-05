@@ -275,7 +275,7 @@ def create_restaurant_order(
     receipt_url = f"{str(request.base_url).rstrip('/')}/restaurant"
     qr_payload = f"RESTAURANT_ORDER:{order.id}"
     send_payment_confirmation(
-        recipient=current_user.email,
+        recipient=order.customer_phone,
         order_id=order.id,
         amount=order.total_amount,
         receipt_url=receipt_url,

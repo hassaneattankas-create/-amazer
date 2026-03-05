@@ -73,6 +73,7 @@ def register(
         email=payload.email,
         full_name=payload.full_name,
         password=payload.password.get_secret_value(),
+        whatsapp_phone=payload.whatsapp_phone,
     )
     return user
 

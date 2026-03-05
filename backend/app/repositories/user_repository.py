@@ -16,9 +16,19 @@ class UserRepository:
         stmt = select(User).where(User.id == user_id)
         return self.db.scalar(stmt)
 
-    def create(self, email: str, full_name: str, hashed_password: str) -> User:
-        user = User(email=email.lower(), full_name=full_name, hashed_password=hashed_password)
+    def create(
+        self,
+        email: str,
+        full_name: str,
+        hashed_password: str,
+        whatsapp_phone: str | None = None,
+    ) -> User:
+        user = User(
+            email=email.lower(),
+            full_name=full_name,
+            hashed_password=hashed_password,
+            whatsapp_phone=whatsapp_phone,
+        )
         self.db.add(user)
         self.db.flush()
         return user
-

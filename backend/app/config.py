@@ -27,14 +27,10 @@ class Settings(BaseSettings):
         default="REPLACE_WITH_BASE64URL_32BYTE_KEY_REPLACE_WITH_KEY_1234="
     )
     redis_url: str | None = Field(default=None)
-
-    smtp_host: str | None = Field(default=None)
-    smtp_port: int = Field(default=587, ge=1, le=65535)
-    smtp_username: str | None = Field(default=None)
-    smtp_password: str | None = Field(default=None)
-    smtp_from_email: str | None = Field(default=None)
-    smtp_use_ssl: bool = Field(default=True)
-    smtp_use_starttls: bool = Field(default=True)
+    whatsapp_api_token: str | None = Field(default=None)
+    whatsapp_phone_number_id: str | None = Field(default=None)
+    whatsapp_api_version: str = Field(default="v20.0")
+    whatsapp_template_otp: str | None = Field(default=None)
 
     def get_cors_origins(self) -> list[str]:
         if self.app_env.lower() == "development":

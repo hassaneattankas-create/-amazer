@@ -9,6 +9,7 @@ type LoginPayload = {
 type RegisterPayload = {
   email: string;
   full_name: string;
+  whatsapp_phone: string;
   password: string;
 };
 
@@ -22,6 +23,7 @@ export type UserResponse = {
   id: string;
   email: string;
   full_name: string;
+  whatsapp_phone: string | null;
   is_active: boolean;
   created_at: string;
 };

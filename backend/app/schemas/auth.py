@@ -3,6 +3,7 @@ import re
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator
 
 PASSWORD_REGEX = re.compile(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$")
+WHATSAPP_REGEX = re.compile(r"^\+?[1-9]\d{7,14}$")
 
 
 class RegisterRequest(BaseModel):
@@ -10,6 +11,7 @@ class RegisterRequest(BaseModel):
 
     email: EmailStr
     full_name: str = Field(min_length=2, max_length=120)
+    whatsapp_phone: str = Field(min_length=8, max_length=20)
     password: SecretStr = Field(min_length=8, max_length=72)
 
     @field_validator("password")
@@ -21,6 +23,14 @@ class RegisterRequest(BaseModel):
                 "Password must contain upper, lower, digit, and special character."
             )
         return value
+
+    @field_validator("whatsapp_phone")
+    @classmethod
+    def validate_whatsapp_phone(cls, value: str) -> str:
+        normalized = value.strip().replace(" ", "")
+        if not WHATSAPP_REGEX.match(normalized):
+            raise ValueError("whatsapp_phone must be a valid international number")
+        return normalized
 
 
 class LoginRequest(BaseModel):

@@ -45,6 +45,7 @@ export default function VendrePage() {
           await register({
             email: normalizedEmail,
             full_name: form.full_name.trim(),
+            whatsapp_phone: form.phone.trim(),
             password: form.password,
           });
         } catch (registerError) {
@@ -105,6 +106,7 @@ export default function VendrePage() {
   const canSubmit =
     form.full_name.trim().length >= 2 &&
     form.email.trim().length >= 5 &&
+    form.phone.trim().length >= 8 &&
     PASSWORD_POLICY.test(form.password) &&
     form.business_name.trim().length >= 2;
 
@@ -181,7 +183,7 @@ export default function VendrePage() {
             <Input
               value={form.phone}
               onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
-              placeholder="Telephone"
+              placeholder="Telephone WhatsApp (+227...)"
             />
             <Input
               value={form.address}

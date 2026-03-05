@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from io import BytesIO
+import json
 import logging
-import smtplib
-from email.message import EmailMessage
-
-import qrcode
+import re
+from urllib import error, request
 
 from app.config import get_settings
 
@@ -13,121 +11,71 @@ logger = logging.getLogger("amazer.notification")
 settings = get_settings()
 
 
-def _build_qr_png(payload: str) -> bytes:
-    qr = qrcode.QRCode(box_size=8, border=2)
-    qr.add_data(payload)
-    qr.make(fit=True)
-    image = qr.make_image(fill_color="black", back_color="white")
-    buffer = BytesIO()
-    image.save(buffer, format="PNG")
-    return buffer.getvalue()
+def _normalize_phone(phone: str) -> str:
+    cleaned = re.sub(r"[^\d+]", "", phone.strip())
+    if cleaned.startswith("+"):
+        cleaned = cleaned[1:]
+    return cleaned
 
 
-def _send_email(
-    recipient: str,
-    subject: str,
-    message: str,
-    *,
-    qr_payload: str | None = None,
-    qr_filename: str = "amazer-receipt-qr.png",
-) -> bool:
-    delivered, _ = _send_email_detailed(
-        recipient=recipient,
-        subject=subject,
-        message=message,
-        qr_payload=qr_payload,
-        qr_filename=qr_filename,
-    )
-    return delivered
-
-
-def _send_email_detailed(
-    *,
-    recipient: str,
-    subject: str,
-    message: str,
-    qr_payload: str | None = None,
-    qr_filename: str = "amazer-receipt-qr.png",
-) -> tuple[bool, str]:
-    from_email = settings.smtp_from_email or settings.smtp_username
-    if not settings.smtp_host or not from_email:
-        logger.warning("EMAIL_NOT_CONFIGURED recipient=%s subject=%s", recipient, subject)
+def _send_whatsapp_text(*, destination: str, message: str) -> tuple[bool, str]:
+    if not settings.whatsapp_api_token or not settings.whatsapp_phone_number_id:
+        logger.warning("WHATSAPP_NOT_CONFIGURED destination=%s", destination)
         return False, "config_missing"
 
-    email = EmailMessage()
-    email["Subject"] = subject
-    email["From"] = from_email
-    email["To"] = recipient
-    email.set_content(message)
-    if qr_payload:
-        email.add_attachment(
-            _build_qr_png(qr_payload),
-            maintype="image",
-            subtype="png",
-            filename=qr_filename,
-        )
-
-    if settings.smtp_use_ssl:
-        primary_mode = ("ssl", settings.smtp_port if settings.smtp_port else 465)
-        fallback_mode = ("starttls", 587)
-    else:
-        primary_mode = ("starttls", settings.smtp_port if settings.smtp_port else 587)
-        fallback_mode = ("ssl", 465)
-
-    attempts = [primary_mode, fallback_mode] if fallback_mode != primary_mode else [primary_mode]
-
-    errors: list[str] = []
-    for mode, port in attempts:
+    to = _normalize_phone(destination)
+    url = (
+        f"https://graph.facebook.com/{settings.whatsapp_api_version}/"
+        f"{settings.whatsapp_phone_number_id}/messages"
+    )
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "text",
+        "text": {"preview_url": False, "body": message},
+    }
+    req = request.Request(
+        url=url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {settings.whatsapp_api_token}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with request.urlopen(req, timeout=15) as response:
+            code = response.getcode()
+            if 200 <= code < 300:
+                return True, "ok"
+            return False, f"http_{code}"
+    except error.HTTPError as exc:
+        detail = ""
         try:
-            if mode == "starttls":
-                with smtplib.SMTP(settings.smtp_host, port, timeout=15) as smtp:
-                    smtp.starttls()
-                    if settings.smtp_username and settings.smtp_password:
-                        smtp.login(settings.smtp_username, settings.smtp_password)
-                    smtp.send_message(email)
-            else:
-                with smtplib.SMTP_SSL(settings.smtp_host, port, timeout=15) as smtp:
-                    if settings.smtp_username and settings.smtp_password:
-                        smtp.login(settings.smtp_username, settings.smtp_password)
-                    smtp.send_message(email)
-            if (mode, port) != primary_mode:
-                logger.info(
-                    "EMAIL_SEND_FALLBACK_SUCCESS recipient=%s mode=%s port=%s",
-                    recipient,
-                    mode,
-                    port,
-                )
-            return True, "ok"
-        except smtplib.SMTPAuthenticationError as exc:
-            errors.append(f"mode={mode} port={port} auth_error={exc}")
-        except TimeoutError as exc:
-            errors.append(f"mode={mode} port={port} timeout={exc}")
-        except Exception as exc:
-            errors.append(f"mode={mode} port={port} error={exc}")
-
-    attempts_text = " | ".join(errors)
-    logger.warning("EMAIL_SEND_FAILED recipient=%s attempts=%s", recipient, attempts_text)
-    lowered = attempts_text.lower()
-    if "auth" in lowered:
-        return False, "auth_error"
-    if "timed out" in lowered or "timeout" in lowered:
-        return False, "timeout"
-    if "network is unreachable" in lowered or "connection refused" in lowered or "name or service not known" in lowered:
+            detail = exc.read().decode("utf-8")
+        except Exception:
+            detail = str(exc)
+        logger.warning("WHATSAPP_SEND_HTTP_ERROR destination=%s code=%s detail=%s", destination, exc.code, detail)
+        return False, f"http_{exc.code}"
+    except Exception as exc:
+        logger.warning("WHATSAPP_SEND_FAILED destination=%s error=%s", destination, exc)
+        lowered = str(exc).lower()
+        if "timed out" in lowered:
+            return False, "timeout"
         return False, "network_error"
-    return False, f"send_failed:{attempts_text[:220]}"
 
 
 def send_login_verification_code(*, destination: str, code: str) -> bool:
-    message = f"Votre code de connexion AMAZER est {code}. Ce code expire dans 5 minutes."
-    return _send_email(destination, "Code de connexion AMAZER", message)
-
-
-def send_test_email(*, recipient: str) -> tuple[bool, str]:
-    return _send_email_detailed(
-        recipient=recipient,
-        subject="AMAZER LIVE",
-        message="AMAZER LIVE",
+    message = (
+        "AMAZER\n"
+        f"Code de connexion: {code}\n"
+        "Ce code expire dans 5 minutes.\n"
+        "Ne le partagez avec personne."
     )
+    delivered, reason = _send_whatsapp_text(destination=destination, message=message)
+    if not delivered:
+        logger.warning("LOGIN_CODE_SEND_FAILED destination=%s reason=%s", destination, reason)
+    return delivered
 
 
 def send_payment_confirmation(
@@ -135,30 +83,24 @@ def send_payment_confirmation(
     recipient: str,
     order_id: str,
     amount: float,
-    channel: str = "email",
     receipt_url: str | None = None,
     qr_payload: str | None = None,
 ) -> None:
-    if channel != "email":
-        logger.warning("PAYMENT_CONFIRMATION_UNSUPPORTED_CHANNEL channel=%s order_id=%s", channel, order_id)
-        return
-
-    receipt_line = f"Recu securise: {receipt_url}" if receipt_url else "Recu securise: indisponible"
+    _ = qr_payload
+    receipt_line = receipt_url or "https://amazer.vercel.app"
     message = (
-        "Paiement confirme sur AMAZER.\n\n"
+        "AMAZER - Paiement confirme\n"
         f"Commande: {order_id}\n"
         f"Montant: {amount:.0f} XOF\n"
-        f"{receipt_line}\n\n"
-        "Le QR Code de verification est joint a cet e-mail."
+        f"Recu: {receipt_line}"
     )
-    delivered = _send_email(
-        recipient,
-        "AMAZER - Recu de paiement securise",
-        message,
-        qr_payload=qr_payload,
-        qr_filename=f"amazer-receipt-{order_id}.png",
-    )
+    delivered, reason = _send_whatsapp_text(destination=recipient, message=message)
     if delivered:
-        logger.info("PAYMENT_CONFIRMATION_SENT recipient=%s order_id=%s", recipient, order_id)
+        logger.info("PAYMENT_CONFIRMATION_SENT destination=%s order_id=%s", recipient, order_id)
     else:
-        logger.warning("PAYMENT_CONFIRMATION_FAILED recipient=%s order_id=%s", recipient, order_id)
+        logger.warning(
+            "PAYMENT_CONFIRMATION_FAILED destination=%s order_id=%s reason=%s",
+            recipient,
+            order_id,
+            reason,
+        )

@@ -28,7 +28,6 @@ from app.routes.admin_finance import router as admin_finance_router
 from app.routes.content import router as content_router, admin_router as admin_content_router, ads_router
 from app.routes.feedback import router as feedback_router, admin_router as admin_feedback_router
 from app.services.security_log_service import log_security_event
-from app.services.notification_service import send_test_email
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version=settings.app_version)
@@ -49,8 +48,16 @@ def _bootstrap_database_if_needed() -> None:
         with engine.begin() as conn:
             # Optional extension for text search improvements (safe if unavailable).
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+            # Keep auth schema compatible on existing databases.
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_phone VARCHAR(24)"))
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_whatsapp_phone "
+                    "ON users (whatsapp_phone) WHERE whatsapp_phone IS NOT NULL"
+                )
+            )
     except Exception as exc:  # pragma: no cover - depends on managed DB privileges
-        logger.warning("pg_trgm extension initialization skipped: %s", exc)
+        logger.warning("Database bootstrap extension/compat skipped: %s", exc)
 
     Base.metadata.create_all(bind=engine)
 
@@ -95,20 +102,6 @@ def request_validation_exception_handler(
     exc: RequestValidationError,
 ) -> JSONResponse:
     return JSONResponse(status_code=422, content={"detail": exc.errors()})
-
-
-@app.get("/test-mail")
-def test_mail() -> JSONResponse:
-    delivered, reason = send_test_email(recipient=settings.admin_email)
-    status_code = 200 if delivered else 503
-    return JSONResponse(
-        status_code=status_code,
-        content={
-            "delivered": delivered,
-            "to": settings.admin_email,
-            "reason": reason,
-        },
-    )
 
 
 app.include_router(auth_router, prefix=settings.api_prefix)

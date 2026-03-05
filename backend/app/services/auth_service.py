@@ -37,7 +37,7 @@ class AuthService:
         self.users = UserRepository(db)
         self.refresh_tokens = RefreshTokenRepository(db)
 
-    def register(self, email: str, full_name: str, password: str) -> User:
+    def register(self, email: str, full_name: str, password: str, whatsapp_phone: str | None = None) -> User:
         existing = self.users.get_by_email(email)
         if existing:
             raise ConflictError("Email is already registered")
@@ -47,6 +47,7 @@ class AuthService:
                 email=email,
                 full_name=full_name,
                 hashed_password=hash_password(password),
+                whatsapp_phone=whatsapp_phone,
             )
             self.db.commit()
         except IntegrityError as exc:
@@ -174,8 +175,10 @@ class AuthService:
             self.db.flush()
 
     def _resolve_login_destination(self, user: User) -> tuple[str, str]:
-        email = str(user.email).strip().lower()
-        return email, self._mask_email(email)
+        whatsapp_phone = str(getattr(user, "whatsapp_phone", "") or "").strip()
+        if not whatsapp_phone:
+            raise UnauthorizedError("Numero WhatsApp manquant pour ce compte.")
+        return whatsapp_phone, self._mask_phone(whatsapp_phone)
 
     def _issue_login_verification_code(self, user: User) -> tuple[str, str | None]:
         now = datetime.now(UTC)
@@ -184,7 +187,7 @@ class AuthService:
         hashed = payment_code_hash(f"{user.id}:{code}")
         row = LoginVerificationCode(
             user_id=user.id,
-            channel="email",
+            channel="whatsapp",
             destination_masked=destination_masked,
             code_hash=hashed,
             attempt_count=0,

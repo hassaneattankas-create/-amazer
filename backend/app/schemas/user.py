@@ -9,6 +9,6 @@ class UserResponse(BaseModel):
     id: str
     email: EmailStr
     full_name: str
+    whatsapp_phone: str | None
     is_active: bool
     created_at: datetime
-

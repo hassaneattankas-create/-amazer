@@ -13,6 +13,7 @@ const PASSWORD_POLICY = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [whatsappPhone, setWhatsappPhone] = useState("");
   const [password, setPassword] = useState("");
   const [isSeller, setIsSeller] = useState(false);
   const [businessName, setBusinessName] = useState("");
@@ -49,6 +50,7 @@ export default function RegisterPage() {
           await register({
             email: normalizedEmail,
             full_name: fullName.trim(),
+            whatsapp_phone: whatsappPhone.trim(),
             password,
           });
         } catch (registerError) {
@@ -96,6 +98,7 @@ export default function RegisterPage() {
   const canSubmit =
     fullName.trim().length >= 2 &&
     email.trim().length >= 5 &&
+    whatsappPhone.trim().length >= 8 &&
     PASSWORD_POLICY.test(password) &&
     (!isSeller || businessName.trim().length >= 2);
 
@@ -151,6 +154,20 @@ export default function RegisterPage() {
             <p className="mt-1 text-xs text-slate-500">
               Minimum 8 caracteres avec majuscule, minuscule, chiffre et caractere special.
             </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-slate-800" htmlFor="whatsapp-phone">
+              WhatsApp (obligatoire)
+            </label>
+            <input
+              id="whatsapp-phone"
+              required
+              value={whatsappPhone}
+              onChange={(event) => setWhatsappPhone(event.target.value)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="+22790000000"
+            />
           </div>
 
           {requiresVerificationCode ? (
