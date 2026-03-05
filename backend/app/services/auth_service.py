@@ -199,6 +199,8 @@ class AuthService:
         self.db.flush()
         delivered = send_login_verification_code(channel=channel, destination=destination, code=code)
         self.db.commit()
+        if not delivered and get_settings().is_production():
+            raise UnauthorizedError("Impossible d'envoyer le code de connexion. Contactez le support.")
         fallback_code = None if delivered else code
         return destination_masked, fallback_code
 

@@ -17,7 +17,7 @@ export function HeroSection() {
           Bienvenue sur AMAZER
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-slate-600 sm:text-base">
-          Comparez les prix, achetez mieux, et gagnez du temps a Niamey.
+          Comparez les prix, achetez mieux, et gagnez du temps.
         </p>
       </div>
     </motion.section>

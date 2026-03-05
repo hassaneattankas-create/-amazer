@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     smtp_from_email: str | None = Field(default=None)
     smtp_use_starttls: bool = Field(default=True)
 
+    sms_provider: str = Field(default="none")
+    twilio_account_sid: str | None = Field(default=None)
+    twilio_auth_token: str | None = Field(default=None)
+    twilio_from_number: str | None = Field(default=None)
     sms_api_url: str | None = Field(default=None)
     sms_api_token: str | None = Field(default=None)
 

@@ -17,7 +17,6 @@ const navItems = [
   { href: "/profile", label: "Profil" },
   { href: "/cart", label: "Panier" },
   { href: "/restaurant", label: "Restaurant" },
-  { href: "/vendre", label: "Devenir Vendeur" },
 ];
 
 export function FloatingNavbar() {

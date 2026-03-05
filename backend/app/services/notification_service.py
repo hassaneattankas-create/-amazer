@@ -48,22 +48,49 @@ def _send_email(recipient: str, subject: str, message: str) -> bool:
 
 
 def _send_sms(phone: str, message: str) -> bool:
-    if not settings.sms_api_url:
-        logger.info("SMS_FALLBACK phone=%s message=%s", phone, message)
-        return False
+    provider = (settings.sms_provider or "none").strip().lower()
+    if provider == "twilio":
+        if not settings.twilio_account_sid or not settings.twilio_auth_token or not settings.twilio_from_number:
+            logger.warning("TWILIO_NOT_CONFIGURED phone=%s", phone)
+            return False
+        try:
+            url = f"https://api.twilio.com/2010-04-01/Accounts/{settings.twilio_account_sid}/Messages.json"
+            payload = {
+                "To": phone,
+                "From": settings.twilio_from_number,
+                "Body": message,
+            }
+            with httpx.Client(timeout=15.0) as client:
+                response = client.post(
+                    url,
+                    data=payload,
+                    auth=(settings.twilio_account_sid, settings.twilio_auth_token),
+                )
+                response.raise_for_status()
+            return True
+        except Exception as exc:
+            logger.warning("TWILIO_SEND_FAILED phone=%s error=%s", phone, exc)
+            return False
 
-    try:
-        headers = {"Content-Type": "application/json"}
-        if settings.sms_api_token:
-            headers["Authorization"] = f"Bearer {settings.sms_api_token}"
-        payload = {"to": phone, "message": message}
-        with httpx.Client(timeout=15.0) as client:
-            response = client.post(settings.sms_api_url, headers=headers, json=payload)
-            response.raise_for_status()
-        return True
-    except Exception as exc:
-        logger.warning("SMS_SEND_FAILED phone=%s error=%s", phone, exc)
-        return False
+    if provider in {"custom", "webhook"}:
+        if not settings.sms_api_url:
+            logger.warning("SMS_CUSTOM_NOT_CONFIGURED phone=%s", phone)
+            return False
+        try:
+            headers = {"Content-Type": "application/json"}
+            if settings.sms_api_token:
+                headers["Authorization"] = f"Bearer {settings.sms_api_token}"
+            payload = {"to": phone, "message": message}
+            with httpx.Client(timeout=15.0) as client:
+                response = client.post(settings.sms_api_url, headers=headers, json=payload)
+                response.raise_for_status()
+            return True
+        except Exception as exc:
+            logger.warning("SMS_CUSTOM_SEND_FAILED phone=%s error=%s", phone, exc)
+            return False
+
+    logger.info("SMS_PROVIDER_DISABLED phone=%s provider=%s", phone, provider)
+    return False
 
 
 def send_login_verification_code(*, channel: str, destination: str, code: str) -> bool:
