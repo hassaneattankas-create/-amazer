@@ -26,6 +26,7 @@ def test_register_success_commits_and_refreshes() -> None:
     result = service.register("user@example.com", "Jane Doe", "StrongP@ssw0rd!")
 
     assert result is user
+    assert service.users.create.call_args.kwargs["is_active"] is True
     db.commit.assert_called_once()
     db.refresh.assert_called_once_with(user)
 

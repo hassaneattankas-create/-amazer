@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = Field(default=15, ge=1, le=1440)
     jwt_refresh_token_expire_days: int = Field(default=30, ge=1, le=30)
+    auto_activate_new_accounts: bool = Field(default=True)
     admin_email: str = Field(default="owner@amazer.ne")
     admin_finance_pin: str = Field(default="7391")
     cors_allowed_origins: str = Field(

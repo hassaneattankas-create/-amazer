@@ -26,12 +26,14 @@ class UserRepository:
         full_name: str,
         hashed_password: str,
         whatsapp_phone: str | None = None,
+        is_active: bool = True,
     ) -> User:
         user = User(
             email=email.lower(),
             full_name=full_name,
             hashed_password=hashed_password,
             whatsapp_phone=whatsapp_phone,
+            is_active=is_active,
         )
         self.db.add(user)
         self.db.flush()
