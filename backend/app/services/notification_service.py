@@ -49,12 +49,17 @@ def _send_email(
                 filename=qr_filename,
             )
 
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
-            if settings.smtp_use_starttls:
+        if settings.smtp_use_starttls:
+            with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
                 smtp.starttls()
-            if settings.smtp_username and settings.smtp_password:
-                smtp.login(settings.smtp_username, settings.smtp_password)
-            smtp.send_message(email)
+                if settings.smtp_username and settings.smtp_password:
+                    smtp.login(settings.smtp_username, settings.smtp_password)
+                smtp.send_message(email)
+        else:
+            with smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
+                if settings.smtp_username and settings.smtp_password:
+                    smtp.login(settings.smtp_username, settings.smtp_password)
+                smtp.send_message(email)
         return True
     except Exception as exc:
         logger.warning("EMAIL_SEND_FAILED recipient=%s error=%s", recipient, exc)
