@@ -31,39 +31,60 @@ def _send_email(
     qr_payload: str | None = None,
     qr_filename: str = "amazer-receipt-qr.png",
 ) -> bool:
-    if not settings.smtp_host or not settings.smtp_from_email:
+    from_email = settings.smtp_from_email or settings.smtp_username
+    if not settings.smtp_host or not from_email:
         logger.warning("EMAIL_NOT_CONFIGURED recipient=%s subject=%s", recipient, subject)
         return False
 
-    try:
-        email = EmailMessage()
-        email["Subject"] = subject
-        email["From"] = settings.smtp_from_email
-        email["To"] = recipient
-        email.set_content(message)
-        if qr_payload:
-            email.add_attachment(
-                _build_qr_png(qr_payload),
-                maintype="image",
-                subtype="png",
-                filename=qr_filename,
-            )
+    email = EmailMessage()
+    email["Subject"] = subject
+    email["From"] = from_email
+    email["To"] = recipient
+    email.set_content(message)
+    if qr_payload:
+        email.add_attachment(
+            _build_qr_png(qr_payload),
+            maintype="image",
+            subtype="png",
+            filename=qr_filename,
+        )
 
-        if settings.smtp_use_starttls:
-            with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
-                smtp.starttls()
-                if settings.smtp_username and settings.smtp_password:
-                    smtp.login(settings.smtp_username, settings.smtp_password)
-                smtp.send_message(email)
-        else:
-            with smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
-                if settings.smtp_username and settings.smtp_password:
-                    smtp.login(settings.smtp_username, settings.smtp_password)
-                smtp.send_message(email)
-        return True
-    except Exception as exc:
-        logger.warning("EMAIL_SEND_FAILED recipient=%s error=%s", recipient, exc)
-        return False
+    primary_mode = (settings.smtp_use_starttls, settings.smtp_port)
+    fallback_mode = (
+        (not settings.smtp_use_starttls),
+        465 if settings.smtp_use_starttls else 587,
+    )
+    attempts = [primary_mode]
+    if fallback_mode != primary_mode:
+        attempts.append(fallback_mode)
+
+    errors: list[str] = []
+    for use_starttls, port in attempts:
+        try:
+            if use_starttls:
+                with smtplib.SMTP(settings.smtp_host, port, timeout=15) as smtp:
+                    smtp.starttls()
+                    if settings.smtp_username and settings.smtp_password:
+                        smtp.login(settings.smtp_username, settings.smtp_password)
+                    smtp.send_message(email)
+            else:
+                with smtplib.SMTP_SSL(settings.smtp_host, port, timeout=15) as smtp:
+                    if settings.smtp_username and settings.smtp_password:
+                        smtp.login(settings.smtp_username, settings.smtp_password)
+                    smtp.send_message(email)
+            if (use_starttls, port) != primary_mode:
+                logger.info(
+                    "EMAIL_SEND_FALLBACK_SUCCESS recipient=%s mode=%s port=%s",
+                    recipient,
+                    "starttls" if use_starttls else "ssl",
+                    port,
+                )
+            return True
+        except Exception as exc:
+            errors.append(f"mode={'starttls' if use_starttls else 'ssl'} port={port}: {exc}")
+
+    logger.warning("EMAIL_SEND_FAILED recipient=%s attempts=%s", recipient, " | ".join(errors))
+    return False
 
 
 def send_login_verification_code(*, destination: str, code: str) -> bool:
