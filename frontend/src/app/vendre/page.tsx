@@ -8,15 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
+import { persistAppMode } from "@/lib/session-mode";
 import { login, register } from "@/services/auth-service";
 import { getPublicFinanceSettings } from "@/services/finance-service";
 import { upsertSellerProfile } from "@/services/seller-service";
+import { useAuthStore } from "@/store/auth-store";
 
 const PASSWORD_POLICY = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/;
 
 export default function VendrePage() {
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const setAppMode = useAuthStore((state) => state.setAppMode);
   const [form, setForm] = useState({
     full_name: "",
     identifier: "",
@@ -49,6 +52,8 @@ export default function VendrePage() {
         phone: form.phone.trim() || undefined,
         address: form.address.trim() || undefined,
       });
+      setAppMode("seller");
+      persistAppMode("seller");
       setStatus("Compte vendeur cree et active. Redirection...");
       window.location.assign("/seller");
     } catch (error) {

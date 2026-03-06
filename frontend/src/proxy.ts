@@ -2,6 +2,30 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const PROTECTED_PATHS = ["/seller", "/admin", "/dashboard", "/profile", "/security/mfa"];
+const APP_MODE_COOKIE_KEY = "amazer_app_mode";
+
+function isSellerSpace(pathname: string): boolean {
+  return (
+    pathname === "/seller" ||
+    pathname.startsWith("/seller/") ||
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/") ||
+    pathname === "/security/mfa" ||
+    pathname.startsWith("/security/mfa/")
+  );
+}
+
+function isFrameworkOrStaticPath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/_next/") ||
+    pathname.startsWith("/images/") ||
+    pathname.startsWith("/api/") ||
+    pathname === "/favicon.ico" ||
+    pathname === "/manifest.json" ||
+    pathname === "/sw.js" ||
+    pathname.startsWith("/logo-amazer")
+  );
+}
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -11,6 +35,15 @@ export function proxy(request: NextRequest) {
     console.info(`[SECURITY] protected_page_access path=${pathname} ip=${requestIp || "unknown"}`);
   }
 
+  const accessToken =
+    request.cookies.get("access_token")?.value || request.cookies.get("amazer_access_token")?.value;
+  const appMode = request.cookies.get(APP_MODE_COOKIE_KEY)?.value;
+  const sellerModeActive = appMode === "seller" && Boolean(accessToken);
+
+  if (sellerModeActive && !isSellerSpace(pathname) && !isFrameworkOrStaticPath(pathname)) {
+    return NextResponse.redirect(new URL("/seller", request.url));
+  }
+
   const requiresAuth = PROTECTED_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`)
   );
@@ -18,8 +51,6 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const accessToken =
-    request.cookies.get("access_token")?.value || request.cookies.get("amazer_access_token")?.value;
   if (accessToken) {
     return NextResponse.next();
   }
@@ -31,10 +62,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/seller/:path*",
-    "/admin/:path*",
-    "/dashboard/:path*",
-    "/profile/:path*",
-    "/security/mfa/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|logo-amazer.*|images/).*)",
   ],
 };

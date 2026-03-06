@@ -8,7 +8,10 @@ import { useSearchParams } from "next/navigation";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { persistAppMode } from "@/lib/session-mode";
 import { login } from "@/services/auth-service";
+import { getSellerProfile } from "@/services/seller-service";
+import { useAuthStore } from "@/store/auth-store";
 
 function LoginPageContent() {
   const searchParams = useSearchParams();
@@ -16,6 +19,7 @@ function LoginPageContent() {
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const setAppMode = useAuthStore((state) => state.setAppMode);
 
   const next = searchParams.get("next") || "/";
 
@@ -28,6 +32,15 @@ function LoginPageContent() {
         identifier,
         password,
       });
+      const sellerProfile = await getSellerProfile().catch(() => null);
+      if (sellerProfile?.id) {
+        setAppMode("seller");
+        persistAppMode("seller");
+        window.location.assign(next.startsWith("/seller") ? next : "/seller");
+        return;
+      }
+      setAppMode("client");
+      persistAppMode("client");
       window.location.assign(next);
     } catch (error) {
       setStatus(getApiErrorMessage(error, "Identifiants invalides ou session indisponible."));

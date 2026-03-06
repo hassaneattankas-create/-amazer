@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, PlusCircle, UtensilsCrossed } from "lucide-react";
 
@@ -10,41 +10,90 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatXOF } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
+import { persistAppMode } from "@/lib/session-mode";
 import { listCatalogCategories } from "@/services/catalog-service";
 import { createRestaurantMenuItem, listRestaurantMenu } from "@/services/restaurant-service";
-import {
-  createSellerProduct,
-  getSellerProfile,
-  upsertSellerProfile,
-} from "@/services/seller-service";
+import { createSellerProduct, getSellerProfile, upsertSellerProfile } from "@/services/seller-service";
+import { useAuthStore } from "@/store/auth-store";
+
+const SELLER_PROFILE_DRAFT_KEY = "amazer_seller_profile_draft";
+const SELLER_PRODUCT_DRAFT_KEY = "amazer_seller_product_draft";
+const SELLER_RESTAURANT_DRAFT_KEY = "amazer_seller_restaurant_draft";
+
+function loadDraft<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) {
+      return fallback;
+    }
+    return { ...fallback, ...(JSON.parse(raw) as Partial<T>) };
+  } catch {
+    return fallback;
+  }
+}
 
 export default function SellerPage() {
   const queryClient = useQueryClient();
+  const setAppMode = useAuthStore((state) => state.setAppMode);
   const [status, setStatus] = useState("");
-  const [profileForm, setProfileForm] = useState({
-    business_name: "",
-    city: "Niamey",
-    phone: "",
-    address: "",
-  });
-  const [productForm, setProductForm] = useState({
-    name: "",
-    brand: "",
-    category_id: "",
-    amount: "",
-    stock_quantity: "1",
-    description: "",
-    main_image_url: "",
-  });
-  const [restaurantForm, setRestaurantForm] = useState({
-    name: "",
-    description: "",
-    image_url: "",
-    base_price: "",
-    estimated_prep_minutes: "20",
-    category: "plat" as "plat" | "boisson",
-    is_plat_du_jour: false,
-  });
+  const [profileHydratedFromServer, setProfileHydratedFromServer] = useState(false);
+
+  const [profileForm, setProfileForm] = useState(() =>
+    loadDraft(SELLER_PROFILE_DRAFT_KEY, {
+      business_name: "",
+      city: "Niamey",
+      phone: "",
+      address: "",
+    })
+  );
+  const [productForm, setProductForm] = useState(() =>
+    loadDraft(SELLER_PRODUCT_DRAFT_KEY, {
+      name: "",
+      brand: "",
+      category_id: "",
+      amount: "",
+      stock_quantity: "1",
+      description: "",
+      main_image_url: "",
+    })
+  );
+  const [restaurantForm, setRestaurantForm] = useState(() =>
+    loadDraft(SELLER_RESTAURANT_DRAFT_KEY, {
+      name: "",
+      description: "",
+      image_url: "",
+      base_price: "",
+      estimated_prep_minutes: "20",
+      category: "plat" as "plat" | "boisson",
+      is_plat_du_jour: false,
+    })
+  );
+
+  useEffect(() => {
+    setAppMode("seller");
+    persistAppMode("seller");
+  }, [setAppMode]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(SELLER_PROFILE_DRAFT_KEY, JSON.stringify(profileForm));
+    }
+  }, [profileForm]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(SELLER_PRODUCT_DRAFT_KEY, JSON.stringify(productForm));
+    }
+  }, [productForm]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(SELLER_RESTAURANT_DRAFT_KEY, JSON.stringify(restaurantForm));
+    }
+  }, [restaurantForm]);
 
   const { data: profile, isPending } = useQuery({
     queryKey: ["seller-profile"],
@@ -59,6 +108,20 @@ export default function SellerPage() {
     queryKey: ["catalog-categories"],
     queryFn: listCatalogCategories,
   });
+
+  useEffect(() => {
+    if (!profile || profileHydratedFromServer) {
+      return;
+    }
+    setProfileForm((prev) => ({
+      ...prev,
+      business_name: prev.business_name || profile.business_name || "",
+      city: prev.city || profile.city || "Niamey",
+      phone: prev.phone || profile.phone || "",
+      address: prev.address || profile.address || "",
+    }));
+    setProfileHydratedFromServer(true);
+  }, [profile, profileHydratedFromServer]);
 
   const profileMutation = useMutation({
     mutationFn: upsertSellerProfile,
@@ -100,7 +163,7 @@ export default function SellerPage() {
       <header className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="luxury-title text-3xl font-semibold">Seller Central Niamey</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Interface commerçants pour publier des offres locales.
+          Interface commercants pour publier des offres locales. Vos brouillons restent sauvegardes.
         </p>
         <Button asChild variant="outline" className="mt-4">
           <Link href="/seller/dashboard">Aller au dashboard de stock</Link>
@@ -117,11 +180,11 @@ export default function SellerPage() {
           </h2>
           {profile ? (
             <p className="mt-2 text-sm text-emerald-700">
-              Profil actif: {profile.business_name} ({profile.city}) -{" "}
-              {profile.is_verified ? "Badge Confiance actif" : "En attente de verification admin"}
+              Profil actif immediatement: {profile.business_name} ({profile.city}) -{" "}
+              {profile.is_verified ? "Badge Confiance actif" : "Boutique operationnelle"}
             </p>
           ) : (
-            <p className="mt-2 text-sm text-slate-600">Aucun profil active pour ce compte.</p>
+            <p className="mt-2 text-sm text-slate-600">Aucun profil actif pour ce compte.</p>
           )}
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Input
@@ -240,10 +303,10 @@ export default function SellerPage() {
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
           <UtensilsCrossed className="h-5 w-5 text-[#FF4D00]" />
-          Boutique Restaurant (Plats & Boissons)
+          Boutique Restaurant (Plats et Boissons)
         </h2>
         <p className="mt-2 text-sm text-slate-600">
-          Ajoutez vos plats, boissons, prix et marquez vos offres en &quot;Plat du Jour&quot;.
+          Ajoutez vos plats, boissons, prix et marquez vos offres en "Plat du Jour".
         </p>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -331,7 +394,7 @@ export default function SellerPage() {
               >
                 <div>
                   <p className="font-medium text-slate-900">{item.name}</p>
-                  <p className="text-xs text-slate-500">{item.tags.join(" • ") || "Sans tag"}</p>
+                  <p className="text-xs text-slate-500">{item.tags.join(" - ") || "Sans tag"}</p>
                 </div>
                 <p className="font-semibold text-[#FF4D00]">{formatXOF(item.base_price)}</p>
               </div>

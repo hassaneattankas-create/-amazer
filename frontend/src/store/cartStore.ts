@@ -13,6 +13,7 @@ type CartStoreState = {
   setQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   addSavingsRecord: (savings: number) => void;
+  resetSession: () => void;
 };
 
 export const useCartStore = create<CartStoreState>()(
@@ -77,6 +78,7 @@ export const useCartStore = create<CartStoreState>()(
             ...state.savingsHistory,
           ].slice(0, 40),
         })),
+      resetSession: () => set({ items: [], savingsHistory: [] }),
     }),
     {
       name: "amazer-smart-cart",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Boxes, Clock3, UtensilsCrossed } from "lucide-react";
 
@@ -9,17 +9,19 @@ import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { resolveImageUrl } from "@/lib/image";
+import { persistAppMode } from "@/lib/session-mode";
 import {
   createRestaurantMenuItem,
   listSellerRestaurantOrders,
   updateSellerRestaurantOrderStatus,
 } from "@/services/restaurant-service";
 import { listSellerInventory, updateSellerInventory } from "@/services/seller-service";
+import { useAuthStore } from "@/store/auth-store";
 
-export default function SellerDashboardPage() {
-  const queryClient = useQueryClient();
-  const [status, setStatus] = useState("");
-  const [dishForm, setDishForm] = useState({
+const SELLER_DASHBOARD_DISH_DRAFT_KEY = "amazer_seller_dashboard_dish_draft";
+
+function loadDishDraft() {
+  const fallback = {
     name: "",
     description: "",
     image_url: "",
@@ -27,7 +29,37 @@ export default function SellerDashboardPage() {
     prep: "20",
     tags: "Chaud,Populaire",
     options: "Boisson:500,Sauce pimentee:250",
-  });
+  };
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+  try {
+    const raw = window.localStorage.getItem(SELLER_DASHBOARD_DISH_DRAFT_KEY);
+    if (!raw) {
+      return fallback;
+    }
+    return { ...fallback, ...(JSON.parse(raw) as Partial<typeof fallback>) };
+  } catch {
+    return fallback;
+  }
+}
+
+export default function SellerDashboardPage() {
+  const queryClient = useQueryClient();
+  const setAppMode = useAuthStore((state) => state.setAppMode);
+  const [status, setStatus] = useState("");
+  const [dishForm, setDishForm] = useState(loadDishDraft);
+
+  useEffect(() => {
+    setAppMode("seller");
+    persistAppMode("seller");
+  }, [setAppMode]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(SELLER_DASHBOARD_DISH_DRAFT_KEY, JSON.stringify(dishForm));
+    }
+  }, [dishForm]);
   const { data: inventory = [], isPending } = useQuery({
     queryKey: ["seller-inventory"],
     queryFn: listSellerInventory,
@@ -45,18 +77,21 @@ export default function SellerDashboardPage() {
       stock,
       promo_amount,
       boost_duration_hours,
+      is_active,
     }: {
       priceId: string;
       amount: number;
       stock: number;
       promo_amount?: number;
       boost_duration_hours?: 24 | 168;
+      is_active?: boolean;
     }) =>
       updateSellerInventory(priceId, {
         amount,
         stock_quantity: stock,
         promo_amount,
         boost_duration_hours,
+        is_active,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["seller-inventory"] });
@@ -69,6 +104,9 @@ export default function SellerDashboardPage() {
     onSuccess: () => {
       setStatus("Plat restaurant publie.");
       setDishForm((prev) => ({ ...prev, name: "", description: "", image_url: "", base_price: "" }));
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(SELLER_DASHBOARD_DISH_DRAFT_KEY);
+      }
     },
     onError: () => setStatus("Erreur publication du plat."),
   });
@@ -272,6 +310,7 @@ export default function SellerDashboardPage() {
                         priceId: item.price_id,
                         amount: Number(amountInput?.value ?? item.amount),
                         stock: Number(stockInput?.value ?? item.stock_quantity),
+                        is_active: item.is_active,
                         ...(promoValue > 0 ? { promo_amount: promoValue } : {}),
                       });
                     }}
@@ -301,8 +340,25 @@ export default function SellerDashboardPage() {
                         boost_duration_hours: 168,
                       })
                     }
-                  >
+                    >
                     Boost 7j
+                  </Button>
+                  <Button
+                    className={
+                      item.is_active
+                        ? "border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                        : "border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                    }
+                    onClick={() =>
+                      mutation.mutate({
+                        priceId: item.price_id,
+                        amount: item.amount,
+                        stock: item.stock_quantity,
+                        is_active: !item.is_active,
+                      })
+                    }
+                  >
+                    {item.is_active ? "Retirer" : "Remettre"}
                   </Button>
                 </div>
               </div>
@@ -310,6 +366,7 @@ export default function SellerDashboardPage() {
                 {item.is_boosted ? "Boost actif" : "Boost inactif"}
                 {item.boost_until ? ` jusqu au ${new Date(item.boost_until).toLocaleString("fr-FR")}` : ""}
                 {item.promo_price ? ` | Promo: ${item.promo_price.toFixed(0)} XOF` : ""}
+                {!item.is_active ? " | Produit retire" : ""}
               </p>
             </article>
           ))}

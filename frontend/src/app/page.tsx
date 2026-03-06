@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Search, SearchX, SlidersHorizontal } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Drawer } from "vaul";
 import { useQuery } from "@tanstack/react-query";
 
@@ -25,6 +25,7 @@ import { HomeContentProduct } from "@/types/content";
 import { ProductSearchItem } from "@/types/product";
 
 const DEBOUNCE_MS = 250;
+const HOME_STATE_DRAFT_KEY = "amazer_home_state_draft";
 
 const SHELF_TABS = [
   { slug: "all", emoji: "✨", label: "Tout" },
@@ -35,6 +36,34 @@ const SHELF_TABS = [
 ] as const;
 
 type ShelfSlug = (typeof SHELF_TABS)[number]["slug"];
+
+function loadHomeStateDraft(): { query: string; barcode: string; activeShelf: ShelfSlug } {
+  const fallback: { query: string; barcode: string; activeShelf: ShelfSlug } = {
+    query: "",
+    barcode: "",
+    activeShelf: "all",
+  };
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+  try {
+    const raw = window.localStorage.getItem(HOME_STATE_DRAFT_KEY);
+    if (!raw) {
+      return fallback;
+    }
+    const parsed = JSON.parse(raw) as Partial<typeof fallback>;
+    const activeShelf = SHELF_TABS.some((entry) => entry.slug === parsed.activeShelf)
+      ? (parsed.activeShelf as ShelfSlug)
+      : "all";
+    return {
+      query: typeof parsed.query === "string" ? parsed.query : "",
+      barcode: typeof parsed.barcode === "string" ? parsed.barcode : "",
+      activeShelf,
+    };
+  } catch {
+    return fallback;
+  }
+}
 
 function shuffleItems<T>(items: T[]): T[] {
   const copy = [...items];
@@ -59,9 +88,10 @@ function withBoostRotation<T extends { is_boosted: boolean }>(items: T[]): T[] {
 }
 
 export default function HomePage() {
-  const [query, setQuery] = useState("");
-  const [barcode, setBarcode] = useState("");
-  const [activeShelf, setActiveShelf] = useState<ShelfSlug>("all");
+  const [homeInit] = useState(loadHomeStateDraft);
+  const [query, setQuery] = useState(homeInit.query);
+  const [barcode, setBarcode] = useState(homeInit.barcode);
+  const [activeShelf, setActiveShelf] = useState<ShelfSlug>(homeInit.activeShelf);
   const preferredCurrency = useAuthStore((state) => state.preferredCurrency);
   const debouncedQuery = useDebouncedValue(query, DEBOUNCE_MS);
   const debouncedBarcode = useDebouncedValue(barcode, DEBOUNCE_MS);
@@ -123,6 +153,15 @@ export default function HomePage() {
     setBarcode(value);
     setQuery(value);
   };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        HOME_STATE_DRAFT_KEY,
+        JSON.stringify({ query, barcode, activeShelf })
+      );
+    }
+  }, [activeShelf, barcode, query]);
 
   return (
     <section className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-6">
