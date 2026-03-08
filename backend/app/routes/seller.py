@@ -7,25 +7,40 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_admin_user, get_current_user
+from app.core.crypto import decrypt_phone_value, encrypt_phone_value
 from app.core.csrf import enforce_csrf
 from app.core.exceptions import ConflictError, NotFoundError
 from app.database import get_db
+from app.models.hospitality import HotelBooking, RestaurantReservation
 from app.models.price_history import PriceHistory
 from app.models.product import Price, Product
+from app.models.restaurant import RestaurantMenuItem
 from app.models.seller_profile import SellerProfile
 from app.models.seller_lead import SellerLead
 from app.models.user import User
 from app.models.vendor import Vendor
+from app.schemas.restaurant import (
+    RestaurantMenuItemResponse,
+    RestaurantReservationCreateRequest,
+    RestaurantReservationResponse,
+    RestaurantReservationStatusUpdateRequest,
+)
 from app.schemas.seller import (
+    HotelBookingCreateRequest,
+    HotelBookingResponse,
+    HotelBookingStatusUpdateRequest,
     SellerInventoryItemResponse,
     SellerInventoryUpdateRequest,
     SellerProductCreateRequest,
     SellerProductCreateResponse,
     SellerProfileRequest,
     SellerProfileResponse,
+    SellerStorefrontProductResponse,
+    SellerStorefrontResponse,
 )
 from app.schemas.seller_lead import SellerLeadCreateRequest, SellerLeadResponse
 from app.services.audit_log_service import append_audit_log
+from app.services.seller_profile_service import create_or_update_seller_profile
 
 router = APIRouter(prefix="/seller", tags=["seller"])
 
@@ -119,17 +134,7 @@ def get_profile(
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
         return None
-    return SellerProfileResponse(
-        id=profile.id,
-        user_id=profile.user_id,
-        vendor_id=profile.vendor_id,
-        business_name=profile.business_name,
-        phone=profile.phone,
-        city=profile.city,
-        address=profile.address,
-        is_verified=profile.is_verified,
-        created_at=profile.created_at,
-    )
+    return _profile_response(profile)
 
 
 @router.post("/profile", response_model=SellerProfileResponse, status_code=status.HTTP_201_CREATED)
@@ -141,49 +146,93 @@ def upsert_profile(
 ) -> SellerProfileResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
-    if profile is None:
-        slug_base = _slugify(payload.business_name) or f"vendor-{current_user.id[:8]}"
-        slug = slug_base
-        suffix = 1
-        while db.scalar(select(Vendor).where(Vendor.slug == slug)) is not None:
-            suffix += 1
-            slug = f"{slug_base}-{suffix}"
-
-        vendor = Vendor(name=payload.business_name, slug=slug, is_active=True)
-        db.add(vendor)
-        db.flush()
-
-        profile = SellerProfile(
-            user_id=current_user.id,
-            vendor_id=vendor.id,
-            business_name=payload.business_name,
-            phone=payload.phone,
-            city=payload.city,
-            address=payload.address,
-        )
-        db.add(profile)
-    else:
-        profile.business_name = payload.business_name
-        profile.phone = payload.phone
-        profile.city = payload.city
-        profile.address = payload.address
-        vendor_record = db.get(Vendor, profile.vendor_id)
-        if vendor_record is None:
-            raise ConflictError("Associated vendor not found")
-        vendor_record.name = payload.business_name
-
+    profile = create_or_update_seller_profile(
+        db,
+        user=current_user,
+        payload=payload.model_dump(exclude_none=True),
+        existing_profile=profile,
+    )
     db.commit()
     db.refresh(profile)
-    return SellerProfileResponse(
-        id=profile.id,
-        user_id=profile.user_id,
-        vendor_id=profile.vendor_id,
+    return _profile_response(profile)
+
+
+@router.get("/storefront/{vendor_id}", response_model=SellerStorefrontResponse)
+def get_storefront(
+    vendor_id: str,
+    db: Annotated[Session, Depends(get_db)],
+) -> SellerStorefrontResponse:
+    vendor = db.get(Vendor, vendor_id)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == vendor_id))
+    if vendor is None or profile is None:
+        raise NotFoundError("Storefront not found")
+
+    products = db.scalars(
+        select(Price)
+        .where(Price.vendor_id == vendor_id, Price.is_active.is_(True))
+        .order_by(Price.updated_at.desc())
+        .limit(120)
+    ).all()
+    restaurant_menu = db.scalars(
+        select(RestaurantMenuItem)
+        .where(RestaurantMenuItem.vendor_id == vendor_id, RestaurantMenuItem.is_available.is_(True))
+        .order_by(RestaurantMenuItem.updated_at.desc())
+        .limit(120)
+    ).all()
+
+    return SellerStorefrontResponse(
+        vendor_id=vendor.id,
+        vendor_slug=vendor.slug,
         business_name=profile.business_name,
-        phone=profile.phone,
+        activity_type=profile.activity_type,
+        storefront_tier=profile.storefront_tier,
         city=profile.city,
         address=profile.address,
+        phone=decrypt_phone_value(profile.phone),
+        description=profile.description,
+        logo_url=profile.logo_url,
+        cover_image_url=profile.cover_image_url,
+        opening_hours=profile.opening_hours,
+        whatsapp_contact=profile.whatsapp_contact,
+        contact_email=profile.contact_email,
+        gallery_images=list(profile.gallery_images or []),
+        service_offerings=list(profile.service_offerings or []),
+        room_types=list(profile.room_types or []),
+        deposit_payment_method=profile.deposit_payment_method,
+        deposit_amount=profile.deposit_amount,
+        accepts_table_reservations=bool(profile.accepts_table_reservations),
+        accepts_hotel_bookings=bool(profile.accepts_hotel_bookings),
         is_verified=profile.is_verified,
-        created_at=profile.created_at,
+        products=[
+            SellerStorefrontProductResponse(
+                price_id=row.id,
+                product_id=row.product_id,
+                name=row.product.name,
+                brand=row.product.brand,
+                amount=row.amount,
+                currency=row.currency,
+                is_boosted=row.product.is_boosted,
+                main_image_url=row.product.main_image_url,
+            )
+            for row in products
+        ],
+        restaurant_menu=[
+            RestaurantMenuItemResponse(
+                id=item.id,
+                vendor_id=item.vendor_id,
+                vendor_name=vendor.name,
+                name=item.name,
+                description=item.description,
+                image_url=item.image_url,
+                base_price=item.base_price,
+                currency=item.currency,
+                tags=list(item.tags or []),
+                options=list(item.options or []),
+                estimated_prep_minutes=item.estimated_prep_minutes,
+                is_available=item.is_available,
+            )
+            for item in restaurant_menu
+        ],
     )
 
 

@@ -18,9 +18,12 @@ from app.schemas.auth import (
     MfaStatusResponse,
     RefreshTokenRequest,
     RegisterRequest,
+    RegisterResponse,
     TokenPair,
     UserPreferencesResponse,
     UserPreferencesUpdateRequest,
+    VerifyAccountRequest,
+    VerifyAccountResponse,
 )
 from app.schemas.user import UserResponse
 from app.services.auth_service import AuthService
@@ -64,19 +67,29 @@ def _set_auth_cookies(response: Response, tokens: dict[str, str]) -> None:
     )
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 def register(
     payload: RegisterRequest,
     request: Request,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
-) -> User:
+) -> dict[str, str | bool | None]:
     enforce_rate_limit(request, key="auth_register", limit=5, window_seconds=300)
-    user = auth_service.register(
+    return auth_service.register(
         identifier=payload.identifier or payload.email or payload.whatsapp_phone or "",
         full_name=payload.full_name,
         password=payload.password.get_secret_value(),
+        seller_profile=payload.seller_profile.model_dump(exclude_none=True) if payload.seller_profile else None,
     )
-    return user
+
+
+@router.post("/verify-account", response_model=VerifyAccountResponse)
+def verify_account(
+    payload: VerifyAccountRequest,
+    request: Request,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+) -> dict[str, str | bool]:
+    enforce_rate_limit(request, key="auth_verify_account", limit=8, window_seconds=300)
+    return auth_service.verify_account(identifier=payload.identifier, code=payload.code)
 
 
 @router.post("/login", response_model=TokenPair)

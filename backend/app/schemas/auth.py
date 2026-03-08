@@ -142,6 +142,18 @@ class RegisterResponse(BaseModel):
     verification_code_preview: str | None = None
 
 
+class VerifyAccountRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    identifier: str = Field(min_length=6, max_length=120)
+    code: str = Field(min_length=4, max_length=8)
+
+
+class VerifyAccountResponse(BaseModel):
+    success: bool = True
+    message: str
+
+
 class MfaSetupResponse(BaseModel):
     secret_key: str
     otpauth_url: str

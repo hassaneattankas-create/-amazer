@@ -18,7 +18,10 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = Field(default=15, ge=1, le=1440)
     jwt_refresh_token_expire_days: int = Field(default=30, ge=1, le=30)
-    auto_activate_new_accounts: bool = Field(default=True)
+    auto_activate_new_accounts: bool = Field(default=False)
+    registration_requires_verification: bool = Field(default=True)
+    verification_code_ttl_minutes: int = Field(default=10, ge=3, le=30)
+    verification_code_max_attempts: int = Field(default=5, ge=3, le=10)
     admin_email: str = Field(default="amazer.niger@gmail.com")
     admin_finance_pin: str = Field(default="Aminasadek11$")
     admin_birth_date: str = Field(default="07/11/03")
@@ -29,6 +32,10 @@ class Settings(BaseSettings):
         default="REPLACE_WITH_BASE64URL_32BYTE_KEY_REPLACE_WITH_KEY_1234="
     )
     redis_url: str | None = Field(default=None)
+    whatsapp_verification_enabled: bool = Field(default=True)
+    whatsapp_api_version: str = Field(default="v22.0")
+    whatsapp_access_token: str | None = Field(default=None)
+    whatsapp_phone_number_id: str | None = Field(default=None)
 
     def get_cors_origins(self) -> list[str]:
         if self.app_env.lower() == "development":

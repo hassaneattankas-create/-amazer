@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -36,6 +36,21 @@ class SellerProfile(Base):
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     city: Mapped[str] = mapped_column(String(80), nullable=False, default="Niamey")
     address: Mapped[str | None] = mapped_column(String(220), nullable=True)
+    activity_type: Mapped[str] = mapped_column(String(32), nullable=False, default="shop")
+    storefront_tier: Mapped[str] = mapped_column(String(32), nullable=False, default="basic")
+    description: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    logo_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    cover_image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    opening_hours: Mapped[str | None] = mapped_column(String(240), nullable=True)
+    whatsapp_contact: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    contact_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    gallery_images: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    service_offerings: Mapped[list[dict[str, str]]] = mapped_column(JSON, nullable=False, default=list)
+    room_types: Mapped[list[dict[str, object]]] = mapped_column(JSON, nullable=False, default=list)
+    deposit_payment_method: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    deposit_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
+    accepts_table_reservations: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    accepts_hotel_bookings: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
