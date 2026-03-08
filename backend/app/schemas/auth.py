@@ -2,6 +2,8 @@ import re
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
+from app.schemas.seller import SellerProfileRequest
+
 PASSWORD_REGEX = re.compile(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$")
 WHATSAPP_REGEX = re.compile(r"^(?:\+?227)\d{8}$")
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -15,6 +17,7 @@ class RegisterRequest(BaseModel):
     whatsapp_phone: str | None = Field(default=None, min_length=8, max_length=20)
     full_name: str = Field(min_length=2, max_length=120)
     password: SecretStr = Field(min_length=8, max_length=72)
+    seller_profile: SellerProfileRequest | None = None
 
     @field_validator("password")
     @classmethod
@@ -128,6 +131,15 @@ class TokenPair(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+
+class RegisterResponse(BaseModel):
+    success: bool = True
+    user_id: str
+    email: str
+    verification_channel: str
+    verification_destination_masked: str
+    verification_code_preview: str | None = None
 
 
 class MfaSetupResponse(BaseModel):

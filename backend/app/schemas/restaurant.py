@@ -119,3 +119,34 @@ class RestaurantStorefrontListResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     items: list[RestaurantStorefrontResponse]
+
+
+class RestaurantReservationCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    vendor_id: str = Field(min_length=1, max_length=36)
+    customer_name: str = Field(min_length=2, max_length=120)
+    customer_phone: str = Field(min_length=6, max_length=40)
+    reservation_at: datetime
+    guest_count: int = Field(default=2, ge=1, le=20)
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class RestaurantReservationStatusUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: str = Field(pattern="^(pending|confirmed|declined)$")
+
+
+class RestaurantReservationResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    vendor_id: str
+    customer_name: str
+    customer_phone: str
+    reservation_at: datetime
+    guest_count: int
+    note: str | None
+    status: str
+    created_at: datetime

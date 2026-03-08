@@ -19,8 +19,9 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = Field(default=15, ge=1, le=1440)
     jwt_refresh_token_expire_days: int = Field(default=30, ge=1, le=30)
     auto_activate_new_accounts: bool = Field(default=True)
-    admin_email: str = Field(default="owner@amazer.ne")
-    admin_finance_pin: str = Field(default="7391")
+    admin_email: str = Field(default="amazer.niger@gmail.com")
+    admin_finance_pin: str = Field(default="Aminasadek11$")
+    admin_birth_date: str = Field(default="07/11/03")
     cors_allowed_origins: str = Field(
         default="https://amazer.vercel.app,https://www.amazer.vercel.app,https://amazerniger.vercel.app,https://www.amazerniger.vercel.app"
     )

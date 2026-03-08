@@ -31,6 +31,26 @@ def test_register_success_commits_and_refreshes() -> None:
     db.refresh.assert_called_once_with(user)
 
 
+def test_register_with_seller_profile_creates_storefront() -> None:
+    service, db = _build_service()
+    user = SimpleNamespace(id="u1", email="user@example.com", full_name="Jane Doe")
+
+    service.users.get_by_email.return_value = None
+    service.users.create.return_value = user
+    db.scalar.return_value = None
+
+    result = service.register(
+        "user@example.com",
+        "Jane Doe",
+        "StrongP@ssw0rd!",
+        seller_profile={"business_name": "Hotel Amazer", "activity_type": "hotel"},
+    )
+
+    assert result is user
+    db.add.assert_called()
+    db.commit.assert_called_once()
+
+
 def test_register_duplicate_email_raises() -> None:
     service, _ = _build_service()
     service.users.get_by_email.return_value = SimpleNamespace(id="u1")

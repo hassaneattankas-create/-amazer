@@ -12,7 +12,13 @@ function hasSessionToken(): boolean {
   if (typeof window === "undefined") {
     return false;
   }
-  return Boolean(window.localStorage.getItem(ACCESS_TOKEN_KEY) || window.sessionStorage.getItem(ACCESS_TOKEN_KEY));
+  const storedToken = window.localStorage.getItem(ACCESS_TOKEN_KEY) || window.sessionStorage.getItem(ACCESS_TOKEN_KEY);
+  const cookie = typeof document !== "undefined" ? document.cookie : "";
+  const hasCookieSession =
+    cookie.includes("amazer_access_token=") ||
+    cookie.includes("access_token=") ||
+    cookie.includes("csrf_token=");
+  return Boolean(storedToken || hasCookieSession);
 }
 
 export function useCurrentUser() {

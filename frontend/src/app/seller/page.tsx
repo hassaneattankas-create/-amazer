@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, PlusCircle, UtensilsCrossed } from "lucide-react";
 
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatXOF } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
 import { persistAppMode } from "@/lib/session-mode";
@@ -19,6 +21,61 @@ import { useAuthStore } from "@/store/auth-store";
 const SELLER_PROFILE_DRAFT_KEY = "amazer_seller_profile_draft";
 const SELLER_PRODUCT_DRAFT_KEY = "amazer_seller_product_draft";
 const SELLER_RESTAURANT_DRAFT_KEY = "amazer_seller_restaurant_draft";
+
+function splitListInput(value: string): string[] {
+  return value
+    .split(/\r?\n|,/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function parseServices(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [title, description = "", displayMode = "consult_only"] = entry
+        .split("|")
+        .map((part) => part.trim());
+      return {
+        title,
+        description: description || null,
+        display_mode: (displayMode || "consult_only") as
+          | "consult_only"
+          | "book_only"
+          | "shop",
+      };
+    })
+    .filter((entry) => entry.title);
+}
+
+function parseRoomTypes(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry, index) => {
+      const [
+        name,
+        priceText = "0",
+        capacityText = "1",
+        amenitiesText = "",
+        depositText = "",
+      ] = entry.split("|").map((part) => part.trim());
+      return {
+        id: `room-${index + 1}`,
+        name,
+        description: null,
+        night_price: Number(priceText || 0),
+        capacity: Number(capacityText || 1),
+        amenities: splitListInput(amenitiesText),
+        photo_urls: [],
+        deposit_amount: depositText ? Number(depositText) : null,
+      };
+    })
+    .filter((entry) => entry.name && entry.night_price > 0);
+}
 
 function loadDraft<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") {
@@ -36,6 +93,9 @@ function loadDraft<T>(key: string, fallback: T): T {
 }
 
 export default function SellerPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { data: user, isPending: isAuthPending } = useCurrentUser();
   const queryClient = useQueryClient();
   const setAppMode = useAuthStore((state) => state.setAppMode);
   const [status, setStatus] = useState("");
@@ -47,6 +107,21 @@ export default function SellerPage() {
       city: "Niamey",
       phone: "",
       address: "",
+      activity_type: "shop" as "shop" | "restaurant" | "hotel" | "enterprise",
+      storefront_tier: "basic" as "basic" | "premium",
+      description: "",
+      logo_url: "",
+      cover_image_url: "",
+      opening_hours: "",
+      whatsapp_contact: "",
+      contact_email: "",
+      gallery_images_text: "",
+      service_offerings_text: "",
+      room_types_text: "",
+      deposit_payment_method: "nita" as "nita" | "amana",
+      deposit_amount: "",
+      accepts_table_reservations: false,
+      accepts_hotel_bookings: false,
     })
   );
   const [productForm, setProductForm] = useState(() =>
@@ -110,6 +185,16 @@ export default function SellerPage() {
   });
 
   useEffect(() => {
+    if (isAuthPending) {
+      return;
+    }
+    if (!user) {
+      const next = encodeURIComponent(pathname || "/seller");
+      router.replace(`/login?next=${next}`);
+    }
+  }, [isAuthPending, pathname, router, user]);
+
+  useEffect(() => {
     if (!profile || profileHydratedFromServer) {
       return;
     }
@@ -119,6 +204,42 @@ export default function SellerPage() {
       city: prev.city || profile.city || "Niamey",
       phone: prev.phone || profile.phone || "",
       address: prev.address || profile.address || "",
+      activity_type: prev.activity_type || profile.activity_type || "shop",
+      storefront_tier: prev.storefront_tier || profile.storefront_tier || "basic",
+      description: prev.description || profile.description || "",
+      logo_url: prev.logo_url || profile.logo_url || "",
+      cover_image_url: prev.cover_image_url || profile.cover_image_url || "",
+      opening_hours: prev.opening_hours || profile.opening_hours || "",
+      whatsapp_contact: prev.whatsapp_contact || profile.whatsapp_contact || "",
+      contact_email: prev.contact_email || profile.contact_email || "",
+      gallery_images_text:
+        prev.gallery_images_text || (profile.gallery_images || []).join("\n") || "",
+      service_offerings_text:
+        prev.service_offerings_text ||
+        (profile.service_offerings || [])
+          .map((item) => [item.title, item.description || "", item.display_mode].join(" | "))
+          .join("\n"),
+      room_types_text:
+        prev.room_types_text ||
+        (profile.room_types || [])
+          .map((room) =>
+            [
+              room.name,
+              String(room.night_price),
+              String(room.capacity),
+              (room.amenities || []).join(", "),
+              room.deposit_amount ? String(room.deposit_amount) : "",
+            ].join(" | "),
+          )
+          .join("\n"),
+      deposit_payment_method:
+        prev.deposit_payment_method || profile.deposit_payment_method || "nita",
+      deposit_amount:
+        prev.deposit_amount || (profile.deposit_amount ? String(profile.deposit_amount) : ""),
+      accepts_table_reservations:
+        prev.accepts_table_reservations || profile.accepts_table_reservations || false,
+      accepts_hotel_bookings:
+        prev.accepts_hotel_bookings || profile.accepts_hotel_bookings || false,
     }));
     setProfileHydratedFromServer(true);
   }, [profile, profileHydratedFromServer]);
@@ -209,10 +330,176 @@ export default function SellerPage() {
               value={profileForm.address}
               onChange={(event) => setProfileForm((prev) => ({ ...prev, address: event.target.value }))}
             />
+            <select
+              className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900"
+              value={profileForm.activity_type}
+              onChange={(event) =>
+                setProfileForm((prev) => ({
+                  ...prev,
+                  activity_type: event.target.value as "shop" | "restaurant" | "hotel" | "enterprise",
+                }))
+              }
+            >
+              <option value="shop">Boutique simple</option>
+              <option value="restaurant">Restaurant</option>
+              <option value="hotel">Hotel</option>
+              <option value="enterprise">Grande entreprise</option>
+            </select>
+            <select
+              className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900"
+              value={profileForm.storefront_tier}
+              onChange={(event) =>
+                setProfileForm((prev) => ({
+                  ...prev,
+                  storefront_tier: event.target.value as "basic" | "premium",
+                }))
+              }
+            >
+              <option value="basic">Storefront basic</option>
+              <option value="premium">Mini-site premium</option>
+            </select>
+            <Input
+              placeholder="Logo URL"
+              value={profileForm.logo_url}
+              onChange={(event) => setProfileForm((prev) => ({ ...prev, logo_url: event.target.value }))}
+            />
+            <Input
+              placeholder="Cover URL"
+              value={profileForm.cover_image_url}
+              onChange={(event) =>
+                setProfileForm((prev) => ({ ...prev, cover_image_url: event.target.value }))
+              }
+            />
+            <Input
+              placeholder="Horaires"
+              value={profileForm.opening_hours}
+              onChange={(event) =>
+                setProfileForm((prev) => ({ ...prev, opening_hours: event.target.value }))
+              }
+            />
+            <Input
+              placeholder="WhatsApp contact"
+              value={profileForm.whatsapp_contact}
+              onChange={(event) =>
+                setProfileForm((prev) => ({ ...prev, whatsapp_contact: event.target.value }))
+              }
+            />
+            <Input
+              placeholder="Email contact"
+              value={profileForm.contact_email}
+              onChange={(event) =>
+                setProfileForm((prev) => ({ ...prev, contact_email: event.target.value }))
+              }
+            />
+            <Input
+              placeholder="Acompte XOF"
+              type="number"
+              value={profileForm.deposit_amount}
+              onChange={(event) =>
+                setProfileForm((prev) => ({ ...prev, deposit_amount: event.target.value }))
+              }
+            />
+            <select
+              className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900"
+              value={profileForm.deposit_payment_method}
+              onChange={(event) =>
+                setProfileForm((prev) => ({
+                  ...prev,
+                  deposit_payment_method: event.target.value as "nita" | "amana",
+                }))
+              }
+            >
+              <option value="nita">Nita</option>
+              <option value="amana">Amana</option>
+            </select>
+            <div className="rounded-md border border-slate-200 p-3 text-sm text-slate-700">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={profileForm.accepts_table_reservations}
+                  onChange={(event) =>
+                    setProfileForm((prev) => ({
+                      ...prev,
+                      accepts_table_reservations: event.target.checked,
+                    }))
+                  }
+                />
+                Activer reservation de table
+              </label>
+              <label className="mt-2 flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={profileForm.accepts_hotel_bookings}
+                  onChange={(event) =>
+                    setProfileForm((prev) => ({
+                      ...prev,
+                      accepts_hotel_bookings: event.target.checked,
+                    }))
+                  }
+                />
+                Activer reservation hotel
+              </label>
+            </div>
+            <textarea
+              placeholder="Description boutique"
+              value={profileForm.description}
+              onChange={(event) =>
+                setProfileForm((prev) => ({ ...prev, description: event.target.value }))
+              }
+              className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
+            />
+            <textarea
+              placeholder="Galerie photos: une URL par ligne"
+              value={profileForm.gallery_images_text}
+              onChange={(event) =>
+                setProfileForm((prev) => ({ ...prev, gallery_images_text: event.target.value }))
+              }
+              className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <textarea
+              placeholder="Services: titre | description | consult_only"
+              value={profileForm.service_offerings_text}
+              onChange={(event) =>
+                setProfileForm((prev) => ({ ...prev, service_offerings_text: event.target.value }))
+              }
+              className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <textarea
+              placeholder="Chambres: nom | prix | capacite | amenites | acompte"
+              value={profileForm.room_types_text}
+              onChange={(event) =>
+                setProfileForm((prev) => ({ ...prev, room_types_text: event.target.value }))
+              }
+              className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
+            />
           </div>
           <Button
             className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
-            onClick={() => profileMutation.mutate(profileForm)}
+            onClick={() =>
+              profileMutation.mutate({
+                business_name: profileForm.business_name,
+                city: profileForm.city,
+                phone: profileForm.phone || undefined,
+                address: profileForm.address || undefined,
+                activity_type: profileForm.activity_type,
+                storefront_tier: profileForm.storefront_tier,
+                description: profileForm.description || undefined,
+                logo_url: normalizeImageInput(profileForm.logo_url),
+                cover_image_url: normalizeImageInput(profileForm.cover_image_url),
+                opening_hours: profileForm.opening_hours || undefined,
+                whatsapp_contact: profileForm.whatsapp_contact || undefined,
+                contact_email: profileForm.contact_email || undefined,
+                gallery_images: splitListInput(profileForm.gallery_images_text),
+                service_offerings: parseServices(profileForm.service_offerings_text),
+                room_types: parseRoomTypes(profileForm.room_types_text),
+                deposit_payment_method: profileForm.deposit_payment_method,
+                deposit_amount: profileForm.deposit_amount
+                  ? Number(profileForm.deposit_amount)
+                  : undefined,
+                accepts_table_reservations: profileForm.accepts_table_reservations,
+                accepts_hotel_bookings: profileForm.accepts_hotel_bookings,
+              })
+            }
           >
             Enregistrer le profil
           </Button>

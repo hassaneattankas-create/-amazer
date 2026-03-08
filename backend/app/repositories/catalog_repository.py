@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models.category import Category
 from app.models.product import Price, Product
+from app.models.seller_profile import SellerProfile
 from app.models.vendor import Vendor
 
 
@@ -33,7 +34,15 @@ class CatalogRepository:
         )
         if query:
             term = f"%{query.strip()}%"
-            stmt = stmt.where(or_(Vendor.name.ilike(term), Vendor.slug.ilike(term)))
+            stmt = stmt.where(
+                or_(
+                    Vendor.name.ilike(term),
+                    Vendor.slug.ilike(term),
+                    SellerProfile.business_name.ilike(term),
+                    SellerProfile.city.ilike(term),
+                    SellerProfile.activity_type.ilike(term),
+                )
+            )
         return list(self.db.scalars(stmt))
 
     def list_vendor_storefronts(
@@ -46,6 +55,7 @@ class CatalogRepository:
         stmt = (
             select(Vendor)
             .where(Vendor.is_active.is_(True))
+            .outerjoin(SellerProfile, SellerProfile.vendor_id == Vendor.id)
             .options(selectinload(Vendor.seller_profile))
             .order_by(Vendor.updated_at.desc(), Vendor.name.asc())
             .offset(offset)

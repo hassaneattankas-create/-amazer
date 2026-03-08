@@ -30,6 +30,7 @@ export default function AdminFinancePage() {
   const [settingsStatus, setSettingsStatus] = useState("");
   const [pinStatus, setPinStatus] = useState("");
   const [pin, setPin] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [pinVerified, setPinVerified] = useState(false);
   const [transferAmount, setTransferAmount] = useState("");
   const [bankName, setBankName] = useState<"BOA" | "SONIBANK">("BOA");
@@ -78,10 +79,11 @@ export default function AdminFinancePage() {
     mutationFn: verifyAdminFinancePin,
     onSuccess: () => {
       setPinVerified(true);
-      setPinStatus("Code PIN valide. Acces autorise.");
+      setPinStatus("Verification admin valide. Acces autorise.");
       setPin("");
+      setBirthDate("");
     },
-    onError: () => setPinStatus("PIN invalide."),
+    onError: () => setPinStatus("Verification admin invalide."),
   });
 
   const updateMutation = useMutation({
@@ -164,21 +166,26 @@ export default function AdminFinancePage() {
         <article className="premium-card border border-slate-200 bg-white p-6">
           <h1 className="luxury-title text-2xl font-semibold">Dashboard Tresorerie Admin</h1>
           <p className="mt-2 text-sm text-slate-600">
-            Acces prive: saisissez votre code PIN admin (2FA/PIN special) pour consulter les fonds.
+            Acces prive: saisissez le secret admin et la date de naissance pour consulter les fonds.
           </p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <input
               value={pin}
               onChange={(event) => setPin(event.target.value)}
               type="password"
-              inputMode="numeric"
-              placeholder="Code PIN admin"
+              placeholder="Secret admin"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <input
+              value={birthDate}
+              onChange={(event) => setBirthDate(event.target.value)}
+              placeholder="Date anniversaire (07/11/03)"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
             />
             <Button
               type="button"
-              onClick={() => pinMutation.mutate({ pin })}
-              disabled={!pin || pinMutation.isPending}
+              onClick={() => pinMutation.mutate({ pin, birth_date: birthDate })}
+              disabled={!pin || !birthDate || pinMutation.isPending}
               className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
             >
               Verifier

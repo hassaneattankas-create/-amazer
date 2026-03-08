@@ -37,26 +37,39 @@ export default function BoutiquesPage() {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">{store.business_name || store.name}</h2>
-                  <p className="text-xs text-slate-500">{store.city || "Niamey"}</p>
+                  <p className="text-xs text-slate-500">
+                    {(store.activity_type || "shop").toUpperCase()} • {store.city || "Niamey"}
+                  </p>
                 </div>
-                {store.is_verified ? (
-                  <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                    Verifie
-                  </span>
-                ) : null}
+                <div className="flex flex-col items-end gap-1">
+                  {store.storefront_tier === "premium" ? (
+                    <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                      Premium
+                    </span>
+                  ) : null}
+                  {store.is_verified ? (
+                    <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                      Verifie
+                    </span>
+                  ) : null}
+                </div>
               </div>
+              {store.description ? <p className="mt-2 line-clamp-3 text-sm text-slate-600">{store.description}</p> : null}
               <p className="mt-2 text-sm text-slate-600">
-                {store.product_count} produits | {store.promotion_count} promos actives
+                {store.product_count} produits | {store.promotion_count} promos | {store.service_count} services
               </p>
+              {store.room_type_count ? (
+                <p className="mt-1 text-xs text-slate-500">{store.room_type_count} type(s) de chambre</p>
+              ) : null}
               <p className="mt-1 text-xs text-slate-500">
                 {store.phone ? `Tel: ${store.phone}` : "Contact non renseigne"}
               </p>
               <div className="mt-3">
                 <Link
-                  href="/"
+                  href={`/shop/${store.id}`}
                   className="inline-flex rounded-md border border-[#FF4D00]/40 bg-[#FF4D00]/10 px-3 py-1.5 text-xs font-medium text-[#FF4D00]"
                 >
-                  Aller au catalogue
+                  Ouvrir la boutique
                 </Link>
               </div>
             </article>

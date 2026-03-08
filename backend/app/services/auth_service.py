@@ -32,7 +32,6 @@ class AuthService:
         self.refresh_tokens = RefreshTokenRepository(db)
 
     def register(self, identifier: str, full_name: str, password: str) -> User:
-        settings = get_settings()
         if self._is_whatsapp_identifier(identifier):
             whatsapp_phone = self._canonicalize_whatsapp(identifier)
             email = self._shadow_email_for_whatsapp(whatsapp_phone)
@@ -50,7 +49,6 @@ class AuthService:
                 full_name=full_name,
                 hashed_password=hash_password(password),
                 whatsapp_phone=whatsapp_phone,
-                is_active=settings.auto_activate_new_accounts,
             )
             self.db.commit()
         except IntegrityError as exc:

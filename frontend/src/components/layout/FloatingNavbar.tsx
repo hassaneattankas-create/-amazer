@@ -5,14 +5,14 @@ import { useEffect, useState } from "react";
 import { ShoppingCart, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
+import { Badge } from "@/components/ui/badge";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { isAdminEmail } from "@/lib/admin";
 import { clearAppMode, persistAppMode } from "@/lib/session-mode";
-import { Badge } from "@/components/ui/badge";
-import { useCartStore } from "@/store/cartStore";
-import { getSellerProfile } from "@/services/seller-service";
 import { logout } from "@/services/auth-service";
+import { getSellerProfile } from "@/services/seller-service";
 import { useAuthStore } from "@/store/auth-store";
+import { useCartStore } from "@/store/cartStore";
 
 const clientNavItems = [
   { href: "/", label: "Accueil" },
@@ -53,6 +53,7 @@ export function FloatingNavbar() {
     enabled: Boolean(user?.id),
     staleTime: 60_000,
   });
+
   const showAdminLink = isAdminEmail(user?.email);
   const showSellerLink = Boolean(sellerProfile?.id);
   const isAuthenticated = Boolean(user?.id);
@@ -102,7 +103,7 @@ export function FloatingNavbar() {
   }
 
   return (
-    <header className="fixed left-1/2 top-3 z-50 w-[min(1160px,calc(100%-1rem))] -translate-x-1/2 rounded-3xl border border-white/20 bg-white/70 shadow-[0_20px_50px_rgba(255,77,0,0.15)] backdrop-blur-xl">
+    <header className="pointer-events-auto fixed left-1/2 top-3 z-50 w-[min(1160px,calc(100%-1rem))] -translate-x-1/2 rounded-3xl border border-white/20 bg-white/70 shadow-[0_20px_50px_rgba(255,77,0,0.15)] backdrop-blur-xl">
       <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
         <Link href="/" className="inline-flex shrink-0 items-center gap-2">
           <span className="luxury-title text-lg font-semibold tracking-tight">AMAZER</span>
@@ -114,11 +115,15 @@ export function FloatingNavbar() {
               {item.label}
             </Link>
           ))}
-          {showSellerLink && appMode !== "seller" ? (
+          {showSellerLink ? (
             <Link href="/seller" className="transition hover:text-[#FF4D00]">
               Espace Vendeur
             </Link>
-          ) : null}
+          ) : (
+            <Link href="/vendre" className="transition hover:text-[#FF4D00]">
+              Devenir vendeur
+            </Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-2">
@@ -157,14 +162,17 @@ export function FloatingNavbar() {
             </button>
           )}
           {appMode !== "seller" ? (
-            <Link href="/cart" className="primary-glow-btn shine-btn relative inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-white">
-                <ShoppingCart className="h-4 w-4" />
-                <span className="hidden sm:inline">Panier</span>
-                {cartCount > 0 ? (
-                  <Badge className="absolute -right-2 -top-2 bg-white text-[#FF4D00] hover:bg-white">
-                    {cartCount}
-                  </Badge>
-                ) : null}
+            <Link
+              href="/cart"
+              className="primary-glow-btn shine-btn relative inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-white"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span className="hidden sm:inline">Panier</span>
+              {cartCount > 0 ? (
+                <Badge className="absolute -right-2 -top-2 bg-white text-[#FF4D00] hover:bg-white">
+                  {cartCount}
+                </Badge>
+              ) : null}
             </Link>
           ) : null}
         </div>
@@ -197,14 +205,21 @@ export function FloatingNavbar() {
             {item.label}
           </Link>
         ))}
-        {showSellerLink && appMode !== "seller" ? (
+        {showSellerLink ? (
           <Link
             href="/seller"
             className="whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
           >
             Espace Vendeur
           </Link>
-        ) : null}
+        ) : (
+          <Link
+            href="/vendre"
+            className="whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
+          >
+            Devenir vendeur
+          </Link>
+        )}
         {showAdminLink ? (
           <Link
             href="/admin"

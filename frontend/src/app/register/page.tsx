@@ -5,10 +5,8 @@ import { FormEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { persistAppMode } from "@/lib/session-mode";
 import { login, register } from "@/services/auth-service";
 import { upsertSellerProfile } from "@/services/seller-service";
-import { useAuthStore } from "@/store/auth-store";
 
 const PASSWORD_POLICY = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/;
 
@@ -23,7 +21,6 @@ export default function RegisterPage() {
   const [address, setAddress] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const setAppMode = useAuthStore((state) => state.setAppMode);
 
   async function finalizeRedirect() {
     if (isSeller) {
@@ -33,13 +30,9 @@ export default function RegisterPage() {
         city: city.trim() || "Niamey",
         address: address.trim() || undefined,
       });
-      setAppMode("seller");
-      persistAppMode("seller");
       window.location.assign("/seller");
       return;
     }
-    setAppMode("client");
-    persistAppMode("client");
     window.location.assign("/");
   }
 

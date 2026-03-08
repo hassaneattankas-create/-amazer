@@ -26,11 +26,18 @@ class VendorStorefrontResponse(BaseModel):
     is_active: bool
     is_verified: bool
     business_name: str | None
+    activity_type: str | None
+    storefront_tier: str | None
     city: str | None
     phone: str | None
     address: str | None
+    description: str | None
+    logo_url: str | None
+    cover_image_url: str | None
     product_count: int
     promotion_count: int
+    service_count: int
+    room_type_count: int
 
 
 class VendorStorefrontListResponse(BaseModel):

@@ -3,6 +3,8 @@ import {
   RestaurantMenuItem,
   RestaurantOrder,
   RestaurantOrderRequest,
+  RestaurantReservation,
+  RestaurantReservationRequest,
   RestaurantStorefront,
 } from "@/types/restaurant";
 
@@ -52,5 +54,32 @@ export async function createRestaurantMenuItem(payload: {
   estimated_prep_minutes?: number;
 }): Promise<RestaurantMenuItem> {
   const response = await api.post<RestaurantMenuItem>("/api/v1/restaurant/menu", payload);
+  return response.data;
+}
+
+export async function createRestaurantReservation(
+  vendorId: string,
+  payload: RestaurantReservationRequest
+): Promise<RestaurantReservation> {
+  const response = await api.post<RestaurantReservation>(
+    `/api/v1/seller/storefront/${vendorId}/restaurant-reservations`,
+    payload
+  );
+  return response.data;
+}
+
+export async function listSellerRestaurantReservations(): Promise<RestaurantReservation[]> {
+  const response = await api.get<RestaurantReservation[]>("/api/v1/seller/restaurant-reservations");
+  return response.data;
+}
+
+export async function updateSellerRestaurantReservationStatus(
+  reservationId: string,
+  status: "pending" | "confirmed" | "declined"
+): Promise<RestaurantReservation> {
+  const response = await api.patch<RestaurantReservation>(
+    `/api/v1/seller/restaurant-reservations/${reservationId}/status`,
+    { status }
+  );
   return response.data;
 }

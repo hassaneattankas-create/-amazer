@@ -70,3 +70,24 @@ export type RestaurantStorefront = {
   plat_du_jour_count: number;
   cover_image_url: string | null;
 };
+
+export type RestaurantReservationRequest = {
+  vendor_id: string;
+  customer_name: string;
+  customer_phone: string;
+  reservation_at: string;
+  guest_count: number;
+  note?: string;
+};
+
+export type RestaurantReservation = {
+  id: string;
+  vendor_id: string;
+  customer_name: string;
+  customer_phone: string;
+  reservation_at: string;
+  guest_count: number;
+  note: string | null;
+  status: "pending" | "confirmed" | "declined";
+  created_at: string;
+};

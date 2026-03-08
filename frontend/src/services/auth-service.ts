@@ -1,4 +1,5 @@
 import { api, clearAuthTokens, persistAuthTokens } from "@/lib/api";
+import type { SellerProfilePayload } from "@/types/seller";
 
 type LoginPayload = {
   identifier: string;
@@ -9,12 +10,22 @@ type RegisterPayload = {
   identifier: string;
   full_name: string;
   password: string;
+  seller_profile?: SellerProfilePayload;
 };
 
 type TokenPair = {
   access_token: string;
   refresh_token: string;
   token_type: string;
+};
+
+export type RegisterResponse = {
+  success: boolean;
+  user_id: string;
+  email: string;
+  verification_channel: string;
+  verification_destination_masked: string;
+  verification_code_preview: string | null;
 };
 
 export type UserResponse = {
@@ -70,10 +81,19 @@ export async function login(payload: LoginPayload) {
 }
 
 export async function register(payload: RegisterPayload) {
-  const response = await api.post<UserResponse>("/api/v1/auth/register", {
+  const response = await api.post<RegisterResponse>("/api/v1/auth/register", {
     identifier: normalizeIdentifier(payload.identifier),
     full_name: payload.full_name,
     password: payload.password,
+    seller_profile: payload.seller_profile,
+  });
+  return response.data;
+}
+
+export async function verifyAccount(payload: { identifier: string; code: string }) {
+  const response = await api.post<{ success: boolean; message: string }>("/api/v1/auth/verify-account", {
+    identifier: normalizeIdentifier(payload.identifier),
+    code: payload.code.trim(),
   });
   return response.data;
 }

@@ -19,6 +19,7 @@ import { resolveImageUrl } from "@/lib/image";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { getHomeContent, trackAdClick } from "@/services/content-service";
 import { getPublicContactInfo } from "@/services/finance-service";
+import { listStorefronts } from "@/services/catalog-service";
 import { useAuthStore } from "@/store/auth-store";
 import { useProductSearch } from "@/hooks/use-product-search";
 import { HomeContentProduct } from "@/types/content";
@@ -106,6 +107,11 @@ export default function HomePage() {
     queryKey: ["public-contact-info"],
     queryFn: getPublicContactInfo,
     staleTime: 60_000,
+  });
+  const { data: storefronts = [] } = useQuery({
+    queryKey: ["home-storefronts"],
+    queryFn: () => listStorefronts(),
+    staleTime: 30_000,
   });
   const { data, isPending, isFetching, isError, error } = useProductSearch({
     query: debouncedBarcode ? "" : debouncedQuery,
@@ -206,6 +212,47 @@ export default function HomePage() {
                 <p className="text-xs text-slate-500">{item.brand}</p>
                 <p className="mt-2 text-base font-semibold text-[#FF4D00]">
                   {formatMoney(item.amount, preferredCurrency)}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </article>
+      ) : null}
+
+      {!hasActiveFilter && storefronts.length ? (
+        <article className="premium-card mt-5 border border-slate-200 bg-white p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="luxury-title text-lg font-semibold text-slate-900">Boutiques & Enseignes</h2>
+              <p className="mt-1 text-xs text-slate-500">Mini-sites vendeurs, restaurants, hotels et premium.</p>
+            </div>
+            <Link href="/boutiques" className="text-sm font-medium text-[#FF4D00]">
+              Voir tout
+            </Link>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {storefronts.slice(0, 8).map((store) => (
+              <Link
+                key={store.id}
+                href={`/shop/${store.id}`}
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-[#FF4D00]/30"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{store.business_name || store.name}</p>
+                    <p className="mt-1 text-[11px] uppercase tracking-wide text-slate-500">
+                      {store.activity_type || "shop"}
+                    </p>
+                  </div>
+                  {store.storefront_tier === "premium" ? (
+                    <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                      Premium
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-xs text-slate-500">{store.city || "Niamey"}</p>
+                <p className="mt-3 text-xs text-slate-600">
+                  {store.product_count} produits • {store.service_count} services
                 </p>
               </Link>
             ))}

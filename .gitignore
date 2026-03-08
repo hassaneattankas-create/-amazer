@@ -2,9 +2,14 @@
 .env.local
 **/.env
 **/.env.local
+amazer.db
+*.log
 
 backend/.venv311/
 backend/venv/
 frontend/.env*
 **/__pycache__/
 *.pyc
+__pycache__/
+
+.vercel

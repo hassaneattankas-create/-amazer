@@ -68,6 +68,7 @@ class PinVerifyRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     pin: str = Field(min_length=4, max_length=32)
+    birth_date: str = Field(min_length=6, max_length=16)
 
 
 class WalletSummaryResponse(BaseModel):

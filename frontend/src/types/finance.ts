@@ -51,6 +51,7 @@ export type TreasuryTransaction = {
 
 export type VerifyPinPayload = {
   pin: string;
+  birth_date: string;
 };
 
 export type TransferPayload = {

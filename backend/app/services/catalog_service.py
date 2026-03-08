@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
+from app.core.crypto import decrypt_phone_value
 from app.repositories.catalog_repository import CatalogRepository
 from app.schemas.catalog import (
     CategoryListResponse,
@@ -72,11 +73,18 @@ class CatalogService:
                     is_active=vendor.is_active,
                     is_verified=bool(getattr(getattr(vendor, "seller_profile", None), "is_verified", False)),
                     business_name=getattr(getattr(vendor, "seller_profile", None), "business_name", None),
+                    activity_type=getattr(getattr(vendor, "seller_profile", None), "activity_type", None),
+                    storefront_tier=getattr(getattr(vendor, "seller_profile", None), "storefront_tier", None),
                     city=getattr(getattr(vendor, "seller_profile", None), "city", None),
-                    phone=getattr(getattr(vendor, "seller_profile", None), "phone", None),
+                    phone=decrypt_phone_value(getattr(getattr(vendor, "seller_profile", None), "phone", None)),
                     address=getattr(getattr(vendor, "seller_profile", None), "address", None),
+                    description=getattr(getattr(vendor, "seller_profile", None), "description", None),
+                    logo_url=getattr(getattr(vendor, "seller_profile", None), "logo_url", None),
+                    cover_image_url=getattr(getattr(vendor, "seller_profile", None), "cover_image_url", None),
                     product_count=len(product_counter.get(vendor.id, set())),
                     promotion_count=promo_counter.get(vendor.id, 0),
+                    service_count=len(getattr(getattr(vendor, "seller_profile", None), "service_offerings", []) or []),
+                    room_type_count=len(getattr(getattr(vendor, "seller_profile", None), "room_types", []) or []),
                 )
                 for vendor in vendors
             ]

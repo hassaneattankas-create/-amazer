@@ -61,6 +61,56 @@ def _sync_product_flags(product: Product) -> tuple[float | None, datetime | None
     return promo_price, promo_until, boost_until
 
 
+def _profile_response(profile: SellerProfile) -> SellerProfileResponse:
+    return SellerProfileResponse(
+        id=profile.id,
+        user_id=profile.user_id,
+        vendor_id=profile.vendor_id,
+        business_name=profile.business_name,
+        phone=decrypt_phone_value(profile.phone),
+        city=profile.city,
+        address=profile.address,
+        activity_type=profile.activity_type,
+        storefront_tier=profile.storefront_tier,
+        description=profile.description,
+        logo_url=profile.logo_url,
+        cover_image_url=profile.cover_image_url,
+        opening_hours=profile.opening_hours,
+        whatsapp_contact=profile.whatsapp_contact,
+        contact_email=profile.contact_email,
+        gallery_images=list(profile.gallery_images or []),
+        service_offerings=list(profile.service_offerings or []),
+        room_types=list(profile.room_types or []),
+        deposit_payment_method=profile.deposit_payment_method,
+        deposit_amount=profile.deposit_amount,
+        accepts_table_reservations=bool(profile.accepts_table_reservations),
+        accepts_hotel_bookings=bool(profile.accepts_hotel_bookings),
+        is_verified=profile.is_verified,
+        created_at=profile.created_at,
+    )
+
+
+def _hotel_booking_response(row: HotelBooking) -> HotelBookingResponse:
+    return HotelBookingResponse(
+        id=row.id,
+        vendor_id=row.vendor_id,
+        room_type_id=row.room_type_id,
+        room_snapshot=row.room_snapshot or {},
+        guest_name=row.guest_name,
+        guest_phone=decrypt_phone_value(row.guest_phone) or "***",
+        guest_email=row.guest_email,
+        check_in_date=row.check_in_date,
+        check_out_date=row.check_out_date,
+        guest_count=row.guest_count,
+        deposit_payment_method=row.deposit_payment_method,  # type: ignore[arg-type]
+        deposit_amount=row.deposit_amount,
+        transaction_reference=row.transaction_reference,
+        special_request=row.special_request,
+        status=row.status,  # type: ignore[arg-type]
+        created_at=row.created_at,
+    )
+
+
 @router.get("/profile", response_model=SellerProfileResponse | None)
 def get_profile(
     db: Annotated[Session, Depends(get_db)],
@@ -322,6 +372,211 @@ def update_inventory_item(
         promo_until=promo_until,
         boost_until=boost_until,
     )
+
+
+@router.post(
+    "/storefront/{vendor_id}/restaurant-reservations",
+    response_model=RestaurantReservationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_restaurant_reservation(
+    vendor_id: str,
+    payload: RestaurantReservationCreateRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> RestaurantReservationResponse:
+    enforce_csrf(request)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == vendor_id))
+    if profile is None or profile.activity_type != "restaurant":
+        raise NotFoundError("Restaurant storefront not found")
+    if not profile.accepts_table_reservations:
+        raise ConflictError("Table reservations are disabled for this restaurant")
+
+    reservation = RestaurantReservation(
+        vendor_id=vendor_id,
+        user_id=current_user.id,
+        customer_name=payload.customer_name,
+        customer_phone=encrypt_phone_value(payload.customer_phone) or payload.customer_phone,
+        reservation_at=payload.reservation_at,
+        guest_count=payload.guest_count,
+        note=payload.note,
+        status="pending",
+    )
+    db.add(reservation)
+    db.commit()
+    db.refresh(reservation)
+    return RestaurantReservationResponse(
+        id=reservation.id,
+        vendor_id=reservation.vendor_id,
+        customer_name=reservation.customer_name,
+        customer_phone=decrypt_phone_value(reservation.customer_phone) or "***",
+        reservation_at=reservation.reservation_at,
+        guest_count=reservation.guest_count,
+        note=reservation.note,
+        status=reservation.status,
+        created_at=reservation.created_at,
+    )
+
+
+@router.get("/restaurant-reservations", response_model=list[RestaurantReservationResponse])
+def list_seller_restaurant_reservations(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> list[RestaurantReservationResponse]:
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        return []
+    rows = db.scalars(
+        select(RestaurantReservation)
+        .where(RestaurantReservation.vendor_id == profile.vendor_id)
+        .order_by(RestaurantReservation.reservation_at.asc())
+        .limit(100)
+    ).all()
+    return [
+        RestaurantReservationResponse(
+            id=row.id,
+            vendor_id=row.vendor_id,
+            customer_name=row.customer_name,
+            customer_phone=decrypt_phone_value(row.customer_phone) or "***",
+            reservation_at=row.reservation_at,
+            guest_count=row.guest_count,
+            note=row.note,
+            status=row.status,
+            created_at=row.created_at,
+        )
+        for row in rows
+    ]
+
+
+@router.patch(
+    "/restaurant-reservations/{reservation_id}/status",
+    response_model=RestaurantReservationResponse,
+)
+def update_restaurant_reservation_status(
+    reservation_id: str,
+    payload: RestaurantReservationStatusUpdateRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> RestaurantReservationResponse:
+    enforce_csrf(request)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        raise NotFoundError("Seller profile not found")
+    reservation = db.get(RestaurantReservation, reservation_id)
+    if reservation is None or reservation.vendor_id != profile.vendor_id:
+        raise NotFoundError("Reservation not found")
+    reservation.status = payload.status
+    db.commit()
+    db.refresh(reservation)
+    return RestaurantReservationResponse(
+        id=reservation.id,
+        vendor_id=reservation.vendor_id,
+        customer_name=reservation.customer_name,
+        customer_phone=decrypt_phone_value(reservation.customer_phone) or "***",
+        reservation_at=reservation.reservation_at,
+        guest_count=reservation.guest_count,
+        note=reservation.note,
+        status=reservation.status,
+        created_at=reservation.created_at,
+    )
+
+
+@router.post(
+    "/storefront/{vendor_id}/hotel-bookings",
+    response_model=HotelBookingResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_hotel_booking(
+    vendor_id: str,
+    payload: HotelBookingCreateRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> HotelBookingResponse:
+    enforce_csrf(request)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == vendor_id))
+    if profile is None or profile.activity_type not in {"hotel", "enterprise"}:
+        raise NotFoundError("Hotel storefront not found")
+    if not profile.accepts_hotel_bookings:
+        raise ConflictError("Hotel bookings are disabled for this storefront")
+
+    room_map = {
+        str(room.get("id")): room
+        for room in (profile.room_types or [])
+        if isinstance(room, dict) and room.get("id")
+    }
+    room = room_map.get(payload.room_type_id)
+    if room is None:
+        raise NotFoundError("Room type not found")
+
+    nights = (payload.check_out_date - payload.check_in_date).days
+    if nights <= 0:
+        raise ConflictError("Check-out must be after check-in")
+    deposit_amount = float(room.get("deposit_amount") or profile.deposit_amount or 0)
+    if deposit_amount <= 0:
+        raise ConflictError("A deposit amount must be configured for this hotel booking")
+
+    booking = HotelBooking(
+        vendor_id=vendor_id,
+        user_id=current_user.id,
+        room_type_id=payload.room_type_id,
+        room_snapshot=room,
+        guest_name=payload.guest_name,
+        guest_phone=encrypt_phone_value(payload.guest_phone) or payload.guest_phone,
+        guest_email=payload.guest_email,
+        check_in_date=payload.check_in_date,
+        check_out_date=payload.check_out_date,
+        guest_count=payload.guest_count,
+        deposit_payment_method=payload.deposit_payment_method,
+        deposit_amount=deposit_amount,
+        transaction_reference=payload.transaction_reference,
+        special_request=payload.special_request,
+        status="pending",
+    )
+    db.add(booking)
+    db.commit()
+    db.refresh(booking)
+    return _hotel_booking_response(booking)
+
+
+@router.get("/hotel-bookings", response_model=list[HotelBookingResponse])
+def list_seller_hotel_bookings(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> list[HotelBookingResponse]:
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        return []
+    rows = db.scalars(
+        select(HotelBooking)
+        .where(HotelBooking.vendor_id == profile.vendor_id)
+        .order_by(HotelBooking.created_at.desc())
+        .limit(100)
+    ).all()
+    return [_hotel_booking_response(row) for row in rows]
+
+
+@router.patch("/hotel-bookings/{booking_id}/status", response_model=HotelBookingResponse)
+def update_hotel_booking_status(
+    booking_id: str,
+    payload: HotelBookingStatusUpdateRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> HotelBookingResponse:
+    enforce_csrf(request)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        raise NotFoundError("Seller profile not found")
+    booking = db.get(HotelBooking, booking_id)
+    if booking is None or booking.vendor_id != profile.vendor_id:
+        raise NotFoundError("Hotel booking not found")
+    booking.status = payload.status
+    db.commit()
+    db.refresh(booking)
+    return _hotel_booking_response(booking)
 
 
 @router.post("/leads", response_model=SellerLeadResponse, status_code=status.HTTP_201_CREATED)

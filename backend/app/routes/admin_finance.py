@@ -138,7 +138,7 @@ def verify_admin_finance_pin(
 ) -> None:
     enforce_csrf(request)
     enforce_rate_limit(request, key="admin_finance_pin", limit=5, window_seconds=300)
-    if payload.pin != settings.admin_finance_pin:
+    if payload.pin != settings.admin_finance_pin or payload.birth_date != settings.admin_birth_date:
         raise UnauthorizedError("Invalid finance PIN")
     response.set_cookie(
         key="finance_pin_verified",
