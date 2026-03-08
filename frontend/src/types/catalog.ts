@@ -13,6 +13,10 @@ export type VendorStorefront = {
   description: string | null;
   logo_url: string | null;
   cover_image_url: string | null;
+  badge_label: string | null;
+  starting_price: number | null;
+  price_suffix: string | null;
+  highlight_items: string[];
   product_count: number;
   promotion_count: number;
   service_count: number;

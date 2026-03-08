@@ -12,16 +12,17 @@ import { BarcodeScannerDrawer } from "@/components/BarcodeScannerDrawer";
 import { HeroSection } from "@/components/HeroSection";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
+import { StorefrontShowcaseCard } from "@/components/storefront/StorefrontShowcaseCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { formatMoney } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { getHomeContent, trackAdClick } from "@/services/content-service";
 import { getPublicContactInfo } from "@/services/finance-service";
 import { listStorefronts } from "@/services/catalog-service";
-import { useAuthStore } from "@/store/auth-store";
 import { useProductSearch } from "@/hooks/use-product-search";
+import { useAuthStore } from "@/store/auth-store";
 import { HomeContentProduct } from "@/types/content";
 import { ProductSearchItem } from "@/types/product";
 
@@ -29,11 +30,11 @@ const DEBOUNCE_MS = 250;
 const HOME_STATE_DRAFT_KEY = "amazer_home_state_draft";
 
 const SHELF_TABS = [
-  { slug: "all", emoji: "✨", label: "Tout" },
-  { slug: "alimentation", emoji: "🍎", label: "Alimentation" },
-  { slug: "restaurant", emoji: "🍽️", label: "Restaurant" },
-  { slug: "accessoires", emoji: "🎧", label: "Accessoires" },
-  { slug: "technologie", emoji: "💻", label: "Technologie" },
+  { slug: "all", emoji: "*", label: "Tout" },
+  { slug: "alimentation", emoji: "AG", label: "Alimentation" },
+  { slug: "restaurant", emoji: "RE", label: "Restaurant" },
+  { slug: "accessoires", emoji: "AC", label: "Accessoires" },
+  { slug: "technologie", emoji: "TE", label: "Technologie" },
 ] as const;
 
 type ShelfSlug = (typeof SHELF_TABS)[number]["slug"];
@@ -68,9 +69,9 @@ function loadHomeStateDraft(): { query: string; barcode: string; activeShelf: Sh
 
 function shuffleItems<T>(items: T[]): T[] {
   const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
   }
   return copy;
 }
@@ -110,13 +111,14 @@ export default function HomePage() {
   });
   const { data: storefronts = [] } = useQuery({
     queryKey: ["home-storefronts"],
-    queryFn: () => listStorefronts(),
+    queryFn: () => listStorefronts({ storefrontTier: "premium" }),
     staleTime: 30_000,
   });
   const { data, isPending, isFetching, isError, error } = useProductSearch({
     query: debouncedBarcode ? "" : debouncedQuery,
     barcode: debouncedBarcode,
   });
+
   const products = useMemo(() => data?.items ?? [], [data?.items]);
   const shelfFiltered = useMemo(() => {
     if (activeShelf === "all") {
@@ -143,6 +145,25 @@ export default function HomePage() {
     }
     return shuffleItems(cards).slice(0, 12);
   }, [homeContent?.sections]);
+
+  const featuredHotels = useMemo(
+    () =>
+      storefronts
+        .filter((store) => store.activity_type === "hotel" && store.is_verified)
+        .slice(0, 3),
+    [storefronts]
+  );
+  const featuredBoutiques = useMemo(
+    () =>
+      storefronts
+        .filter(
+          (store) =>
+            (store.activity_type === "shop" || store.activity_type === "enterprise") &&
+            store.is_verified
+        )
+        .slice(0, 6),
+    [storefronts]
+  );
 
   const showSkeletons = isPending || (isFetching && boostedResults.length === 0);
   const isEmptyState = hasActiveFilter && !isPending && !isError && boostedResults.length === 0;
@@ -219,42 +240,43 @@ export default function HomePage() {
         </article>
       ) : null}
 
-      {!hasActiveFilter && storefronts.length ? (
+      {!hasActiveFilter && featuredHotels.length ? (
+        <article className="premium-card mt-5 border border-slate-200 bg-white p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="luxury-title text-lg font-semibold text-slate-900">Hotels de Luxe</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Suites premium, spa, piscine et services signatures.
+              </p>
+            </div>
+            <Link href="/hotels" className="text-sm font-medium text-[#FF4D00]">
+              Voir tout
+            </Link>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+            {featuredHotels.map((store) => (
+              <StorefrontShowcaseCard key={store.id} store={store} ctaLabel="Voir l'hotel" />
+            ))}
+          </div>
+        </article>
+      ) : null}
+
+      {!hasActiveFilter && featuredBoutiques.length ? (
         <article className="premium-card mt-5 border border-slate-200 bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="luxury-title text-lg font-semibold text-slate-900">Boutiques & Enseignes</h2>
-              <p className="mt-1 text-xs text-slate-500">Mini-sites vendeurs, restaurants, hotels et premium.</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Mini-sites premium pour artisanat, tech et gourmet.
+              </p>
             </div>
             <Link href="/boutiques" className="text-sm font-medium text-[#FF4D00]">
               Voir tout
             </Link>
           </div>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {storefronts.slice(0, 8).map((store) => (
-              <Link
-                key={store.id}
-                href={`/shop/${store.id}`}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-[#FF4D00]/30"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{store.business_name || store.name}</p>
-                    <p className="mt-1 text-[11px] uppercase tracking-wide text-slate-500">
-                      {store.activity_type || "shop"}
-                    </p>
-                  </div>
-                  {store.storefront_tier === "premium" ? (
-                    <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                      Premium
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-2 text-xs text-slate-500">{store.city || "Niamey"}</p>
-                <p className="mt-3 text-xs text-slate-600">
-                  {store.product_count} produits • {store.service_count} services
-                </p>
-              </Link>
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {featuredBoutiques.map((store) => (
+              <StorefrontShowcaseCard key={store.id} store={store} />
             ))}
           </div>
         </article>
@@ -315,7 +337,7 @@ export default function HomePage() {
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-500">
                   <li>Utilise la camera arriere pour les code-barres longs.</li>
                   <li>Un scan reussi declenche une vibration legere.</li>
-                  <li>La recherche `barcode` est lancee automatiquement.</li>
+                  <li>La recherche barcode est lancee automatiquement.</li>
                 </ul>
               </Drawer.Content>
             </Drawer.Portal>
@@ -329,7 +351,9 @@ export default function HomePage() {
           <p className="mt-1 text-sm text-slate-600">Selection chaude du jour pour livraison a Niamey.</p>
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {(homeContent?.sections ?? [])
-              .flatMap((section) => section.restaurants.map((entry) => ({ ...entry, sectionSlug: section.slug })))
+              .flatMap((section) =>
+                section.restaurants.map((entry) => ({ ...entry, sectionSlug: section.slug }))
+              )
               .slice(0, 6)
               .map((restaurant) => (
                 <Link

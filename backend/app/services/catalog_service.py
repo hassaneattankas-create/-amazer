@@ -51,16 +51,32 @@ class CatalogService:
         limit: int,
         offset: int,
         query: str | None = None,
+        activity_type: str | None = None,
+        storefront_tier: str | None = None,
     ) -> VendorStorefrontListResponse:
-        vendors = self.catalog.list_vendor_storefronts(limit=limit, offset=offset, query=query)
+        vendors = self.catalog.list_vendor_storefronts(
+            limit=limit,
+            offset=offset,
+            query=query,
+            activity_type=activity_type,
+            storefront_tier=storefront_tier,
+        )
         prices = self.catalog.list_vendor_prices(vendor_ids=[vendor.id for vendor in vendors])
 
         product_counter: dict[str, set[str]] = {}
         promo_counter: dict[str, int] = {}
+        product_names: dict[str, list[str]] = {}
+        min_product_price: dict[str, float] = {}
         for price in prices:
             if price.stock_quantity <= 0 or price.product is None:
                 continue
             product_counter.setdefault(price.vendor_id, set()).add(price.product_id)
+            names = product_names.setdefault(price.vendor_id, [])
+            if price.product.name not in names and len(names) < 4:
+                names.append(price.product.name)
+            current_min = min_product_price.get(price.vendor_id)
+            if current_min is None or float(price.amount) < current_min:
+                min_product_price[price.vendor_id] = float(price.amount)
             if self._is_promo_active(price.product):
                 promo_counter[price.vendor_id] = promo_counter.get(price.vendor_id, 0) + 1
 
@@ -81,6 +97,16 @@ class CatalogService:
                     description=getattr(getattr(vendor, "seller_profile", None), "description", None),
                     logo_url=getattr(getattr(vendor, "seller_profile", None), "logo_url", None),
                     cover_image_url=getattr(getattr(vendor, "seller_profile", None), "cover_image_url", None),
+                    badge_label=self._build_badge_label(getattr(vendor, "seller_profile", None)),
+                    starting_price=self._build_starting_price(
+                        getattr(vendor, "seller_profile", None),
+                        min_product_price.get(vendor.id),
+                    ),
+                    price_suffix=self._build_price_suffix(getattr(vendor, "seller_profile", None)),
+                    highlight_items=self._build_highlights(
+                        getattr(vendor, "seller_profile", None),
+                        product_names.get(vendor.id, []),
+                    ),
                     product_count=len(product_counter.get(vendor.id, set())),
                     promotion_count=promo_counter.get(vendor.id, 0),
                     service_count=len(getattr(getattr(vendor, "seller_profile", None), "service_offerings", []) or []),
@@ -89,6 +115,73 @@ class CatalogService:
                 for vendor in vendors
             ]
         )
+
+    def _build_badge_label(self, profile) -> str | None:
+        if profile is None:
+            return None
+        activity_type = getattr(profile, "activity_type", None)
+        tier = getattr(profile, "storefront_tier", None)
+        if activity_type == "hotel" and tier == "premium":
+            return "Luxe"
+        if tier == "premium":
+            return "Premium"
+        return None
+
+    def _build_price_suffix(self, profile) -> str | None:
+        if profile is None:
+            return None
+        activity_type = getattr(profile, "activity_type", None)
+        if activity_type == "hotel":
+            return "par nuit"
+        if activity_type == "restaurant":
+            return "menu"
+        if activity_type == "shop":
+            return "selection"
+        return None
+
+    def _build_starting_price(self, profile, default_product_price: float | None) -> float | None:
+        if profile is None:
+            return default_product_price
+        activity_type = getattr(profile, "activity_type", None)
+        room_types = list(getattr(profile, "room_types", []) or [])
+        if activity_type == "hotel":
+            nightly_prices = [
+                float(room.get("night_price"))
+                for room in room_types
+                if isinstance(room, dict) and isinstance(room.get("night_price"), (int, float))
+            ]
+            if nightly_prices:
+                return min(nightly_prices)
+        return default_product_price
+
+    def _build_highlights(self, profile, product_names: list[str]) -> list[str]:
+        if profile is None:
+            return product_names[:3]
+        service_offerings = list(getattr(profile, "service_offerings", []) or [])
+        room_types = list(getattr(profile, "room_types", []) or [])
+        highlights: list[str] = []
+        for item in service_offerings:
+            if isinstance(item, dict):
+                title = str(item.get("title", "")).strip()
+                if title and title not in highlights:
+                    highlights.append(title)
+            if len(highlights) >= 4:
+                return highlights[:4]
+        for room in room_types:
+            if not isinstance(room, dict):
+                continue
+            for amenity in room.get("amenities", []) or []:
+                amenity_label = str(amenity).strip()
+                if amenity_label and amenity_label not in highlights:
+                    highlights.append(amenity_label)
+                if len(highlights) >= 4:
+                    return highlights[:4]
+        for name in product_names:
+            if name and name not in highlights:
+                highlights.append(name)
+            if len(highlights) >= 4:
+                break
+        return highlights[:4]
 
     def list_promotions(
         self,

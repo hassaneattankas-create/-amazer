@@ -17,6 +17,7 @@ import { useCartStore } from "@/store/cartStore";
 const clientNavItems = [
   { href: "/", label: "Accueil" },
   { href: "/boutiques", label: "Boutiques" },
+  { href: "/hotels", label: "Hotels" },
   { href: "/promotions", label: "Promotions" },
   { href: "/avis", label: "Avis" },
   { href: "/dashboard", label: "Dashboard" },

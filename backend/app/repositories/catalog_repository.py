@@ -51,6 +51,8 @@ class CatalogRepository:
         limit: int,
         offset: int,
         query: str | None = None,
+        activity_type: str | None = None,
+        storefront_tier: str | None = None,
     ) -> list[Vendor]:
         stmt = (
             select(Vendor)
@@ -63,7 +65,20 @@ class CatalogRepository:
         )
         if query:
             term = f"%{query.strip()}%"
-            stmt = stmt.where(or_(Vendor.name.ilike(term), Vendor.slug.ilike(term)))
+            stmt = stmt.where(
+                or_(
+                    Vendor.name.ilike(term),
+                    Vendor.slug.ilike(term),
+                    SellerProfile.business_name.ilike(term),
+                    SellerProfile.city.ilike(term),
+                    SellerProfile.activity_type.ilike(term),
+                    SellerProfile.description.ilike(term),
+                )
+            )
+        if activity_type:
+            stmt = stmt.where(SellerProfile.activity_type == activity_type)
+        if storefront_tier:
+            stmt = stmt.where(SellerProfile.storefront_tier == storefront_tier)
         return list(self.db.scalars(stmt))
 
     def list_vendor_prices(self, *, vendor_ids: list[str]) -> list[Price]:

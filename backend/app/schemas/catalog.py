@@ -34,6 +34,10 @@ class VendorStorefrontResponse(BaseModel):
     description: str | None
     logo_url: str | None
     cover_image_url: str | None
+    badge_label: str | None
+    starting_price: float | None
+    price_suffix: str | None
+    highlight_items: list[str]
     product_count: int
     promotion_count: int
     service_count: int

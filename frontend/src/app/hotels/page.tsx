@@ -9,55 +9,55 @@ import { StorefrontShowcaseCard } from "@/components/storefront/StorefrontShowca
 import { Input } from "@/components/ui/input";
 import { listStorefronts } from "@/services/catalog-service";
 
-export default function BoutiquesPage() {
+export default function HotelsPage() {
   const [query, setQuery] = useState("");
-  const { data: stores = [], isPending } = useQuery({
-    queryKey: ["catalog-storefronts-boutiques", query],
+  const { data: hotels = [], isPending } = useQuery({
+    queryKey: ["catalog-storefronts-hotels", query],
     queryFn: () =>
       listStorefronts({
         query,
-        activityType: "shop",
+        activityType: "hotel",
       }),
   });
-  const visibleStores = useMemo(() => stores.filter((store) => store.is_verified), [stores]);
+  const visibleHotels = useMemo(() => hotels.filter((hotel) => hotel.is_verified), [hotels]);
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
       <header className="premium-card border border-white/20 bg-white/70 p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="luxury-title text-3xl font-semibold">Boutiques Premium</h1>
+            <h1 className="luxury-title text-3xl font-semibold">Hotels de Luxe</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-600">
-              Explorez les mini-sites marchands, les vitrines premium et les produits phares de la place.
+              Comparez les etablissements premium, leurs services signatures et leurs chambres a partir de prix en XOF.
             </p>
           </div>
-          <Link href="/hotels" className="text-sm font-medium text-[#FF4D00]">
-            Voir aussi les hotels
+          <Link href="/boutiques" className="text-sm font-medium text-[#FF4D00]">
+            Retour aux boutiques
           </Link>
         </div>
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Rechercher une boutique, une enseigne ou une ville..."
+          placeholder="Rechercher un hotel, un quartier ou un service..."
           className="mt-5"
         />
       </header>
 
       {isPending ? (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <ProductCardSkeleton key={`store-skeleton-${index}`} />
+          {Array.from({ length: 3 }).map((_, index) => (
+            <ProductCardSkeleton key={`hotel-skeleton-${index}`} />
           ))}
         </div>
-      ) : visibleStores.length ? (
+      ) : visibleHotels.length ? (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {visibleStores.map((store) => (
-            <StorefrontShowcaseCard key={store.id} store={store} ctaLabel="Entrer" />
+          {visibleHotels.map((hotel) => (
+            <StorefrontShowcaseCard key={hotel.id} store={hotel} ctaLabel="Voir les chambres" />
           ))}
         </div>
       ) : (
         <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
-          Aucune boutique ne correspond a cette recherche.
+          Aucun hotel ne correspond a cette recherche.
         </article>
       )}
     </section>

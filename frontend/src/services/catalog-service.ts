@@ -1,9 +1,20 @@
 import { api } from "@/lib/api";
 import { CatalogCategory, PromotionItem, VendorStorefront } from "@/types/catalog";
 
-export async function listStorefronts(query?: string): Promise<VendorStorefront[]> {
+type StorefrontFilters = {
+  query?: string;
+  activityType?: "shop" | "restaurant" | "hotel" | "enterprise";
+  storefrontTier?: "basic" | "premium";
+};
+
+export async function listStorefronts(filters?: StorefrontFilters): Promise<VendorStorefront[]> {
   const response = await api.get<{ items: VendorStorefront[] }>("/api/v1/catalog/storefronts", {
-    params: query?.trim() ? { query: query.trim(), limit: 120 } : { limit: 120 },
+    params: {
+      limit: 120,
+      ...(filters?.query?.trim() ? { query: filters.query.trim() } : {}),
+      ...(filters?.activityType ? { activity_type: filters.activityType } : {}),
+      ...(filters?.storefrontTier ? { storefront_tier: filters.storefrontTier } : {}),
+    },
   });
   return response.data.items;
 }

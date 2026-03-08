@@ -42,11 +42,19 @@ def list_vendors(
 def list_storefronts(
     db: Annotated[Session, Depends(get_db)],
     query: Annotated[str | None, Query(min_length=1, max_length=120)] = None,
+    activity_type: Annotated[str | None, Query(min_length=1, max_length=32)] = None,
+    storefront_tier: Annotated[str | None, Query(min_length=1, max_length=32)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> VendorStorefrontListResponse:
     service = CatalogService(db)
-    return service.list_vendor_storefronts(limit=limit, offset=offset, query=query)
+    return service.list_vendor_storefronts(
+        limit=limit,
+        offset=offset,
+        query=query,
+        activity_type=activity_type,
+        storefront_tier=storefront_tier,
+    )
 
 
 @router.get("/promotions", response_model=PromotionListResponse)
