@@ -44,55 +44,40 @@ app.add_middleware(
 
 def _bootstrap_database_if_needed() -> None:
     """Initialize schema and seed base marketplace data when DB is empty."""
-    try:
-        with engine.begin() as conn:
-            # Optional extension for text search improvements (safe if unavailable).
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
-            # Keep auth schema compatible on existing databases.
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_phone VARCHAR(24)"))
-            conn.execute(
-                text(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_whatsapp_phone "
-                    "ON users (whatsapp_phone) WHERE whatsapp_phone IS NOT NULL"
-                )
-            )
-            conn.execute(text("ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS activity_type VARCHAR(32) DEFAULT 'shop'"))
-            conn.execute(text("ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS storefront_tier VARCHAR(32) DEFAULT 'basic'"))
-            conn.execute(text("ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS description VARCHAR(2000)"))
-            conn.execute(text("ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS logo_url VARCHAR(1024)"))
-            conn.execute(text("ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS cover_image_url VARCHAR(1024)"))
-            conn.execute(text("ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS opening_hours VARCHAR(240)"))
-            conn.execute(text("ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS whatsapp_contact VARCHAR(40)"))
-            conn.execute(text("ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS contact_email VARCHAR(320)"))
-            conn.execute(
-                text(
-                    "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS gallery_images JSONB DEFAULT '[]'::jsonb"
-                )
-            )
-            conn.execute(
-                text(
-                    "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS service_offerings JSONB DEFAULT '[]'::jsonb"
-                )
-            )
-            conn.execute(
-                text(
-                    "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS room_types JSONB DEFAULT '[]'::jsonb"
-                )
-            )
-            conn.execute(text("ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS deposit_payment_method VARCHAR(20)"))
-            conn.execute(text("ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS deposit_amount DOUBLE PRECISION"))
-            conn.execute(
-                text(
-                    "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS accepts_table_reservations BOOLEAN DEFAULT FALSE"
-                )
-            )
-            conn.execute(
-                text(
-                    "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS accepts_hotel_bookings BOOLEAN DEFAULT FALSE"
-                )
-            )
-    except Exception as exc:  # pragma: no cover - depends on managed DB privileges
-        logger.warning("Database bootstrap extension/compat skipped: %s", exc)
+    def _run_ddl_safely(statement: str) -> None:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(statement))
+        except Exception as exc:  # pragma: no cover - depends on managed DB privileges
+            logger.warning("Database bootstrap DDL skipped: %s | statement=%s", exc, statement)
+
+    # Optional extension for text search improvements (safe if unavailable).
+    _run_ddl_safely("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+
+    # Keep auth schema compatible on existing databases.
+    for statement in (
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_phone VARCHAR(24)",
+        (
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_whatsapp_phone "
+            "ON users (whatsapp_phone) WHERE whatsapp_phone IS NOT NULL"
+        ),
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS activity_type VARCHAR(32) DEFAULT 'shop'",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS storefront_tier VARCHAR(32) DEFAULT 'basic'",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS description VARCHAR(2000)",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS logo_url VARCHAR(1024)",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS cover_image_url VARCHAR(1024)",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS opening_hours VARCHAR(240)",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS whatsapp_contact VARCHAR(40)",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS contact_email VARCHAR(320)",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS gallery_images JSONB DEFAULT '[]'::jsonb",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS service_offerings JSONB DEFAULT '[]'::jsonb",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS room_types JSONB DEFAULT '[]'::jsonb",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS deposit_payment_method VARCHAR(20)",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS deposit_amount DOUBLE PRECISION",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS accepts_table_reservations BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS accepts_hotel_bookings BOOLEAN DEFAULT FALSE",
+    ):
+        _run_ddl_safely(statement)
 
     Base.metadata.create_all(bind=engine)
 
