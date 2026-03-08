@@ -120,6 +120,8 @@ def list_restaurant_storefronts(
         if not vendor_menu:
             continue
         profile = profile_by_vendor.get(vendor.id)
+        if profile is None or profile.activity_type != "restaurant" or not profile.is_verified:
+            continue
         business_name = profile.business_name if profile else None
         city = profile.city if profile else None
         haystack = " ".join(
@@ -176,7 +178,18 @@ def list_restaurant_menu(
     vendor_ids = {row.vendor_id for row in rows}
     vendors = db.scalars(select(Vendor).where(Vendor.id.in_(vendor_ids))).all()
     vendor_map = {vendor.id: vendor.name for vendor in vendors}
-    return [_menu_response(row, vendor_map.get(row.vendor_id, "Restaurant")) for row in rows]
+    profiles = db.scalars(select(SellerProfile).where(SellerProfile.vendor_id.in_(vendor_ids))).all()
+    profile_map = {profile.vendor_id: profile for profile in profiles}
+    filtered_rows = [
+        row
+        for row in rows
+        if (
+            profile_map.get(row.vendor_id) is not None
+            and profile_map[row.vendor_id].activity_type == "restaurant"
+            and profile_map[row.vendor_id].is_verified
+        )
+    ]
+    return [_menu_response(row, vendor_map.get(row.vendor_id, "Restaurant")) for row in filtered_rows]
 
 
 @router.post("/menu", response_model=RestaurantMenuItemResponse, status_code=status.HTTP_201_CREATED)
