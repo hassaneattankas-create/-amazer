@@ -74,7 +74,7 @@ RESTAURANTS = [
                 "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1600&q=80",
             ],
             "service_offerings": [
-                {"title": "Tea Room", "description": "Selection de thés et accords desserts.", "display_mode": "consult_only"},
+                {"title": "Tea Room", "description": "Selection de thes et accords desserts.", "display_mode": "consult_only"},
                 {"title": "Table Chef", "description": "Experience degustation sur reservation.", "display_mode": "consult_only"},
                 {"title": "WiFi", "description": "Connexion stable business lunch.", "display_mode": "consult_only"},
             ],
@@ -97,7 +97,7 @@ RESTAURANTS = [
             "address": "Rive droite, maison lounge nomade",
             "activity_type": "restaurant",
             "storefront_tier": "premium",
-            "description": "Grill house premium et salon de thé sahelien pour dejeuners, commandes express et tables de groupe.",
+            "description": "Grill house premium et salon de the sahelien pour dejeuners, commandes express et tables de groupe.",
             "logo_url": "https://placehold.co/256x256/111827/22c55e/png?text=NG",
             "cover_image_url": "https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=1600&q=80",
             "opening_hours": "Lun-Dim 10:30-23:00",
@@ -117,8 +117,8 @@ RESTAURANTS = [
         },
         "menu": [
             {"name": "Burger Zinder Smoke", "description": "Boeuf fume, cheddar et oignons confits.", "image_url": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1200&q=80", "base_price": 14500, "tags": ["Populaire", "Chaud"], "options": [{"name": "Frites maison", "price": 2000}, {"name": "Cheddar extra", "price": 1200}], "estimated_prep_minutes": 18},
-            {"name": "Wrap Poulet Nomade", "description": "Wrap grillé et sauce yaourt cumin.", "image_url": "https://images.unsplash.com/photo-1539252554453-80ab65ce3586?auto=format&fit=crop&w=1200&q=80", "base_price": 9800, "tags": ["Plat du Jour", "Express"], "options": [{"name": "Boisson gingembre", "price": 1500}], "estimated_prep_minutes": 14},
-            {"name": "The Glace Menthe Safran", "description": "Infusion glacée menthe fraiche et pointe safran.", "image_url": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=1200&q=80", "base_price": 4800, "tags": ["Boisson", "Signature"], "options": [{"name": "Citron confit", "price": 600}], "estimated_prep_minutes": 7},
+            {"name": "Wrap Poulet Nomade", "description": "Wrap grille et sauce yaourt cumin.", "image_url": "https://images.unsplash.com/photo-1539252554453-80ab65ce3586?auto=format&fit=crop&w=1200&q=80", "base_price": 9800, "tags": ["Plat du Jour", "Express"], "options": [{"name": "Boisson gingembre", "price": 1500}], "estimated_prep_minutes": 14},
+            {"name": "The Glace Menthe Safran", "description": "Infusion glacee menthe fraiche et pointe safran.", "image_url": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=1200&q=80", "base_price": 4800, "tags": ["Boisson", "Signature"], "options": [{"name": "Citron confit", "price": 600}], "estimated_prep_minutes": 7},
         ],
     },
 ]
