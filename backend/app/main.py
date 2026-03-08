@@ -61,6 +61,7 @@ def _bootstrap_database_if_needed() -> None:
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_whatsapp_phone "
             "ON users (whatsapp_phone) WHERE whatsapp_phone IS NOT NULL"
         ),
+        "ALTER TABLE seller_profiles ALTER COLUMN phone TYPE VARCHAR(255)",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS activity_type VARCHAR(32) DEFAULT 'shop'",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS storefront_tier VARCHAR(32) DEFAULT 'basic'",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS description VARCHAR(2000)",

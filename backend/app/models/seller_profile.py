@@ -33,7 +33,7 @@ class SellerProfile(Base):
         index=True,
     )
     business_name: Mapped[str] = mapped_column(String(140), nullable=False)
-    phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(255), nullable=True)
     city: Mapped[str] = mapped_column(String(80), nullable=False, default="Niamey")
     address: Mapped[str | None] = mapped_column(String(220), nullable=True)
     activity_type: Mapped[str] = mapped_column(String(32), nullable=False, default="shop")
