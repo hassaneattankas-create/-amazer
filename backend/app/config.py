@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = Field(default=15, ge=1, le=1440)
     jwt_refresh_token_expire_days: int = Field(default=30, ge=1, le=30)
-    auto_activate_new_accounts: bool = Field(default=False)
-    registration_requires_verification: bool = Field(default=True)
+    auto_activate_new_accounts: bool = Field(default=True)
+    registration_requires_verification: bool = Field(default=False)
     verification_code_ttl_minutes: int = Field(default=10, ge=3, le=30)
     verification_code_max_attempts: int = Field(default=5, ge=3, le=10)
     admin_email: str = Field(default="amazer.niger@gmail.com")

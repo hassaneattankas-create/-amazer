@@ -45,6 +45,14 @@ export default function RegisterPage() {
             }
           : undefined,
       });
+      if (response.verification_channel === "none") {
+        await login({
+          identifier: identifier.trim(),
+          password,
+        });
+        await finalizeRedirect();
+        return;
+      }
       setRegistrationMeta(response);
       setStatus(
         `Code envoye via ${response.verification_channel} vers ${response.verification_destination_masked}.`
