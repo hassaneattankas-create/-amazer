@@ -61,6 +61,10 @@ export default function RestaurantPage() {
     queryKey: ["restaurant-menu", selectedVendorId],
     queryFn: () => listRestaurantMenu(selectedVendorId || undefined),
   });
+  const visibleStorefronts = useMemo(
+    () => storefronts.filter((store) => store.is_verified),
+    [storefronts]
+  );
 
   const orderMutation = useMutation({
     mutationFn: createRestaurantOrder,
@@ -169,8 +173,8 @@ export default function RestaurantPage() {
           placeholder="Rechercher une boutique restaurant..."
           className="mt-4"
         />
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {storefronts.slice(0, 9).map((store) => (
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {visibleStorefronts.slice(0, 9).map((store) => (
             <button
               key={store.id}
               type="button"
@@ -178,29 +182,50 @@ export default function RestaurantPage() {
                 setSelectedItems([]);
                 setSelectedVendorId((current) => (current === store.id ? "" : store.id));
               }}
-              className={`rounded-2xl border p-4 text-left transition ${
+              className={`overflow-hidden rounded-3xl border text-left transition ${
                 selectedVendorId === store.id
-                  ? "border-[#FF4D00]/40 bg-[#FF4D00]/10"
-                  : "border-slate-200 bg-slate-50 hover:border-[#FF4D00]/25"
+                  ? "border-[#FF4D00]/40 bg-white shadow-[0_20px_45px_rgba(255,77,0,0.18)]"
+                  : "border-slate-200 bg-white hover:border-[#FF4D00]/25 hover:shadow-[0_20px_45px_rgba(255,77,0,0.12)]"
               }`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">{store.business_name || store.name}</p>
-                  <p className="text-xs text-slate-500">{store.city || "Niamey"}</p>
+              <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-slate-950 via-slate-800 to-[#1f2937]">
+                {store.cover_image_url ? (
+                  <Image
+                    src={resolveImageUrl(store.cover_image_url) || store.cover_image_url}
+                    alt={store.business_name || store.name}
+                    fill
+                    unoptimized
+                    className="object-cover opacity-90"
+                  />
+                ) : null}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/25 to-transparent" />
+                <div className="absolute bottom-3 left-3 right-3">
+                  <p className="text-sm font-semibold text-white">{store.business_name || store.name}</p>
+                  <p className="text-xs text-white/75">{store.city || "Niamey"}</p>
                 </div>
-                {store.is_verified ? (
+              </div>
+              <div className="space-y-2 p-4">
+                <div className="flex items-center justify-between gap-2">
                   <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
                     Verifie
                   </span>
-                ) : null}
+                  {store.plat_du_jour_count ? (
+                    <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                      {store.plat_du_jour_count} plat(s) du jour
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-xs text-slate-600">
+                  {store.menu_item_count} article(s) menu
+                </p>
+                {store.address ? <p className="line-clamp-2 text-xs text-slate-500">{store.address}</p> : null}
               </div>
-              <p className="mt-2 text-xs text-slate-600">
-                {store.menu_item_count} articles | {store.plat_du_jour_count} plat(s) du jour
-              </p>
             </button>
           ))}
         </div>
+        {!visibleStorefronts.length ? (
+          <p className="mt-4 text-sm text-slate-500">Aucun restaurant premium verifie pour le moment.</p>
+        ) : null}
         {selectedVendorId ? (
           <p className="mt-3 text-xs text-[#FF4D00]">
             Filtre actif: menu d&apos;une seule boutique. Cliquez a nouveau pour afficher tous les restaurants.

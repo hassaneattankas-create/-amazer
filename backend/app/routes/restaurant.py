@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
 from app.core.csrf import enforce_csrf
-from app.core.crypto import encrypt_payment_code, payment_code_hash
+from app.core.crypto import decrypt_phone_value, encrypt_payment_code, payment_code_hash
 from app.core.exceptions import NotFoundError, ValidationDomainError
 from app.core.rate_limit import enforce_rate_limit
 from app.database import get_db
@@ -136,16 +136,27 @@ def list_restaurant_storefronts(
                 slug=vendor.slug,
                 business_name=business_name,
                 city=city,
-                phone=profile.phone if profile else None,
+                phone=decrypt_phone_value(profile.phone) if profile else None,
                 address=profile.address if profile else None,
                 is_verified=bool(profile.is_verified) if profile else False,
                 menu_item_count=len(vendor_menu),
                 plat_du_jour_count=sum(1 for entry in vendor_menu if _is_plat_du_jour(entry.tags)),
-                cover_image_url=next((entry.image_url for entry in vendor_menu if entry.image_url), None),
+                cover_image_url=(
+                    profile.cover_image_url
+                    if profile and profile.cover_image_url
+                    else next((entry.image_url for entry in vendor_menu if entry.image_url), None)
+                ),
             )
         )
 
-    items.sort(key=lambda row: (-row.plat_du_jour_count, -row.menu_item_count, row.name.lower()))
+    items.sort(
+        key=lambda row: (
+            0 if row.is_verified else 1,
+            -row.plat_du_jour_count,
+            -row.menu_item_count,
+            row.name.lower(),
+        )
+    )
     return RestaurantStorefrontListResponse(items=items[:limit])
 
 
