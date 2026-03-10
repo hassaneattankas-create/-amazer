@@ -20,7 +20,7 @@ import type { RestaurantMenuItem } from "@/types/restaurant";
 const activityLabels = {
   shop: "Boutique",
   restaurant: "Restaurant",
-  hotel: "Hotel",
+  hotel: "Premium",
   enterprise: "Entreprise",
 } as const;
 

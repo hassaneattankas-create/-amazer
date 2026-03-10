@@ -29,6 +29,7 @@ export type RestaurantOrderRequest = {
     menu_item_id: string;
     quantity: number;
     selected_options: RestaurantMenuOption[];
+    customer_note?: string;
   }>;
 };
 
@@ -52,6 +53,7 @@ export type RestaurantOrder = {
     dish_name: string;
     quantity: number;
     selected_options: RestaurantMenuOption[];
+    customer_note: string | null;
     unit_price: number;
     subtotal: number;
   }>;

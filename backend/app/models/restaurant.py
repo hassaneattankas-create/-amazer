@@ -96,6 +96,7 @@ class RestaurantOrderItem(Base):
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     selected_options: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    customer_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
     unit_price: Mapped[float] = mapped_column(Float, nullable=False)
     subtotal: Mapped[float] = mapped_column(Float, nullable=False)
 

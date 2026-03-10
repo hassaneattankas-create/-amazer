@@ -19,16 +19,20 @@ export default function HotelsPage() {
         activityType: "hotel",
       }),
   });
-  const visibleHotels = useMemo(() => hotels.filter((hotel) => hotel.is_verified), [hotels]);
+  const visibleHotels = useMemo(() => {
+    const copy = [...hotels];
+    copy.sort((a, b) => Number(b.is_verified) - Number(a.is_verified));
+    return copy;
+  }, [hotels]);
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
       <header className="premium-card border border-white/20 bg-white/70 p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="luxury-title text-3xl font-semibold">Hotels de Luxe</h1>
+            <h1 className="luxury-title text-3xl font-semibold">Premium & Residences</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-600">
-              Comparez les etablissements premium, leurs services signatures et leurs chambres a partir de prix en XOF.
+              Comparez les etablissements premium, leurs services signatures et leurs nuits en XOF.
             </p>
           </div>
           <Link href="/boutiques" className="text-sm font-medium text-[#FF4D00]">
@@ -38,7 +42,7 @@ export default function HotelsPage() {
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Rechercher un hotel, un quartier ou un service..."
+          placeholder="Rechercher un etablissement premium, un quartier ou un service..."
           className="mt-5"
         />
       </header>
@@ -57,7 +61,7 @@ export default function HotelsPage() {
         </div>
       ) : (
         <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
-          Aucun hotel ne correspond a cette recherche.
+          Aucun etablissement premium ne correspond a cette recherche.
         </article>
       )}
     </section>

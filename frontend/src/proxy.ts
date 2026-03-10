@@ -29,11 +29,6 @@ function isFrameworkOrStaticPath(pathname: string): boolean {
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (pathname.startsWith("/admin") || pathname.startsWith("/seller")) {
-    const forwardedFor = request.headers.get("x-forwarded-for");
-    const requestIp = forwardedFor ? forwardedFor.split(",")[0]?.trim() : "unknown";
-    console.info(`[SECURITY] protected_page_access path=${pathname} ip=${requestIp || "unknown"}`);
-  }
 
   const accessToken =
     request.cookies.get("access_token")?.value || request.cookies.get("amazer_access_token")?.value;

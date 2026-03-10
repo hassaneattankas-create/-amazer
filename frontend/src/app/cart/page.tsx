@@ -31,6 +31,7 @@ export default function CartPage() {
   const [paymentMode, setPaymentMode] = useState<"nita" | "amana">("nita");
   const [deliveryType, setDeliveryType] = useState<"standard" | "express_niamey">("standard");
   const [transactionCode, setTransactionCode] = useState("");
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const { data: financeSettings } = useQuery({
     queryKey: ["public-finance-settings"],
     queryFn: getPublicFinanceSettings,
@@ -81,17 +82,18 @@ export default function CartPage() {
   };
 
   const placeOrder = async () => {
-    if (!result) {
+    if (!result || isSubmittingOrder) {
       return;
     }
 
+    setIsSubmittingOrder(true);
     try {
       const order = await checkout({
         items: result.optimizedPlan.map((entry) => ({
           product_id: entry.productId,
           vendor_id: entry.vendorId,
-          quantity: 1,
-          unit_price: entry.subtotal,
+          quantity: entry.quantity,
+          unit_price: entry.unitPrice,
         })),
         payment_mode: paymentMode,
         delivery_type: deliveryType,
@@ -107,6 +109,7 @@ export default function CartPage() {
     } catch {
       setShareMessage("Echec creation commande. Verifie ta connexion.");
     } finally {
+      setIsSubmittingOrder(false);
       window.setTimeout(() => setShareMessage(""), 2400);
     }
   };
@@ -408,10 +411,11 @@ export default function CartPage() {
           <div className="mt-4 flex flex-wrap gap-2">
             <Button
               type="button"
-              onClick={placeOrder}
+              onClick={() => void placeOrder()}
+              disabled={isSubmittingOrder}
               className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
             >
-              Valider et payer
+              {isSubmittingOrder ? "Validation..." : "Commander"}
             </Button>
             <Button
               type="button"

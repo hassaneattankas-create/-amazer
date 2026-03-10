@@ -47,6 +47,7 @@ class RestaurantOrderLineRequest(BaseModel):
     menu_item_id: str = Field(min_length=1, max_length=36)
     quantity: int = Field(ge=1, le=20)
     selected_options: list[MenuOptionSchema] = Field(default_factory=list, max_length=8)
+    customer_note: str | None = Field(default=None, max_length=500)
 
 
 class RestaurantOrderCreateRequest(BaseModel):
@@ -70,6 +71,7 @@ class RestaurantOrderItemResponse(BaseModel):
     dish_name: str
     quantity: int
     selected_options: list[dict[str, Any]]
+    customer_note: str | None
     unit_price: float
     subtotal: float
 

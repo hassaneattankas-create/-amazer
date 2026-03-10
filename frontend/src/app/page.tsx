@@ -244,7 +244,7 @@ export default function HomePage() {
         <article className="premium-card mt-5 border border-slate-200 bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="luxury-title text-lg font-semibold text-slate-900">Hotels de Luxe</h2>
+              <h2 className="luxury-title text-lg font-semibold text-slate-900">Premium & Residences</h2>
               <p className="mt-1 text-xs text-slate-500">
                 Suites premium, spa, piscine et services signatures.
               </p>
@@ -255,7 +255,7 @@ export default function HomePage() {
           </div>
           <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
             {featuredHotels.map((store) => (
-              <StorefrontShowcaseCard key={store.id} store={store} ctaLabel="Voir l'hotel" />
+              <StorefrontShowcaseCard key={store.id} store={store} ctaLabel="Voir le premium" />
             ))}
           </div>
         </article>

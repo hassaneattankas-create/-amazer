@@ -11,7 +11,7 @@ import type { VendorStorefront } from "@/types/catalog";
 const activityMeta = {
   shop: { label: "Boutique", icon: Store },
   restaurant: { label: "Restaurant", icon: UtensilsCrossed },
-  hotel: { label: "Hotel", icon: BedDouble },
+  hotel: { label: "Premium", icon: BedDouble },
   enterprise: { label: "Premium", icon: Store },
 } as const;
 

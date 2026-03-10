@@ -7,16 +7,17 @@ import { motion } from "framer-motion";
 import { Flame, ForkKnife, Sparkles } from "lucide-react";
 
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
+import { StorefrontShowcaseCard } from "@/components/storefront/StorefrontShowcaseCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatMoney } from "@/lib/currency";
+import { formatXOF } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
+import { listStorefronts } from "@/services/catalog-service";
+import { getPublicFinanceSettings } from "@/services/finance-service";
 import {
   createRestaurantOrder,
   listRestaurantMenu,
-  listRestaurantStorefronts,
 } from "@/services/restaurant-service";
-import { useAuthStore } from "@/store/auth-store";
 import { RestaurantMenuItem, RestaurantMenuOption } from "@/types/restaurant";
 
 type SelectedItem = {
@@ -26,6 +27,7 @@ type SelectedItem = {
   quantity: number;
   base_price: number;
   selected_options: RestaurantMenuOption[];
+  customer_note: string;
 };
 
 const dishImageFallbacks = [
@@ -40,8 +42,18 @@ function badgeColor(tag: string): string {
   return "bg-emerald-100 text-emerald-700 border-emerald-200";
 }
 
+function resolveMenuCategory(item: RestaurantMenuItem): string {
+  const normalizedTags = (item.tags || []).map((tag) => tag.trim().toLowerCase());
+  if (normalizedTags.some((tag) => tag.includes("entree"))) {
+    return "Entrees";
+  }
+  if (normalizedTags.some((tag) => tag.includes("boisson") || tag.includes("jus"))) {
+    return "Boissons";
+  }
+  return "Plats";
+}
+
 export default function RestaurantPage() {
-  const preferredCurrency = useAuthStore((state) => state.preferredCurrency);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -52,19 +64,37 @@ export default function RestaurantPage() {
   const [paymentMode, setPaymentMode] = useState<"nita" | "amana" | "cash_on_delivery">("nita");
   const [status, setStatus] = useState("");
 
-  const { data: storefronts = [] } = useQuery({
-    queryKey: ["restaurant-storefronts", storeQuery],
-    queryFn: () => listRestaurantStorefronts(storeQuery),
+  const { data: storefronts = [], isPending: isStorefrontsPending } = useQuery({
+    queryKey: ["catalog-storefronts-restaurants", storeQuery],
+    queryFn: () =>
+      listStorefronts({
+        query: storeQuery,
+        activityType: "restaurant",
+      }),
+  });
+  const { data: financeSettings } = useQuery({
+    queryKey: ["public-finance-settings"],
+    queryFn: getPublicFinanceSettings,
   });
 
   const { data: menu = [], isPending } = useQuery({
     queryKey: ["restaurant-menu", selectedVendorId],
     queryFn: () => listRestaurantMenu(selectedVendorId || undefined),
+    enabled: Boolean(selectedVendorId),
   });
-  const visibleStorefronts = useMemo(
-    () => storefronts.filter((store) => store.is_verified),
-    [storefronts]
-  );
+  const visibleStorefronts = useMemo(() => {
+    const copy = [...storefronts];
+    copy.sort((a, b) => Number(b.is_verified) - Number(a.is_verified));
+    return copy;
+  }, [storefronts]);
+  const groupedMenu = useMemo(() => {
+    const groups = new Map<string, RestaurantMenuItem[]>();
+    for (const item of menu) {
+      const group = resolveMenuCategory(item);
+      groups.set(group, [...(groups.get(group) ?? []), item]);
+    }
+    return Array.from(groups.entries());
+  }, [menu]);
 
   const orderMutation = useMutation({
     mutationFn: createRestaurantOrder,
@@ -93,6 +123,10 @@ export default function RestaurantPage() {
 
   const addDish = (dish: RestaurantMenuItem) => {
     setSelectedItems((prev) => {
+      if (!selectedVendorId) {
+        setStatus("Selectionne d'abord un restaurant.");
+        return prev;
+      }
       if (prev.length && prev[0].vendor_id !== dish.vendor_id) {
         setStatus("Choisis des plats d'un seul restaurant a la fois.");
         return prev;
@@ -112,6 +146,7 @@ export default function RestaurantPage() {
           quantity: 1,
           base_price: dish.base_price,
           selected_options: [],
+          customer_note: "",
         },
       ];
     });
@@ -132,6 +167,12 @@ export default function RestaurantPage() {
     );
   };
 
+  const setItemNote = (menuItemId: string, customerNote: string) => {
+    setSelectedItems((prev) =>
+      prev.map((item) => (item.menu_item_id === menuItemId ? { ...item, customer_note: customerNote } : item))
+    );
+  };
+
   const submitOrder = () => {
     if (!selectedItems.length) return;
     const vendorId = selectedItems[0].vendor_id;
@@ -146,6 +187,7 @@ export default function RestaurantPage() {
         menu_item_id: item.menu_item_id,
         quantity: item.quantity,
         selected_options: item.selected_options,
+        customer_note: item.customer_note.trim() || undefined,
       })),
     });
   };
@@ -160,6 +202,14 @@ export default function RestaurantPage() {
         <p className="mt-2 text-sm text-slate-600">
           Commande appetissante, paiement local et livraison express moto-coursier a Niamey.
         </p>
+        <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-700">
+          <span className="rounded-full border border-[#FF4D00]/25 bg-[#FF4D00]/10 px-3 py-1 font-medium text-[#FF4D00]">
+            Frais livraison standard: {formatXOF(financeSettings?.default_delivery_fee ?? 1500)}
+          </span>
+          <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 font-medium text-amber-700">
+            Livraison estimee: {estimatedMinutes} min
+          </span>
+        </div>
       </header>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
@@ -173,147 +223,137 @@ export default function RestaurantPage() {
           placeholder="Rechercher une boutique restaurant..."
           className="mt-4"
         />
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {visibleStorefronts.slice(0, 9).map((store) => (
-            <button
-              key={store.id}
-              type="button"
-              onClick={() => {
-                setSelectedItems([]);
-                setSelectedVendorId((current) => (current === store.id ? "" : store.id));
-              }}
-              className={`overflow-hidden rounded-3xl border text-left transition ${
-                selectedVendorId === store.id
-                  ? "border-[#FF4D00]/40 bg-white shadow-[0_20px_45px_rgba(255,77,0,0.18)]"
-                  : "border-slate-200 bg-white hover:border-[#FF4D00]/25 hover:shadow-[0_20px_45px_rgba(255,77,0,0.12)]"
-              }`}
-            >
-              <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-slate-950 via-slate-800 to-[#1f2937]">
-                {store.cover_image_url ? (
-                  <Image
-                    src={resolveImageUrl(store.cover_image_url) || store.cover_image_url}
-                    alt={store.business_name || store.name}
-                    fill
-                    unoptimized
-                    className="object-cover opacity-90"
-                  />
-                ) : null}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/25 to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3">
-                  <p className="text-sm font-semibold text-white">{store.business_name || store.name}</p>
-                  <p className="text-xs text-white/75">{store.city || "Niamey"}</p>
+        {isStorefrontsPending ? (
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <ProductCardSkeleton key={`restaurant-storefront-skeleton-${index}`} />
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {visibleStorefronts.slice(0, 12).map((store) => (
+                <div key={store.id} className="space-y-3">
+                  <StorefrontShowcaseCard store={store} ctaLabel="Voir" />
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setSelectedItems([]);
+                      setSelectedVendorId(store.id);
+                    }}
+                    className={
+                      selectedVendorId === store.id
+                        ? "primary-glow-btn w-full bg-[#FF4D00] text-white hover:bg-[#e74700]"
+                        : "w-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    }
+                  >
+                    {selectedVendorId === store.id ? "Selectionne" : "Selectionner pour commander"}
+                  </Button>
                 </div>
-              </div>
-              <div className="space-y-2 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                    Verifie
-                  </span>
-                  {store.plat_du_jour_count ? (
-                    <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                      {store.plat_du_jour_count} plat(s) du jour
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-xs text-slate-600">
-                  {store.menu_item_count} article(s) menu
-                </p>
-                {store.address ? <p className="line-clamp-2 text-xs text-slate-500">{store.address}</p> : null}
-              </div>
-            </button>
-          ))}
-        </div>
-        {!visibleStorefronts.length ? (
-          <p className="mt-4 text-sm text-slate-500">Aucun restaurant premium verifie pour le moment.</p>
-        ) : null}
-        {selectedVendorId ? (
-          <p className="mt-3 text-xs text-[#FF4D00]">
-            Filtre actif: menu d&apos;une seule boutique. Cliquez a nouveau pour afficher tous les restaurants.
-          </p>
-        ) : null}
+              ))}
+            </div>
+            {!visibleStorefronts.length ? (
+              <p className="mt-4 text-sm text-slate-500">Aucun restaurant trouve pour le moment.</p>
+            ) : null}
+          </>
+        )}
       </article>
 
-      {isPending ? (
+      {!selectedVendorId ? (
+        <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
+          Selectionne un restaurant ci-dessus pour afficher son menu.
+        </article>
+      ) : isPending ? (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <ProductCardSkeleton key={`menu-skeleton-${index}`} />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {menu.map((dish, index) => (
-            <article
-              key={dish.id}
-              className="premium-card overflow-hidden border border-slate-200 bg-white"
-            >
-              <div className="relative h-52 w-full">
-                <Image
-                  src={
-                    resolveImageUrl(dish.image_url) ||
-                    dishImageFallbacks[index % dishImageFallbacks.length]
-                  }
-                  alt={dish.name}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
+        <div className="space-y-6">
+          {groupedMenu.map(([category, items]) => (
+            <section key={category} className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="luxury-title text-xl font-semibold">{category}</h2>
+                <p className="text-xs text-slate-500">{items.length} article(s)</p>
               </div>
-              <div className="space-y-3 p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-[#FF4D00]">{dish.vendor_name}</p>
-                    <h2 className="text-lg font-semibold text-slate-900">{dish.name}</h2>
-                  </div>
-                  <p className="text-sm font-semibold text-[#FF4D00]">
-                    {formatMoney(dish.base_price, preferredCurrency)}
-                  </p>
-                </div>
-                {dish.description ? <p className="text-sm text-slate-600">{dish.description}</p> : null}
-
-                <div className="flex flex-wrap gap-2">
-                  {(dish.tags.length ? dish.tags : ["Populaire"]).slice(0, 3).map((tag) => (
-                    <motion.span
-                      key={`${dish.id}-${tag}`}
-                      initial={{ scale: 0.92, opacity: 0.7 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium ${badgeColor(
-                        tag
-                      )}`}
-                    >
-                      <Flame className="h-3 w-3" />
-                      {tag}
-                    </motion.span>
-                  ))}
-                </div>
-
-                {dish.options.length ? (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
-                    <p className="text-xs font-medium text-slate-700">Options</p>
-                    <div className="mt-1 flex flex-wrap gap-2">
-                      {dish.options.map((option) => (
-                        <button
-                          key={`${dish.id}-${option.name}`}
-                          type="button"
-                          onClick={() => toggleOption(dish.id, option)}
-                          className="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
-                        >
-                          {option.name} (+{formatMoney(option.price, preferredCurrency)})
-                        </button>
-                      ))}
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {items.map((dish, index) => (
+                  <article
+                    key={dish.id}
+                    className="premium-card overflow-hidden border border-slate-200 bg-white"
+                  >
+                    <div className="relative h-52 w-full">
+                      <Image
+                        src={
+                          resolveImageUrl(dish.image_url) ||
+                          dishImageFallbacks[index % dishImageFallbacks.length]
+                        }
+                        alt={dish.name}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
                     </div>
-                  </div>
-                ) : null}
+                    <div className="space-y-3 p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-[#FF4D00]">{dish.vendor_name}</p>
+                          <h2 className="text-lg font-semibold text-slate-900">{dish.name}</h2>
+                        </div>
+                        <p className="text-sm font-semibold text-[#FF4D00]">
+                          {formatXOF(dish.base_price)}
+                        </p>
+                      </div>
+                      {dish.description ? <p className="text-sm text-slate-600">{dish.description}</p> : null}
 
-                <Button
-                  type="button"
-                  onClick={() => addDish(dish)}
-                  className="primary-glow-btn w-full bg-[#FF4D00] text-white hover:bg-[#e74700]"
-                >
-                  Ajouter au panier repas
-                </Button>
+                      <div className="flex flex-wrap gap-2">
+                        {(dish.tags.length ? dish.tags : ["Populaire"]).slice(0, 3).map((tag) => (
+                          <motion.span
+                            key={`${dish.id}-${tag}`}
+                            initial={{ scale: 0.92, opacity: 0.7 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ duration: 0.3 }}
+                            className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium ${badgeColor(
+                              tag
+                            )}`}
+                          >
+                            <Flame className="h-3 w-3" />
+                            {tag}
+                          </motion.span>
+                        ))}
+                      </div>
+
+                      {dish.options.length ? (
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                          <p className="text-xs font-medium text-slate-700">Options</p>
+                          <div className="mt-1 flex flex-wrap gap-2">
+                            {dish.options.map((option) => (
+                              <button
+                                key={`${dish.id}-${option.name}`}
+                                type="button"
+                                onClick={() => toggleOption(dish.id, option)}
+                                className="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
+                              >
+                                {option.name} (+{formatXOF(option.price)})
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <Button
+                        type="button"
+                        onClick={() => addDish(dish)}
+                        className="primary-glow-btn w-full bg-[#FF4D00] text-white hover:bg-[#e74700]"
+                      >
+                        Ajouter au panier repas
+                      </Button>
+                    </div>
+                  </article>
+                ))}
               </div>
-            </article>
+            </section>
           ))}
         </div>
       )}
@@ -359,9 +399,31 @@ export default function RestaurantPage() {
             <Sparkles className="h-4 w-4 text-amber-600" />
             Livraison Express Niamey estimee: {estimatedMinutes} min
           </p>
-          <p className="mt-1">Total panier repas: {formatMoney(total, preferredCurrency)}</p>
+          <p className="mt-1">Frais de livraison de base: {formatXOF(financeSettings?.default_delivery_fee ?? 1500)}</p>
+          <p className="mt-1">Total panier repas: {formatXOF(total)}</p>
           <p className="mt-1">Articles: {selectedItems.length}</p>
         </div>
+
+        {selectedItems.length ? (
+          <div className="mt-4 space-y-3">
+            {selectedItems.map((item) => (
+              <div key={item.menu_item_id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-900">
+                    {item.name} x{item.quantity}
+                  </p>
+                  <p className="text-sm font-semibold text-[#FF4D00]">{formatXOF(item.base_price * item.quantity)}</p>
+                </div>
+                <textarea
+                  value={item.customer_note}
+                  onChange={(event) => setItemNote(item.menu_item_id, event.target.value)}
+                  className="mt-3 min-h-20 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                  placeholder='Note cuisine ou livraison, ex: "Pas de piment"'
+                />
+              </div>
+            ))}
+          </div>
+        ) : null}
 
         <Button
           type="button"

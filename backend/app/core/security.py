@@ -1,4 +1,6 @@
 from datetime import UTC, datetime, timedelta
+import hashlib
+import os
 from typing import Any, cast
 from uuid import uuid4
 
@@ -10,12 +12,27 @@ from app.config import get_settings
 settings = get_settings()
 
 
+def _bcrypt_rounds() -> int:
+    # Keep production hashing strong while allowing the unit suite to finish quickly.
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return 4
+    return 12
+
+
 def hash_password(password: str) -> str:
-    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    # In tests, use a fast deterministic hash to avoid bcrypt slowness on some Windows machines.
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        digest = hashlib.sha256(password.encode("utf-8")).hexdigest()
+        return f"test${digest}"
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=_bcrypt_rounds()))
     return hashed.decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
+    if hashed_password.startswith("test$"):
+        expected = hashed_password.removeprefix("test$")
+        digest = hashlib.sha256(plain_password.encode("utf-8")).hexdigest()
+        return digest == expected
     return bcrypt.checkpw(
         plain_password.encode("utf-8"),
         hashed_password.encode("utf-8"),

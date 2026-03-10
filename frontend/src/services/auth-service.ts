@@ -4,6 +4,7 @@ import type { SellerProfilePayload } from "@/types/seller";
 type LoginPayload = {
   identifier: string;
   password: string;
+  mfa_code?: string;
 };
 
 type RegisterPayload = {
@@ -75,6 +76,7 @@ export async function login(payload: LoginPayload) {
   const response = await api.post<TokenPair>("/api/v1/auth/login", {
     identifier: normalizeIdentifier(payload.identifier),
     password: payload.password,
+    mfa_code: payload.mfa_code?.trim() || undefined,
   });
   persistAuthTokens(response.data);
   return response.data;

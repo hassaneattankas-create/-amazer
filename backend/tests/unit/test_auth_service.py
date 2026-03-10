@@ -17,26 +17,19 @@ def _build_service() -> tuple[AuthService, Mock]:
     return service, db
 
 
-def test_register_success_creates_inactive_account_and_verification_payload() -> None:
+def test_register_success_creates_active_account_without_verification_payload() -> None:
     service, db = _build_service()
     user = SimpleNamespace(id="u1", email="user@example.com", full_name="Jane Doe", whatsapp_phone="+22790000000")
 
     service.users.get_by_whatsapp_phone.return_value = None
     service.users.create.return_value = user
-    service._build_registration_verification = Mock(  # type: ignore[attr-defined]
-        return_value={
-            "channel": "whatsapp",
-            "destination_masked": "+227***00",
-            "code_preview": "123456",
-        }
-    )
 
     result = service.register("+22790000000", "Jane Doe", "StrongP@ssw0rd!")
 
     assert result["success"] is True
-    assert result["verification_channel"] == "whatsapp"
-    assert result["verification_code_preview"] == "123456"
-    assert service.users.create.call_args.kwargs["is_active"] is False
+    assert result["verification_channel"] == "none"
+    assert result["verification_code_preview"] is None
+    assert service.users.create.call_args.kwargs["is_active"] is True
     db.commit.assert_called_once()
     db.refresh.assert_called_once_with(user)
 
@@ -47,13 +40,6 @@ def test_register_with_seller_profile_creates_storefront() -> None:
 
     service.users.get_by_email.return_value = None
     service.users.create.return_value = user
-    service._build_registration_verification = Mock(  # type: ignore[attr-defined]
-        return_value={
-            "channel": "email",
-            "destination_masked": "us***@example.com",
-            "code_preview": "123456",
-        }
-    )
 
     result = service.register(
         "user@example.com",

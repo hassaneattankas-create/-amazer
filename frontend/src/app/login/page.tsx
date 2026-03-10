@@ -17,6 +17,7 @@ function LoginPageContent() {
   const searchParams = useSearchParams();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const setAppMode = useAuthStore((state) => state.setAppMode);
@@ -31,6 +32,7 @@ function LoginPageContent() {
       await login({
         identifier,
         password,
+        mfa_code: mfaCode,
       });
       const sellerProfile = await getSellerProfile().catch(() => null);
       if (sellerProfile?.id) {
@@ -84,6 +86,21 @@ function LoginPageContent() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-slate-800" htmlFor="mfaCode">
+              Code MFA (si active)
+            </label>
+            <input
+              id="mfaCode"
+              type="text"
+              inputMode="numeric"
+              value={mfaCode}
+              onChange={(event) => setMfaCode(event.target.value)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="6 chiffres"
             />
           </div>
 

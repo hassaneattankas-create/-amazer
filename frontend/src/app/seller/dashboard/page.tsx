@@ -279,6 +279,23 @@ export default function SellerDashboardPage() {
                     Sauver
                   </Button>
                   <Button
+                    className={
+                      item.is_active
+                        ? "border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                        : "border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                    }
+                    onClick={() =>
+                      mutation.mutate({
+                        priceId: item.price_id,
+                        amount: item.amount,
+                        stock: item.stock_quantity,
+                        is_active: !item.is_active,
+                      })
+                    }
+                  >
+                    {item.is_active ? "Retirer" : "Re-publier"}
+                  </Button>
+                  <Button
                     className="border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
                     onClick={() =>
                       mutation.mutate({

@@ -19,7 +19,11 @@ export default function BoutiquesPage() {
         activityType: "shop",
       }),
   });
-  const visibleStores = useMemo(() => stores.filter((store) => store.is_verified), [stores]);
+  const visibleStores = useMemo(() => {
+    const copy = [...stores];
+    copy.sort((a, b) => Number(b.is_verified) - Number(a.is_verified));
+    return copy;
+  }, [stores]);
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
@@ -32,7 +36,7 @@ export default function BoutiquesPage() {
             </p>
           </div>
           <Link href="/hotels" className="text-sm font-medium text-[#FF4D00]">
-            Voir aussi les hotels
+            Voir aussi les premium
           </Link>
         </div>
         <Input
