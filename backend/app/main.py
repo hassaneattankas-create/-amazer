@@ -10,6 +10,7 @@ from sqlalchemy import func, select, text
 
 from app import models as _models  # noqa: F401
 from app.config import get_settings
+from app.core.csrf import enforce_csrf
 from app.core.exceptions import DomainError
 from app.database import Base, engine
 from app.database import SessionLocal
@@ -152,6 +153,10 @@ async def security_access_logger(
     request: Request,
     call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.url.path.startswith(
+        settings.api_prefix
+    ):
+        enforce_csrf(request)
     response = await call_next(request)
     path = request.url.path
     if path.startswith(f"{settings.api_prefix}/admin") or path.startswith(f"{settings.api_prefix}/seller"):

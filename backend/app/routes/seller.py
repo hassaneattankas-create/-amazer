@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.deps import get_admin_user, get_current_user, get_seller_user_with_mfa
+from app.core.deps import get_admin_user, get_current_user, get_seller_user
 from app.core.crypto import decrypt_phone_value, encrypt_phone_value
 from app.core.csrf import enforce_csrf
 from app.core.exceptions import ConflictError, NotFoundError
@@ -129,7 +129,7 @@ def _hotel_booking_response(row: HotelBooking) -> HotelBookingResponse:
 @router.get("/profile", response_model=SellerProfileResponse | None)
 def get_profile(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
+    current_user: Annotated[User, Depends(get_seller_user)],
 ) -> SellerProfileResponse | None:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -142,7 +142,7 @@ def upsert_profile(
     payload: SellerProfileRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
+    current_user: Annotated[User, Depends(get_seller_user)],
 ) -> SellerProfileResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
@@ -242,7 +242,7 @@ def create_product_listing(
     payload: SellerProductCreateRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
+    current_user: Annotated[User, Depends(get_seller_user)],
 ) -> SellerProductCreateResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
@@ -309,7 +309,7 @@ def create_product_listing(
 @router.get("/inventory", response_model=list[SellerInventoryItemResponse])
 def list_inventory(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
+    current_user: Annotated[User, Depends(get_seller_user)],
 ) -> list[SellerInventoryItemResponse]:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -349,7 +349,7 @@ def update_inventory_item(
     payload: SellerInventoryUpdateRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
+    current_user: Annotated[User, Depends(get_seller_user)],
 ) -> SellerInventoryItemResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
@@ -475,7 +475,7 @@ def create_restaurant_reservation(
 @router.get("/restaurant-reservations", response_model=list[RestaurantReservationResponse])
 def list_seller_restaurant_reservations(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
+    current_user: Annotated[User, Depends(get_seller_user)],
 ) -> list[RestaurantReservationResponse]:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -511,7 +511,7 @@ def update_restaurant_reservation_status(
     payload: RestaurantReservationStatusUpdateRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
+    current_user: Annotated[User, Depends(get_seller_user)],
 ) -> RestaurantReservationResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
@@ -597,7 +597,7 @@ def create_hotel_booking(
 @router.get("/hotel-bookings", response_model=list[HotelBookingResponse])
 def list_seller_hotel_bookings(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
+    current_user: Annotated[User, Depends(get_seller_user)],
 ) -> list[HotelBookingResponse]:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -617,7 +617,7 @@ def update_hotel_booking_status(
     payload: HotelBookingStatusUpdateRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user_with_mfa)],
+    current_user: Annotated[User, Depends(get_seller_user)],
 ) -> HotelBookingResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))

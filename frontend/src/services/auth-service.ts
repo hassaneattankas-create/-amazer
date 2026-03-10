@@ -4,7 +4,6 @@ import type { SellerProfilePayload } from "@/types/seller";
 type LoginPayload = {
   identifier: string;
   password: string;
-  mfa_code?: string;
 };
 
 type RegisterPayload = {
@@ -42,18 +41,6 @@ export type UserPreferencesResponse = {
   preferred_currency: "XOF";
 };
 
-type MfaStatusResponse = {
-  enabled: boolean;
-  required_for_account: boolean;
-};
-
-type MfaSetupResponse = {
-  secret_key: string;
-  otpauth_url: string;
-  issuer: string;
-  account: string;
-};
-
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
@@ -84,7 +71,6 @@ export async function login(payload: LoginPayload) {
   const response = await api.post<TokenPair>("/api/v1/auth/login", {
     identifier: normalizeIdentifier(payload.identifier),
     password: payload.password,
-    mfa_code: payload.mfa_code?.trim() || undefined,
   });
   persistAuthTokens(response.data);
   return response.data;
@@ -139,20 +125,6 @@ export async function logout() {
 export async function getCurrentUser() {
   const response = await api.get<UserResponse>("/api/v1/auth/me");
   return response.data;
-}
-
-export async function getMfaStatus() {
-  const response = await api.get<MfaStatusResponse>("/api/v1/auth/mfa/status");
-  return response.data;
-}
-
-export async function setupMfa() {
-  const response = await api.post<MfaSetupResponse>("/api/v1/auth/mfa/setup");
-  return response.data;
-}
-
-export async function enableMfa(code: string) {
-  await api.post("/api/v1/auth/mfa/enable", { code });
 }
 
 export async function getUserPreferences() {

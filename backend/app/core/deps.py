@@ -47,7 +47,7 @@ def get_current_user_optional(
         return None
 
 
-def _require_admin_with_mfa(current_user: User, db: Session) -> User:
+def _require_admin(current_user: User, db: Session) -> User:
     settings = get_settings()
     if current_user.email.lower() != settings.admin_email.lower():
         raise UnauthorizedError("Admin access required")
@@ -58,10 +58,10 @@ def get_admin_user(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> User:
-    return _require_admin_with_mfa(current_user, db)
+    return _require_admin(current_user, db)
 
 
-def get_seller_user_with_mfa(
+def get_seller_user(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> User:

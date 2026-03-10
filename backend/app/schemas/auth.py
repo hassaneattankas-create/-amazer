@@ -84,7 +84,6 @@ class LoginRequest(BaseModel):
     identifier: str | None = Field(default=None, min_length=6, max_length=120)
     email: str | None = Field(default=None, min_length=6, max_length=120)
     password: SecretStr = Field(min_length=8, max_length=72)
-    mfa_code: str | None = Field(default=None)
 
     @field_validator("identifier")
     @classmethod
@@ -152,22 +151,6 @@ class VerifyAccountRequest(BaseModel):
 class VerifyAccountResponse(BaseModel):
     success: bool = True
     message: str
-
-
-class MfaSetupResponse(BaseModel):
-    secret_key: str
-    otpauth_url: str
-    issuer: str
-    account: str
-
-
-class MfaEnableRequest(BaseModel):
-    code: str = Field(min_length=6, max_length=8)
-
-
-class MfaStatusResponse(BaseModel):
-    enabled: bool
-    required_for_account: bool
 
 
 class UserPreferencesResponse(BaseModel):

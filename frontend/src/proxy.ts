@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PROTECTED_PATHS = ["/seller", "/admin", "/dashboard", "/profile", "/security/mfa"];
+const PROTECTED_PATHS = ["/seller", "/admin", "/dashboard", "/profile"];
 const APP_MODE_COOKIE_KEY = "amazer_app_mode";
 
 function isSellerSpace(pathname: string): boolean {
@@ -9,9 +9,7 @@ function isSellerSpace(pathname: string): boolean {
     pathname === "/seller" ||
     pathname.startsWith("/seller/") ||
     pathname === "/admin" ||
-    pathname.startsWith("/admin/") ||
-    pathname === "/security/mfa" ||
-    pathname.startsWith("/security/mfa/")
+    pathname.startsWith("/admin/")
   );
 }
 

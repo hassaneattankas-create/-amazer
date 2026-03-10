@@ -52,7 +52,8 @@ class ProductService:
         limit: int,
         offset: int,
     ) -> ProductSearchResult:
-        raw_limit = max(limit * 5, limit)
+        target = max(limit + offset, limit)
+        raw_limit = max(target * 5, target)
         rows = self.products.search_offers(
             query=query,
             barcode=barcode,
@@ -65,7 +66,7 @@ class ProductService:
             max_price=max_price,
             in_stock_only=in_stock_only,
             raw_limit=raw_limit,
-            raw_offset=offset,
+            raw_offset=0,
         )
         if not rows:
             return ProductSearchResult(
@@ -103,7 +104,7 @@ class ProductService:
             best_by_product.values(),
             key=lambda offer: self._sort_key(offer, sort),
         )
-        paged = sorted_products[:limit]
+        paged = sorted_products[offset : offset + limit]
 
         items = [self._build_product_search_response(offer) for offer in paged]
         return ProductSearchResult(

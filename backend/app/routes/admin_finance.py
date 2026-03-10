@@ -10,7 +10,7 @@ from sqlalchemy import desc, func, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.config import get_settings
-from app.core.crypto import decrypt_payment_code, encrypt_payment_code
+from app.core.crypto import decrypt_payment_code, decrypt_phone_value, encrypt_payment_code
 from app.core.csrf import enforce_csrf
 from app.core.deps import get_admin_user
 from app.core.exceptions import UnauthorizedError, ValidationDomainError
@@ -153,12 +153,13 @@ def verify_admin_finance_pin(
     enforce_rate_limit(request, key="admin_finance_pin", limit=5, window_seconds=300)
     if payload.pin != settings.admin_finance_pin or payload.birth_date != settings.admin_birth_date:
         raise UnauthorizedError("Invalid finance PIN")
+    same_site = "none" if settings.is_production() else "lax"
     response.set_cookie(
         key="finance_pin_verified",
         value="1",
         httponly=True,
         secure=settings.is_production(),
-        samesite="strict",
+        samesite=same_site,
         max_age=30 * 60,
         path="/",
     )
@@ -656,7 +657,7 @@ def list_sellers_admin(
                 vendor_id=row.vendor_id,
                 business_name=row.business_name,
                 city=row.city,
-                phone=row.phone,
+                phone=decrypt_phone_value(row.phone),
                 is_verified=row.is_verified,
                 is_active=bool(vendor.is_active) if vendor else False,
                 created_at=row.created_at.isoformat(),

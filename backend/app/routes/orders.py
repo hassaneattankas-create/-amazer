@@ -18,7 +18,7 @@ from app.core.rate_limit import enforce_rate_limit
 from app.core.exceptions import UnauthorizedError, ValidationDomainError
 from app.database import get_db
 from app.models.order import Order, OrderItem
-from app.models.product import Product
+from app.models.product import Price, Product
 from app.models.receipt_scan import ReceiptScan
 from app.models.user import User
 from app.schemas.order import (
@@ -205,7 +205,32 @@ def checkout(
     enforce_csrf(request)
     enforce_rate_limit(request, key="payment_checkout", limit=10, window_seconds=60)
     estimated_minutes = 45 if payload.delivery_type == "express_niamey" else 180
-    total = sum(item.quantity * item.unit_price for item in payload.items)
+    validated_items: list[tuple[Price, int]] = []
+    total = 0.0
+    order_currency: str | None = None
+    for item in payload.items:
+        price = db.scalar(
+            select(Price)
+            .where(
+                Price.product_id == item.product_id,
+                Price.vendor_id == item.vendor_id,
+                Price.is_active.is_(True),
+            )
+            .options(selectinload(Price.product), selectinload(Price.vendor))
+        )
+        if price is None or price.product is None or price.vendor is None:
+            raise ValidationDomainError("Article indisponible")
+        if not price.vendor.is_active:
+            raise ValidationDomainError("Vendeur inactif")
+        if price.stock_quantity < item.quantity:
+            raise ValidationDomainError("Stock insuffisant pour cet article")
+        if order_currency is None:
+            order_currency = price.currency
+        elif order_currency != price.currency:
+            raise ValidationDomainError("Les devises multiples ne sont pas supportees")
+        line_total = float(price.amount) * item.quantity
+        total += line_total
+        validated_items.append((price, item.quantity))
     encrypted_code: str | None = None
     code_hash: str | None = None
     payment_status = "pending"
@@ -220,6 +245,9 @@ def checkout(
         order_status = "commande"
         payment_confirmed_at = datetime.now(UTC)
 
+    if order_currency and payload.currency.upper() != order_currency:
+        raise ValidationDomainError("Devise invalide pour cette commande")
+
     order = Order(
         user_id=current_user.id,
         payment_mode=payload.payment_mode,
@@ -229,18 +257,18 @@ def checkout(
         payment_reference=None,
         payment_status=payment_status,
         payment_confirmed_at=payment_confirmed_at,
-        currency=payload.currency,
+        currency=order_currency or payload.currency,
         total_amount=total,
         estimated_minutes=estimated_minutes,
         status=order_status,
     )
-    for item in payload.items:
+    for price, quantity in validated_items:
         order.items.append(
             OrderItem(
-                product_id=item.product_id,
-                vendor_id=item.vendor_id,
-                quantity=item.quantity,
-                unit_price=item.unit_price,
+                product_id=price.product_id,
+                vendor_id=price.vendor_id,
+                quantity=quantity,
+                unit_price=price.amount,
             )
         )
 

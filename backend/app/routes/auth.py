@@ -6,16 +6,12 @@ from sqlalchemy import select
 from app.core.deps import get_auth_service, get_current_user
 from app.core.csrf import enforce_csrf, generate_csrf_token
 from app.config import get_settings
-from app.core.mfa import build_provisioning_uri, generate_totp_secret, verify_totp_code
 from app.core.exceptions import UnauthorizedError
 from app.core.rate_limit import enforce_rate_limit
 from app.models.user import User
 from app.models.user_preferences import UserPreferences
 from app.schemas.auth import (
     LoginRequest,
-    MfaEnableRequest,
-    MfaSetupResponse,
-    MfaStatusResponse,
     RefreshTokenRequest,
     RegisterRequest,
     RegisterResponse,
@@ -105,7 +101,6 @@ def login(
         tokens = auth_service.login(
             identifier=payload.identifier or payload.email or "",
             password=payload.password.get_secret_value(),
-            mfa_code=payload.mfa_code,
         )
         _set_auth_cookies(response, tokens)
         return tokens
@@ -162,49 +157,6 @@ def logout(
     response.delete_cookie("access_token", path="/", secure=secure_cookie, httponly=True, samesite=same_site)
     response.delete_cookie("refresh_token", path="/", secure=secure_cookie, httponly=True, samesite=same_site)
     response.delete_cookie("csrf_token", path="/", secure=secure_cookie, httponly=False, samesite=same_site)
-
-
-@router.get("/mfa/status", response_model=MfaStatusResponse)
-def mfa_status(
-    auth_service: Annotated[AuthService, Depends(get_auth_service)],
-    user: Annotated[User, Depends(get_current_user)],
-) -> MfaStatusResponse:
-    enabled, required = auth_service.get_mfa_status(user)
-    return MfaStatusResponse(enabled=enabled, required_for_account=required)
-
-
-@router.post("/mfa/setup", response_model=MfaSetupResponse)
-def mfa_setup(
-    request: Request,
-    auth_service: Annotated[AuthService, Depends(get_auth_service)],
-    user: Annotated[User, Depends(get_current_user)],
-) -> MfaSetupResponse:
-    enforce_csrf(request)
-    enforce_rate_limit(request, key="auth_mfa_setup", limit=4, window_seconds=300)
-    secret = generate_totp_secret()
-    auth_service.save_mfa_secret(user, secret, enabled=False)
-    issuer = settings.app_name or "AMAZER"
-    uri = build_provisioning_uri(secret=secret, email=user.email, issuer=issuer)
-    auth_service.db.commit()
-    return MfaSetupResponse(secret_key=secret, otpauth_url=uri, issuer=issuer, account=user.email)
-
-
-@router.post("/mfa/enable", status_code=status.HTTP_204_NO_CONTENT)
-def mfa_enable(
-    payload: MfaEnableRequest,
-    request: Request,
-    auth_service: Annotated[AuthService, Depends(get_auth_service)],
-    user: Annotated[User, Depends(get_current_user)],
-) -> None:
-    enforce_csrf(request)
-    enforce_rate_limit(request, key="auth_mfa_enable", limit=6, window_seconds=300)
-    secret = auth_service.get_mfa_secret(user)
-    if not secret:
-        raise UnauthorizedError("MFA setup is required before activation")
-    if not verify_totp_code(secret=secret, code=payload.code):
-        raise UnauthorizedError("Invalid MFA code")
-    auth_service.save_mfa_secret(user, secret, enabled=True)
-    auth_service.db.commit()
 
 
 def _get_or_create_preferences(auth_service: AuthService, user: User) -> UserPreferences:

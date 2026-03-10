@@ -33,7 +33,6 @@ class Settings(BaseSettings):
     )
     bootstrap_on_startup: bool = Field(default=True)
     seed_demo_data: bool = Field(default=False)
-    require_seller_mfa: bool = Field(default=False)
     redis_url: str | None = Field(default=None)
     whatsapp_verification_enabled: bool = Field(default=True)
     whatsapp_api_version: str = Field(default="v22.0")
@@ -55,9 +54,6 @@ class Settings(BaseSettings):
 
     def should_seed_demo_data(self) -> bool:
         return self.seed_demo_data and not self.is_production()
-
-    def is_seller_mfa_required(self) -> bool:
-        return self.require_seller_mfa
 
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":

@@ -10,7 +10,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.core.crypto import decrypt_payment_code, encrypt_payment_code
 from app.core.exceptions import (
     ConflictError,
     ForbiddenError,
@@ -26,7 +25,6 @@ from app.core.security import (
 )
 from app.models.login_verification_code import LoginVerificationCode
 from app.models.user import User
-from app.models.user_mfa import UserMfa
 from app.models.user_preferences import UserPreferences
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.user_repository import UserRepository
@@ -129,7 +127,7 @@ class AuthService:
         self.db.commit()
         return {"success": True, "message": "Compte verifie avec succes"}
 
-    def login(self, identifier: str, password: str, mfa_code: str | None = None) -> dict[str, str]:
+    def login(self, identifier: str, password: str) -> dict[str, str]:
         user = self._get_user_by_identifier(identifier)
         if not user or not verify_password(password, user.hashed_password):
             raise UnauthorizedError("Invalid credentials")
@@ -196,31 +194,6 @@ class AuthService:
             "refresh_token": refresh_token,
             "token_type": "bearer",
         }
-
-    def save_mfa_secret(self, user: User, secret: str, enabled: bool = False) -> UserMfa:
-        row = self.db.scalar(select(UserMfa).where(UserMfa.user_id == user.id))
-        encrypted = encrypt_payment_code(secret)
-        if row is None:
-            row = UserMfa(user_id=user.id, secret_encrypted=encrypted, enabled=enabled)
-            self.db.add(row)
-        else:
-            row.secret_encrypted = encrypted
-            row.enabled = enabled
-        if enabled:
-            # Force re-authentication with MFA for any existing refresh tokens.
-            self.refresh_tokens.revoke_all_for_user(user.id)
-        self.db.flush()
-        return row
-
-    def get_mfa_secret(self, user: User) -> str | None:
-        row = self.db.scalar(select(UserMfa).where(UserMfa.user_id == user.id))
-        if row is None:
-            return None
-        return decrypt_payment_code(row.secret_encrypted)
-
-    def get_mfa_status(self, user: User) -> tuple[bool, bool]:
-        row = self.db.scalar(select(UserMfa.enabled).where(UserMfa.user_id == user.id))
-        return bool(row), False
 
     def _ensure_default_preferences(self, user_id: str) -> None:
         row = self.db.scalar(select(UserPreferences).where(UserPreferences.user_id == user_id))

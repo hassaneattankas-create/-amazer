@@ -18,7 +18,6 @@ from app.models.hospitality import HotelBooking, RestaurantReservation
 from app.models.refresh_token import RefreshToken
 from app.models.login_verification_code import LoginVerificationCode
 from app.models.user import User
-from app.models.user_mfa import UserMfa
 from app.models.user_preferences import UserPreferences
 from app.models.audit_log import AuditLog
 from app.models.global_settings import GlobalSettings
@@ -28,7 +27,6 @@ __all__ = [
     "User",
     "RefreshToken",
     "LoginVerificationCode",
-    "UserMfa",
     "UserPreferences",
     "AuditLog",
     "GlobalSettings",

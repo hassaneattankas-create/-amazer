@@ -25,6 +25,7 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
     forbidden: "Action interdite.",
     conflict: "Cette information existe deja.",
     validation_error: "Certaines donnees sont invalides.",
+    too_many_requests: "Trop de tentatives. Patientez un instant.",
   };
   if (code && translatedByCode[code]) {
     return translatedByCode[code];
