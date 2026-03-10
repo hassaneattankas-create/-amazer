@@ -3,8 +3,8 @@ import axios from "axios";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:8000";
 const ACCESS_TOKEN_KEY = "amazer_access_token";
-const REFRESH_TOKEN_KEY = "amazer_refresh_token";
 const ACCESS_TOKEN_COOKIE_KEY = "amazer_access_token";
+const LEGACY_REFRESH_TOKEN_KEY = "amazer_refresh_token";
 export const AUTH_CHANGE_EVENT = "amazer-auth-changed";
 const AUTH_COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
@@ -50,9 +50,9 @@ export function persistAuthTokens(tokens: TokenPair): void {
     return;
   }
   writeStoredToken(ACCESS_TOKEN_KEY, tokens.access_token);
-  writeStoredToken(REFRESH_TOKEN_KEY, tokens.refresh_token);
+  removeStoredToken(LEGACY_REFRESH_TOKEN_KEY);
   const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=${encodeURIComponent(tokens.access_token)}; Path=/; SameSite=Lax; Max-Age=${AUTH_COOKIE_MAX_AGE_SECONDS}${secureFlag}`;
+  document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=1; Path=/; SameSite=Lax; Max-Age=${AUTH_COOKIE_MAX_AGE_SECONDS}${secureFlag}`;
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
 
@@ -61,17 +61,13 @@ export function clearAuthTokens(): void {
     return;
   }
   removeStoredToken(ACCESS_TOKEN_KEY);
-  removeStoredToken(REFRESH_TOKEN_KEY);
+  removeStoredToken(LEGACY_REFRESH_TOKEN_KEY);
   document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
 
 function getAccessToken(): string | null {
   return readStoredToken(ACCESS_TOKEN_KEY);
-}
-
-function getRefreshToken(): string | null {
-  return readStoredToken(REFRESH_TOKEN_KEY);
 }
 
 function getCookieValue(name: string): string | null {
@@ -123,21 +119,18 @@ api.interceptors.response.use(
 
     if (status === 401 && originalRequest && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true;
-      const refreshToken = getRefreshToken();
-      if (refreshToken) {
-        try {
-          const refreshResponse = await axios.post<TokenPair>(
-            `${API_BASE_URL}/api/v1/auth/refresh`,
-            { refresh_token: refreshToken },
-            { timeout: 10000, withCredentials: true }
-          );
-          persistAuthTokens(refreshResponse.data);
-          originalRequest.headers = originalRequest.headers || {};
-          originalRequest.headers.Authorization = `Bearer ${refreshResponse.data.access_token}`;
-          return api(originalRequest);
-        } catch {
-          clearAuthTokens();
-        }
+      try {
+        const refreshResponse = await axios.post<TokenPair>(
+          `${API_BASE_URL}/api/v1/auth/refresh`,
+          {},
+          { timeout: 10000, withCredentials: true }
+        );
+        persistAuthTokens(refreshResponse.data);
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${refreshResponse.data.access_token}`;
+        return api(originalRequest);
+      } catch {
+        clearAuthTokens();
       }
     }
 

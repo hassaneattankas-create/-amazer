@@ -25,7 +25,6 @@ from app.core.security import (
     verify_password,
 )
 from app.models.login_verification_code import LoginVerificationCode
-from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.user_mfa import UserMfa
 from app.models.user_preferences import UserPreferences
@@ -130,7 +129,7 @@ class AuthService:
         self.db.commit()
         return {"success": True, "message": "Compte verifie avec succes"}
 
-    def login(self, identifier: str, password: str) -> dict[str, str]:
+    def login(self, identifier: str, password: str, mfa_code: str | None = None) -> dict[str, str]:
         user = self._get_user_by_identifier(identifier)
         if not user or not verify_password(password, user.hashed_password):
             raise UnauthorizedError("Invalid credentials")
@@ -207,6 +206,9 @@ class AuthService:
         else:
             row.secret_encrypted = encrypted
             row.enabled = enabled
+        if enabled:
+            # Force re-authentication with MFA for any existing refresh tokens.
+            self.refresh_tokens.revoke_all_for_user(user.id)
         self.db.flush()
         return row
 
@@ -218,18 +220,7 @@ class AuthService:
 
     def get_mfa_status(self, user: User) -> tuple[bool, bool]:
         row = self.db.scalar(select(UserMfa.enabled).where(UserMfa.user_id == user.id))
-        required = self._is_sensitive_account(user)
-        return bool(row), required
-
-    def _is_sensitive_account(self, user: User) -> bool:
-        settings = get_settings()
-        user_email = str(getattr(user, "email", "") or "").lower()
-        if user_email and user_email == settings.admin_email.lower():
-            return True
-        return (
-            self.db.scalar(select(SellerProfile.id).where(SellerProfile.user_id == user.id).limit(1))
-            is not None
-        )
+        return bool(row), False
 
     def _ensure_default_preferences(self, user_id: str) -> None:
         row = self.db.scalar(select(UserPreferences).where(UserPreferences.user_id == user_id))

@@ -1,9 +1,10 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, status
+from fastapi import APIRouter, Depends, Path, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.csrf import enforce_csrf
 from app.core.deps import get_current_user
 from app.core.exceptions import NotFoundError
 from app.database import get_db
@@ -46,9 +47,11 @@ def list_reviews(
 def create_review(
     payload: ReviewCreateRequest,
     product_id: Annotated[str, Path(min_length=1, max_length=36)],
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> ReviewResponse:
+    enforce_csrf(request)
     product = db.get(Product, product_id)
     if product is None:
         raise NotFoundError("Product not found")

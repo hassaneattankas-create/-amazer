@@ -438,7 +438,7 @@ def verify_receipt_scan(
             event_type="critical_double_usage_attempt",
             ip_address=request.client.host if request.client else None,
             path=str(request.url.path),
-            details={"message": f"⚠️ TENTATIVE DE DOUBLE USAGE - COMMANDE #{order.id}", "vendor_id": payload.vendor_id},
+            details={"message": f"ALERTE DOUBLE USAGE - COMMANDE #{order.id}", "vendor_id": payload.vendor_id},
         )
         db.commit()
         db.refresh(scan)
@@ -446,7 +446,7 @@ def verify_receipt_scan(
         return ReceiptVerifyResponse(
             order_id=order.id,
             status="blocked",
-            message=f"❌ RECU DEJA UTILISE le {used_iso}",
+            message=f"RECU DEJA UTILISE le {used_iso}",
             scanned_at=scan.scanned_at,
         )
 
@@ -458,6 +458,6 @@ def verify_receipt_scan(
     return ReceiptVerifyResponse(
         order_id=order.id,
         status="claimed",
-        message="✅ Recu valide. Commande marquee comme retiree.",
+        message="RECU VALIDE. COMMANDE MARQUEE COMME RETIREE.",
         scanned_at=scan.scanned_at,
     )

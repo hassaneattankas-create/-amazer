@@ -63,7 +63,15 @@ function normalizeIdentifier(identifier: string): string {
   if (trimmed.includes("@")) {
     return normalizeEmail(trimmed);
   }
-  return trimmed.replace(/\s+/g, "");
+  const compact = trimmed.replace(/\s+/g, "");
+  const digitsOnly = compact.replace(/\D/g, "");
+  if (digitsOnly.length === 8) {
+    return `+227${digitsOnly}`;
+  }
+  if (digitsOnly.startsWith("227") && digitsOnly.length >= 11) {
+    return `+${digitsOnly}`;
+  }
+  return compact;
 }
 
 function getResponseStatus(error: unknown): number | null {

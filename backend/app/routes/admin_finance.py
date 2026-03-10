@@ -6,8 +6,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import StreamingResponse
-from sqlalchemy import desc, select, update
-from sqlalchemy.orm import Session
+from sqlalchemy import desc, func, select, update
+from sqlalchemy.orm import Session, selectinload
 
 from app.config import get_settings
 from app.core.crypto import decrypt_payment_code, encrypt_payment_code
@@ -128,6 +128,19 @@ def _audit_admin_access(db: Session, request: Request, user: User, event_type: s
     db.commit()
 
 
+def _normalize_day(value: object) -> date | None:
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, str):
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            return None
+    return None
+
+
 @router.post("/pin/verify", status_code=204)
 def verify_admin_finance_pin(
     payload: PinVerifyRequest,
@@ -224,25 +237,49 @@ def get_finance_summary(
     start_date = today - timedelta(days=29)
     start_dt = datetime.combine(start_date, datetime.min.time(), tzinfo=UTC)
 
-    platform_orders = db.scalars(select(Order).where(Order.created_at >= start_dt)).all()
-    restaurant_orders = db.scalars(
-        select(RestaurantOrder).where(RestaurantOrder.created_at >= start_dt)
-    ).all()
-    active_sellers = len(db.scalars(select(SellerProfile.id)).all())
+    active_sellers = db.scalar(select(func.count(SellerProfile.id))) or 0
 
     revenue_map: dict[date, float] = {start_date + timedelta(days=i): 0 for i in range(30)}
 
+    platform_daily = db.execute(
+        select(
+            func.date(Order.created_at).label("day"),
+            func.sum(Order.total_amount).label("amount"),
+            func.count(Order.id).label("count"),
+        )
+        .where(Order.created_at >= start_dt)
+        .group_by(func.date(Order.created_at))
+    ).all()
+
+    restaurant_daily = db.execute(
+        select(
+            func.date(RestaurantOrder.created_at).label("day"),
+            func.sum(RestaurantOrder.total_amount).label("amount"),
+            func.count(RestaurantOrder.id).label("count"),
+        )
+        .where(RestaurantOrder.created_at >= start_dt)
+        .group_by(func.date(RestaurantOrder.created_at))
+    ).all()
+
     total_commissions = 0.0
-    for platform_order in platform_orders:
-        day_value = platform_order.created_at.astimezone(UTC).date()
-        amount = _commission_from_order(platform_order.total_amount, settings)
+    for row in platform_daily:
+        if row.amount is None or row.count is None:
+            continue
+        day_value = _normalize_day(row.day)
+        if day_value is None:
+            continue
+        amount = (float(row.amount) * _effective_commission_rate(settings)) + (int(row.count) * settings.service_fee)
         total_commissions += amount
         if day_value in revenue_map:
             revenue_map[day_value] += amount
 
-    for restaurant_order in restaurant_orders:
-        day_value = restaurant_order.created_at.astimezone(UTC).date()
-        amount = _commission_from_order(restaurant_order.total_amount, settings)
+    for row in restaurant_daily:
+        if row.amount is None or row.count is None:
+            continue
+        day_value = _normalize_day(row.day)
+        if day_value is None:
+            continue
+        amount = (float(row.amount) * _effective_commission_rate(settings)) + (int(row.count) * settings.service_fee)
         total_commissions += amount
         if day_value in revenue_map:
             revenue_map[day_value] += amount
@@ -265,17 +302,27 @@ def get_wallet_summary(
     _audit_admin_access(db, request, admin_user, "admin_finance_wallet_read")
     finance = _get_or_create_settings(db)
 
-    platform_orders = db.scalars(select(Order)).all()
-    restaurant_orders = db.scalars(select(RestaurantOrder)).all()
+    platform_totals = db.execute(
+        select(Order.payment_mode, func.sum(Order.total_amount)).group_by(Order.payment_mode)
+    ).all()
+    restaurant_totals = db.execute(
+        select(RestaurantOrder.payment_mode, func.sum(RestaurantOrder.total_amount)).group_by(RestaurantOrder.payment_mode)
+    ).all()
+    platform_count = db.scalar(select(func.count(Order.id))) or 0
+    restaurant_count = db.scalar(select(func.count(RestaurantOrder.id))) or 0
 
     totals = {"nita": 0.0, "amana": 0.0, "cash_on_delivery": 0.0}
-    for order in platform_orders:
-        totals[order.payment_mode] = totals.get(order.payment_mode, 0.0) + order.total_amount
-    for order in restaurant_orders:
-        totals[order.payment_mode] = totals.get(order.payment_mode, 0.0) + order.total_amount
+    for mode, amount in platform_totals:
+        if amount is None:
+            continue
+        totals[mode] = totals.get(mode, 0.0) + float(amount)
+    for mode, amount in restaurant_totals:
+        if amount is None:
+            continue
+        totals[mode] = totals.get(mode, 0.0) + float(amount)
 
     total_all = sum(totals.values())
-    transaction_count = len(platform_orders) + len(restaurant_orders)
+    transaction_count = int(platform_count) + int(restaurant_count)
     commission_total = total_all * _effective_commission_rate(finance)
     service_fee_total = transaction_count * finance.service_fee
     return WalletSummaryResponse(
@@ -448,7 +495,12 @@ def list_admin_orders(
 ) -> list[AdminOrderTrackingResponse]:
     _require_finance_pin(request)
     _audit_admin_access(db, request, admin_user, "admin_orders_read")
-    orders = db.scalars(select(Order).order_by(Order.created_at.desc()).limit(limit)).all()
+    orders = db.scalars(
+        select(Order)
+        .options(selectinload(Order.user))
+        .order_by(Order.created_at.desc())
+        .limit(limit)
+    ).all()
     payload: list[AdminOrderTrackingResponse] = []
     for order in orders:
         payload.append(
@@ -591,9 +643,12 @@ def list_sellers_admin(
 ) -> list[AdminSellerResponse]:
     _require_finance_pin(request)
     rows = db.scalars(select(SellerProfile).order_by(desc(SellerProfile.created_at)).limit(500)).all()
+    vendor_ids = {row.vendor_id for row in rows}
+    vendors = db.scalars(select(Vendor).where(Vendor.id.in_(vendor_ids))).all() if vendor_ids else []
+    vendor_map = {vendor.id: vendor for vendor in vendors}
     payload: list[AdminSellerResponse] = []
     for row in rows:
-        vendor = db.get(Vendor, row.vendor_id)
+        vendor = vendor_map.get(row.vendor_id)
         payload.append(
             AdminSellerResponse(
                 profile_id=row.id,

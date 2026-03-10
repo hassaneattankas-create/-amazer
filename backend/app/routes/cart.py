@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.csrf import enforce_csrf
 from app.core.deps import get_current_user
 from app.database import get_db
 from app.models.cart import Cart
@@ -27,9 +28,11 @@ def get_cart(
 @router.post("/items", response_model=CartResponse, status_code=status.HTTP_200_OK)
 def add_item(
     payload: CartItemAddRequest,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> Cart:
+    enforce_csrf(request)
     service = CartService(db)
     return service.add_item(
         user_id=current_user.id,
@@ -42,9 +45,11 @@ def add_item(
 def update_quantity(
     item_id: str,
     payload: CartItemUpdateRequest,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> Cart:
+    enforce_csrf(request)
     service = CartService(db)
     return service.update_quantity(
         user_id=current_user.id,
@@ -55,8 +60,10 @@ def update_quantity(
 
 @router.delete("", response_model=CartResponse)
 def clear_cart(
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> Cart:
+    enforce_csrf(request)
     service = CartService(db)
     return service.clear_cart(current_user.id)

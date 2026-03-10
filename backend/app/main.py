@@ -93,6 +93,10 @@ def _bootstrap_database_if_needed() -> None:
     if product_count > 0 and vendor_count > 0 and price_count > 0:
         return
 
+    if not settings.should_seed_demo_data():
+        logger.info("Database empty detected, demo seeding disabled.")
+        return
+
     from seed_niger_market import main as seed_market_main
 
     logger.info("Database empty detected, running Niger market seed bootstrap.")
@@ -101,7 +105,8 @@ def _bootstrap_database_if_needed() -> None:
 
 @app.on_event("startup")
 def on_startup() -> None:
-    _bootstrap_database_if_needed()
+    if settings.should_bootstrap_db():
+        _bootstrap_database_if_needed()
 
 
 @app.exception_handler(DomainError)

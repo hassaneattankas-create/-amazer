@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from uuid import uuid4
 from typing import Any, Mapping
 
 from sqlalchemy import select
@@ -20,10 +21,13 @@ def build_unique_vendor_slug(db: Session, business_name: str, fallback_seed: str
     slug_base = slugify(business_name) or f"vendor-{fallback_seed[:8]}"
     slug = slug_base
     suffix = 1
-    while db.scalar(select(Vendor).where(Vendor.slug == slug)) is not None:
+    for _ in range(20):
+        exists = db.scalar(select(Vendor).where(Vendor.slug == slug))
+        if exists is None:
+            return slug
         suffix += 1
         slug = f"{slug_base}-{suffix}"
-    return slug
+    return f"{slug_base}-{uuid4().hex[:8]}"
 
 
 def _normalize_string_list(values: Any) -> list[str]:

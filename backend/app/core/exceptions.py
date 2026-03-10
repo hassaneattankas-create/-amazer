@@ -31,6 +31,11 @@ class ForbiddenError(DomainError):
         super().__init__(message=message, status_code=403, code="forbidden")
 
 
+class TooManyRequestsError(DomainError):
+    def __init__(self, message: str) -> None:
+        super().__init__(message=message, status_code=429, code="too_many_requests")
+
+
 class AuthError(DomainError):
     def __init__(self, message: str, status_code: int = 401) -> None:
         super().__init__(message=message, status_code=status_code, code="auth_error")

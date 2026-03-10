@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     verification_code_ttl_minutes: int = Field(default=10, ge=3, le=30)
     verification_code_max_attempts: int = Field(default=5, ge=3, le=10)
     admin_email: str = Field(default="amazer.niger@gmail.com")
-    admin_finance_pin: str = Field(default="Aminasadek11$")
+    admin_finance_pin: str = Field(default="CHANGE_ME")
     admin_birth_date: str = Field(default="07/11/03")
     cors_allowed_origins: str = Field(
         default="https://amazer.vercel.app,https://www.amazer.vercel.app,https://amazerniger.vercel.app,https://www.amazerniger.vercel.app"
@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     payment_encryption_key: str = Field(
         default="REPLACE_WITH_BASE64URL_32BYTE_KEY_REPLACE_WITH_KEY_1234="
     )
+    bootstrap_on_startup: bool = Field(default=True)
+    seed_demo_data: bool = Field(default=False)
+    require_seller_mfa: bool = Field(default=False)
     redis_url: str | None = Field(default=None)
     whatsapp_verification_enabled: bool = Field(default=True)
     whatsapp_api_version: str = Field(default="v22.0")
@@ -46,6 +49,43 @@ class Settings(BaseSettings):
 
     def is_production(self) -> bool:
         return self.app_env.lower() == "production"
+
+    def should_bootstrap_db(self) -> bool:
+        return self.bootstrap_on_startup and not self.is_production()
+
+    def should_seed_demo_data(self) -> bool:
+        return self.seed_demo_data and not self.is_production()
+
+    def is_seller_mfa_required(self) -> bool:
+        return self.require_seller_mfa
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        if not self.is_production():
+            return self
+
+        weak_jwt_values = {
+            "supersecretkey-supersecretkey",
+            "replace-with-a-strong-secret",
+            "changeme",
+            "CHANGE_ME",
+        }
+        if self.jwt_secret_key.strip() in weak_jwt_values or len(self.jwt_secret_key.strip()) < 32:
+            raise ValueError("JWT_SECRET_KEY must be a strong secret in production")
+
+        if self.admin_finance_pin in {"CHANGE_ME", "0000", "1234"} or len(self.admin_finance_pin) < 4:
+            raise ValueError("ADMIN_FINANCE_PIN must be set to a strong value in production")
+
+        if self.admin_birth_date in {"07/11/03", "1970-01-01", "01/01/1970"}:
+            raise ValueError("ADMIN_BIRTH_DATE must be set in production")
+
+        if self.payment_encryption_key.startswith("REPLACE_WITH"):
+            raise ValueError("PAYMENT_ENCRYPTION_KEY must be set in production")
+
+        if not self.cors_allowed_origins.strip():
+            raise ValueError("CORS_ALLOWED_ORIGINS must be configured in production")
+
+        return self
 
 
 @lru_cache

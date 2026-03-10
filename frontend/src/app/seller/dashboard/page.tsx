@@ -43,18 +43,21 @@ export default function SellerDashboardPage() {
       priceId,
       amount,
       stock,
+      is_active,
       promo_amount,
       boost_duration_hours,
     }: {
       priceId: string;
       amount: number;
       stock: number;
+      is_active?: boolean;
       promo_amount?: number;
       boost_duration_hours?: 24 | 168;
     }) =>
       updateSellerInventory(priceId, {
         amount,
         stock_quantity: stock,
+        is_active,
         promo_amount,
         boost_duration_hours,
       }),

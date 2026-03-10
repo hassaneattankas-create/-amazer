@@ -1,6 +1,6 @@
 from starlette.requests import Request
 
-from app.core.exceptions import UnauthorizedError
+from app.core.exceptions import TooManyRequestsError
 from app.core import rate_limit as rate_limit_module
 
 
@@ -26,5 +26,5 @@ def test_rate_limit_blocks_after_threshold(monkeypatch) -> None:
     try:
         rate_limit_module.enforce_rate_limit(request, key="auth_login", limit=2, window_seconds=60)
         assert False, "Expected rate limit exception"
-    except UnauthorizedError as exc:
-        assert exc.status_code == 401
+    except TooManyRequestsError as exc:
+        assert exc.status_code == 429

@@ -10,7 +10,7 @@ except Exception:  # pragma: no cover - optional dependency in local dev
     Redis = None  # type: ignore[assignment]
 
 from app.config import get_settings
-from app.core.exceptions import UnauthorizedError
+from app.core.exceptions import TooManyRequestsError
 
 _RATE_BUCKETS: dict[str, deque[datetime]] = defaultdict(deque)
 _REDIS_CLIENT: Redis | None = None
@@ -43,7 +43,7 @@ def enforce_rate_limit(request: Request, *, key: str, limit: int, window_seconds
         if count == 1:
             redis_client.expire(bucket_key, window_seconds)
         if count > limit:
-            raise UnauthorizedError("Too many attempts, please try again later")
+            raise TooManyRequestsError("Too many attempts, please try again later")
         return
 
     now = datetime.now(UTC)
@@ -52,5 +52,5 @@ def enforce_rate_limit(request: Request, *, key: str, limit: int, window_seconds
     while bucket and bucket[0] < threshold:
         bucket.popleft()
     if len(bucket) >= limit:
-        raise UnauthorizedError("Too many attempts, please try again later")
+        raise TooManyRequestsError("Too many attempts, please try again later")
     bucket.append(now)

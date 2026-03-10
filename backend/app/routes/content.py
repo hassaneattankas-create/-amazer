@@ -7,6 +7,8 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy import delete, desc, func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.cache import build_cache_key, cache_get_json, cache_set_json
+from app.core.csrf import enforce_csrf
 from app.core.deps import get_admin_user
 from app.core.exceptions import ValidationDomainError
 from app.database import get_db
@@ -121,9 +123,11 @@ def list_categories_admin(
 @admin_router.post("/categories", response_model=AdminCategoryResponse)
 def create_category_admin(
     payload: AdminCategoryCreateRequest,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[User, Depends(get_admin_user)],
 ) -> AdminCategoryResponse:
+    enforce_csrf(request)
     exists = db.scalar(select(Category.id).where(Category.slug == payload.slug))
     if exists:
         raise ValidationDomainError("Category slug already exists")
@@ -143,9 +147,11 @@ def create_category_admin(
 def update_category_admin(
     category_id: str,
     payload: AdminCategoryUpdateRequest,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[User, Depends(get_admin_user)],
 ) -> AdminCategoryResponse:
+    enforce_csrf(request)
     row = db.get(Category, category_id)
     if row is None:
         raise ValidationDomainError("Category not found")
@@ -166,9 +172,11 @@ def update_category_admin(
 @admin_router.post("/sections", response_model=DynamicSectionResponse)
 def create_section(
     payload: DynamicSectionCreateRequest,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[User, Depends(get_admin_user)],
 ) -> DynamicSectionResponse:
+    enforce_csrf(request)
     section = DynamicSection(
         title=payload.title,
         slug=payload.slug,
@@ -192,9 +200,11 @@ def create_section(
 def update_section(
     section_id: str,
     payload: DynamicSectionUpdateRequest,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[User, Depends(get_admin_user)],
 ) -> DynamicSectionResponse:
+    enforce_csrf(request)
     section = db.scalar(
         select(DynamicSection)
         .where(DynamicSection.id == section_id)
@@ -215,9 +225,11 @@ def update_section(
 def replace_section_items(
     section_id: str,
     payload: list[DynamicSectionItemRequest],
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[User, Depends(get_admin_user)],
 ) -> DynamicSectionResponse:
+    enforce_csrf(request)
     section = db.scalar(
         select(DynamicSection)
         .where(DynamicSection.id == section_id)
@@ -272,6 +284,10 @@ def ad_click_stats(
 def get_home_content(
     db: Annotated[Session, Depends(get_db)],
 ) -> HomeContentResponse:
+    cache_key = build_cache_key("content:home")
+    cached = cache_get_json(cache_key)
+    if cached is not None:
+        return HomeContentResponse(**cached)
     sections = db.scalars(
         select(DynamicSection)
         .where(DynamicSection.is_active.is_(True))
@@ -329,7 +345,9 @@ def get_home_content(
             )
         )
 
-    return HomeContentResponse(top_banner_url=top_banner, sections=payload_sections)
+    response = HomeContentResponse(top_banner_url=top_banner, sections=payload_sections)
+    cache_set_json(cache_key, response.model_dump(), ttl_seconds=60)
+    return response
 
 
 @ads_router.post("/click", status_code=200)

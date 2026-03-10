@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.core.cache import build_cache_key, cache_get_json, cache_set_json
 from app.database import get_db
 from app.schemas.catalog import (
     CategoryListResponse,
@@ -23,8 +24,14 @@ def list_categories(
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> CategoryListResponse:
+    cache_key = build_cache_key("catalog:categories", limit=limit, offset=offset)
+    cached = cache_get_json(cache_key)
+    if cached is not None:
+        return CategoryListResponse(**cached)
     service = CatalogService(db)
-    return service.list_categories(limit=limit, offset=offset)
+    response = service.list_categories(limit=limit, offset=offset)
+    cache_set_json(cache_key, response.model_dump(), ttl_seconds=120)
+    return response
 
 
 @router.get("/vendors", response_model=VendorListResponse)
@@ -34,8 +41,19 @@ def list_vendors(
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> VendorListResponse:
+    cache_key = build_cache_key(
+        "catalog:vendors",
+        limit=limit,
+        offset=offset,
+        query=(query or "").strip().lower(),
+    )
+    cached = cache_get_json(cache_key)
+    if cached is not None:
+        return VendorListResponse(**cached)
     service = CatalogService(db)
-    return service.list_vendors(limit=limit, offset=offset, query=query)
+    response = service.list_vendors(limit=limit, offset=offset, query=query)
+    cache_set_json(cache_key, response.model_dump(), ttl_seconds=120)
+    return response
 
 
 @router.get("/storefronts", response_model=VendorStorefrontListResponse)
@@ -47,14 +65,27 @@ def list_storefronts(
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> VendorStorefrontListResponse:
+    cache_key = build_cache_key(
+        "catalog:storefronts",
+        limit=limit,
+        offset=offset,
+        query=(query or "").strip().lower(),
+        activity_type=(activity_type or "").strip().lower(),
+        storefront_tier=(storefront_tier or "").strip().lower(),
+    )
+    cached = cache_get_json(cache_key)
+    if cached is not None:
+        return VendorStorefrontListResponse(**cached)
     service = CatalogService(db)
-    return service.list_vendor_storefronts(
+    response = service.list_vendor_storefronts(
         limit=limit,
         offset=offset,
         query=query,
         activity_type=activity_type,
         storefront_tier=storefront_tier,
     )
+    cache_set_json(cache_key, response.model_dump(), ttl_seconds=120)
+    return response
 
 
 @router.get("/promotions", response_model=PromotionListResponse)
@@ -64,5 +95,16 @@ def list_promotions(
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> PromotionListResponse:
+    cache_key = build_cache_key(
+        "catalog:promotions",
+        limit=limit,
+        offset=offset,
+        query=(query or "").strip().lower(),
+    )
+    cached = cache_get_json(cache_key)
+    if cached is not None:
+        return PromotionListResponse(**cached)
     service = CatalogService(db)
-    return service.list_promotions(limit=limit, offset=offset, query=query)
+    response = service.list_promotions(limit=limit, offset=offset, query=query)
+    cache_set_json(cache_key, response.model_dump(), ttl_seconds=60)
+    return response

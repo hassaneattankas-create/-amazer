@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.csrf import enforce_csrf
 from app.core.deps import get_current_user
 from app.database import get_db
 from app.models.price_alert import PriceAlert
@@ -18,9 +19,11 @@ router = APIRouter(prefix="/alerts", tags=["alerts"])
 @router.post("", response_model=PriceAlertResponse, status_code=status.HTTP_201_CREATED)
 def create_alert(
     payload: PriceAlertCreateRequest,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> PriceAlert:
+    enforce_csrf(request)
     service = AlertService(db)
     return service.create_or_update_alert(
         user_id=current_user.id,

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy import select
 
 from app.core.deps import get_auth_service, get_current_user
-from app.core.csrf import generate_csrf_token
+from app.core.csrf import enforce_csrf, generate_csrf_token
 from app.config import get_settings
 from app.core.mfa import build_provisioning_uri, generate_totp_secret, verify_totp_code
 from app.core.exceptions import UnauthorizedError
@@ -35,6 +35,7 @@ settings = get_settings()
 
 def _set_auth_cookies(response: Response, tokens: dict[str, str]) -> None:
     secure_cookie = settings.is_production()
+    same_site = "none" if secure_cookie else "lax"
     csrf_token = generate_csrf_token()
     access_max_age = settings.jwt_access_token_expire_minutes * 60
     refresh_max_age = settings.jwt_refresh_token_expire_days * 24 * 60 * 60
@@ -43,7 +44,7 @@ def _set_auth_cookies(response: Response, tokens: dict[str, str]) -> None:
         value=tokens["access_token"],
         httponly=True,
         secure=secure_cookie,
-        samesite="strict",
+        samesite=same_site,
         max_age=access_max_age,
         path="/",
     )
@@ -52,7 +53,7 @@ def _set_auth_cookies(response: Response, tokens: dict[str, str]) -> None:
         value=tokens["refresh_token"],
         httponly=True,
         secure=secure_cookie,
-        samesite="strict",
+        samesite=same_site,
         max_age=refresh_max_age,
         path="/",
     )
@@ -61,7 +62,7 @@ def _set_auth_cookies(response: Response, tokens: dict[str, str]) -> None:
         value=csrf_token,
         httponly=False,
         secure=secure_cookie,
-        samesite="strict",
+        samesite=same_site,
         max_age=7 * 24 * 60 * 60,
         path="/",
     )
@@ -104,6 +105,7 @@ def login(
         tokens = auth_service.login(
             identifier=payload.identifier or payload.email or "",
             password=payload.password.get_secret_value(),
+            mfa_code=payload.mfa_code,
         )
         _set_auth_cookies(response, tokens)
         return tokens
@@ -146,11 +148,20 @@ def health() -> dict[str, str]:
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(response: Response) -> None:
+def logout(
+    request: Request,
+    response: Response,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    user: Annotated[User, Depends(get_current_user)],
+) -> None:
+    enforce_csrf(request)
+    auth_service.refresh_tokens.revoke_all_for_user(user.id)
+    auth_service.db.commit()
     secure_cookie = settings.is_production()
-    response.delete_cookie("access_token", path="/", secure=secure_cookie, httponly=True, samesite="strict")
-    response.delete_cookie("refresh_token", path="/", secure=secure_cookie, httponly=True, samesite="strict")
-    response.delete_cookie("csrf_token", path="/", secure=secure_cookie, httponly=False, samesite="strict")
+    same_site = "none" if secure_cookie else "lax"
+    response.delete_cookie("access_token", path="/", secure=secure_cookie, httponly=True, samesite=same_site)
+    response.delete_cookie("refresh_token", path="/", secure=secure_cookie, httponly=True, samesite=same_site)
+    response.delete_cookie("csrf_token", path="/", secure=secure_cookie, httponly=False, samesite=same_site)
 
 
 @router.get("/mfa/status", response_model=MfaStatusResponse)
@@ -168,6 +179,7 @@ def mfa_setup(
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
     user: Annotated[User, Depends(get_current_user)],
 ) -> MfaSetupResponse:
+    enforce_csrf(request)
     enforce_rate_limit(request, key="auth_mfa_setup", limit=4, window_seconds=300)
     secret = generate_totp_secret()
     auth_service.save_mfa_secret(user, secret, enabled=False)
@@ -184,6 +196,7 @@ def mfa_enable(
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
     user: Annotated[User, Depends(get_current_user)],
 ) -> None:
+    enforce_csrf(request)
     enforce_rate_limit(request, key="auth_mfa_enable", limit=6, window_seconds=300)
     secret = auth_service.get_mfa_secret(user)
     if not secret:
@@ -220,9 +233,11 @@ def get_preferences(
 @router.put("/preferences", response_model=UserPreferencesResponse)
 def update_preferences(
     payload: UserPreferencesUpdateRequest,
+    request: Request,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
     user: Annotated[User, Depends(get_current_user)],
 ) -> UserPreferencesResponse:
+    enforce_csrf(request)
     row = _get_or_create_preferences(auth_service, user)
     row.preferred_currency = "XOF"
     auth_service.db.commit()
