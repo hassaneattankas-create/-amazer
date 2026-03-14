@@ -30,9 +30,9 @@ export default function BoutiquesPage() {
       <header className="premium-card border border-white/20 bg-white/70 p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="luxury-title text-3xl font-semibold">Boutiques Premium</h1>
+            <h1 className="luxury-title text-3xl font-semibold">Boutiques</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-600">
-              Explorez les mini-sites marchands, les vitrines premium et les produits phares de la place.
+              Explorez les produits de la place.
             </p>
           </div>
           <Link href="/hotels" className="text-sm font-medium text-[#FF4D00]">
@@ -42,7 +42,7 @@ export default function BoutiquesPage() {
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Rechercher une boutique, une enseigne ou une ville..."
+          placeholder="Rechercher une boutique."
           className="mt-5"
         />
       </header>

@@ -19,24 +19,23 @@ export default function VendrePage() {
       <header className="premium-card border border-slate-200 bg-gradient-to-br from-white to-orange-50 p-6">
         <h1 className="luxury-title inline-flex items-center gap-2 text-3xl font-semibold">
           <Store className="h-6 w-6 text-[#FF4D00]" />
-          Ouvrir ma Boutique AMAZER
+          Devenir vendeur AMAZER
         </h1>
         <p className="mt-2 text-sm text-slate-600">
-          Inscription securisee avec verification obligatoire et creation automatique
-          de votre mini-site vendeur.
+          Cette rubrique est reservee aux vendeurs (boutique, restaurant ou premium).
         </p>
         <ol className="mt-3 list-decimal space-y-1 pl-5 text-xs text-slate-600">
-          <li>Creer votre compte avec e-mail ou WhatsApp</li>
-          <li>Verifier votre code unique</li>
-          <li>Acceder au dashboard adapte a votre activite</li>
+          <li>Creer ou connecter votre compte client</li>
+          <li>Choisir votre profil (boutique, restaurant ou premium)</li>
+          <li>Publier vos offres depuis l&apos;espace vendeur</li>
         </ol>
         <Button
           asChild
           className="primary-glow-btn mt-5 bg-[#FF4D00] text-white hover:bg-[#e74700]"
         >
-          <Link href="/register">
+          <Link href="/seller">
             <Rocket className="h-4 w-4" />
-            Commencer l&apos;inscription vendeur
+            Ouvrir mon espace vendeur
           </Link>
         </Button>
       </header>

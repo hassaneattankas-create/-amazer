@@ -21,7 +21,7 @@ const activityLabels = {
   shop: "Boutique",
   restaurant: "Restaurant",
   hotel: "Premium",
-  enterprise: "Entreprise",
+  enterprise: "Premium",
 } as const;
 
 export default function VendorShopPage() {
@@ -97,7 +97,7 @@ export default function VendorShopPage() {
         special_request: hotelForm.special_request || undefined,
       }),
     onSuccess: () => {
-      setStatus("Demande de reservation hotel envoyee.");
+      setStatus("Demande de reservation premium envoyee.");
       setHotelForm((prev) => ({
         ...prev,
         guest_name: "",
@@ -110,7 +110,7 @@ export default function VendorShopPage() {
         special_request: "",
       }));
     },
-    onError: () => setStatus("Impossible d'envoyer la reservation hotel."),
+    onError: () => setStatus("Impossible d'envoyer la reservation premium."),
   });
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -174,7 +174,7 @@ export default function VendorShopPage() {
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Rechercher dans cette boutique, restaurant, hotel ou services..."
+            placeholder="Rechercher dans cette boutique, restaurant, premium ou services..."
             className="h-11 rounded-xl border-slate-200 bg-white pl-9 text-sm text-slate-900 placeholder:text-slate-400"
           />
         </div>
@@ -287,7 +287,7 @@ export default function VendorShopPage() {
             <article className="premium-card border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-5">
               <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
                 <Hotel className="h-5 w-5 text-[#0ea5e9]" />
-                Reservation hotel avec acompte
+                Reservation premium avec acompte
               </h2>
               <p className="mt-2 text-sm text-slate-600">
                 Acompte obligatoire via {data.deposit_payment_method || "Nita/Amana"} pour valider la demande.
@@ -430,7 +430,7 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
             <Pill>{activityLabels[data.activity_type]}</Pill>
             {data.storefront_tier === "premium" ? <Pill>Premium</Pill> : null}
             {data.accepts_table_reservations ? <Pill>Reservation table</Pill> : null}
-            {data.accepts_hotel_bookings ? <Pill>Reservation hotel</Pill> : null}
+            {data.accepts_hotel_bookings ? <Pill>Reservation premium</Pill> : null}
           </div>
         </div>
       </div>

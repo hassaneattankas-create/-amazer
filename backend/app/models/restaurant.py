@@ -58,6 +58,7 @@ class RestaurantOrder(Base):
     customer_phone: Mapped[str] = mapped_column(String(40), nullable=False)
     delivery_address: Mapped[str] = mapped_column(String(220), nullable=False)
     distance_km: Mapped[float] = mapped_column(Float, nullable=False, default=3)
+    delivery_fee: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     delivery_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
     payment_mode: Mapped[str] = mapped_column(String(30), nullable=False, default="cash_on_delivery")
     transaction_code: Mapped[str | None] = mapped_column(String(180), nullable=True)

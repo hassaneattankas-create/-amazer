@@ -76,6 +76,7 @@ export default function RestaurantPage() {
     queryKey: ["public-finance-settings"],
     queryFn: getPublicFinanceSettings,
   });
+  const deliveryFee = financeSettings?.default_delivery_fee ?? 1500;
 
   const { data: menu = [], isPending } = useQuery({
     queryKey: ["restaurant-menu", selectedVendorId],
@@ -119,6 +120,10 @@ export default function RestaurantPage() {
         return sum + (item.base_price + optionsTotal) * item.quantity;
       }, 0),
     [selectedItems]
+  );
+  const orderTotal = useMemo(
+    () => (selectedItems.length ? total + deliveryFee : total),
+    [deliveryFee, selectedItems.length, total]
   );
 
   const addDish = (dish: RestaurantMenuItem) => {
@@ -204,7 +209,7 @@ export default function RestaurantPage() {
         </p>
         <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-700">
           <span className="rounded-full border border-[#FF4D00]/25 bg-[#FF4D00]/10 px-3 py-1 font-medium text-[#FF4D00]">
-            Frais livraison standard: {formatXOF(financeSettings?.default_delivery_fee ?? 1500)}
+            Frais livraison unique: {formatXOF(deliveryFee)}
           </span>
           <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 font-medium text-amber-700">
             Livraison estimee: {estimatedMinutes} min
@@ -399,8 +404,9 @@ export default function RestaurantPage() {
             <Sparkles className="h-4 w-4 text-amber-600" />
             Livraison Express Niamey estimee: {estimatedMinutes} min
           </p>
-          <p className="mt-1">Frais de livraison de base: {formatXOF(financeSettings?.default_delivery_fee ?? 1500)}</p>
+          <p className="mt-1">Frais de livraison: {formatXOF(deliveryFee)}</p>
           <p className="mt-1">Total panier repas: {formatXOF(total)}</p>
+          <p className="mt-1 font-medium">Total a payer: {formatXOF(orderTotal)}</p>
           <p className="mt-1">Articles: {selectedItems.length}</p>
         </div>
 

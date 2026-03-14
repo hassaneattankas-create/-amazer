@@ -8,7 +8,10 @@ from sqlalchemy.orm import Session
 from app import models as _models  # noqa: F401
 from app.core.crypto import encrypt_phone_value
 from app.database import SessionLocal
+from app.models.global_settings import GlobalSettings
 from app.models.hospitality import HotelBooking, RestaurantReservation
+from app.models.order import Order, OrderItem
+from app.models.product import Price, Product
 from app.models.restaurant import RestaurantMenuItem, RestaurantOrder, RestaurantOrderItem
 from app.models.seller_profile import SellerProfile
 from app.models.vendor import Vendor
@@ -121,6 +124,76 @@ RESTAURANTS = [
             {"name": "The Glace Menthe Safran", "description": "Infusion glacee menthe fraiche et pointe safran.", "image_url": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=1200&q=80", "base_price": 4800, "tags": ["Boisson", "Signature"], "options": [{"name": "Citron confit", "price": 600}], "estimated_prep_minutes": 7},
         ],
     },
+    {
+        "full_name": "Chef Le Fleuve Bistro",
+        "email": "demo.fleuvebistro@amazer.demo",
+        "phone": "+22790003004",
+        "profile": {
+            "business_name": "Le Fleuve Bistro",
+            "phone": "+22790003004",
+            "city": "Niamey",
+            "address": "Boulevard du fleuve, terrasse principale",
+            "activity_type": "restaurant",
+            "storefront_tier": "premium",
+            "description": "Bistro rive fleuve, brunchs signatures et plats de saison.",
+            "logo_url": "https://placehold.co/256x256/0f172a/38bdf8/png?text=FB",
+            "cover_image_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1600&q=80",
+            "opening_hours": "Lun-Dim 08:00-23:00",
+            "whatsapp_contact": "+22790003004",
+            "contact_email": "hello@fleuvebistro.demo",
+            "gallery_images": [
+                "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1600&q=80",
+                "https://images.unsplash.com/photo-1541544741938-0af808871cc0?auto=format&fit=crop&w=1600&q=80",
+                "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1600&q=80",
+            ],
+            "service_offerings": [
+                {"title": "Brunch Week-end", "description": "Formules brunch premium.", "display_mode": "consult_only"},
+                {"title": "Table Business", "description": "Espace reunion discret.", "display_mode": "consult_only"},
+                {"title": "Cuisine du Fleuve", "description": "Produits frais du jour.", "display_mode": "consult_only"},
+            ],
+            "accepts_table_reservations": True,
+        },
+        "menu": [
+            {"name": "Pavé de capitaine grillé", "description": "Poisson frais et légumes rôtis.", "image_url": "https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=1200&q=80", "base_price": 19500, "tags": ["Signature", "Chaud"], "options": [{"name": "Sauce citron", "price": 1200}], "estimated_prep_minutes": 20},
+            {"name": "Brunch Sahel Deluxe", "description": "Oeufs, pain artisanal et jus frais.", "image_url": "https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=1200&q=80", "base_price": 14500, "tags": ["Brunch", "Populaire"], "options": [{"name": "Cafe premium", "price": 1200}], "estimated_prep_minutes": 15},
+            {"name": "Limonade Gingembre", "description": "Gingembre frais et menthe.", "image_url": "https://images.unsplash.com/photo-1497534446932-c925b458314e?auto=format&fit=crop&w=1200&q=80", "base_price": 4200, "tags": ["Boisson", "Frais"], "options": [{"name": "Version miel", "price": 700}], "estimated_prep_minutes": 6},
+        ],
+    },
+    {
+        "full_name": "Chef Zinder Spice House",
+        "email": "demo.zinderspice@amazer.demo",
+        "phone": "+22790003005",
+        "profile": {
+            "business_name": "Zinder Spice House",
+            "phone": "+22790003005",
+            "city": "Niamey",
+            "address": "Quartier Yantala, maison epicee",
+            "activity_type": "restaurant",
+            "storefront_tier": "premium",
+            "description": "Cuisine epicee du Niger, grillades et plats familiaux.",
+            "logo_url": "https://placehold.co/256x256/7c2d12/f97316/png?text=ZH",
+            "cover_image_url": "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=1600&q=80",
+            "opening_hours": "Lun-Dim 11:00-23:30",
+            "whatsapp_contact": "+22790003005",
+            "contact_email": "contact@zinderspice.demo",
+            "gallery_images": [
+                "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=1600&q=80",
+                "https://images.unsplash.com/photo-1517244683847-7456b63c5969?auto=format&fit=crop&w=1600&q=80",
+                "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1600&q=80",
+            ],
+            "service_offerings": [
+                {"title": "Assiettes partage", "description": "Plats familiaux.", "display_mode": "consult_only"},
+                {"title": "Epices maison", "description": "Melanges signatures.", "display_mode": "consult_only"},
+                {"title": "Menu midi", "description": "Formules rapides.", "display_mode": "consult_only"},
+            ],
+            "accepts_table_reservations": True,
+        },
+        "menu": [
+            {"name": "Poulet Yassa Zinder", "description": "Poulet mariné, oignons et riz.", "image_url": "https://images.unsplash.com/photo-1511690743698-d9d85f2fbf38?auto=format&fit=crop&w=1200&q=80", "base_price": 15000, "tags": ["Populaire", "Chaud"], "options": [{"name": "Piment extra", "price": 500}], "estimated_prep_minutes": 18},
+            {"name": "Brochettes de boeuf", "description": "Brochettes epicees et salade.", "image_url": "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=1200&q=80", "base_price": 13500, "tags": ["Grill", "Maison"], "options": [{"name": "Portion extra", "price": 2500}], "estimated_prep_minutes": 16},
+            {"name": "Jus Bissap Royal", "description": "Bissap frais et menthe.", "image_url": "https://images.unsplash.com/photo-1497534446932-c925b458314e?auto=format&fit=crop&w=1200&q=80", "base_price": 3800, "tags": ["Boisson", "Frais"], "options": [{"name": "Version gingembre", "price": 600}], "estimated_prep_minutes": 6},
+        ],
+    },
 ]
 
 
@@ -143,6 +216,8 @@ def ensure_menu_item(db: Session, vendor_id: str, seed: dict) -> RestaurantMenuI
 
 def ensure_restaurant_order(db: Session, vendor_id: str, user_id: str, customer_name: str, customer_phone: str, delivery_address: str, distance_km: float, payment_mode: str, status: str, lines: list[dict]) -> None:
     row = db.scalar(select(RestaurantOrder).where(RestaurantOrder.vendor_id == vendor_id, RestaurantOrder.customer_name == customer_name, RestaurantOrder.delivery_address == delivery_address).limit(1))
+    settings_row = db.scalar(select(GlobalSettings).order_by(GlobalSettings.id.asc()))
+    delivery_fee = float(settings_row.default_delivery_fee) if settings_row else 1500.0
     if row is None:
         row = RestaurantOrder(
             vendor_id=vendor_id,
@@ -151,6 +226,7 @@ def ensure_restaurant_order(db: Session, vendor_id: str, user_id: str, customer_
             customer_phone=customer_phone,
             delivery_address=delivery_address,
             distance_km=distance_km,
+            delivery_fee=delivery_fee,
             delivery_minutes=max(15, int(round(8 + (distance_km * 4.5) + 20))),
             payment_mode=payment_mode,
             status=status,
@@ -162,6 +238,7 @@ def ensure_restaurant_order(db: Session, vendor_id: str, user_id: str, customer_
     row.user_id = user_id
     row.customer_phone = customer_phone
     row.distance_km = distance_km
+    row.delivery_fee = delivery_fee
     row.delivery_minutes = max(15, int(round(8 + (distance_km * 4.5) + 20)))
     row.payment_mode = payment_mode
     row.status = status
@@ -177,7 +254,7 @@ def ensure_restaurant_order(db: Session, vendor_id: str, user_id: str, customer_
         subtotal = unit_price * quantity
         total += subtotal
         row.items.append(RestaurantOrderItem(menu_item_id=dish.id, quantity=quantity, selected_options=selected_options, unit_price=unit_price, subtotal=subtotal))
-    row.total_amount = total
+    row.total_amount = total + delivery_fee
     db.flush()
 
 
@@ -240,6 +317,50 @@ def ensure_hotel_booking(db: Session, vendor_id: str, user_id: str, guest_name: 
     db.flush()
 
 
+def ensure_product_order(db: Session, user_id: str, tracking_code: str, prices: list[Price]) -> None:
+    if not prices:
+        return
+    row = db.scalar(select(Order).where(Order.tracking_code == tracking_code).limit(1))
+    delivery_fee = 1500.0
+    if row is None:
+        row = Order(
+            user_id=user_id,
+            status="commande",
+            payment_mode="nita",
+            delivery_type="standard",
+            payment_status="paid",
+            tracking_code=tracking_code,
+            estimated_minutes=180,
+            total_amount=0,
+            currency="XOF",
+        )
+        db.add(row)
+        db.flush()
+    row.user_id = user_id
+    row.status = "commande"
+    row.payment_mode = "nita"
+    row.delivery_type = "standard"
+    row.payment_status = "paid"
+    row.estimated_minutes = 180
+    row.currency = "XOF"
+    row.items.clear()
+    total = 0.0
+    for price in prices:
+        quantity = 1 if price == prices[0] else 2
+        subtotal = float(price.amount) * quantity
+        total += subtotal
+        row.items.append(
+            OrderItem(
+                product_id=price.product_id,
+                vendor_id=price.vendor_id,
+                quantity=quantity,
+                unit_price=float(price.amount),
+            )
+        )
+    row.total_amount = total + delivery_fee
+    db.flush()
+
+
 def main() -> None:
     db = SessionLocal()
     try:
@@ -253,22 +374,44 @@ def main() -> None:
 
         demo_customer = ensure_user(db, "demo.client@amazer.demo", "Client Demo AMAZER", "+22790009999")
 
+        price_rows = db.scalars(
+            select(Price)
+            .join(Product, Product.id == Price.product_id)
+            .where(Price.is_active.is_(True))
+            .order_by(Price.created_at.desc())
+            .limit(4)
+        ).all()
+        if len(price_rows) >= 2:
+            ensure_product_order(db, demo_customer.id, "ORDER-DEMO-CLIENT-1", price_rows[:2])
+        if len(price_rows) >= 4:
+            ensure_product_order(db, demo_customer.id, "ORDER-DEMO-CLIENT-2", price_rows[2:4])
+
         ensure_restaurant_order(db, profile_map["Le Sahel Rooftop"].vendor_id, demo_customer.id, "Client Demo AMAZER", "+22790009999", "Plateau, immeuble A demo", 3.2, "nita", "preparation", [{"menu": RESTAURANTS[0]["menu"][0], "quantity": 1, "selected_options": [{"name": "Frites patates douces", "price": 2500}]}, {"menu": RESTAURANTS[0]["menu"][2], "quantity": 2}])
         ensure_restaurant_order(db, profile_map["Maison Djerma Dining"].vendor_id, demo_customer.id, "Amina Audit Demo", "+22790009998", "Yantala, bureau demo 4", 5.4, "amana", "livraison", [{"menu": RESTAURANTS[1]["menu"][0], "quantity": 1, "selected_options": [{"name": "Legumes croquants", "price": 2000}]}])
         ensure_restaurant_order(db, profile_map["Nomad Grill & Tea"].vendor_id, demo_customer.id, "Equipe Produit AMAZER", "+22790009997", "Rive droite, atelier demo", 2.1, "cash_on_delivery", "commande", [{"menu": RESTAURANTS[2]["menu"][0], "quantity": 2, "selected_options": [{"name": "Cheddar extra", "price": 1200}]}, {"menu": RESTAURANTS[2]["menu"][2], "quantity": 2, "selected_options": [{"name": "Citron confit", "price": 600}]}])
+        ensure_restaurant_order(db, profile_map["Le Fleuve Bistro"].vendor_id, demo_customer.id, "Kadi Demo", "+22790009996", "Boulevard du fleuve, terrasse 3", 4.6, "nita", "livraison", [{"menu": RESTAURANTS[3]["menu"][0], "quantity": 1, "selected_options": [{"name": "Sauce citron", "price": 1200}]}, {"menu": RESTAURANTS[3]["menu"][2], "quantity": 2}])
+        ensure_restaurant_order(db, profile_map["Zinder Spice House"].vendor_id, demo_customer.id, "Issa Demo", "+22790009995", "Yantala, rue demo 7", 2.8, "cash_on_delivery", "commande", [{"menu": RESTAURANTS[4]["menu"][0], "quantity": 1, "selected_options": [{"name": "Piment extra", "price": 500}]}, {"menu": RESTAURANTS[4]["menu"][2], "quantity": 2}])
 
         ensure_restaurant_reservation(db, profile_map["Le Sahel Rooftop"].vendor_id, demo_customer.id, "Client Demo AMAZER", "+22790009999", datetime.now(UTC) + timedelta(days=1, hours=8), 4, "demo-seed-sahel-reservation", "confirmed")
         ensure_restaurant_reservation(db, profile_map["Maison Djerma Dining"].vendor_id, demo_customer.id, "Amina Audit Demo", "+22790009998", datetime.now(UTC) + timedelta(days=2, hours=6), 2, "demo-seed-djerma-reservation", "pending")
         ensure_restaurant_reservation(db, profile_map["Nomad Grill & Tea"].vendor_id, demo_customer.id, "Equipe Produit AMAZER", "+22790009997", datetime.now(UTC) + timedelta(days=3, hours=5), 6, "demo-seed-nomad-reservation", "confirmed")
+        ensure_restaurant_reservation(db, profile_map["Le Fleuve Bistro"].vendor_id, demo_customer.id, "Kadi Demo", "+22790009996", datetime.now(UTC) + timedelta(days=2, hours=4), 3, "demo-seed-fleuve-reservation", "confirmed")
+        ensure_restaurant_reservation(db, profile_map["Zinder Spice House"].vendor_id, demo_customer.id, "Issa Demo", "+22790009995", datetime.now(UTC) + timedelta(days=4, hours=3), 5, "demo-seed-zinder-reservation", "pending")
 
-        for hotel_name, room_index, status, reference in [("Radisson Blu Niamey", 0, "confirmed", "HOTEL-DEMO-RADISSON"), ("Hotel Soluxe Niamey", 1, "pending", "HOTEL-DEMO-SOLUXE"), ("Grand Hotel du Fleuve", 0, "confirmed", "HOTEL-DEMO-FLEUVE")]:
+        for hotel_name, room_index, status, reference in [
+            ("Radisson Blu Niamey", 0, "confirmed", "HOTEL-DEMO-RADISSON"),
+            ("Hotel Soluxe Niamey", 1, "pending", "HOTEL-DEMO-SOLUXE"),
+            ("Grand Hotel du Fleuve", 0, "confirmed", "HOTEL-DEMO-FLEUVE"),
+            ("Azalai Grand Resort", 1, "pending", "HOTEL-DEMO-AZALAI"),
+            ("Sahel Palace Residences", 0, "confirmed", "HOTEL-DEMO-SAHEL"),
+        ]:
             hotel_profile = db.scalar(select(SellerProfile).where(SellerProfile.business_name == hotel_name).limit(1))
             if hotel_profile is not None and hotel_profile.room_types:
                 ensure_hotel_booking(db, hotel_profile.vendor_id, demo_customer.id, "Client Demo AMAZER", "+22790009999", hotel_profile.room_types[room_index], str(hotel_profile.deposit_payment_method or "nita"), reference, status)
 
         db.commit()
         print("Demo restaurants seed termine.")
-        print("- Restaurants premium: 3")
+        print("- Restaurants premium: 5")
         print("- Orders/reservations/bookings: seeded")
         print(f"- Password: {COMMON_PASSWORD}")
     except Exception:

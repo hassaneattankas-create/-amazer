@@ -5,7 +5,7 @@ const OFFLINE_PRICE_KEYS = [
   "/api/v1/products/search",
   "/api/v1/products/",
   "/api/v1/alerts",
-  "/api/v1/content/home",
+  "/api/v1/home-content",
 ];
 
 self.addEventListener("install", (event) => {

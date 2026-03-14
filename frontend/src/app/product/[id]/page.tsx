@@ -79,13 +79,14 @@ export default function ProductDetailPage() {
       })),
     [priceHistory]
   );
+  const detailImageFallback = data?.product.images?.length ? data.product.images[0].image_url : null;
   const detailImageUrl = useMemo(
     () =>
       resolveProductImageUrl({
-        raw: data?.product.main_image_url,
+        raw: data?.product.main_image_url ?? detailImageFallback,
         categorySlug: data?.product.category?.slug,
       }),
-    [data?.product.category?.slug, data?.product.main_image_url]
+    [data?.product.category?.slug, data?.product.main_image_url, detailImageFallback]
   );
 
   if (isPending) {

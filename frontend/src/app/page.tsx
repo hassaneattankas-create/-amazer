@@ -30,11 +30,11 @@ const DEBOUNCE_MS = 250;
 const HOME_STATE_DRAFT_KEY = "amazer_home_state_draft";
 
 const SHELF_TABS = [
-  { slug: "all", emoji: "*", label: "Tout" },
-  { slug: "alimentation", emoji: "AG", label: "Alimentation" },
-  { slug: "restaurant", emoji: "RE", label: "Restaurant" },
-  { slug: "accessoires", emoji: "AC", label: "Accessoires" },
-  { slug: "technologie", emoji: "TE", label: "Technologie" },
+  { slug: "all", emoji: "✨", label: "Tout" },
+  { slug: "alimentation", emoji: "🥕", label: "Alimentation" },
+  { slug: "restaurant", emoji: "🍽️", label: "Restaurant" },
+  { slug: "accessoires", emoji: "👜", label: "Accessoires" },
+  { slug: "technologie", emoji: "💻", label: "Technologie" },
 ] as const;
 
 type ShelfSlug = (typeof SHELF_TABS)[number]["slug"];

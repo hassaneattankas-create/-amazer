@@ -1,7 +1,15 @@
 import axios from "axios";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:8000";
+const API_BASE_URL = (() => {
+  const fromEnv = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (fromEnv) {
+    return fromEnv;
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("NEXT_PUBLIC_API_URL must be defined in production builds.");
+  }
+  return "http://localhost:8000";
+})();
 const ACCESS_TOKEN_KEY = "amazer_access_token";
 const ACCESS_TOKEN_COOKIE_KEY = "amazer_access_token";
 const LEGACY_REFRESH_TOKEN_KEY = "amazer_refresh_token";

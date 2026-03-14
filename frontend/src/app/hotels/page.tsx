@@ -30,9 +30,9 @@ export default function HotelsPage() {
       <header className="premium-card border border-white/20 bg-white/70 p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="luxury-title text-3xl font-semibold">Premium & Residences</h1>
+            <h1 className="luxury-title text-3xl font-semibold">Premium</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-600">
-              Comparez les etablissements premium, leurs services signatures et leurs nuits en XOF.
+              Comparez les etablissements premium, leurs services signatures et leurs offres disponibles.
             </p>
           </div>
           <Link href="/boutiques" className="text-sm font-medium text-[#FF4D00]">
@@ -42,7 +42,7 @@ export default function HotelsPage() {
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Rechercher un etablissement premium, un quartier ou un service..."
+          placeholder="Rechercher un etablissement premium..."
           className="mt-5"
         />
       </header>

@@ -17,12 +17,9 @@ import { useCartStore } from "@/store/cartStore";
 const clientNavItems = [
   { href: "/", label: "Accueil" },
   { href: "/boutiques", label: "Boutiques" },
-  { href: "/hotels", label: "Hotels" },
+  { href: "/hotels", label: "Premium" },
   { href: "/promotions", label: "Promotions" },
   { href: "/avis", label: "Avis" },
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/profile", label: "Profil" },
-  { href: "/cart", label: "Panier" },
   { href: "/restaurant", label: "Restaurant" },
 ];
 
@@ -58,6 +55,7 @@ export function FloatingNavbar() {
   const showAdminLink = isAdminEmail(user?.email);
   const showSellerLink = Boolean(sellerProfile?.id);
   const isAuthenticated = Boolean(user?.id);
+  const showClientDashboard = isAuthenticated && appMode !== "seller";
   const activeNavItems =
     isAuthenticated && appMode === "seller" ? sellerNavItems : clientNavItems;
 
@@ -116,6 +114,11 @@ export function FloatingNavbar() {
               {item.label}
             </Link>
           ))}
+          {showClientDashboard ? (
+            <Link href="/dashboard" className="transition hover:text-[#FF4D00]">
+              Dashboard
+            </Link>
+          ) : null}
           {showSellerLink ? (
             <Link href="/seller" className="transition hover:text-[#FF4D00]">
               Espace Vendeur
@@ -142,7 +145,7 @@ export function FloatingNavbar() {
                 href="/register"
                 className="hidden items-center gap-2 rounded-md border border-white/20 bg-white/70 px-3 py-2 text-sm text-slate-700 backdrop-blur-xl hover:bg-white sm:inline-flex"
               >
-                Inscription
+                Inscription client
               </Link>
               <Link
                 href="/login"
@@ -185,7 +188,7 @@ export function FloatingNavbar() {
             href="/register"
             className="whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
           >
-            Inscription
+            Inscription client
           </Link>
         ) : (
           <button
@@ -206,6 +209,14 @@ export function FloatingNavbar() {
             {item.label}
           </Link>
         ))}
+        {showClientDashboard ? (
+          <Link
+            href="/dashboard"
+            className="whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
+          >
+            Dashboard
+          </Link>
+        ) : null}
         {showSellerLink ? (
           <Link
             href="/seller"

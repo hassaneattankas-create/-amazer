@@ -10,6 +10,7 @@ from app.core.crypto import decrypt_phone_value, encrypt_payment_code, payment_c
 from app.core.exceptions import NotFoundError, ValidationDomainError
 from app.core.rate_limit import enforce_rate_limit
 from app.database import get_db
+from app.models.global_settings import GlobalSettings
 from app.models.restaurant import RestaurantMenuItem, RestaurantOrder, RestaurantOrderItem
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
@@ -60,6 +61,7 @@ def _order_response(order: RestaurantOrder, vendor_name: str, dish_map: dict[str
         customer_phone=order.customer_phone,
         delivery_address=order.delivery_address,
         distance_km=order.distance_km,
+        delivery_fee=order.delivery_fee,
         delivery_minutes=order.delivery_minutes,
         payment_mode=order.payment_mode,
         status=order.status,
@@ -86,6 +88,31 @@ def _is_plat_du_jour(tags: list[str] | None) -> bool:
         return False
     normalized = {tag.strip().lower() for tag in tags if isinstance(tag, str)}
     return "plat du jour" in normalized
+
+
+def _get_or_create_settings(db: Session) -> GlobalSettings:
+    settings_row = db.scalar(select(GlobalSettings).order_by(GlobalSettings.id.asc()))
+    if settings_row is None:
+        settings_row = GlobalSettings(
+            commission_rate=0.05,
+            service_fee=200,
+            default_delivery_fee=1500,
+            urban_delivery_fee=1500,
+            peripheral_delivery_fee=2200,
+            seller_subscription_fee=5000,
+            ad_boost_price=2000,
+            ad_boost_duration_days=7,
+            ad_boost_price_24h=1000,
+            ad_boost_price_7d=2000,
+            launch_mode_zero_commission=False,
+            support_email=None,
+            support_phone=None,
+            support_whatsapp=None,
+        )
+        db.add(settings_row)
+        db.commit()
+        db.refresh(settings_row)
+    return settings_row
 
 
 @router.get("/storefronts", response_model=RestaurantStorefrontListResponse)
@@ -248,6 +275,8 @@ def create_restaurant_order(
     if len(menu_map) != len(set(menu_ids)):
         raise ValidationDomainError("One or more menu items are invalid for this restaurant")
 
+    settings_row = _get_or_create_settings(db)
+    delivery_fee = float(settings_row.default_delivery_fee or 0)
     prep_minutes = max(row.estimated_prep_minutes for row in menu_rows) if menu_rows else 20
     delivery_minutes = _estimate_delivery_minutes(payload.distance_km, prep_minutes)
     encrypted_code: str | None = None
@@ -265,6 +294,7 @@ def create_restaurant_order(
         customer_phone=payload.customer_phone,
         delivery_address=payload.delivery_address,
         distance_km=payload.distance_km,
+        delivery_fee=delivery_fee,
         delivery_minutes=delivery_minutes,
         payment_mode=payload.payment_mode,
         transaction_code=encrypted_code,
@@ -286,12 +316,13 @@ def create_restaurant_order(
                 menu_item_id=line.menu_item_id,
                 quantity=line.quantity,
                 selected_options=[{"name": option.name, "price": option.price} for option in line.selected_options],
+                customer_note=getattr(line, "customer_note", None),
                 unit_price=unit_price,
                 subtotal=subtotal,
             )
         )
 
-    order.total_amount = total_amount
+    order.total_amount = total_amount + delivery_fee
     db.add(order)
     db.commit()
     db.refresh(order)

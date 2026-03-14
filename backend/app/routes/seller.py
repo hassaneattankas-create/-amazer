@@ -61,6 +61,14 @@ def _parse_utc_datetime(value: object) -> datetime | None:
     return parsed.astimezone(UTC)
 
 
+def _resolve_product_main_image(product: Product) -> str | None:
+    if product.main_image_url:
+        return product.main_image_url
+    if not product.images:
+        return None
+    return sorted(product.images, key=lambda image: image.sort_order)[0].image_url
+
+
 def _sync_product_flags(product: Product) -> tuple[float | None, datetime | None, datetime | None]:
     specs = product.specs or {}
     now = datetime.now(UTC)
@@ -170,7 +178,7 @@ def get_storefront(
     products = db.scalars(
         select(Price)
         .where(Price.vendor_id == vendor_id, Price.is_active.is_(True))
-        .options(selectinload(Price.product))
+        .options(selectinload(Price.product).selectinload(Product.images))
         .order_by(Price.updated_at.desc())
         .limit(120)
     ).all()
@@ -213,7 +221,7 @@ def get_storefront(
                 amount=row.amount,
                 currency=row.currency,
                 is_boosted=row.product.is_boosted,
-                main_image_url=row.product.main_image_url,
+                main_image_url=_resolve_product_main_image(row.product),
             )
             for row in products
         ],

@@ -86,6 +86,7 @@ class RestaurantOrderResponse(BaseModel):
     customer_phone: str
     delivery_address: str
     distance_km: float
+    delivery_fee: float
     delivery_minutes: int
     payment_mode: str
     status: str

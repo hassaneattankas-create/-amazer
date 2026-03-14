@@ -29,13 +29,14 @@ export function ProductCard({ product }: ProductCardProps) {
   } = product;
 
   const adBadge = is_boosted ? "Sponsorise" : is_sponsored ? "Annonce" : null;
+  const fallbackImage = product.images?.length ? product.images[0].image_url : null;
   const resolvedImageUrl = useMemo(
     () =>
       resolveProductImageUrl({
-        raw: main_image_url,
+        raw: main_image_url ?? fallbackImage,
         categorySlug: product.category?.slug,
       }),
-    [main_image_url, product.category?.slug]
+    [fallbackImage, main_image_url, product.category?.slug]
   );
 
   const onOpenDetail = () => {

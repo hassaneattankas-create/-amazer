@@ -1,10 +1,12 @@
 from collections.abc import Awaitable, Callable
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from sqlalchemy import func, select, text
 
@@ -25,6 +27,7 @@ from app.routes.products import router as products_router
 from app.routes.reviews import router as reviews_router
 from app.routes.seller import router as seller_router
 from app.routes.restaurant import router as restaurant_router
+from app.routes.media import router as media_router
 from app.routes.admin_finance import router as admin_finance_router
 from app.routes.content import router as content_router, admin_router as admin_content_router, ads_router
 from app.routes.feedback import router as feedback_router, admin_router as admin_feedback_router
@@ -33,6 +36,11 @@ from app.services.security_log_service import log_security_event
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version=settings.app_version)
 logger = logging.getLogger(__name__)
+
+if settings.media_storage_provider.lower() == "local":
+    media_dir = Path(settings.media_upload_dir).resolve()
+    media_dir.mkdir(parents=True, exist_ok=True)
+    app.mount(settings.media_base_url, StaticFiles(directory=str(media_dir)), name="media")
 
 app.add_middleware(
     CORSMiddleware,
@@ -78,6 +86,8 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS deposit_amount DOUBLE PRECISION",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS accepts_table_reservations BOOLEAN DEFAULT FALSE",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS accepts_hotel_bookings BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS delivery_fee DOUBLE PRECISION DEFAULT 0",
+        "ALTER TABLE restaurant_order_items ADD COLUMN IF NOT EXISTS customer_note VARCHAR(500)",
     ):
         _run_ddl_safely(statement)
 
@@ -140,6 +150,7 @@ app.include_router(catalog_router, prefix=settings.api_prefix)
 app.include_router(seller_router, prefix=settings.api_prefix)
 app.include_router(orders_router, prefix=settings.api_prefix)
 app.include_router(restaurant_router, prefix=settings.api_prefix)
+app.include_router(media_router, prefix=settings.api_prefix)
 app.include_router(admin_finance_router, prefix=settings.api_prefix)
 app.include_router(content_router, prefix=settings.api_prefix)
 app.include_router(admin_content_router, prefix=settings.api_prefix)

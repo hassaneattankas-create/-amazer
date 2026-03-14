@@ -97,8 +97,13 @@ function LoginPageContent() {
           <p className="text-sm text-slate-600">
             Pas encore de compte ?{" "}
             <Link href="/register" className="font-medium text-[#FF4D00] hover:underline">
-              Creer un compte
+              Creer un compte client
             </Link>
+            {" "}ou{" "}
+            <Link href="/vendre" className="font-medium text-[#FF4D00] hover:underline">
+              devenir vendeur
+            </Link>
+            .
           </p>
           {status ? <p className="text-sm text-slate-700">{status}</p> : null}
         </form>

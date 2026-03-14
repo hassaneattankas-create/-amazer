@@ -35,7 +35,7 @@ export function OrderStepper({ order }: OrderStepperProps) {
       </div>
       <p className="mt-3 inline-flex items-center gap-1 text-xs text-slate-500">
         <Truck className="h-3.5 w-3.5 text-[#FF4D00]" />
-        ETA: {order.estimated_minutes} min {order.tracking_code ? `- ${order.tracking_code}` : ""}
+        Suivi: {order.tracking_code || "en cours"}
       </p>
     </div>
   );

@@ -11,8 +11,10 @@ function getApiOrigin(): string {
   }
 }
 
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0"]);
+
 function toHttpsIfPossible(url: URL): string {
-  if (url.protocol === "http:") {
+  if (url.protocol === "http:" && !LOCAL_HOSTS.has(url.hostname)) {
     url.protocol = "https:";
   }
   return url.toString();

@@ -38,6 +38,16 @@ class Settings(BaseSettings):
     whatsapp_api_version: str = Field(default="v22.0")
     whatsapp_access_token: str | None = Field(default=None)
     whatsapp_phone_number_id: str | None = Field(default=None)
+    media_upload_dir: str = Field(default="uploads")
+    media_base_url: str = Field(default="/media")
+    media_max_bytes: int = Field(default=5_000_000, ge=1_000_000, le=20_000_000)
+    media_storage_provider: str = Field(default="local")
+    media_public_base_url: str | None = Field(default=None)
+    s3_bucket_name: str | None = Field(default=None)
+    s3_endpoint_url: str | None = Field(default=None)
+    s3_region: str | None = Field(default=None)
+    s3_access_key_id: str | None = Field(default=None)
+    s3_secret_access_key: str | None = Field(default=None)
 
     def get_cors_origins(self) -> list[str]:
         if self.app_env.lower() == "development":

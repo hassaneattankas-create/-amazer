@@ -8,6 +8,7 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "rec
 import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { OrderStepper } from "@/components/OrderStepper";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { listActiveAlerts } from "@/services/alert-service";
 import { listMyOrders } from "@/services/order-service";
 import { useCartStore } from "@/store/cartStore";
@@ -27,6 +28,7 @@ function AnimatedCounter({ value }: { value: number }) {
 
 export default function DashboardPage() {
   const savingsHistory = useCartStore((state) => state.savingsHistory);
+  const { data: user } = useCurrentUser();
   const { data: alerts, isPending } = useQuery({
     queryKey: ["alerts-active"],
     queryFn: listActiveAlerts,
@@ -97,6 +99,11 @@ export default function DashboardPage() {
             <p className="mt-2 text-3xl font-semibold text-[#FF4D00]">
               <AnimatedCounter value={alerts?.length ?? 0} />
             </p>
+            {!alerts?.length ? (
+              <p className="mt-2 text-xs text-slate-500">
+                Aucune alerte active. Cree une alerte depuis une fiche produit.
+              </p>
+            ) : null}
           </article>
           <article className="premium-card rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
             <p className="text-xs uppercase tracking-[0.15em] text-slate-500">
@@ -106,6 +113,29 @@ export default function DashboardPage() {
           </article>
         </div>
       )}
+
+      <article className="premium-card rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <h2 className="luxury-title text-lg font-semibold">Profil &amp; Preferences</h2>
+        <p className="mt-1 text-sm text-slate-500">Informations du compte et devise.</p>
+        <div className="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
+          <div>
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Nom</p>
+            <p className="mt-1 font-medium text-slate-900">{user?.full_name || "Compte client"}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Email</p>
+            <p className="mt-1 font-medium text-slate-900">{user?.email || "Non renseigne"}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">WhatsApp</p>
+            <p className="mt-1 font-medium text-slate-900">{user?.whatsapp_phone || "Non renseigne"}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Devise</p>
+            <p className="mt-1 font-medium text-slate-900">Franc CFA (XOF)</p>
+          </div>
+        </div>
+      </article>
 
       <article className="premium-card rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
         <h2 className="luxury-title text-lg font-semibold">Evolution des economies</h2>
@@ -146,7 +176,11 @@ export default function DashboardPage() {
           {orders.slice(0, 2).map((order) => (
             <OrderStepper key={order.id} order={order} />
           ))}
-          {!orders.length ? <p className="text-sm text-slate-500">Aucune commande pour le moment.</p> : null}
+          {!orders.length ? (
+            <p className="text-sm text-slate-500">
+              Aucune commande pour le moment. Ajoute un produit au panier pour demarrer.
+            </p>
+          ) : null}
         </div>
       </article>
     </section>

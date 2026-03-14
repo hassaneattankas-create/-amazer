@@ -13,16 +13,11 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [isSeller, setIsSeller] = useState(false);
-  const [businessName, setBusinessName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [city, setCity] = useState("Niamey");
-  const [address, setAddress] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   async function finalizeRedirect() {
-    window.location.assign(isSeller ? "/seller/dashboard" : "/");
+    window.location.assign("/");
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -34,14 +29,6 @@ export default function RegisterPage() {
         identifier: identifier.trim(),
         full_name: fullName.trim(),
         password,
-        seller_profile: isSeller
-          ? {
-              business_name: businessName.trim(),
-              phone: phone.trim() || undefined,
-              city: city.trim() || "Niamey",
-              address: address.trim() || undefined,
-            }
-          : undefined,
       });
       void response;
       await login({
@@ -59,8 +46,7 @@ export default function RegisterPage() {
   const canSubmit =
     fullName.trim().length >= 2 &&
     identifier.trim().length >= 6 &&
-    PASSWORD_POLICY.test(password) &&
-    (!isSeller || businessName.trim().length >= 2);
+    PASSWORD_POLICY.test(password);
 
   return (
     <section className="mx-auto max-w-xl px-4 py-10">
@@ -68,6 +54,11 @@ export default function RegisterPage() {
         <h1 className="luxury-title text-3xl font-semibold">Creer un compte</h1>
         <p className="mt-2 text-sm text-slate-600">
           Renseignez des informations exactes. La connexion est ouverte des que le compte est cree.
+          Pour les vendeurs, passez par la rubrique{" "}
+          <Link href="/vendre" className="font-medium text-[#FF4D00] hover:underline">
+            Devenir vendeur
+          </Link>
+          .
         </p>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
@@ -116,65 +107,6 @@ export default function RegisterPage() {
               Minimum 8 caracteres avec majuscule, minuscule, chiffre et caractere special.
             </p>
           </div>
-
-          <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={isSeller}
-              onChange={(event) => setIsSeller(event.target.checked)}
-            />
-            Je suis vendeur et je veux creer ma boutique automatiquement
-          </label>
-
-          {isSeller ? (
-            <div className="space-y-3 rounded-md border border-slate-200 bg-white p-3">
-              <div>
-                <label className="text-sm font-medium text-slate-800" htmlFor="business-name">
-                  Nom de la boutique
-                </label>
-                <input
-                  id="business-name"
-                  required
-                  value={businessName}
-                  onChange={(event) => setBusinessName(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-800" htmlFor="phone">
-                  Telephone
-                </label>
-                <input
-                  id="phone"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-800" htmlFor="city">
-                  Ville
-                </label>
-                <input
-                  id="city"
-                  value={city}
-                  onChange={(event) => setCity(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-800" htmlFor="address">
-                  Adresse
-                </label>
-                <input
-                  id="address"
-                  value={address}
-                  onChange={(event) => setAddress(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-          ) : null}
 
           <Button
             type="submit"

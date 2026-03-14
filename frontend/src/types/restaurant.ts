@@ -41,6 +41,7 @@ export type RestaurantOrder = {
   customer_phone: string;
   delivery_address: string;
   distance_km: number;
+  delivery_fee: number;
   delivery_minutes: number;
   payment_mode: string;
   status: string;
