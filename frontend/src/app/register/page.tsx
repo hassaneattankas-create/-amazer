@@ -17,7 +17,10 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   async function finalizeRedirect() {
-    window.location.assign("/");
+    const url = new URL(window.location.href);
+    const next = url.searchParams.get("next") || "/";
+    const target = next.startsWith("/") ? next : "/";
+    window.location.assign(target);
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {

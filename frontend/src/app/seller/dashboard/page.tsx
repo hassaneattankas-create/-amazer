@@ -103,8 +103,11 @@ export default function SellerDashboardPage() {
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
       <header className="premium-card border border-slate-200 bg-white p-6">
-        <h1 className="luxury-title text-3xl font-semibold">Seller Dashboard</h1>
-        <p className="mt-2 text-sm text-slate-600">Gestion des stocks et prix pour les marchands.</p>
+        <h1 className="luxury-title text-3xl font-semibold">Ma Boutique AMAZER</h1>
+        <p className="mt-2 text-sm text-slate-600">
+          Back-office type Shopify adapte a ton profil (boutique, restaurant ou premium) pour gerer articles,
+          prix, boosts et commandes.
+        </p>
       </header>
 
       <article className="premium-card border border-slate-200 bg-white p-6">

@@ -22,6 +22,7 @@ function LoginPageContent() {
   const setAppMode = useAuthStore((state) => state.setAppMode);
 
   const next = searchParams.get("next") || "/";
+  const sellerRegisterHref = "/register?next=/seller";
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -36,7 +37,8 @@ function LoginPageContent() {
       if (sellerProfile?.id) {
         setAppMode("seller");
         persistAppMode("seller");
-        window.location.assign(next.startsWith("/seller") ? next : "/seller");
+        // Les vendeurs sont diriges vers leur back-office boutique type Shopify.
+        window.location.assign("/seller/dashboard");
         return;
       }
       setAppMode("client");
@@ -100,7 +102,7 @@ function LoginPageContent() {
               Creer un compte client
             </Link>
             {" "}ou{" "}
-            <Link href="/vendre" className="font-medium text-[#FF4D00] hover:underline">
+            <Link href={sellerRegisterHref} className="font-medium text-[#FF4D00] hover:underline">
               devenir vendeur
             </Link>
             .

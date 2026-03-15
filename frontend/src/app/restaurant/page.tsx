@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Flame, ForkKnife, Sparkles } from "lucide-react";
+import { Flame, ForkKnife } from "lucide-react";
 
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { StorefrontShowcaseCard } from "@/components/storefront/StorefrontShowcaseCard";
@@ -100,18 +100,11 @@ export default function RestaurantPage() {
   const orderMutation = useMutation({
     mutationFn: createRestaurantOrder,
     onSuccess: (order) => {
-      setStatus(
-        `Commande envoyee au restaurant ${order.vendor_name}. Livraison estimee: ${order.delivery_minutes} min.`
-      );
+      setStatus(`Commande envoyee au restaurant ${order.vendor_name}. Livraison en cours de preparation.`);
       setSelectedItems([]);
     },
     onError: () => setStatus("Echec envoi commande. Verifie les champs et reconnecte-toi."),
   });
-
-  const estimatedMinutes = useMemo(() => {
-    const km = Number(distanceKm || 0);
-    return Math.max(12, Math.round(8 + km * 4.5 + 20));
-  }, [distanceKm]);
 
   const total = useMemo(
     () =>
@@ -210,9 +203,6 @@ export default function RestaurantPage() {
         <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-700">
           <span className="rounded-full border border-[#FF4D00]/25 bg-[#FF4D00]/10 px-3 py-1 font-medium text-[#FF4D00]">
             Frais livraison unique: {formatXOF(deliveryFee)}
-          </span>
-          <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 font-medium text-amber-700">
-            Livraison estimee: {estimatedMinutes} min
           </span>
         </div>
       </header>
@@ -400,10 +390,6 @@ export default function RestaurantPage() {
         </div>
 
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-slate-700">
-          <p className="inline-flex items-center gap-1 font-medium">
-            <Sparkles className="h-4 w-4 text-amber-600" />
-            Livraison Express Niamey estimee: {estimatedMinutes} min
-          </p>
           <p className="mt-1">Frais de livraison: {formatXOF(deliveryFee)}</p>
           <p className="mt-1">Total panier repas: {formatXOF(total)}</p>
           <p className="mt-1 font-medium">Total a payer: {formatXOF(orderTotal)}</p>

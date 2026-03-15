@@ -24,8 +24,7 @@ const clientNavItems = [
 ];
 
 const sellerNavItems = [
-  { href: "/seller", label: "Mon Espace" },
-  { href: "/seller/dashboard", label: "Gestion Stock" },
+  { href: "/seller/dashboard", label: "Ma Boutique" },
 ];
 
 const SESSION_DRAFT_KEYS = [
@@ -119,11 +118,7 @@ export function FloatingNavbar() {
               Dashboard
             </Link>
           ) : null}
-          {showSellerLink ? (
-            <Link href="/seller" className="transition hover:text-[#FF4D00]">
-              Espace Vendeur
-            </Link>
-          ) : (
+          {showSellerLink ? null : (
             <Link href="/vendre" className="transition hover:text-[#FF4D00]">
               Devenir vendeur
             </Link>
@@ -217,14 +212,7 @@ export function FloatingNavbar() {
             Dashboard
           </Link>
         ) : null}
-        {showSellerLink ? (
-          <Link
-            href="/seller"
-            className="whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
-          >
-            Espace Vendeur
-          </Link>
-        ) : (
+        {showSellerLink ? null : (
           <Link
             href="/vendre"
             className="whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"

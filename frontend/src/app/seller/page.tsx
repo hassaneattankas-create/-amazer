@@ -24,6 +24,7 @@ import {
   upsertSellerProfile,
 } from "@/services/seller-service";
 import { useAuthStore } from "@/store/auth-store";
+import type { StorefrontTier } from "@/types/seller";
 
 const SELLER_PROFILE_DRAFT_KEY = "amazer_seller_profile_draft";
 const SELLER_PRODUCT_DRAFT_KEY = "amazer_seller_product_draft";
@@ -130,7 +131,8 @@ export default function SellerPage() {
       accepts_table_reservations: false,
       accepts_hotel_bookings: false,
     });
-    const normalizedActivity = draft.activity_type === "enterprise" ? "hotel" : draft.activity_type;
+    const normalizedActivity =
+      (draft.activity_type as string) === "enterprise" ? "hotel" : draft.activity_type;
     return {
       ...draft,
       activity_type: normalizedActivity,
@@ -216,6 +218,8 @@ export default function SellerPage() {
     if (!profile || profileHydratedFromServer) {
       return;
     }
+    // This effect hydrates the local seller profile draft once from the server response.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProfileForm((prev) => ({
       ...prev,
       business_name: prev.business_name || profile.business_name || "",
@@ -599,7 +603,7 @@ export default function SellerPage() {
                 phone: profileForm.phone || undefined,
                 address: profileForm.address || undefined,
                 activity_type: profileForm.activity_type,
-                storefront_tier: profileForm.storefront_tier,
+                storefront_tier: profileForm.storefront_tier as StorefrontTier,
                 description: profileForm.description || undefined,
                 logo_url: normalizeImageInput(profileForm.logo_url),
                 cover_image_url: normalizeImageInput(profileForm.cover_image_url),
@@ -723,7 +727,7 @@ export default function SellerPage() {
             Menu restaurant
           </h2>
           <p className="mt-2 text-sm text-slate-600">
-            Ajoutez vos plats, boissons, prix et marquez vos offres en "Plat du Jour".
+        Ajoutez vos plats, boissons, prix et marquez vos offres en Plat du Jour.
           </p>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">

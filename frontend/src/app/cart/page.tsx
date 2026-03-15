@@ -56,8 +56,6 @@ export default function CartPage() {
     }, 1200);
   };
 
-  const estimatedMinutes = deliveryType === "express_niamey" ? 45 : 180;
-
   const downloadReceipt = () => {
     if (!result) {
       return;
@@ -324,7 +322,6 @@ export default function CartPage() {
               Livraison Express Niamey
             </Button>
           </div>
-          <p className="mt-2 text-xs text-slate-500">Delai estime: {estimatedMinutes} minutes</p>
         </div>
       </article>
 
