@@ -201,15 +201,15 @@ export default function OrderReceiptPage() {
 
         <div ref={qrRef} className="mt-5 flex flex-col items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4">
           <QRCodeCanvas value={qrPayload} size={180} includeMargin />
-          <p className="text-xs text-slate-500">QR de verification securisee (admin uniquement)</p>
+          <p className="text-xs text-slate-500">QR de verification livraison (a scanner par le livreur)</p>
         </div>
       </article>
 
       <article className="premium-card border border-emerald-200 bg-emerald-50 p-5">
-        <h2 className="text-base font-semibold text-emerald-800">🛡️ Conseils de Securite AMAZER</h2>
+        <h2 className="text-base font-semibold text-emerald-800">Conseils de Securite AMAZER</h2>
         <ul className="mt-3 space-y-2 text-sm text-emerald-900">
           <li>Ne partagez jamais la capture d ecran de ce QR Code sur les reseaux sociaux.</li>
-          <li>Le vendeur doit scanner ce code uniquement via l application officielle AMAZER.</li>
+          <li>Le livreur doit scanner ce code uniquement au moment de la remise en main propre.</li>
           <li>Ce recu est valable pour un seul retrait. Une fois scanne, il devient invalide.</li>
           <li>AMAZER ne vous demandera jamais votre code secret Nita/Amana par SMS ou appel.</li>
         </ul>

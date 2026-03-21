@@ -115,7 +115,7 @@ export default function SellerPage() {
       city: "Niamey",
       phone: "",
       address: "",
-      activity_type: "shop" as "shop" | "restaurant" | "hotel",
+      activity_type: "shop" as "shop" | "restaurant" | "hotel" | "enterprise",
       storefront_tier: "basic" as "basic" | "premium",
       description: "",
       logo_url: "",
@@ -132,11 +132,11 @@ export default function SellerPage() {
       accepts_hotel_bookings: false,
     });
     const normalizedActivity =
-      (draft.activity_type as string) === "enterprise" ? "hotel" : draft.activity_type;
+      (draft.activity_type as string) === "hotel" ? "enterprise" : draft.activity_type;
     return {
       ...draft,
       activity_type: normalizedActivity,
-      storefront_tier: normalizedActivity === "hotel" ? "premium" : "basic",
+      storefront_tier: normalizedActivity === "enterprise" ? "premium" : "basic",
     };
   });
   const [productForm, setProductForm] = useState(() =>
@@ -228,7 +228,7 @@ export default function SellerPage() {
       address: prev.address || profile.address || "",
       activity_type:
         prev.activity_type ||
-        (profile.activity_type === "enterprise" ? "hotel" : profile.activity_type) ||
+        (profile.activity_type === "hotel" ? "enterprise" : profile.activity_type) ||
         "shop",
       storefront_tier:
         prev.storefront_tier ||
@@ -310,7 +310,7 @@ export default function SellerPage() {
   const normalizeImageInput = (raw: string): string | undefined => resolveImageUrl(raw) ?? undefined;
   const isShop = profileForm.activity_type === "shop";
   const isRestaurant = profileForm.activity_type === "restaurant";
-  const isPremium = profileForm.activity_type === "hotel";
+  const isPremium = profileForm.activity_type === "hotel" || profileForm.activity_type === "enterprise";
   const showRestaurantSection = isRestaurant || isPremium;
   const showProductSection = isShop || isPremium;
   const hasProfile = Boolean(profile?.id);
@@ -410,10 +410,10 @@ export default function SellerPage() {
           ) : (
             <p className="mt-2 text-sm text-slate-600">Aucun profil actif pour ce compte.</p>
           )}
-          <p className="mt-3 text-sm text-slate-600">
-            Boutique: publier des produits. Restaurant: menu digital et reservations. Premium: mini-site complet
-            (services, chambres, paiement avec acompte).
-          </p>
+        <p className="mt-3 text-sm text-slate-600">
+            Boutique: publier des produits. Restaurant: menu digital, commandes et reservations. Premium: toutes les
+            fonctions boutique + restaurant + mini-site complet (galerie, services, chambres, paiement avec acompte).
+        </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Input
               placeholder="Nom du commerce"
@@ -441,17 +441,17 @@ export default function SellerPage() {
               className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900"
               value={profileForm.activity_type}
               onChange={(event) => {
-                const activityType = event.target.value as "shop" | "restaurant" | "hotel";
+                const activityType = event.target.value as "shop" | "restaurant" | "enterprise";
                 setProfileForm((prev) => ({
                   ...prev,
                   activity_type: activityType,
-                  storefront_tier: activityType === "hotel" ? "premium" : "basic",
+                  storefront_tier: activityType === "enterprise" ? "premium" : "basic",
                 }));
               }}
             >
               <option value="shop">Boutique (produits)</option>
               <option value="restaurant">Restaurant (menu)</option>
-              <option value="hotel">Premium (mini-site)</option>
+              <option value="enterprise">Premium entreprise (mini-site complet)</option>
             </select>
             <div className="space-y-2">
               <Input

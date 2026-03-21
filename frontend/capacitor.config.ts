@@ -1,11 +1,13 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
+const mobileServerUrl = process.env.CAPACITOR_SERVER_URL || "https://amazerniger.vercel.app";
+
 const config: CapacitorConfig = {
   appId: "ne.amazer.app",
   appName: "AMAZER",
   webDir: "public",
   server: {
-    url: "https://amazer.vercel.app",
+    url: mobileServerUrl,
     cleartext: false,
     androidScheme: "https",
   },

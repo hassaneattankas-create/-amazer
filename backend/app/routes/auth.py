@@ -11,6 +11,7 @@ from app.core.rate_limit import enforce_rate_limit
 from app.models.user import User
 from app.models.user_preferences import UserPreferences
 from app.schemas.auth import (
+    DeleteAccountRequest,
     LoginRequest,
     RefreshTokenRequest,
     RegisterRequest,
@@ -151,6 +152,32 @@ def logout(
 ) -> None:
     enforce_csrf(request)
     auth_service.refresh_tokens.revoke_all_for_user(user.id)
+    auth_service.db.commit()
+    secure_cookie = settings.is_production()
+    same_site = "none" if secure_cookie else "lax"
+    response.delete_cookie("access_token", path="/", secure=secure_cookie, httponly=True, samesite=same_site)
+    response.delete_cookie("refresh_token", path="/", secure=secure_cookie, httponly=True, samesite=same_site)
+    response.delete_cookie("csrf_token", path="/", secure=secure_cookie, httponly=False, samesite=same_site)
+
+
+@router.post("/delete-account", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    payload: DeleteAccountRequest,
+    request: Request,
+    response: Response,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    user: Annotated[User, Depends(get_current_user)],
+) -> None:
+    enforce_csrf(request)
+    enforce_rate_limit(request, key="auth_delete_account", limit=4, window_seconds=600)
+    auth_service.close_account(user=user, password=payload.password.get_secret_value())
+    log_security_event(
+        auth_service.db,
+        event_type="account_deleted_by_user",
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        details={"user_id": user.id},
+    )
     auth_service.db.commit()
     secure_cookie = settings.is_production()
     same_site = "none" if secure_cookie else "lax"

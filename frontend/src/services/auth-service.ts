@@ -122,6 +122,14 @@ export async function logout() {
   }
 }
 
+export async function deleteMyAccount(payload: { password: string }) {
+  try {
+    await api.post("/api/v1/auth/delete-account", payload);
+  } finally {
+    clearAuthTokens();
+  }
+}
+
 export async function getCurrentUser() {
   const response = await api.get<UserResponse>("/api/v1/auth/me");
   return response.data;

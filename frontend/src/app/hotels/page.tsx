@@ -11,19 +11,19 @@ import { listStorefronts } from "@/services/catalog-service";
 
 export default function HotelsPage() {
   const [query, setQuery] = useState("");
-  const { data: hotels = [], isPending } = useQuery({
+  const { data: premiumStores = [], isPending } = useQuery({
     queryKey: ["catalog-storefronts-hotels", query],
     queryFn: () =>
       listStorefronts({
         query,
-        activityType: "hotel",
+        storefrontTier: "premium",
       }),
   });
-  const visibleHotels = useMemo(() => {
-    const copy = [...hotels];
+  const visiblePremiumStores = useMemo(() => {
+    const copy = [...premiumStores];
     copy.sort((a, b) => Number(b.is_verified) - Number(a.is_verified));
     return copy;
-  }, [hotels]);
+  }, [premiumStores]);
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
@@ -32,7 +32,7 @@ export default function HotelsPage() {
           <div>
             <h1 className="luxury-title text-3xl font-semibold">Premium</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-600">
-              Comparez les etablissements premium, leurs services signatures et leurs offres disponibles.
+              Grandes entreprises premium: boutique + restaurant + mini-site complet + services exclusifs.
             </p>
           </div>
           <Link href="/boutiques" className="text-sm font-medium text-[#FF4D00]">
@@ -42,7 +42,7 @@ export default function HotelsPage() {
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Rechercher un etablissement premium..."
+          placeholder="Rechercher une entreprise premium..."
           className="mt-5"
         />
       </header>
@@ -53,15 +53,15 @@ export default function HotelsPage() {
             <ProductCardSkeleton key={`hotel-skeleton-${index}`} />
           ))}
         </div>
-      ) : visibleHotels.length ? (
+      ) : visiblePremiumStores.length ? (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {visibleHotels.map((hotel) => (
-            <StorefrontShowcaseCard key={hotel.id} store={hotel} ctaLabel="Voir les chambres" />
+          {visiblePremiumStores.map((store) => (
+            <StorefrontShowcaseCard key={store.id} store={store} ctaLabel="Voir le mini-site premium" />
           ))}
         </div>
       ) : (
         <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
-          Aucun etablissement premium ne correspond a cette recherche.
+          Aucune entreprise premium ne correspond a cette recherche.
         </article>
       )}
     </section>

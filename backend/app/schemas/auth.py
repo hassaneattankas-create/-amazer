@@ -161,3 +161,9 @@ class UserPreferencesUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     preferred_currency: str = Field(pattern="^(XOF)$")
+
+
+class DeleteAccountRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    password: SecretStr = Field(min_length=8, max_length=72)

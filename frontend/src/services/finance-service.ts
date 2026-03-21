@@ -1,6 +1,8 @@
 import { api } from "@/lib/api";
 import {
   AdminSeller,
+  AdminUser,
+  AdminUserStats,
   AdminOrderTracking,
   AuditLogItem,
   DistrictFeeItem,
@@ -117,6 +119,27 @@ export async function verifyAdminSeller(profileId: string, verified: boolean): P
   const response = await api.post<AdminSeller>(`/api/v1/admin/finance/sellers/${profileId}/verify`, null, {
     params: { verified },
   });
+  return response.data;
+}
+
+export async function getAdminUserStats(): Promise<AdminUserStats> {
+  const response = await api.get<AdminUserStats>("/api/v1/admin/finance/users/stats");
+  return response.data;
+}
+
+export async function listAdminUsers(query?: string, limit = 200): Promise<AdminUser[]> {
+  const response = await api.get<AdminUser[]>("/api/v1/admin/finance/users", {
+    params: { query, limit },
+  });
+  return response.data;
+}
+
+export async function removeAdminUser(userId: string): Promise<void> {
+  await api.delete(`/api/v1/admin/finance/users/${userId}`);
+}
+
+export async function restoreAdminUser(userId: string): Promise<AdminUser> {
+  const response = await api.post<AdminUser>(`/api/v1/admin/finance/users/${userId}/restore`);
   return response.data;
 }
 

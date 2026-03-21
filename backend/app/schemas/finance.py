@@ -162,3 +162,29 @@ class AdminSellerResponse(BaseModel):
     is_verified: bool
     is_active: bool
     created_at: str
+
+
+class AdminUserStatsResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    total_users: int
+    active_users: int
+    inactive_users: int
+    seller_accounts: int
+    client_only_accounts: int
+    admin_accounts: int
+    new_users_last_7_days: int
+    new_users_last_30_days: int
+
+
+class AdminUserResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    email: str
+    full_name: str
+    whatsapp_phone: str | None
+    is_active: bool
+    is_admin: bool
+    is_seller: bool
+    created_at: str

@@ -28,7 +28,7 @@ export function ProductCard({ product }: ProductCardProps) {
     best_offer: { amount, stock_quantity, vendor },
   } = product;
 
-  const adBadge = is_boosted ? "Sponsorise" : is_sponsored ? "Annonce" : null;
+  const adBadge = is_boosted ? "Sponsorise" : is_sponsored ? "Sponsoris\u00e9" : null;
   const fallbackImage = product.images?.length ? product.images[0].image_url : null;
   const resolvedImageUrl = useMemo(
     () =>

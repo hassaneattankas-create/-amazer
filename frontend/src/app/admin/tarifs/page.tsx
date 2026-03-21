@@ -126,7 +126,7 @@ export default function AdminTarifsPage() {
       <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
         <article className="premium-card border border-slate-200 bg-white p-6">
           <h1 className="luxury-title text-2xl font-semibold">Panneau Tarifs Admin</h1>
-          <p className="mt-2 text-sm text-slate-600">Acces protege par MFA + secret admin + date anniversaire.</p>
+          <p className="mt-2 text-sm text-slate-600">Acces protege par MFA + secret admin + cle secondaire.</p>
           <div className="mt-4 flex gap-3">
             <input
               type="password"
@@ -139,7 +139,7 @@ export default function AdminTarifsPage() {
               value={birthDate}
               onChange={(event) => setBirthDate(event.target.value)}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="Date anniversaire (07/11/03)"
+              placeholder="Cle secondaire"
             />
             <Button onClick={() => pinMutation.mutate({ pin, birth_date: birthDate })} disabled={!pin || !birthDate}>
               Verifier

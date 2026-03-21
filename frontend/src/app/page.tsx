@@ -39,34 +39,6 @@ const SHELF_TABS = [
 
 type ShelfSlug = (typeof SHELF_TABS)[number]["slug"];
 
-function loadHomeStateDraft(): { query: string; barcode: string; activeShelf: ShelfSlug } {
-  const fallback: { query: string; barcode: string; activeShelf: ShelfSlug } = {
-    query: "",
-    barcode: "",
-    activeShelf: "all",
-  };
-  if (typeof window === "undefined") {
-    return fallback;
-  }
-  try {
-    const raw = window.localStorage.getItem(HOME_STATE_DRAFT_KEY);
-    if (!raw) {
-      return fallback;
-    }
-    const parsed = JSON.parse(raw) as Partial<typeof fallback>;
-    const activeShelf = SHELF_TABS.some((entry) => entry.slug === parsed.activeShelf)
-      ? (parsed.activeShelf as ShelfSlug)
-      : "all";
-    return {
-      query: typeof parsed.query === "string" ? parsed.query : "",
-      barcode: typeof parsed.barcode === "string" ? parsed.barcode : "",
-      activeShelf,
-    };
-  } catch {
-    return fallback;
-  }
-}
-
 function shuffleItems<T>(items: T[]): T[] {
   const copy = [...items];
   for (let index = copy.length - 1; index > 0; index -= 1) {
@@ -90,10 +62,9 @@ function withBoostRotation<T extends { is_boosted: boolean }>(items: T[]): T[] {
 }
 
 export default function HomePage() {
-  const [homeInit] = useState(loadHomeStateDraft);
-  const [query, setQuery] = useState(homeInit.query);
-  const [barcode, setBarcode] = useState(homeInit.barcode);
-  const [activeShelf, setActiveShelf] = useState<ShelfSlug>(homeInit.activeShelf);
+  const [query, setQuery] = useState("");
+  const [barcode, setBarcode] = useState("");
+  const [activeShelf, setActiveShelf] = useState<ShelfSlug>("all");
   const preferredCurrency = useAuthStore((state) => state.preferredCurrency);
   const debouncedQuery = useDebouncedValue(query, DEBOUNCE_MS);
   const debouncedBarcode = useDebouncedValue(barcode, DEBOUNCE_MS);
@@ -111,8 +82,8 @@ export default function HomePage() {
   });
   const { data: storefronts = [] } = useQuery({
     queryKey: ["home-storefronts"],
-    queryFn: () => listStorefronts({ storefrontTier: "premium" }),
-    staleTime: 30_000,
+    queryFn: () => listStorefronts({ storefrontTier: "premium", limit: 24 }),
+    staleTime: 120_000,
   });
   const { data, isPending, isFetching, isError, error } = useProductSearch({
     query: debouncedBarcode ? "" : debouncedQuery,
@@ -146,21 +117,17 @@ export default function HomePage() {
     return shuffleItems(cards).slice(0, 12);
   }, [homeContent?.sections]);
 
-  const featuredHotels = useMemo(
+  const featuredPremium = useMemo(
     () =>
       storefronts
-        .filter((store) => store.activity_type === "hotel" && store.is_verified)
+        .filter((store) => store.storefront_tier === "premium" && store.is_verified)
         .slice(0, 3),
     [storefronts]
   );
   const featuredBoutiques = useMemo(
     () =>
       storefronts
-        .filter(
-          (store) =>
-            (store.activity_type === "shop" || store.activity_type === "enterprise") &&
-            store.is_verified
-        )
+        .filter((store) => store.activity_type === "shop" && store.is_verified)
         .slice(0, 6),
     [storefronts]
   );
@@ -240,13 +207,13 @@ export default function HomePage() {
         </article>
       ) : null}
 
-      {!hasActiveFilter && featuredHotels.length ? (
+      {!hasActiveFilter && featuredPremium.length ? (
         <article className="premium-card mt-5 border border-slate-200 bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="luxury-title text-lg font-semibold text-slate-900">Premium & Residences</h2>
+              <h2 className="luxury-title text-lg font-semibold text-slate-900">Premium Entreprises</h2>
               <p className="mt-1 text-xs text-slate-500">
-                Suites premium, spa, piscine et services signatures.
+                Boutique + restaurant + services exclusifs dans un mini-site complet.
               </p>
             </div>
             <Link href="/hotels" className="text-sm font-medium text-[#FF4D00]">
@@ -254,7 +221,7 @@ export default function HomePage() {
             </Link>
           </div>
           <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-            {featuredHotels.map((store) => (
+            {featuredPremium.map((store) => (
               <StorefrontShowcaseCard key={store.id} store={store} ctaLabel="Voir le premium" />
             ))}
           </div>

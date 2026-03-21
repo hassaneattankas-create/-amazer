@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request, status
@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.config import get_settings
 from app.core.crypto import decrypt_payment_code, encrypt_payment_code, payment_code_hash
 from app.core.csrf import enforce_csrf
-from app.core.deps import get_admin_user, get_current_user, get_current_user_optional
+from app.core.deps import get_current_user, get_current_user_optional
 from app.core.receipt_security import (
     create_receipt_access_token,
     decode_receipt_access_token,
@@ -20,6 +20,7 @@ from app.database import get_db
 from app.models.order import Order, OrderItem
 from app.models.product import Price, Product
 from app.models.receipt_scan import ReceiptScan
+from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.schemas.order import (
     CheckoutRequest,
@@ -39,6 +40,7 @@ from app.services.security_log_service import log_security_event
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 settings = get_settings()
+AUTO_RECEIPT_TIMEOUT_HOURS = 24
 
 
 def _to_order_response(order: Order) -> OrderResponse:
@@ -132,6 +134,59 @@ def _resolve_order_for_receipt(db: Session, order_id: str) -> Order | None:
     )
 
 
+def _latest_dispatch_marker(db: Session, order_id: str) -> datetime | None:
+    return db.scalar(
+        select(ReceiptScan.scanned_at)
+        .where(ReceiptScan.order_id == order_id, ReceiptScan.result == "pending")
+        .order_by(ReceiptScan.scanned_at.desc())
+        .limit(1)
+    )
+
+
+def _auto_finalize_order_without_qr(
+    db: Session,
+    order: Order,
+    request: Request | None,
+) -> bool:
+    if order.status != "livraison" or order.payment_status != "paid":
+        return False
+    already_verified = db.scalar(
+        select(ReceiptScan.id)
+        .where(
+            ReceiptScan.order_id == order.id,
+            ReceiptScan.result.in_(["accepted", "auto_verified"]),
+        )
+        .limit(1)
+    )
+    if already_verified is not None:
+        return False
+    reference_time = _latest_dispatch_marker(db, order.id) or order.created_at
+    if reference_time.tzinfo is None:
+        reference_time = reference_time.replace(tzinfo=UTC)
+    if datetime.now(UTC) - reference_time < timedelta(hours=AUTO_RECEIPT_TIMEOUT_HOURS):
+        return False
+    vendor_ids = {item.vendor_id for item in order.items}
+    resolved_vendor_id = next(iter(vendor_ids)) if len(vendor_ids) == 1 else None
+    order.status = "recu"
+    db.add(
+        ReceiptScan(
+            order_id=order.id,
+            vendor_id=resolved_vendor_id,
+            ip_address=request.client.host if request and request.client else None,
+            gps="AUTO_TIMEOUT",
+            result="auto_verified",
+        )
+    )
+    log_security_event(
+        db,
+        event_type="order_auto_receipt_timeout",
+        ip_address=request.client.host if request and request.client else None,
+        path=str(request.url.path) if request else None,
+        details={"order_id": order.id, "timeout_hours": AUTO_RECEIPT_TIMEOUT_HOURS},
+    )
+    return True
+
+
 def _product_names(db: Session, order: Order) -> dict[str, str]:
     product_ids = [item.product_id for item in order.items]
     if not product_ids:
@@ -183,6 +238,7 @@ def _to_receipt_response(
 
 @router.get("/me", response_model=list[OrderResponse])
 def list_my_orders(
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> list[OrderResponse]:
@@ -192,6 +248,12 @@ def list_my_orders(
         .options(selectinload(Order.items))
         .order_by(Order.created_at.desc())
     ).all()
+    has_auto_updates = False
+    for order in orders:
+        if _auto_finalize_order_without_qr(db, order, request):
+            has_auto_updates = True
+    if has_auto_updates:
+        db.commit()
     return [_to_order_response(order) for order in orders]
 
 
@@ -374,7 +436,7 @@ def get_receipt_link(
     digest = receipt_integrity_hash(payload)
     token = create_receipt_access_token(order_id=order.id, digest=digest)
     receipt_url = f"/order/receipt/{order.id}?token={token}"
-    verify_url = f"/admin/receipt-scan?token={token}"
+    verify_url = f"/seller/delivery-scan?token={token}"
     return ReceiptLinkResponse(order_id=order.id, token=token, receipt_url=receipt_url, verify_url=verify_url)
 
 
@@ -389,6 +451,9 @@ def get_secure_receipt(
     order = _resolve_order_for_receipt(db, order_id)
     if order is None:
         raise ValidationDomainError("Order not found")
+    if _auto_finalize_order_without_qr(db, order, request):
+        db.commit()
+        db.refresh(order)
 
     customer_name = order.user.full_name if order.user else "Client AMAZER"
     names = _product_names(db, order)
@@ -422,10 +487,14 @@ def verify_receipt_scan(
     payload: ReceiptVerifyRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    _: Annotated[User, Depends(get_admin_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> ReceiptVerifyResponse:
     enforce_csrf(request)
     enforce_rate_limit(request, key="receipt_scan_verify", limit=20, window_seconds=60)
+    is_admin = _is_admin(current_user)
+    seller_profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if not is_admin and seller_profile is None:
+        raise UnauthorizedError("Seller or admin access required")
     try:
         claims = decode_receipt_access_token(payload.token)
     except ValueError as exc:
@@ -439,6 +508,16 @@ def verify_receipt_scan(
     )
     if order is None:
         raise ValidationDomainError("Order not found")
+    resolved_vendor_id = payload.vendor_id
+    if not is_admin:
+        seller_vendor_id = seller_profile.vendor_id if seller_profile else None
+        if not seller_vendor_id:
+            raise UnauthorizedError("Seller profile not found")
+        if payload.vendor_id and payload.vendor_id != seller_vendor_id:
+            raise UnauthorizedError("Vendor mismatch for delivery verification")
+        if not any(item.vendor_id == seller_vendor_id for item in order.items):
+            raise UnauthorizedError("This order is not linked to your storefront")
+        resolved_vendor_id = seller_vendor_id
 
     customer_name = order.user.full_name if order.user else "Client AMAZER"
     digest = receipt_integrity_hash(_build_receipt_payload(order, customer_name, _product_names(db, order)))
@@ -447,15 +526,18 @@ def verify_receipt_scan(
 
     scan = ReceiptScan(
         order_id=order.id,
-        vendor_id=payload.vendor_id,
+        vendor_id=resolved_vendor_id,
         ip_address=request.client.host if request.client else None,
         gps=payload.gps,
     )
 
-    if order.status == "CLAIMED":
+    if order.status in {"CLAIMED", "recu"}:
         used_at = db.scalar(
             select(ReceiptScan.scanned_at)
-            .where(ReceiptScan.order_id == order.id, ReceiptScan.result == "accepted")
+            .where(
+                ReceiptScan.order_id == order.id,
+                ReceiptScan.result.in_(["accepted", "auto_verified"]),
+            )
             .order_by(ReceiptScan.scanned_at.desc())
             .limit(1)
         )
@@ -478,7 +560,7 @@ def verify_receipt_scan(
             scanned_at=scan.scanned_at,
         )
 
-    order.status = "CLAIMED"
+    order.status = "recu"
     scan.result = "accepted"
     db.add(scan)
     db.commit()
@@ -486,6 +568,6 @@ def verify_receipt_scan(
     return ReceiptVerifyResponse(
         order_id=order.id,
         status="claimed",
-        message="RECU VALIDE. COMMANDE MARQUEE COMME RETIREE.",
+        message="QR VALIDE. COMMANDE MARQUEE COMME LIVREE.",
         scanned_at=scan.scanned_at,
     )

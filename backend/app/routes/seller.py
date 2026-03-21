@@ -218,6 +218,7 @@ def get_storefront(
                 product_id=row.product_id,
                 name=row.product.name,
                 brand=row.product.brand,
+                description=row.product.description,
                 amount=row.amount,
                 currency=row.currency,
                 is_boosted=row.product.is_boosted,
@@ -449,7 +450,9 @@ def create_restaurant_reservation(
 ) -> RestaurantReservationResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == vendor_id))
-    if profile is None or profile.activity_type != "restaurant":
+    if profile is None or (
+        profile.activity_type != "restaurant" and profile.storefront_tier != "premium"
+    ):
         raise NotFoundError("Restaurant storefront not found")
     if not profile.accepts_table_reservations:
         raise ConflictError("Table reservations are disabled for this restaurant")
@@ -558,8 +561,10 @@ def create_hotel_booking(
 ) -> HotelBookingResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == vendor_id))
-    if profile is None or profile.activity_type not in {"hotel", "enterprise"}:
-        raise NotFoundError("Hotel storefront not found")
+    if profile is None or (
+        profile.activity_type not in {"hotel", "enterprise"} and profile.storefront_tier != "premium"
+    ):
+        raise NotFoundError("Premium storefront not found")
     if not profile.accepts_hotel_bookings:
         raise ConflictError("Hotel bookings are disabled for this storefront")
 

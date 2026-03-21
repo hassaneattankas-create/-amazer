@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import StreamingResponse
-from sqlalchemy import desc, func, select, update
+from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.config import get_settings
@@ -22,12 +22,15 @@ from app.models.finance import FinanceTransfer
 from app.models.global_settings import GlobalSettings
 from app.models.order import Order
 from app.models.product import Price
+from app.models.receipt_scan import ReceiptScan
 from app.models.restaurant import RestaurantOrder
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.schemas.finance import (
     AdminSellerResponse,
+    AdminUserResponse,
+    AdminUserStatsResponse,
     AdminOrderStatusUpdateRequest,
     AdminOrderTrackingResponse,
     AuditLogResponse,
@@ -47,6 +50,7 @@ from app.services.audit_log_service import append_audit_log
 
 router = APIRouter(prefix="/admin/finance", tags=["admin-finance"])
 settings = get_settings()
+AUTO_RECEIPT_TIMEOUT_HOURS = 24
 
 def _get_or_create_settings(db: Session) -> GlobalSettings:
     row = db.scalar(select(GlobalSettings).order_by(GlobalSettings.id.asc()))
@@ -139,6 +143,91 @@ def _normalize_day(value: object) -> date | None:
         except ValueError:
             return None
     return None
+
+
+def _is_admin_email(email: str | None) -> bool:
+    if not email:
+        return False
+    return email.lower() == settings.admin_email.lower()
+
+
+def _build_admin_user_response(user: User, seller_user_ids: set[str]) -> AdminUserResponse:
+    return AdminUserResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        whatsapp_phone=user.whatsapp_phone,
+        is_active=bool(user.is_active),
+        is_admin=_is_admin_email(user.email),
+        is_seller=user.id in seller_user_ids,
+        created_at=user.created_at.isoformat(),
+    )
+
+
+def _latest_dispatch_marker(db: Session, order_id: str) -> datetime | None:
+    marker = db.scalar(
+        select(ReceiptScan.scanned_at)
+        .where(ReceiptScan.order_id == order_id, ReceiptScan.result == "pending")
+        .order_by(ReceiptScan.scanned_at.desc())
+        .limit(1)
+    )
+    return marker
+
+
+def _auto_finalize_order_without_qr(
+    db: Session,
+    order: Order,
+    request: Request,
+    admin_user: User,
+) -> bool:
+    if order.status != "livraison" or order.payment_status != "paid":
+        return False
+
+    already_verified = db.scalar(
+        select(ReceiptScan.id)
+        .where(
+            ReceiptScan.order_id == order.id,
+            ReceiptScan.result.in_(["accepted", "auto_verified"]),
+        )
+        .limit(1)
+    )
+    if already_verified is not None:
+        return False
+
+    reference_time = _latest_dispatch_marker(db, order.id) or order.created_at
+    if reference_time.tzinfo is None:
+        reference_time = reference_time.replace(tzinfo=UTC)
+    elapsed = datetime.now(UTC) - reference_time
+    if elapsed < timedelta(hours=AUTO_RECEIPT_TIMEOUT_HOURS):
+        return False
+
+    order.status = "recu"
+    unique_vendor_ids = {item.vendor_id for item in order.items}
+    vendor_id = next(iter(unique_vendor_ids)) if len(unique_vendor_ids) == 1 else None
+    db.add(
+        ReceiptScan(
+            order_id=order.id,
+            vendor_id=vendor_id,
+            ip_address=request.client.host if request.client else None,
+            gps="AUTO_TIMEOUT",
+            result="auto_verified",
+        )
+    )
+    append_audit_log(
+        db,
+        event_type="admin_order_auto_verified_timeout",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="order",
+        entity_id=order.id,
+        details={
+            "status": "recu",
+            "reason": "qr_missing_timeout",
+            "timeout_hours": AUTO_RECEIPT_TIMEOUT_HOURS,
+        },
+    )
+    return True
 
 
 @router.post("/pin/verify", status_code=204)
@@ -498,10 +587,16 @@ def list_admin_orders(
     _audit_admin_access(db, request, admin_user, "admin_orders_read")
     orders = db.scalars(
         select(Order)
-        .options(selectinload(Order.user))
+        .options(selectinload(Order.user), selectinload(Order.items))
         .order_by(Order.created_at.desc())
         .limit(limit)
     ).all()
+    has_auto_updates = False
+    for order in orders:
+        if _auto_finalize_order_without_qr(db, order, request, admin_user):
+            has_auto_updates = True
+    if has_auto_updates:
+        db.commit()
     payload: list[AdminOrderTrackingResponse] = []
     for order in orders:
         payload.append(
@@ -532,6 +627,16 @@ def dispatch_order_to_delivery(
     if order is None:
         raise ValidationDomainError("Order not found")
     order.status = payload.status
+    if payload.status == "livraison":
+        db.add(
+            ReceiptScan(
+                order_id=order.id,
+                vendor_id=None,
+                ip_address=request.client.host if request.client else None,
+                gps="DISPATCH_MARKER",
+                result="pending",
+            )
+        )
     append_audit_log(
         db,
         event_type="admin_order_status_updated",
@@ -634,6 +739,139 @@ def export_audit_history_csv(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=amazer_audit_history.csv"},
     )
+
+
+@router.get("/users/stats", response_model=AdminUserStatsResponse)
+def get_admin_user_stats(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminUserStatsResponse:
+    _require_finance_pin(request)
+    _audit_admin_access(db, request, admin_user, "admin_users_stats_read")
+    now = datetime.now(UTC)
+    since_7_days = now - timedelta(days=7)
+    since_30_days = now - timedelta(days=30)
+
+    total_users = int(db.scalar(select(func.count(User.id))) or 0)
+    active_users = int(db.scalar(select(func.count(User.id)).where(User.is_active.is_(True))) or 0)
+    inactive_users = max(total_users - active_users, 0)
+    seller_accounts = int(db.scalar(select(func.count(SellerProfile.id))) or 0)
+    client_only_accounts = max(total_users - seller_accounts, 0)
+    admin_accounts = int(
+        db.scalar(select(func.count(User.id)).where(func.lower(User.email) == settings.admin_email.lower())) or 0
+    )
+    new_users_last_7_days = int(db.scalar(select(func.count(User.id)).where(User.created_at >= since_7_days)) or 0)
+    new_users_last_30_days = int(db.scalar(select(func.count(User.id)).where(User.created_at >= since_30_days)) or 0)
+
+    return AdminUserStatsResponse(
+        total_users=total_users,
+        active_users=active_users,
+        inactive_users=inactive_users,
+        seller_accounts=seller_accounts,
+        client_only_accounts=client_only_accounts,
+        admin_accounts=admin_accounts,
+        new_users_last_7_days=new_users_last_7_days,
+        new_users_last_30_days=new_users_last_30_days,
+    )
+
+
+@router.get("/users", response_model=list[AdminUserResponse])
+def list_users_admin(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+    limit: int = 200,
+    query: str | None = None,
+) -> list[AdminUserResponse]:
+    _require_finance_pin(request)
+    _audit_admin_access(db, request, admin_user, "admin_users_read")
+    safe_limit = min(max(limit, 1), 500)
+    stmt = select(User).order_by(desc(User.created_at)).limit(safe_limit)
+    if query:
+        needle = query.strip().lower()
+        if needle:
+            stmt = stmt.where(
+                or_(
+                    func.lower(User.email).contains(needle),
+                    func.lower(User.full_name).contains(needle),
+                )
+            )
+    users = db.scalars(stmt).all()
+    user_ids = {row.id for row in users}
+    seller_user_ids = set(
+        db.scalars(select(SellerProfile.user_id).where(SellerProfile.user_id.in_(user_ids))).all()
+    ) if user_ids else set()
+    return [_build_admin_user_response(user, seller_user_ids) for user in users]
+
+
+@router.delete("/users/{user_id}", status_code=204)
+def deactivate_user_admin(
+    user_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> None:
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    target = db.get(User, user_id)
+    if target is None:
+        return
+    if _is_admin_email(target.email):
+        raise ValidationDomainError("Admin account cannot be removed")
+    target.is_active = False
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == target.id))
+    if profile is not None:
+        vendor = db.get(Vendor, profile.vendor_id)
+        if vendor is not None:
+            vendor.is_active = False
+            db.execute(update(Price).where(Price.vendor_id == vendor.id).values(is_active=False))
+    append_audit_log(
+        db,
+        event_type="admin_user_deactivated",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="user",
+        entity_id=target.id,
+        details={"email": target.email},
+    )
+    db.commit()
+
+
+@router.post("/users/{user_id}/restore", response_model=AdminUserResponse)
+def restore_user_admin(
+    user_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminUserResponse:
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    target = db.get(User, user_id)
+    if target is None:
+        raise ValidationDomainError("User not found")
+    target.is_active = True
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == target.id))
+    if profile is not None:
+        vendor = db.get(Vendor, profile.vendor_id)
+        if vendor is not None:
+            vendor.is_active = True
+            db.execute(update(Price).where(Price.vendor_id == vendor.id).values(is_active=True))
+    append_audit_log(
+        db,
+        event_type="admin_user_restored",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="user",
+        entity_id=target.id,
+        details={"email": target.email},
+    )
+    db.commit()
+    db.refresh(target)
+    seller_user_ids = {profile.user_id} if profile is not None else set()
+    return _build_admin_user_response(target, seller_user_ids)
 
 
 @router.get("/sellers", response_model=list[AdminSellerResponse])

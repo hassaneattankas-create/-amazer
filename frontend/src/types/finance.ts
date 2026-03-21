@@ -105,3 +105,25 @@ export type AdminSeller = {
   is_active: boolean;
   created_at: string;
 };
+
+export type AdminUserStats = {
+  total_users: number;
+  active_users: number;
+  inactive_users: number;
+  seller_accounts: number;
+  client_only_accounts: number;
+  admin_accounts: number;
+  new_users_last_7_days: number;
+  new_users_last_30_days: number;
+};
+
+export type AdminUser = {
+  id: string;
+  email: string;
+  full_name: string;
+  whatsapp_phone: string | null;
+  is_active: boolean;
+  is_admin: boolean;
+  is_seller: boolean;
+  created_at: string;
+};

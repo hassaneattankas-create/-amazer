@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BedDouble, Flame, Hotel, Images, Search, ShieldCheck, Store, UtensilsCrossed } from "lucide-react";
@@ -12,10 +12,12 @@ import { Input } from "@/components/ui/input";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatXOF } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
-import { createRestaurantReservation } from "@/services/restaurant-service";
+import { createRestaurantOrder, createRestaurantReservation } from "@/services/restaurant-service";
+import { getProductDetailById } from "@/services/product-service";
 import { createHotelBooking, getSellerStorefront } from "@/services/seller-service";
+import { useCartStore } from "@/store/cartStore";
 import type { HotelRoomType, SellerStorefront, SellerStorefrontProduct } from "@/types/seller";
-import type { RestaurantMenuItem } from "@/types/restaurant";
+import type { RestaurantMenuItem, RestaurantMenuOption } from "@/types/restaurant";
 
 const activityLabels = {
   shop: "Boutique",
@@ -24,13 +26,33 @@ const activityLabels = {
   enterprise: "Premium",
 } as const;
 
+type SelectedMenuItem = {
+  menu_item_id: string;
+  vendor_id: string;
+  name: string;
+  quantity: number;
+  base_price: number;
+  selected_options: RestaurantMenuOption[];
+  customer_note: string;
+};
+
 export default function VendorShopPage() {
   const params = useParams<{ vendorId: string }>();
   const vendorId = params.vendorId;
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { data: currentUser } = useCurrentUser();
+  const addItem = useCartStore((state) => state.addItem);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
+  const [cartMessage, setCartMessage] = useState("");
+  const [orderStatus, setOrderStatus] = useState("");
+  const [selectedItems, setSelectedItems] = useState<SelectedMenuItem[]>([]);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [distanceKm, setDistanceKm] = useState("3");
+  const [paymentMode, setPaymentMode] = useState<"nita" | "amana" | "cash_on_delivery">("nita");
   const [reservationForm, setReservationForm] = useState({
     customer_name: "",
     customer_phone: "",
@@ -57,6 +79,10 @@ export default function VendorShopPage() {
     enabled: Boolean(vendorId),
   });
 
+  const addProductMutation = useMutation({
+    mutationFn: (productId: string) => getProductDetailById(productId),
+  });
+
   const reservationMutation = useMutation({
     mutationFn: () =>
       createRestaurantReservation(vendorId, {
@@ -79,6 +105,15 @@ export default function VendorShopPage() {
       queryClient.invalidateQueries({ queryKey: ["seller-storefront", vendorId] });
     },
     onError: () => setStatus("Impossible d'envoyer la reservation de table."),
+  });
+
+  const orderMutation = useMutation({
+    mutationFn: createRestaurantOrder,
+    onSuccess: (order) => {
+      setOrderStatus(`Commande envoyee au restaurant ${order.vendor_name}.`);
+      setSelectedItems([]);
+    },
+    onError: () => setOrderStatus("Echec envoi commande. Verifie les champs et reconnecte-toi."),
   });
 
   const hotelBookingMutation = useMutation({
@@ -113,6 +148,78 @@ export default function VendorShopPage() {
     onError: () => setStatus("Impossible d'envoyer la reservation premium."),
   });
 
+  const handleAddProduct = (productId: string, redirectToCart = false) => {
+    if (!productId) {
+      setCartMessage("Produit indisponible pour le panier.");
+      window.setTimeout(() => setCartMessage(""), 2400);
+      return;
+    }
+    addProductMutation.mutate(productId, {
+      onSuccess: (data) => {
+        addItem({
+          productId: data.product.id,
+          name: data.product.name,
+          offersSnapshot: data.offers,
+          quantity: 1,
+        });
+        if (redirectToCart) {
+          router.push("/cart");
+          return;
+        }
+        setCartMessage("Produit ajoute au panier.");
+        window.setTimeout(() => setCartMessage(""), 2400);
+      },
+      onError: () => {
+        setCartMessage("Impossible d'ajouter au panier.");
+        window.setTimeout(() => setCartMessage(""), 2400);
+      },
+    });
+  };
+
+  const addDish = (dish: RestaurantMenuItem) => {
+    setSelectedItems((prev) => {
+      const existing = prev.find((item) => item.menu_item_id === dish.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.menu_item_id === dish.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      return [
+        ...prev,
+        {
+          menu_item_id: dish.id,
+          vendor_id: dish.vendor_id,
+          name: dish.name,
+          quantity: 1,
+          base_price: dish.base_price,
+          selected_options: [],
+          customer_note: "",
+        },
+      ];
+    });
+  };
+
+  const toggleOption = (menuItemId: string, option: RestaurantMenuOption) => {
+    setSelectedItems((prev) =>
+      prev.map((item) => {
+        if (item.menu_item_id !== menuItemId) return item;
+        const exists = item.selected_options.some((entry) => entry.name === option.name);
+        return {
+          ...item,
+          selected_options: exists
+            ? item.selected_options.filter((entry) => entry.name !== option.name)
+            : [...item.selected_options, option],
+        };
+      })
+    );
+  };
+
+  const setItemNote = (menuItemId: string, customerNote: string) => {
+    setSelectedItems((prev) =>
+      prev.map((item) => (item.menu_item_id === menuItemId ? { ...item, customer_note: customerNote } : item))
+    );
+  };
+
   const normalizedQuery = query.trim().toLowerCase();
   const filteredProducts = useMemo(() => {
     if (!data || !data.products.length) return [];
@@ -134,12 +241,44 @@ export default function VendorShopPage() {
     );
   }, [data, normalizedQuery]);
 
+  const isPremiumStore =
+    data?.storefront_tier === "premium" || data?.activity_type === "hotel" || data?.activity_type === "enterprise";
+  const showRestaurantSection = data?.activity_type === "restaurant" || Boolean(isPremiumStore);
+  const canOrder = showRestaurantSection && filteredMenu.length > 0;
+
+  const total = useMemo(
+    () =>
+      selectedItems.reduce((sum, item) => {
+        const optionsTotal = item.selected_options.reduce((acc, option) => acc + option.price, 0);
+        return sum + (item.base_price + optionsTotal) * item.quantity;
+      }, 0),
+    [selectedItems]
+  );
+
   const requireSession = () => {
     if (currentUser) {
       return true;
     }
     window.location.assign(`/login?next=${encodeURIComponent(`/shop/${vendorId}`)}`);
     return false;
+  };
+
+  const submitOrder = () => {
+    if (!selectedItems.length) return;
+    orderMutation.mutate({
+      vendor_id: vendorId,
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      delivery_address: deliveryAddress,
+      distance_km: Number(distanceKm || 0),
+      payment_mode: paymentMode,
+      items: selectedItems.map((item) => ({
+        menu_item_id: item.menu_item_id,
+        quantity: item.quantity,
+        selected_options: item.selected_options,
+        customer_note: item.customer_note.trim() || undefined,
+      })),
+    });
   };
 
   if (isPending) {
@@ -222,9 +361,14 @@ export default function VendorShopPage() {
         </article>
       ) : null}
 
-      {data.activity_type === "restaurant" ? (
+      {showRestaurantSection ? (
         <>
-          <RestaurantMenuSection menu={filteredMenu} />
+          <RestaurantMenuSection
+            menu={filteredMenu}
+            selectedItems={selectedItems}
+            onAddDish={addDish}
+            onToggleOption={toggleOption}
+          />
           {data.accepts_table_reservations ? (
             <article className="premium-card border border-orange-200 bg-gradient-to-br from-orange-50 to-white p-5">
               <h2 className="luxury-title text-xl font-semibold">Reservation de table</h2>
@@ -276,6 +420,26 @@ export default function VendorShopPage() {
                 Reserver une table
               </Button>
             </article>
+          ) : null}
+          {canOrder ? (
+            <RestaurantOrderPanel
+              selectedItems={selectedItems}
+              total={total}
+              customerName={customerName}
+              customerPhone={customerPhone}
+              deliveryAddress={deliveryAddress}
+              distanceKm={distanceKm}
+              paymentMode={paymentMode}
+              isSubmitting={orderMutation.isPending}
+              onCustomerNameChange={setCustomerName}
+              onCustomerPhoneChange={setCustomerPhone}
+              onDeliveryAddressChange={setDeliveryAddress}
+              onDistanceChange={setDistanceKm}
+              onPaymentModeChange={setPaymentMode}
+              onItemNoteChange={setItemNote}
+              onSubmit={submitOrder}
+              statusMessage={orderStatus}
+            />
           ) : null}
         </>
       ) : null}
@@ -379,7 +543,15 @@ export default function VendorShopPage() {
         </>
       ) : null}
 
-      {data.products.length ? <RetailShopContent products={filteredProducts} /> : null}
+      {data.products.length ? (
+        <RetailShopContent
+          products={filteredProducts}
+          onAddToCart={(productId) => handleAddProduct(productId)}
+          onBuyNow={(productId) => handleAddProduct(productId, true)}
+          isAdding={addProductMutation.isPending}
+          cartMessage={cartMessage}
+        />
+      ) : null}
       {status ? <p className="text-sm text-slate-700">{status}</p> : null}
     </section>
   );
@@ -455,7 +627,21 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
   );
 }
 
-function RetailShopContent({ products }: { products: SellerStorefrontProduct[] }) {
+type RetailShopContentProps = {
+  products: SellerStorefrontProduct[];
+  onAddToCart: (productId: string) => void;
+  onBuyNow: (productId: string) => void;
+  isAdding?: boolean;
+  cartMessage?: string;
+};
+
+function RetailShopContent({
+  products,
+  onAddToCart,
+  onBuyNow,
+  isAdding = false,
+  cartMessage,
+}: RetailShopContentProps) {
   if (!products.length) {
     return (
       <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
@@ -470,6 +656,7 @@ function RetailShopContent({ products }: { products: SellerStorefrontProduct[] }
         <h2 className="luxury-title text-xl font-semibold">Catalogue de la boutique</h2>
         <p className="text-xs text-slate-500">{products.length} article(s)</p>
       </header>
+      {cartMessage ? <p className="text-xs text-emerald-600">{cartMessage}</p> : null}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
         {products.map((item) => (
           <div
@@ -496,7 +683,28 @@ function RetailShopContent({ products }: { products: SellerStorefrontProduct[] }
             <div className="space-y-2 p-4">
               <p className="text-xs uppercase tracking-wide text-slate-500">{item.brand}</p>
               <h3 className="line-clamp-2 text-sm font-semibold text-slate-900">{item.name}</h3>
+              {item.description ? (
+                <p className="line-clamp-2 text-xs text-slate-600">{item.description}</p>
+              ) : null}
               <p className="text-base font-semibold text-[#FF4D00]">{formatXOF(item.amount)}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  onClick={() => onAddToCart(item.product_id)}
+                  disabled={isAdding || !item.product_id}
+                  className="border border-[#FF4D00]/30 bg-[#FF4D00]/10 text-[#FF4D00] hover:bg-[#FF4D00]/15"
+                >
+                  Ajouter au panier
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => onBuyNow(item.product_id)}
+                  disabled={isAdding || !item.product_id}
+                  className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
+                >
+                  Acheter
+                </Button>
+              </div>
             </div>
           </div>
         ))}
@@ -505,7 +713,19 @@ function RetailShopContent({ products }: { products: SellerStorefrontProduct[] }
   );
 }
 
-function RestaurantMenuSection({ menu }: { menu: RestaurantMenuItem[] }) {
+type RestaurantMenuSectionProps = {
+  menu: RestaurantMenuItem[];
+  selectedItems: SelectedMenuItem[];
+  onAddDish: (dish: RestaurantMenuItem) => void;
+  onToggleOption: (menuItemId: string, option: RestaurantMenuOption) => void;
+};
+
+function RestaurantMenuSection({
+  menu,
+  selectedItems,
+  onAddDish,
+  onToggleOption,
+}: RestaurantMenuSectionProps) {
   if (!menu.length) {
     return (
       <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
@@ -524,7 +744,9 @@ function RestaurantMenuSection({ menu }: { menu: RestaurantMenuItem[] }) {
         <p className="text-xs text-slate-500">{menu.length} plat(s)</p>
       </header>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {menu.map((dish) => (
+        {menu.map((dish) => {
+          const selectedItem = selectedItems.find((item) => item.menu_item_id === dish.id);
+          return (
           <div
             key={dish.id}
             className="premium-card hover-lift-glow overflow-hidden border border-orange-200 bg-gradient-to-br from-orange-50 via-amber-50 to-white p-0"
@@ -547,14 +769,177 @@ function RestaurantMenuSection({ menu }: { menu: RestaurantMenuItem[] }) {
               )}
             </div>
             <div className="space-y-2 p-4">
-              <h3 className="line-clamp-2 text-sm font-semibold text-slate-900">{dish.name}</h3>
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="line-clamp-2 text-sm font-semibold text-slate-900">{dish.name}</h3>
+                {selectedItem ? (
+                  <span className="rounded-full border border-[#FF4D00]/30 bg-white px-2 py-0.5 text-[10px] font-semibold text-[#FF4D00]">
+                    x{selectedItem.quantity}
+                  </span>
+                ) : null}
+              </div>
               {dish.description ? <p className="line-clamp-3 text-sm text-slate-600">{dish.description}</p> : null}
-              {dish.tags?.length ? <p className="text-xs text-slate-500">{dish.tags.join(" • ")}</p> : null}
+              {dish.tags?.length ? <p className="text-xs text-slate-500">{dish.tags.join(" â€¢ ")}</p> : null}
               <p className="text-base font-semibold text-[#FF4D00]">{formatXOF(dish.base_price)}</p>
+              {dish.options.length ? (
+                <div className="rounded-xl border border-orange-100 bg-white/70 p-2">
+                  <p className="text-xs font-medium text-slate-700">Options</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {dish.options.map((option) => {
+                      const isSelected = selectedItem?.selected_options.some((entry) => entry.name === option.name);
+                      return (
+                        <button
+                          key={`${dish.id}-${option.name}`}
+                          type="button"
+                          onClick={() => onToggleOption(dish.id, option)}
+                          className={
+                            isSelected
+                              ? "rounded-full border border-[#FF4D00]/40 bg-[#FF4D00]/10 px-2 py-1 text-xs text-[#FF4D00]"
+                              : "rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
+                          }
+                        >
+                          {option.name} (+{formatXOF(option.price)})
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+              <Button
+                type="button"
+                onClick={() => onAddDish(dish)}
+                className="primary-glow-btn w-full bg-[#FF4D00] text-white hover:bg-[#e74700]"
+              >
+                Ajouter au panier repas
+              </Button>
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
+    </article>
+  );
+}
+
+type RestaurantOrderPanelProps = {
+  selectedItems: SelectedMenuItem[];
+  total: number;
+  customerName: string;
+  customerPhone: string;
+  deliveryAddress: string;
+  distanceKm: string;
+  paymentMode: "nita" | "amana" | "cash_on_delivery";
+  isSubmitting: boolean;
+  statusMessage?: string;
+  onCustomerNameChange: (value: string) => void;
+  onCustomerPhoneChange: (value: string) => void;
+  onDeliveryAddressChange: (value: string) => void;
+  onDistanceChange: (value: string) => void;
+  onPaymentModeChange: (value: "nita" | "amana" | "cash_on_delivery") => void;
+  onItemNoteChange: (menuItemId: string, note: string) => void;
+  onSubmit: () => void;
+};
+
+function RestaurantOrderPanel({
+  selectedItems,
+  total,
+  customerName,
+  customerPhone,
+  deliveryAddress,
+  distanceKm,
+  paymentMode,
+  isSubmitting,
+  statusMessage,
+  onCustomerNameChange,
+  onCustomerPhoneChange,
+  onDeliveryAddressChange,
+  onDistanceChange,
+  onPaymentModeChange,
+  onItemNoteChange,
+  onSubmit,
+}: RestaurantOrderPanelProps) {
+  return (
+    <article className="premium-card border border-slate-200 bg-white p-6">
+      <h2 className="luxury-title text-xl font-semibold">Commander maintenant</h2>
+      <p className="mt-1 text-sm text-slate-600">
+        Ajoute des plats au panier puis renseigne les informations de livraison.
+      </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <Input value={customerName} onChange={(event) => onCustomerNameChange(event.target.value)} placeholder="Nom complet" />
+        <Input value={customerPhone} onChange={(event) => onCustomerPhoneChange(event.target.value)} placeholder="Telephone" />
+        <Input
+          value={deliveryAddress}
+          onChange={(event) => onDeliveryAddressChange(event.target.value)}
+          placeholder="Adresse livraison"
+          className="sm:col-span-2"
+        />
+        <Input
+          value={distanceKm}
+          onChange={(event) => onDistanceChange(event.target.value)}
+          type="number"
+          min="0.1"
+          step="0.1"
+          placeholder="Distance estimee (km)"
+        />
+        <div className="flex flex-wrap gap-2">
+          {[
+            { value: "nita", label: "Nita" },
+            { value: "amana", label: "Amana" },
+            { value: "cash_on_delivery", label: "Paiement livraison" },
+          ].map((entry) => (
+            <Button
+              key={entry.value}
+              type="button"
+              onClick={() => onPaymentModeChange(entry.value as "nita" | "amana" | "cash_on_delivery")}
+              className={
+                paymentMode === entry.value
+                  ? "border border-[#FF4D00]/35 bg-[#FF4D00]/10 text-[#FF4D00]"
+                  : "border border-slate-200 bg-white text-slate-700"
+              }
+            >
+              {entry.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-slate-700">
+        <p className="mt-1">Total panier repas: {formatXOF(total)}</p>
+        <p className="mt-1">Articles: {selectedItems.length}</p>
+      </div>
+
+      {selectedItems.length ? (
+        <div className="mt-4 space-y-3">
+          {selectedItems.map((item) => (
+            <div key={item.menu_item_id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-slate-900">
+                  {item.name} x{item.quantity}
+                </p>
+                <p className="text-sm font-semibold text-[#FF4D00]">{formatXOF(item.base_price * item.quantity)}</p>
+              </div>
+              <textarea
+                value={item.customer_note}
+                onChange={(event) => onItemNoteChange(item.menu_item_id, event.target.value)}
+                className="mt-3 min-h-20 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                placeholder='Note cuisine ou livraison, ex: "Pas de piment"'
+              />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 text-sm text-slate-500">Ajoute un plat pour activer la commande.</p>
+      )}
+
+      <Button
+        type="button"
+        disabled={isSubmitting || !selectedItems.length}
+        onClick={onSubmit}
+        className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
+      >
+        {isSubmitting ? "Envoi en cours..." : "Commander maintenant"}
+      </Button>
+
+      {statusMessage ? <p className="mt-3 text-sm text-slate-700">{statusMessage}</p> : null}
     </article>
   );
 }

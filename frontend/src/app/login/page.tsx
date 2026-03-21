@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { persistAppMode } from "@/lib/session-mode";
 import { login } from "@/services/auth-service";
+import { requestAndRegisterNotifications } from "@/services/notification-service";
 import { getSellerProfile } from "@/services/seller-service";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -33,6 +34,8 @@ function LoginPageContent() {
         identifier,
         password,
       });
+      // Demande opt-in notifications apres premiere connexion reussie.
+      void requestAndRegisterNotifications();
       const sellerProfile = await getSellerProfile().catch(() => null);
       if (sellerProfile?.id) {
         setAppMode("seller");

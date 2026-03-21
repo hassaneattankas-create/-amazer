@@ -166,7 +166,7 @@ export default function AdminFinancePage() {
         <article className="premium-card border border-slate-200 bg-white p-6">
           <h1 className="luxury-title text-2xl font-semibold">Dashboard Tresorerie Admin</h1>
           <p className="mt-2 text-sm text-slate-600">
-            Acces prive: saisissez le secret admin et la date de naissance pour consulter les fonds.
+            Acces prive: saisissez le secret admin et la cle secondaire pour consulter les fonds.
           </p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <input
@@ -179,7 +179,7 @@ export default function AdminFinancePage() {
             <input
               value={birthDate}
               onChange={(event) => setBirthDate(event.target.value)}
-              placeholder="Date anniversaire (07/11/03)"
+              placeholder="Cle secondaire"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
             />
             <Button

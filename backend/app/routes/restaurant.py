@@ -75,6 +75,7 @@ def _order_response(order: RestaurantOrder, vendor_name: str, dish_map: dict[str
                 dish_name=dish_map.get(item.menu_item_id, "Plat"),
                 quantity=item.quantity,
                 selected_options=item.selected_options,
+                customer_note=item.customer_note,
                 unit_price=item.unit_price,
                 subtotal=item.subtotal,
             )
@@ -147,7 +148,10 @@ def list_restaurant_storefronts(
         if not vendor_menu:
             continue
         profile = profile_by_vendor.get(vendor.id)
-        if profile is None or profile.activity_type != "restaurant" or not profile.is_verified:
+        if profile is None or not profile.is_verified:
+            continue
+        can_sell_restaurant = profile.activity_type == "restaurant" or profile.storefront_tier == "premium"
+        if not can_sell_restaurant:
             continue
         business_name = profile.business_name if profile else None
         city = profile.city if profile else None
@@ -212,7 +216,10 @@ def list_restaurant_menu(
         for row in rows
         if (
             profile_map.get(row.vendor_id) is not None
-            and profile_map[row.vendor_id].activity_type == "restaurant"
+            and (
+                profile_map[row.vendor_id].activity_type == "restaurant"
+                or profile_map[row.vendor_id].storefront_tier == "premium"
+            )
             and profile_map[row.vendor_id].is_verified
         )
     ]

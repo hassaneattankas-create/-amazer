@@ -100,6 +100,7 @@ export type SellerStorefrontProduct = {
   product_id: string;
   name: string;
   brand: string;
+  description?: string | null;
   amount: number;
   currency: string;
   is_boosted: boolean;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Boxes, Clock3, UtensilsCrossed } from "lucide-react";
 
@@ -8,7 +8,9 @@ import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { resolveImageUrl } from "@/lib/image";
+import { deleteMyAccount } from "@/services/auth-service";
 import {
   createRestaurantMenuItem,
   listSellerRestaurantOrders,
@@ -19,6 +21,8 @@ import { listSellerInventory, updateSellerInventory } from "@/services/seller-se
 export default function SellerDashboardPage() {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteStatus, setDeleteStatus] = useState("");
   const [dishForm, setDishForm] = useState({
     name: "",
     description: "",
@@ -87,6 +91,22 @@ export default function SellerDashboardPage() {
       queryClient.invalidateQueries({ queryKey: ["seller-restaurant-orders"] });
     },
   });
+  const deleteAccountMutation = useMutation({
+    mutationFn: deleteMyAccount,
+    onSuccess: () => {
+      setDeleteStatus("Compte supprime avec succes. Redirection...");
+      window.location.assign("/login");
+    },
+    onError: (error) => {
+      setDeleteStatus(getApiErrorMessage(error, "Suppression impossible. Verifie le mot de passe."));
+    },
+  });
+
+  function onDeleteAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setDeleteStatus("");
+    deleteAccountMutation.mutate({ password: deletePassword });
+  }
 
   const parseOptions = (value: string): Array<{ name: string; price: number }> =>
     value
@@ -345,6 +365,30 @@ export default function SellerDashboardPage() {
       )}
 
       {status ? <p className="text-sm text-slate-700">{status}</p> : null}
+
+      <article className="premium-card border border-rose-200 bg-rose-50 p-6">
+        <h2 className="luxury-title text-lg font-semibold text-rose-700">Suppression Du Compte Vendeur</h2>
+        <p className="mt-1 text-sm text-rose-700/80">
+          Action irreversible: votre compte sera desactive, votre boutique fermee et vos donnees personnelles anonymisees.
+        </p>
+        <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center" onSubmit={onDeleteAccount}>
+          <Input
+            type="password"
+            value={deletePassword}
+            onChange={(event) => setDeletePassword(event.target.value)}
+            placeholder="Mot de passe actuel"
+            required
+          />
+          <Button
+            type="submit"
+            disabled={deleteAccountMutation.isPending || !deletePassword}
+            className="bg-rose-600 text-white hover:bg-rose-500"
+          >
+            {deleteAccountMutation.isPending ? "Suppression..." : "Supprimer Mon Compte"}
+          </Button>
+        </form>
+        {deleteStatus ? <p className="mt-2 text-sm text-rose-800">{deleteStatus}</p> : null}
+      </article>
     </section>
   );
 }

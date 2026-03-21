@@ -13,6 +13,11 @@ export default function AdminHomePage() {
       description: "Suivre les flux, virements simules et historique financiere.",
     },
     {
+      href: "/admin/users",
+      title: "Utilisateurs",
+      description: "Suivre le nombre d'utilisateurs, desactiver/restaurer les comptes et piloter l'activite.",
+    },
+    {
       href: "/admin/catalog",
       title: "Catalogues",
       description: "Gerer categories et rubriques dynamiques du site.",

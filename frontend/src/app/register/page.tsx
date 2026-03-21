@@ -13,6 +13,7 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -49,7 +50,8 @@ export default function RegisterPage() {
   const canSubmit =
     fullName.trim().length >= 2 &&
     identifier.trim().length >= 6 &&
-    PASSWORD_POLICY.test(password);
+    PASSWORD_POLICY.test(password) &&
+    acceptedLegal;
 
   return (
     <section className="mx-auto max-w-xl px-4 py-10">
@@ -110,6 +112,26 @@ export default function RegisterPage() {
               Minimum 8 caracteres avec majuscule, minuscule, chiffre et caractere special.
             </p>
           </div>
+
+          <label className="flex items-start gap-2 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={acceptedLegal}
+              onChange={(event) => setAcceptedLegal(event.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300"
+            />
+            <span>
+              J accepte la{" "}
+              <Link href="/legal/privacy" className="font-medium text-[#FF4D00] hover:underline">
+                politique de confidentialite
+              </Link>{" "}
+              et les{" "}
+              <Link href="/legal/terms" className="font-medium text-[#FF4D00] hover:underline">
+                conditions d utilisation
+              </Link>
+              .
+            </span>
+          </label>
 
           <Button
             type="submit"

@@ -1,15 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { FormEvent, useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { OrderStepper } from "@/components/OrderStepper";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
+import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { listActiveAlerts } from "@/services/alert-service";
+import { deleteMyAccount } from "@/services/auth-service";
 import { listMyOrders } from "@/services/order-service";
 import { useCartStore } from "@/store/cartStore";
 
@@ -29,6 +32,8 @@ function AnimatedCounter({ value }: { value: number }) {
 export default function DashboardPage() {
   const savingsHistory = useCartStore((state) => state.savingsHistory);
   const { data: user } = useCurrentUser();
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteStatus, setDeleteStatus] = useState("");
   const { data: alerts, isPending } = useQuery({
     queryKey: ["alerts-active"],
     queryFn: listActiveAlerts,
@@ -39,6 +44,22 @@ export default function DashboardPage() {
     queryFn: listMyOrders,
     retry: false,
   });
+  const deleteAccountMutation = useMutation({
+    mutationFn: deleteMyAccount,
+    onSuccess: () => {
+      setDeleteStatus("Compte supprime avec succes. Redirection...");
+      window.location.assign("/login");
+    },
+    onError: (error) => {
+      setDeleteStatus(getApiErrorMessage(error, "Suppression impossible. Verifie ton mot de passe."));
+    },
+  });
+
+  function onDeleteAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setDeleteStatus("");
+    deleteAccountMutation.mutate({ password: deletePassword });
+  }
 
   const totalSaved = useMemo(
     () => savingsHistory.reduce((sum, record) => sum + record.savings, 0),
@@ -182,6 +203,31 @@ export default function DashboardPage() {
             </p>
           ) : null}
         </div>
+      </article>
+
+      <article className="premium-card rounded-3xl border border-rose-200 bg-rose-50 p-6 shadow-2xl">
+        <h2 className="luxury-title text-lg font-semibold text-rose-700">Suppression Du Compte</h2>
+        <p className="mt-1 text-sm text-rose-700/80">
+          Action irreversible: votre compte sera desactive et vos donnees personnelles anonymisees.
+        </p>
+        <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center" onSubmit={onDeleteAccount}>
+          <input
+            type="password"
+            value={deletePassword}
+            onChange={(event) => setDeletePassword(event.target.value)}
+            placeholder="Mot de passe actuel"
+            className="w-full rounded-md border border-rose-300 px-3 py-2 text-sm"
+            required
+          />
+          <Button
+            type="submit"
+            disabled={deleteAccountMutation.isPending || !deletePassword}
+            className="bg-rose-600 text-white hover:bg-rose-500"
+          >
+            {deleteAccountMutation.isPending ? "Suppression..." : "Supprimer Mon Compte"}
+          </Button>
+        </form>
+        {deleteStatus ? <p className="mt-2 text-sm text-rose-800">{deleteStatus}</p> : null}
       </article>
     </section>
   );

@@ -138,6 +138,7 @@ class SellerStorefrontProductResponse(BaseModel):
     product_id: str
     name: str
     brand: str
+    description: str | None = None
     amount: float
     currency: str
     is_boosted: bool

@@ -4,8 +4,9 @@ from datetime import UTC, datetime, timedelta
 import hashlib
 import logging
 import secrets
+from uuid import uuid4
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -24,8 +25,11 @@ from app.core.security import (
     verify_password,
 )
 from app.models.login_verification_code import LoginVerificationCode
+from app.models.product import Price
+from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.user_preferences import UserPreferences
+from app.models.vendor import Vendor
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.user_repository import UserRepository
 from app.services.seller_profile_service import create_or_update_seller_profile
@@ -165,6 +169,35 @@ class AuthService:
         tokens = self._issue_tokens(user.id)
         self.db.commit()
         return tokens
+
+    def close_account(self, user: User, password: str) -> None:
+        settings = get_settings()
+        if user.email.lower() == settings.admin_email.lower():
+            raise ForbiddenError("Admin account cannot be deleted from this action")
+        if not verify_password(password, user.hashed_password):
+            raise UnauthorizedError("Invalid credentials")
+
+        profile = self.db.scalar(select(SellerProfile).where(SellerProfile.user_id == user.id))
+        if profile is not None:
+            vendor = self.db.get(Vendor, profile.vendor_id)
+            if vendor is not None:
+                vendor.is_active = False
+            self.db.execute(update(Price).where(Price.vendor_id == profile.vendor_id).values(is_active=False))
+            profile.phone = None
+            profile.address = None
+            profile.description = "Compte vendeur supprime"
+            profile.whatsapp_contact = None
+            profile.contact_email = None
+            profile.is_verified = False
+
+        marker = f"deleted-{user.id[:8]}-{uuid4().hex[:10]}"
+        user.email = f"{marker}@users.deleted.amazer.ne"
+        user.full_name = "Compte supprime"
+        user.whatsapp_phone = None
+        user.hashed_password = hash_password(secrets.token_urlsafe(32))
+        user.is_active = False
+        self.refresh_tokens.revoke_all_for_user(user.id)
+        self.db.commit()
 
     def get_current_user(self, access_token: str) -> User:
         try:

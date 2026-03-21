@@ -139,7 +139,15 @@ class ProductService:
         return self._sort_key(candidate, sort) < self._sort_key(current, sort)
 
     def _sort_key(self, offer: RankedOffer, sort: SearchSort) -> tuple[float, float, float, float]:
-        boost_rank = 0.0 if self._is_product_boosted(offer.row.product) else 1.0
+        # Prioritise products with boost, then sponsored, then others.
+        is_boosted = self._is_product_boosted(offer.row.product)
+        is_sponsored = bool(getattr(offer.row.product, "is_sponsored", False))
+        if is_boosted:
+            boost_rank = 0.0
+        elif is_sponsored:
+            boost_rank = 0.5
+        else:
+            boost_rank = 1.0
         if sort == "price_asc":
             return (
                 boost_rank,
