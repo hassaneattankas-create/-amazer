@@ -21,6 +21,13 @@ class CatalogService:
     def __init__(self, db: Session) -> None:
         self.catalog = CatalogRepository(db)
 
+    @staticmethod
+    def _norm_optional_str(value: object) -> str | None:
+        if not isinstance(value, str):
+            return None
+        normalized = value.strip().lower()
+        return normalized or None
+
     def list_categories(self, *, limit: int, offset: int) -> CategoryListResponse:
         categories = self.catalog.list_active_categories(limit=limit, offset=offset)
         return CategoryListResponse(
@@ -89,8 +96,12 @@ class CatalogService:
                     is_active=vendor.is_active,
                     is_verified=bool(getattr(getattr(vendor, "seller_profile", None), "is_verified", False)),
                     business_name=getattr(getattr(vendor, "seller_profile", None), "business_name", None),
-                    activity_type=getattr(getattr(vendor, "seller_profile", None), "activity_type", None),
-                    storefront_tier=getattr(getattr(vendor, "seller_profile", None), "storefront_tier", None),
+                    activity_type=self._norm_optional_str(
+                        getattr(getattr(vendor, "seller_profile", None), "activity_type", None)
+                    ),
+                    storefront_tier=self._norm_optional_str(
+                        getattr(getattr(vendor, "seller_profile", None), "storefront_tier", None)
+                    ),
                     city=getattr(getattr(vendor, "seller_profile", None), "city", None),
                     phone=decrypt_phone_value(getattr(getattr(vendor, "seller_profile", None), "phone", None)),
                     address=getattr(getattr(vendor, "seller_profile", None), "address", None),
@@ -119,8 +130,8 @@ class CatalogService:
     def _build_badge_label(self, profile) -> str | None:
         if profile is None:
             return None
-        activity_type = getattr(profile, "activity_type", None)
-        tier = getattr(profile, "storefront_tier", None)
+        activity_type = self._norm_optional_str(getattr(profile, "activity_type", None))
+        tier = self._norm_optional_str(getattr(profile, "storefront_tier", None))
         if activity_type == "hotel" and tier == "premium":
             return "Luxe"
         if tier == "premium":
@@ -130,7 +141,7 @@ class CatalogService:
     def _build_price_suffix(self, profile) -> str | None:
         if profile is None:
             return None
-        activity_type = getattr(profile, "activity_type", None)
+        activity_type = self._norm_optional_str(getattr(profile, "activity_type", None))
         if activity_type == "hotel":
             return "par nuit"
         if activity_type == "restaurant":
@@ -142,7 +153,7 @@ class CatalogService:
     def _build_starting_price(self, profile, default_product_price: float | None) -> float | None:
         if profile is None:
             return default_product_price
-        activity_type = getattr(profile, "activity_type", None)
+        activity_type = self._norm_optional_str(getattr(profile, "activity_type", None))
         room_types = list(getattr(profile, "room_types", []) or [])
         if activity_type == "hotel":
             nightly_prices = [

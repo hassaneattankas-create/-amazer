@@ -65,13 +65,17 @@ def list_storefronts(
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> VendorStorefrontListResponse:
+    normalized_query = query.strip() if query else None
+    normalized_activity_type = activity_type.strip().lower() if activity_type else None
+    normalized_storefront_tier = storefront_tier.strip().lower() if storefront_tier else None
+
     cache_key = build_cache_key(
         "catalog:storefronts",
         limit=limit,
         offset=offset,
-        query=(query or "").strip().lower(),
-        activity_type=(activity_type or "").strip().lower(),
-        storefront_tier=(storefront_tier or "").strip().lower(),
+        query=(normalized_query or "").lower(),
+        activity_type=(normalized_activity_type or ""),
+        storefront_tier=(normalized_storefront_tier or ""),
     )
     cached = cache_get_json(cache_key)
     if cached is not None:
@@ -80,9 +84,9 @@ def list_storefronts(
     response = service.list_vendor_storefronts(
         limit=limit,
         offset=offset,
-        query=query,
-        activity_type=activity_type,
-        storefront_tier=storefront_tier,
+        query=normalized_query,
+        activity_type=normalized_activity_type,
+        storefront_tier=normalized_storefront_tier,
     )
     cache_set_json(cache_key, response.model_dump(), ttl_seconds=120)
     return response

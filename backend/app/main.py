@@ -28,6 +28,7 @@ from app.routes.reviews import router as reviews_router
 from app.routes.seller import router as seller_router
 from app.routes.restaurant import router as restaurant_router
 from app.routes.media import router as media_router
+from app.routes.admin import router as admin_router
 from app.routes.admin_finance import router as admin_finance_router
 from app.routes.content import router as content_router, admin_router as admin_content_router, ads_router
 from app.routes.feedback import router as feedback_router, admin_router as admin_feedback_router
@@ -156,6 +157,7 @@ app.include_router(orders_router, prefix=settings.api_prefix)
 app.include_router(restaurant_router, prefix=settings.api_prefix)
 app.include_router(media_router, prefix=settings.api_prefix)
 app.include_router(admin_finance_router, prefix=settings.api_prefix)
+app.include_router(admin_router, prefix=settings.api_prefix)
 app.include_router(content_router, prefix=settings.api_prefix)
 app.include_router(admin_content_router, prefix=settings.api_prefix)
 app.include_router(ads_router, prefix=settings.api_prefix)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm import Session
 
@@ -56,7 +56,6 @@ class CatalogRepository:
     ) -> list[Vendor]:
         stmt = (
             select(Vendor)
-            .where(Vendor.is_active.is_(True))
             .outerjoin(SellerProfile, SellerProfile.vendor_id == Vendor.id)
             .options(selectinload(Vendor.seller_profile))
             .order_by(Vendor.updated_at.desc(), Vendor.name.asc())
@@ -76,9 +75,13 @@ class CatalogRepository:
                 )
             )
         if activity_type:
-            stmt = stmt.where(SellerProfile.activity_type == activity_type)
+            # Comparaison insensible à la casse/espaces pour supporter les anciennes données.
+            stmt = stmt.where(func.lower(func.trim(SellerProfile.activity_type)) == activity_type.lower())
         if storefront_tier:
-            stmt = stmt.where(SellerProfile.storefront_tier == storefront_tier)
+            # Comparaison insensible à la casse/espaces pour supporter les anciennes données.
+            stmt = stmt.where(
+                func.lower(func.trim(SellerProfile.storefront_tier)) == storefront_tier.lower()
+            )
         return list(self.db.scalars(stmt))
 
     def list_vendor_prices(self, *, vendor_ids: list[str]) -> list[Price]:

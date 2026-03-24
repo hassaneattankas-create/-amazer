@@ -115,8 +115,13 @@ def apply_seller_profile_payload(profile: SellerProfile, payload: Mapping[str, A
     profile.phone = encrypt_phone_value(payload.get("phone"))
     profile.city = str(payload.get("city", profile.city)).strip() or "Niamey"
     profile.address = str(payload.get("address", "")).strip() or None
-    profile.activity_type = str(payload.get("activity_type", profile.activity_type or "shop")).strip() or "shop"
-    profile.storefront_tier = str(payload.get("storefront_tier", profile.storefront_tier or "basic")).strip() or "basic"
+    # Normalisation obligatoire: les filtres de catalog côté DB comparent via égalité stricte.
+    profile.activity_type = (
+        str(payload.get("activity_type", profile.activity_type or "shop")).strip().lower() or "shop"
+    )
+    profile.storefront_tier = (
+        str(payload.get("storefront_tier", profile.storefront_tier or "basic")).strip().lower() or "basic"
+    )
     profile.description = str(payload.get("description", "")).strip() or None
     profile.logo_url = str(payload.get("logo_url", "")).strip() or None
     profile.cover_image_url = str(payload.get("cover_image_url", "")).strip() or None
@@ -183,4 +188,7 @@ def create_or_update_seller_profile(
 
     apply_seller_profile_payload(profile, payload)
     vendor.name = profile.business_name
+    # Les listes "boutiques/mini-sites" ne remontent que si le vendor est actif.
+    # Un vendeur qui sauvegarde son profil doit pouvoir réactiver son mini-site.
+    vendor.is_active = True
     return profile

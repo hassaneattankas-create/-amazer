@@ -257,6 +257,10 @@ def create_product_listing(
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
         raise NotFoundError("Create a seller profile first")
+    # Réactive le mini-site: la boutique (list_vendor_storefronts) ne remonte que si Vendor.is_active=True.
+    vendor = db.get(Vendor, profile.vendor_id)
+    if vendor is not None:
+        vendor.is_active = True
 
     product = Product(
         name=payload.name,
