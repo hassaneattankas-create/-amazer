@@ -278,6 +278,9 @@ export default function SellerPage() {
     mutationFn: upsertSellerProfile,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["seller-profile"] });
+      // Met à jour la home + les listes de boutiques (elles sont basées sur /catalog/storefronts).
+      queryClient.invalidateQueries({ queryKey: ["home-storefronts"] });
+      queryClient.invalidateQueries({ queryKey: ["catalog-storefronts-boutiques"] });
       setStatus("Profil vendeur enregistre.");
     },
     onError: () => setStatus("Erreur lors de l'enregistrement du profil."),
@@ -285,7 +288,11 @@ export default function SellerPage() {
 
   const productMutation = useMutation({
     mutationFn: createSellerProduct,
-    onSuccess: () => setStatus("Produit liste avec succes."),
+    onSuccess: () => {
+      // Met à jour les résultats produits affichés sur la home (search products).
+      queryClient.invalidateQueries({ queryKey: ["products-search"] });
+      setStatus("Produit liste avec succes.");
+    },
     onError: () => setStatus("Erreur lors de la creation du produit."),
   });
 
@@ -703,16 +710,23 @@ export default function SellerPage() {
           <Button
             className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
             onClick={() =>
-              productMutation.mutate({
-                name: productForm.name,
-                brand: productForm.brand,
-                amount: Number(productForm.amount || 0),
-                stock_quantity: Number(productForm.stock_quantity || 0),
-                description: productForm.description || undefined,
-                main_image_url: normalizeImageInput(productForm.main_image_url),
-                category_id: productForm.category_id || undefined,
-                currency: "XOF",
-              })
+              (() => {
+                const stock = Number(productForm.stock_quantity || 0);
+                if (!Number.isFinite(stock) || stock <= 0) {
+                  setStatus("Ton produit doit avoir un stock > 0 pour s'afficher dans les boutiques.");
+                  return;
+                }
+                productMutation.mutate({
+                  name: productForm.name,
+                  brand: productForm.brand,
+                  amount: Number(productForm.amount || 0),
+                  stock_quantity: stock,
+                  description: productForm.description || undefined,
+                  main_image_url: normalizeImageInput(productForm.main_image_url),
+                  category_id: productForm.category_id || undefined,
+                  currency: "XOF",
+                });
+              })()
             }
           >
             Publier mon produit

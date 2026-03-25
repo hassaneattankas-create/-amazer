@@ -51,7 +51,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <section className="mx-auto w-full max-w-4xl px-4 pb-14 sm:px-6">
         <article className="premium-card border border-slate-200 bg-white p-6">
           <h1 className="luxury-title text-2xl font-semibold">Espace Admin Prive</h1>
-          <p className="mt-2 text-sm text-slate-600">Verification d&apos;acces en cours...</p>
+          <p className="mt-2 text-sm text-slate-600">
+            Acces admin requis. Ton compte{" "}
+            <span className="font-semibold">{user?.email ?? "n'est pas identifie"}</span>{" "}
+            ne semble pas avoir les droits admin.
+          </p>
         </article>
       </section>
     );
