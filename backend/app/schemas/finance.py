@@ -25,7 +25,7 @@ class FinanceSettingsResponse(BaseModel):
 class FinanceSettingsUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    commission_rate: float = Field(ge=0, le=1)
+    commission_rate: float = Field(ge=0)
     service_fee: float = Field(ge=0)
     default_delivery_fee: float = Field(ge=0)
     seller_subscription_fee: float = Field(ge=0)

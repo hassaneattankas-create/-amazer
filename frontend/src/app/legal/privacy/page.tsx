@@ -5,7 +5,7 @@ export default function PrivacyPolicyPage() {
         <h1 className="luxury-title text-3xl font-semibold text-slate-900">
           Politique de confidentialite AMAZER
         </h1>
-        <p className="mt-3 text-sm text-slate-600">Derniere mise a jour: 20/03/2026</p>
+        <p className="mt-3 text-sm text-slate-600">Derniere mise a jour: 25/03/2026</p>
 
         <div className="mt-6 space-y-4 text-sm text-slate-700">
           <p>
@@ -25,8 +25,18 @@ export default function PrivacyPolicyPage() {
             respecter les obligations legales et assurer la securite de la plateforme.
           </p>
           <p>
-            Vous pouvez demander la suppression de votre compte depuis votre espace utilisateur, ou
-            contacter le support a amazer.niger@gmail.com.
+            Vous pouvez demander la suppression de votre compte depuis votre espace utilisateur
+            (Dashboard &gt; Suppression du compte) ou depuis la page web de suppression de compte
+            AMAZER.
+          </p>
+          <p>
+            Lorsqu un compte est supprime, les informations d identification directe sont
+            anonymisees ou supprimees. Certaines donnees peuvent etre conservees de facon limitee
+            lorsqu elles sont necessaires a la securite, a la prevention de fraude, au respect
+            d obligations legales ou a la defense de droits.
+          </p>
+          <p>
+            Contact editeur et confidentialite: amazer.niger@gmail.com.
           </p>
         </div>
       </article>

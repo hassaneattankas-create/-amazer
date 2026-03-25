@@ -1,4 +1,4 @@
-from app.schemas.finance import FinanceSettingsResponse
+from app.schemas.finance import FinanceSettingsResponse, FinanceSettingsUpdateRequest
 
 
 def test_finance_settings_response_includes_global_tariff_fields() -> None:
@@ -17,3 +17,24 @@ def test_finance_settings_response_includes_global_tariff_fields() -> None:
     )
     assert payload.urban_delivery_fee == 1500
     assert payload.peripheral_delivery_fee == 2200
+
+
+def test_finance_settings_update_accepts_commission_above_100_percent() -> None:
+    payload = FinanceSettingsUpdateRequest(
+        commission_rate=2.5,
+        service_fee=0,
+        default_delivery_fee=0,
+        seller_subscription_fee=0,
+        ad_boost_price=0,
+        ad_boost_duration_days=7,
+        urban_delivery_fee=0,
+        peripheral_delivery_fee=0,
+        ad_boost_price_24h=0,
+        ad_boost_price_7d=0,
+        launch_mode_zero_commission=False,
+        support_email=None,
+        support_phone=None,
+        support_whatsapp=None,
+    )
+
+    assert payload.commission_rate == 2.5

@@ -10,8 +10,10 @@ import {
   deleteAdminSeller,
   downloadAuditCsv,
   getAdminFinanceSettings,
+  listAdminDistrictFees,
   listAdminAuditHistory,
   listAdminSellers,
+  replaceAdminDistrictFees,
   restoreAdminSeller,
   toggleLaunchMode,
   updateAdminFinanceSettings,
@@ -20,6 +22,59 @@ import {
 } from "@/services/finance-service";
 import { FinanceSettings } from "@/types/finance";
 
+function parseNonNegativeNumber(value: string, fallback: number) {
+  const normalized = value.replace(",", ".").trim();
+  if (!normalized) {
+    return 0;
+  }
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function parsePositiveInteger(value: string, fallback: number) {
+  const parsed = Math.trunc(parseNonNegativeNumber(value, fallback));
+  return parsed >= 1 ? parsed : fallback;
+}
+
+function AdminNumberField({
+  label,
+  value,
+  onChange,
+  suffix,
+  step = "1",
+  min = 0,
+  helper,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: string) => void;
+  suffix?: string;
+  step?: string;
+  min?: number;
+  helper?: string;
+}) {
+  return (
+    <label className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-slate-800">{label}</span>
+        <span className="text-sm font-semibold text-slate-900">
+          {value}
+          {suffix ? ` ${suffix}` : ""}
+        </span>
+      </div>
+      <input
+        type="number"
+        min={min}
+        step={step}
+        value={Number.isFinite(value) ? value : 0}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+      />
+      {helper ? <p className="text-xs text-slate-500">{helper}</p> : null}
+    </label>
+  );
+}
+
 export default function AdminTarifsPage() {
   const queryClient = useQueryClient();
   const [pin, setPin] = useState("");
@@ -27,12 +82,15 @@ export default function AdminTarifsPage() {
   const [pinVerified, setPinVerified] = useState(false);
   const [status, setStatus] = useState("");
   const [draft, setDraft] = useState<FinanceSettings | null>(null);
+  const [districtDraft, setDistrictDraft] = useState<string | null>(null);
 
   const pinMutation = useMutation({
     mutationFn: verifyAdminFinancePin,
     onSuccess: () => {
       setPinVerified(true);
       setStatus("Verification admin valide. Acces tarifs autorise.");
+      setPin("");
+      setBirthDate("");
     },
     onError: () => setStatus("Verification admin invalide."),
   });
@@ -50,6 +108,11 @@ export default function AdminTarifsPage() {
   const { data: sellers } = useQuery({
     queryKey: ["admin-sellers"],
     queryFn: listAdminSellers,
+    enabled: pinVerified,
+  });
+  const { data: districtFees } = useQuery({
+    queryKey: ["admin-district-fees"],
+    queryFn: listAdminDistrictFees,
     enabled: pinVerified,
   });
 
@@ -73,6 +136,15 @@ export default function AdminTarifsPage() {
       setStatus("Mode lancement mis a jour.");
     },
     onError: () => setStatus("Erreur mode lancement."),
+  });
+  const districtMutation = useMutation({
+    mutationFn: replaceAdminDistrictFees,
+    onSuccess: (payload) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-district-fees"] });
+      setDistrictDraft(payload.map((item) => `${item.district_name}:${item.delivery_fee}`).join("\n"));
+      setStatus("Frais de livraison par quartier enregistres.");
+    },
+    onError: () => setStatus("Erreur enregistrement frais quartiers."),
   });
 
   const deleteSellerMutation = useMutation({
@@ -114,12 +186,37 @@ export default function AdminTarifsPage() {
       anchor.download = "amazer_audit_history.csv";
       anchor.click();
       URL.revokeObjectURL(objectUrl);
-    } catch {
+  } catch {
       setStatus("Export CSV impossible.");
     }
   }
 
   const effective = useMemo(() => draft ?? settings ?? null, [draft, settings]);
+  const districtRaw = useMemo(() => {
+    if (districtDraft !== null) {
+      return districtDraft;
+    }
+    if (districtFees?.length) {
+      return districtFees.map((item) => `${item.district_name}:${item.delivery_fee}`).join("\n");
+    }
+    return "";
+  }, [districtDraft, districtFees]);
+  const parsedDistrictPayload = useMemo(
+    () =>
+      districtRaw
+        .split("\n")
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+        .map((entry) => {
+          const [districtName, fee] = entry.split(":");
+          return {
+            district_name: (districtName || "").trim(),
+            delivery_fee: parseNonNegativeNumber(fee || "", 0),
+          };
+        })
+        .filter((entry) => entry.district_name),
+    [districtRaw]
+  );
 
   if (!pinVerified) {
     return (
@@ -182,99 +279,118 @@ export default function AdminTarifsPage() {
 
       <article className="premium-card border border-slate-200 bg-white p-6">
         <div className="space-y-5">
-          <div>
-            <p className="text-sm font-medium text-slate-800">
-              Taux Commission: {(effective.commission_rate * 100).toFixed(1)}%
-            </p>
-            <input
-              type="range"
-              min={0}
-              max={20}
-              value={effective.commission_rate * 100}
-              onChange={(event) =>
-                setDraft({ ...effective, commission_rate: Number(event.target.value) / 100 })
+          <div className="grid gap-4 lg:grid-cols-2">
+            <AdminNumberField
+              label="Commission AMAZER"
+              value={Number((effective.commission_rate * 100).toFixed(4))}
+              suffix="%"
+              step="0.01"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  commission_rate: parseNonNegativeNumber(value, effective.commission_rate * 100) / 100,
+                })
               }
-              className="mt-2 w-full"
+              helper="Saisie libre sans plafond. Exemple: 150 = 150%."
             />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-800">Frais plateforme: {Math.round(effective.service_fee)} XOF</p>
-            <input
-              type="range"
-              min={0}
-              max={2000}
-              step={50}
+            <AdminNumberField
+              label="Frais plateforme"
               value={effective.service_fee}
-              onChange={(event) => setDraft({ ...effective, service_fee: Number(event.target.value) })}
-              className="mt-2 w-full"
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({ ...effective, service_fee: parseNonNegativeNumber(value, effective.service_fee) })
+              }
             />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <p className="text-sm font-medium text-slate-800">Livraison urbaine: {Math.round(effective.urban_delivery_fee)} XOF</p>
-              <input
-                type="range"
-                min={0}
-                max={6000}
-                step={100}
-                value={effective.urban_delivery_fee}
-                onChange={(event) =>
-                  setDraft({
-                    ...effective,
-                    urban_delivery_fee: Number(event.target.value),
-                    default_delivery_fee: Number(event.target.value),
-                  })
-                }
-                className="mt-2 w-full"
-              />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-800">Livraison peripherique: {Math.round(effective.peripheral_delivery_fee)} XOF</p>
-              <input
-                type="range"
-                min={0}
-                max={10000}
-                step={100}
-                value={effective.peripheral_delivery_fee}
-                onChange={(event) =>
-                  setDraft({ ...effective, peripheral_delivery_fee: Number(event.target.value) })
-                }
-                className="mt-2 w-full"
-              />
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <p className="text-sm font-medium text-slate-800">Boost 24h: {Math.round(effective.ad_boost_price_24h)} XOF</p>
-              <input
-                type="range"
-                min={0}
-                max={20000}
-                step={100}
-                value={effective.ad_boost_price_24h}
-                onChange={(event) => setDraft({ ...effective, ad_boost_price_24h: Number(event.target.value) })}
-                className="mt-2 w-full"
-              />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-800">Boost 7 jours: {Math.round(effective.ad_boost_price_7d)} XOF</p>
-              <input
-                type="range"
-                min={0}
-                max={50000}
-                step={100}
-                value={effective.ad_boost_price_7d}
-                onChange={(event) =>
-                  setDraft({
-                    ...effective,
-                    ad_boost_price_7d: Number(event.target.value),
-                    ad_boost_price: Number(event.target.value),
-                    ad_boost_duration_days: 7,
-                  })
-                }
-                className="mt-2 w-full"
-              />
-            </div>
+            <AdminNumberField
+              label="Livraison par defaut"
+              value={effective.default_delivery_fee}
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  default_delivery_fee: parseNonNegativeNumber(value, effective.default_delivery_fee),
+                })
+              }
+            />
+            <AdminNumberField
+              label="Livraison urbaine"
+              value={effective.urban_delivery_fee}
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  urban_delivery_fee: parseNonNegativeNumber(value, effective.urban_delivery_fee),
+                })
+              }
+            />
+            <AdminNumberField
+              label="Livraison peripherique"
+              value={effective.peripheral_delivery_fee}
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  peripheral_delivery_fee: parseNonNegativeNumber(value, effective.peripheral_delivery_fee),
+                })
+              }
+            />
+            <AdminNumberField
+              label="Abonnement vendeur"
+              value={effective.seller_subscription_fee}
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  seller_subscription_fee: parseNonNegativeNumber(value, effective.seller_subscription_fee),
+                })
+              }
+            />
+            <AdminNumberField
+              label="Boost publicitaire principal"
+              value={effective.ad_boost_price}
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  ad_boost_price: parseNonNegativeNumber(value, effective.ad_boost_price),
+                })
+              }
+            />
+            <AdminNumberField
+              label="Duree boost principale"
+              value={effective.ad_boost_duration_days}
+              suffix="jours"
+              min={1}
+              step="1"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  ad_boost_duration_days: parsePositiveInteger(value, effective.ad_boost_duration_days),
+                })
+              }
+            />
+            <AdminNumberField
+              label="Boost 24h"
+              value={effective.ad_boost_price_24h}
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  ad_boost_price_24h: parseNonNegativeNumber(value, effective.ad_boost_price_24h),
+                })
+              }
+            />
+            <AdminNumberField
+              label="Boost 7 jours"
+              value={effective.ad_boost_price_7d}
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  ad_boost_price_7d: parseNonNegativeNumber(value, effective.ad_boost_price_7d),
+                })
+              }
+            />
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
@@ -318,6 +434,29 @@ export default function AdminTarifsPage() {
           >
             {effective.launch_mode_zero_commission ? "Desactiver 0% Commission" : "Activer 0% Commission"}
           </Button>
+        </div>
+      </article>
+
+      <article className="premium-card border border-slate-200 bg-white p-6">
+        <h2 className="text-lg font-semibold text-slate-900">Frais de livraison par quartier</h2>
+        <p className="mt-2 text-sm text-slate-600">Format: `Quartier:Montant` sur une ligne par quartier.</p>
+        <textarea
+          value={districtRaw}
+          onChange={(event) => setDistrictDraft(event.target.value)}
+          className="mt-3 min-h-36 w-full rounded-md border border-slate-300 p-3 text-sm"
+          placeholder={"Centre Ville:1500\nYantala:2000"}
+        />
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button
+            type="button"
+            onClick={() => districtMutation.mutate(parsedDistrictPayload)}
+            variant="outline"
+          >
+            Enregistrer quartiers
+          </Button>
+          <p className="text-xs text-slate-500">
+            {districtFees?.length ? `${districtFees.length} quartier(s) configures.` : "Aucun quartier configure."}
+          </p>
         </div>
       </article>
 

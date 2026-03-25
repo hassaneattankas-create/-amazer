@@ -25,6 +25,59 @@ import {
 } from "@/services/finance-service";
 import { FinanceSettings } from "@/types/finance";
 
+function parseNonNegativeNumber(value: string, fallback: number) {
+  const normalized = value.replace(",", ".").trim();
+  if (!normalized) {
+    return 0;
+  }
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function parsePositiveInteger(value: string, fallback: number) {
+  const parsed = Math.trunc(parseNonNegativeNumber(value, fallback));
+  return parsed >= 1 ? parsed : fallback;
+}
+
+function AdminNumberField({
+  label,
+  value,
+  onChange,
+  suffix,
+  step = "1",
+  min = 0,
+  helper,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: string) => void;
+  suffix?: string;
+  step?: string;
+  min?: number;
+  helper?: string;
+}) {
+  return (
+    <label className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-slate-800">{label}</span>
+        <span className="text-sm font-semibold text-slate-900">
+          {value}
+          {suffix ? ` ${suffix}` : ""}
+        </span>
+      </div>
+      <input
+        type="number"
+        min={min}
+        step={step}
+        value={Number.isFinite(value) ? value : 0}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+      />
+      {helper ? <p className="text-xs text-slate-500">{helper}</p> : null}
+    </label>
+  );
+}
+
 export default function AdminFinancePage() {
   const queryClient = useQueryClient();
   const [settingsStatus, setSettingsStatus] = useState("");
@@ -35,7 +88,7 @@ export default function AdminFinancePage() {
   const [transferAmount, setTransferAmount] = useState("");
   const [bankName, setBankName] = useState<"BOA" | "SONIBANK">("BOA");
   const [transferStatus, setTransferStatus] = useState("");
-  const [districtDraft, setDistrictDraft] = useState("");
+  const [districtDraft, setDistrictDraft] = useState<string | null>(null);
 
   const { data: settings, isPending: isSettingsPending } = useQuery({
     queryKey: ["admin-finance-settings"],
@@ -137,7 +190,7 @@ export default function AdminFinancePage() {
     return Math.max(0, wallet.total_all - wallet.amazer_commission_total - wallet.service_fee_total);
   }, [wallet]);
   const districtRaw = useMemo(() => {
-    if (districtDraft.trim()) {
+    if (districtDraft !== null) {
       return districtDraft;
     }
     if (districtFees?.length) {
@@ -154,7 +207,10 @@ export default function AdminFinancePage() {
         .filter(Boolean)
         .map((entry) => {
           const [district_name, fee] = entry.split(":");
-          return { district_name: (district_name || "").trim(), delivery_fee: Number(fee || 0) };
+          return {
+            district_name: (district_name || "").trim(),
+            delivery_fee: parseNonNegativeNumber(fee || "", 0),
+          };
         })
         .filter((entry) => entry.district_name && Number.isFinite(entry.delivery_fee)),
     [districtRaw]
@@ -226,98 +282,117 @@ export default function AdminFinancePage() {
 
       <article className="premium-card border border-slate-200 bg-white p-6">
         <div className="space-y-5">
-          <div>
-            <p className="text-sm font-medium text-slate-800">
-              Taux de Commission: {(effective.commission_rate * 100).toFixed(1)}%
-            </p>
-            <input
-              type="range"
-              min={0}
-              max={20}
-              value={effective.commission_rate * 100}
-              onChange={(event) =>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <AdminNumberField
+              label="Taux de Commission"
+              value={Number((effective.commission_rate * 100).toFixed(4))}
+              suffix="%"
+              step="0.01"
+              onChange={(value) =>
                 setDraft({
                   ...effective,
-                  commission_rate: Number(event.target.value) / 100,
+                  commission_rate: parseNonNegativeNumber(value, effective.commission_rate * 100) / 100,
                 })
               }
-              className="mt-2 w-full"
+              helper="Saisie libre sans plafond. Exemple: 150 = 150%."
             />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-800">
-              Frais de Service Fixes: {Math.round(effective.service_fee)} XOF
-            </p>
-            <input
-              type="range"
-              min={0}
-              max={2000}
-              step={50}
+            <AdminNumberField
+              label="Frais de Service Fixes"
               value={effective.service_fee}
-              onChange={(event) => setDraft({ ...effective, service_fee: Number(event.target.value) })}
-              className="mt-2 w-full"
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({ ...effective, service_fee: parseNonNegativeNumber(value, effective.service_fee) })
+              }
             />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-800">
-              Frais Livraison par Defaut: {Math.round(effective.default_delivery_fee)} XOF
-            </p>
-            <input
-              type="range"
-              min={0}
-              max={5000}
-              step={100}
+            <AdminNumberField
+              label="Frais Livraison par Defaut"
               value={effective.default_delivery_fee}
-              onChange={(event) =>
-                setDraft({ ...effective, default_delivery_fee: Number(event.target.value) })
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  default_delivery_fee: parseNonNegativeNumber(value, effective.default_delivery_fee),
+                })
               }
-              className="mt-2 w-full"
             />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-800">
-              Abonnement Vendeur: {Math.round(effective.seller_subscription_fee)} XOF / mois
-            </p>
-            <input
-              type="range"
-              min={1000}
-              max={20000}
-              step={500}
+            <AdminNumberField
+              label="Livraison urbaine"
+              value={effective.urban_delivery_fee}
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  urban_delivery_fee: parseNonNegativeNumber(value, effective.urban_delivery_fee),
+                })
+              }
+            />
+            <AdminNumberField
+              label="Livraison peripherique"
+              value={effective.peripheral_delivery_fee}
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  peripheral_delivery_fee: parseNonNegativeNumber(value, effective.peripheral_delivery_fee),
+                })
+              }
+            />
+            <AdminNumberField
+              label="Abonnement Vendeur"
               value={effective.seller_subscription_fee}
-              onChange={(event) =>
-                setDraft({ ...effective, seller_subscription_fee: Number(event.target.value) })
+              suffix="XOF / mois"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  seller_subscription_fee: parseNonNegativeNumber(value, effective.seller_subscription_fee),
+                })
               }
-              className="mt-2 w-full"
             />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-800">
-              Tarif Boost Publicitaire: {Math.round(effective.ad_boost_price)} XOF
-            </p>
-            <input
-              type="range"
-              min={500}
-              max={10000}
-              step={100}
+            <AdminNumberField
+              label="Tarif Boost Publicitaire"
               value={effective.ad_boost_price}
-              onChange={(event) => setDraft({ ...effective, ad_boost_price: Number(event.target.value) })}
-              className="mt-2 w-full"
-            />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-800">
-              Duree Boost: {Math.round(effective.ad_boost_duration_days)} jours
-            </p>
-            <input
-              type="range"
-              min={1}
-              max={30}
-              step={1}
-              value={effective.ad_boost_duration_days}
-              onChange={(event) =>
-                setDraft({ ...effective, ad_boost_duration_days: Number(event.target.value) })
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  ad_boost_price: parseNonNegativeNumber(value, effective.ad_boost_price),
+                })
               }
-              className="mt-2 w-full"
+            />
+            <AdminNumberField
+              label="Boost 24h"
+              value={effective.ad_boost_price_24h}
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  ad_boost_price_24h: parseNonNegativeNumber(value, effective.ad_boost_price_24h),
+                })
+              }
+            />
+            <AdminNumberField
+              label="Boost 7 jours"
+              value={effective.ad_boost_price_7d}
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  ad_boost_price_7d: parseNonNegativeNumber(value, effective.ad_boost_price_7d),
+                })
+              }
+            />
+            <AdminNumberField
+              label="Duree Boost"
+              value={effective.ad_boost_duration_days}
+              suffix="jours"
+              min={1}
+              step="1"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  ad_boost_duration_days: parsePositiveInteger(value, effective.ad_boost_duration_days),
+                })
+              }
             />
           </div>
         </div>
