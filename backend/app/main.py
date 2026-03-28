@@ -90,6 +90,8 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS accepts_hotel_bookings BOOLEAN DEFAULT FALSE",
         "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS delivery_fee DOUBLE PRECISION DEFAULT 0",
         "ALTER TABLE restaurant_order_items ADD COLUMN IF NOT EXISTS customer_note VARCHAR(500)",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS max_products_basic_tier INTEGER DEFAULT 10",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS platform_wallet_phone VARCHAR(40)",
     ):
         _run_ddl_safely(statement)
 

@@ -87,6 +87,8 @@ class ReceiptResponse(BaseModel):
     items: list[ReceiptItemResponse]
     integrity_hash: str
     verify_url: str
+    payment_url: str
+    platform_wallet_phone: str | None = None
 
 
 class ReceiptVerifyRequest(BaseModel):

@@ -14,6 +14,8 @@ def test_finance_settings_response_includes_global_tariff_fields() -> None:
         ad_boost_price_24h=1000,
         ad_boost_price_7d=2000,
         launch_mode_zero_commission=False,
+        max_products_basic_tier=10,
+        platform_wallet_phone="+22700000000",
     )
     assert payload.urban_delivery_fee == 1500
     assert payload.peripheral_delivery_fee == 2200
@@ -32,6 +34,8 @@ def test_finance_settings_update_accepts_commission_above_100_percent() -> None:
         ad_boost_price_24h=0,
         ad_boost_price_7d=0,
         launch_mode_zero_commission=False,
+        max_products_basic_tier=10,
+        platform_wallet_phone=None,
         support_email=None,
         support_phone=None,
         support_whatsapp=None,

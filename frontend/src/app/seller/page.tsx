@@ -15,6 +15,7 @@ import { formatXOF } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
 import { persistAppMode } from "@/lib/session-mode";
 import { listCatalogCategories } from "@/services/catalog-service";
+import { getPublicFinanceSettings } from "@/services/finance-service";
 import { uploadMedia } from "@/services/media-service";
 import { createRestaurantMenuItem, listRestaurantMenu } from "@/services/restaurant-service";
 import {
@@ -320,6 +321,17 @@ export default function SellerPage() {
   const isPremium = profileForm.activity_type === "hotel" || profileForm.activity_type === "enterprise";
   const showRestaurantSection = isRestaurant || isPremium;
   const showProductSection = isShop || isPremium;
+  const { data: publicFinance } = useQuery({
+    queryKey: ["public-finance-settings"],
+    queryFn: getPublicFinanceSettings,
+  });
+  const maxBasicListings = publicFinance?.max_products_basic_tier ?? 10;
+  const isPremiumTier =
+    (profile?.storefront_tier || profileForm.storefront_tier || "").toLowerCase() === "premium";
+  const shopListingLimitReached =
+    showProductSection && !isPremiumTier && inventory.length >= maxBasicListings;
+  const menuListingLimitReached =
+    showRestaurantSection && !isPremiumTier && restaurantItems.length >= maxBasicListings;
   const hasProfile = Boolean(profile?.id);
   const hasProducts = inventory.length > 0;
   const hasMenu = restaurantItems.length > 0;
@@ -647,6 +659,11 @@ export default function SellerPage() {
           <p className="mt-2 text-sm text-slate-600">
             Publiez vos articles avec une experience type Shopify, sans connexion Shopify.
           </p>
+          {!isPremiumTier ? (
+            <p className="mt-2 text-sm text-slate-700">
+              Compte hors Premium : jusqu&apos;a {maxBasicListings} article(s) catalogue. Premium : illimite.
+            </p>
+          ) : null}
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Input
               placeholder="Nom produit"
@@ -711,6 +728,12 @@ export default function SellerPage() {
             className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
             onClick={() =>
               (() => {
+                if (shopListingLimitReached) {
+                  setStatus(
+                    `Limite atteinte (${maxBasicListings} articles hors Premium). Passe en Premium pour continuer.`
+                  );
+                  return;
+                }
                 const stock = Number(productForm.stock_quantity || 0);
                 if (!Number.isFinite(stock) || stock <= 0) {
                   setStatus("Ton produit doit avoir un stock > 0 pour s'afficher dans les boutiques.");
@@ -743,6 +766,11 @@ export default function SellerPage() {
           <p className="mt-2 text-sm text-slate-600">
         Ajoutez vos plats, boissons, prix et marquez vos offres en Plat du Jour.
           </p>
+          {!isPremiumTier ? (
+            <p className="mt-2 text-sm text-slate-700">
+              Hors Premium : jusqu&apos;a {maxBasicListings} plat(s) au menu. Premium : illimite.
+            </p>
+          ) : null}
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Input
@@ -806,6 +834,12 @@ export default function SellerPage() {
           <Button
             className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
             onClick={() => {
+              if (menuListingLimitReached) {
+                setStatus(
+                  `Limite atteinte (${maxBasicListings} plats hors Premium). Passe en Premium pour un menu illimite.`
+                );
+                return;
+              }
               const tags = [restaurantForm.category === "boisson" ? "Boisson" : "Plat"];
               if (restaurantForm.is_plat_du_jour) {
                 tags.push("Plat du Jour");

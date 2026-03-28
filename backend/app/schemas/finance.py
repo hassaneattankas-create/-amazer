@@ -17,6 +17,8 @@ class FinanceSettingsResponse(BaseModel):
     ad_boost_price_24h: float
     ad_boost_price_7d: float
     launch_mode_zero_commission: bool
+    max_products_basic_tier: int
+    platform_wallet_phone: str | None = None
     support_email: str | None = None
     support_phone: str | None = None
     support_whatsapp: str | None = None
@@ -36,6 +38,8 @@ class FinanceSettingsUpdateRequest(BaseModel):
     ad_boost_price_24h: float = Field(ge=0)
     ad_boost_price_7d: float = Field(ge=0)
     launch_mode_zero_commission: bool = False
+    max_products_basic_tier: int = Field(default=10, ge=1, le=5000)
+    platform_wallet_phone: str | None = Field(default=None, max_length=40)
     support_email: str | None = Field(default=None, max_length=255)
     support_phone: str | None = Field(default=None, max_length=40)
     support_whatsapp: str | None = Field(default=None, max_length=40)

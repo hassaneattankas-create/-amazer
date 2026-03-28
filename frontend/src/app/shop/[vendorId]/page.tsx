@@ -326,8 +326,8 @@ export default function VendorShopPage() {
             Galerie
           </h2>
           <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-            {data.gallery_images.map((imageUrl) => (
-              <div key={imageUrl} className="overflow-hidden rounded-2xl bg-slate-100">
+            {data.gallery_images.map((imageUrl, index) => (
+              <div key={`gallery-${index}-${imageUrl}`} className="overflow-hidden rounded-2xl bg-slate-100">
                 <Image
                   src={resolveImageUrl(imageUrl) ?? imageUrl}
                   alt={data.business_name}
@@ -417,7 +417,7 @@ export default function VendorShopPage() {
                   reservationMutation.mutate();
                 }}
               >
-                Reserver une table
+                Reserver
               </Button>
             </article>
           ) : null}

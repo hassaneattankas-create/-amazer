@@ -17,6 +17,7 @@ from app.core.receipt_security import (
 from app.core.rate_limit import enforce_rate_limit
 from app.core.exceptions import UnauthorizedError, ValidationDomainError
 from app.database import get_db
+from app.models.global_settings import GlobalSettings
 from app.models.order import Order, OrderItem
 from app.models.product import Price, Product
 from app.models.receipt_scan import ReceiptScan
@@ -195,6 +196,17 @@ def _product_names(db: Session, order: Order) -> dict[str, str]:
     return {product.id: product.name for product in products}
 
 
+def _resolve_platform_wallet_phone(db: Session) -> str | None:
+    row = db.scalar(select(GlobalSettings).order_by(GlobalSettings.id.asc()))
+    if row is None:
+        return None
+    primary = (row.platform_wallet_phone or "").strip()
+    if primary:
+        return primary
+    fallback = (row.support_phone or "").strip()
+    return fallback or None
+
+
 def _to_receipt_response(
     request: Request,
     order: Order,
@@ -202,6 +214,8 @@ def _to_receipt_response(
     product_name_by_id: dict[str, str],
     digest: str,
     token: str,
+    payment_url: str,
+    platform_wallet_phone: str | None,
 ) -> ReceiptResponse:
     decrypted = None
     if order.transaction_code:
@@ -233,6 +247,8 @@ def _to_receipt_response(
         ],
         integrity_hash=digest,
         verify_url=verify_url,
+        payment_url=payment_url,
+        platform_wallet_phone=platform_wallet_phone,
     )
 
 
@@ -472,6 +488,10 @@ def get_secure_receipt(
     else:
         token = create_receipt_access_token(order_id=order.id, digest=digest)
 
+    reference = order.payment_reference or _build_payment_reference(order.id)
+    payment_url = _build_payment_url(order.payment_mode, reference, order.total_amount)
+    wallet_phone = _resolve_platform_wallet_phone(db)
+
     return _to_receipt_response(
         request=request,
         order=order,
@@ -479,6 +499,8 @@ def get_secure_receipt(
         product_name_by_id=names,
         digest=digest,
         token=token,
+        payment_url=payment_url,
+        platform_wallet_phone=wallet_phone,
     )
 
 

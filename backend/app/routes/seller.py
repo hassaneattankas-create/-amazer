@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.deps import get_admin_user, get_current_user, get_seller_user
 from app.core.crypto import decrypt_phone_value, encrypt_phone_value
 from app.core.csrf import enforce_csrf
-from app.core.exceptions import ConflictError, NotFoundError
+from app.core.exceptions import ConflictError, NotFoundError, ValidationDomainError
 from app.database import get_db
 from app.models.hospitality import HotelBooking, RestaurantReservation
 from app.models.price_history import PriceHistory
@@ -40,6 +40,11 @@ from app.schemas.seller import (
 )
 from app.schemas.seller_lead import SellerLeadCreateRequest, SellerLeadResponse
 from app.services.audit_log_service import append_audit_log
+from app.services.listing_limit_service import (
+    count_vendor_catalog_products,
+    is_premium_profile,
+    max_products_for_basic_tier,
+)
 from app.services.seller_profile_service import create_or_update_seller_profile
 
 router = APIRouter(prefix="/seller", tags=["seller"])
@@ -257,6 +262,14 @@ def create_product_listing(
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
         raise NotFoundError("Create a seller profile first")
+    if not is_premium_profile(profile):
+        cap = max_products_for_basic_tier(db)
+        current = count_vendor_catalog_products(db, profile.vendor_id)
+        if current >= cap:
+            raise ValidationDomainError(
+                f"Limite atteinte: {cap} article(s) maximum pour les comptes hors Premium. "
+                "Passez en formule Premium pour publier sans limite, ou retirez des articles."
+            )
     # Réactive le mini-site: la boutique (list_vendor_storefronts) ne remonte que si Vendor.is_active=True.
     vendor = db.get(Vendor, profile.vendor_id)
     if vendor is not None:

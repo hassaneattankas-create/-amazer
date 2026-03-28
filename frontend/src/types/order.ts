@@ -66,6 +66,8 @@ export type Receipt = {
   items: ReceiptItem[];
   integrity_hash: string;
   verify_url: string;
+  payment_url: string;
+  platform_wallet_phone: string | null;
 };
 
 export type ReceiptVerifyPayload = {

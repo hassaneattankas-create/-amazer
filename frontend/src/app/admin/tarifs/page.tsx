@@ -335,7 +335,7 @@ export default function AdminTarifsPage() {
               }
             />
             <AdminNumberField
-              label="Abonnement vendeur"
+              label="Frais d'ouverture / abonnement vendeur (toutes boutiques)"
               value={effective.seller_subscription_fee}
               suffix="XOF"
               onChange={(value) =>
@@ -344,6 +344,21 @@ export default function AdminTarifsPage() {
                   seller_subscription_fee: parseNonNegativeNumber(value, effective.seller_subscription_fee),
                 })
               }
+              helper="Montant de reference pour activer ou ouvrir une boutique (affiche cote vendeurs selon ton processus)."
+            />
+            <AdminNumberField
+              label="Max articles catalogue & menu (hors Premium)"
+              value={effective.max_products_basic_tier}
+              suffix="articles"
+              min={1}
+              step="1"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  max_products_basic_tier: parsePositiveInteger(value, effective.max_products_basic_tier),
+                })
+              }
+              helper="Boutiques et restaurants en formule basic : plafond. Premium : illimite cote API."
             />
             <AdminNumberField
               label="Boost publicitaire principal"
@@ -391,6 +406,23 @@ export default function AdminTarifsPage() {
                 })
               }
             />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-1">
+            <div>
+              <p className="text-sm font-medium text-slate-800">Numero wallet AMAZER (Nita / Amana)</p>
+              <p className="text-xs text-slate-500">
+                Affiche sur les recus clients comme destination des versements plateforme (prioritaire sur le telephone
+                support si renseigne).
+              </p>
+              <input
+                value={effective.platform_wallet_phone ?? ""}
+                onChange={(event) =>
+                  setDraft({ ...effective, platform_wallet_phone: event.target.value || null })
+                }
+                className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+                placeholder="+227 xx xx xx xx"
+              />
+            </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div>

@@ -10,6 +10,8 @@ export type FinanceSettings = {
   ad_boost_price_24h: number;
   ad_boost_price_7d: number;
   launch_mode_zero_commission: boolean;
+  max_products_basic_tier: number;
+  platform_wallet_phone: string | null;
   support_email: string | null;
   support_phone: string | null;
   support_whatsapp: string | null;

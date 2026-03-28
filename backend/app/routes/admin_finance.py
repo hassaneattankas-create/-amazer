@@ -67,6 +67,8 @@ def _get_or_create_settings(db: Session) -> GlobalSettings:
             ad_boost_price_24h=1000,
             ad_boost_price_7d=2000,
             launch_mode_zero_commission=False,
+            max_products_basic_tier=10,
+            platform_wallet_phone=None,
             support_email=None,
             support_phone=None,
             support_whatsapp=None,
@@ -94,6 +96,8 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
         ad_boost_price_24h=settings.ad_boost_price_24h,
         ad_boost_price_7d=settings.ad_boost_price_7d,
         launch_mode_zero_commission=settings.launch_mode_zero_commission,
+        max_products_basic_tier=int(settings.max_products_basic_tier or 10),
+        platform_wallet_phone=settings.platform_wallet_phone,
         support_email=settings.support_email,
         support_phone=settings.support_phone,
         support_whatsapp=settings.support_whatsapp,
@@ -297,6 +301,8 @@ def update_finance_settings(
     settings_row.ad_boost_price_24h = payload.ad_boost_price_24h
     settings_row.ad_boost_price_7d = payload.ad_boost_price_7d
     settings_row.launch_mode_zero_commission = payload.launch_mode_zero_commission
+    settings_row.max_products_basic_tier = payload.max_products_basic_tier
+    settings_row.platform_wallet_phone = payload.platform_wallet_phone
     settings_row.support_email = payload.support_email
     settings_row.support_phone = payload.support_phone
     settings_row.support_whatsapp = payload.support_whatsapp

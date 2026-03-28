@@ -25,6 +25,11 @@ from app.schemas.restaurant import (
     RestaurantStorefrontListResponse,
     RestaurantStorefrontResponse,
 )
+from app.services.listing_limit_service import (
+    count_vendor_menu_items,
+    is_premium_profile,
+    max_products_for_basic_tier,
+)
 from app.services.payment_security_service import verify_payment_code
 
 router = APIRouter(prefix="/restaurant", tags=["restaurant"])
@@ -106,6 +111,8 @@ def _get_or_create_settings(db: Session) -> GlobalSettings:
             ad_boost_price_24h=1000,
             ad_boost_price_7d=2000,
             launch_mode_zero_commission=False,
+            max_products_basic_tier=10,
+            platform_wallet_phone=None,
             support_email=None,
             support_phone=None,
             support_whatsapp=None,
@@ -237,6 +244,14 @@ def create_restaurant_menu_item(
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
         raise NotFoundError("Create a seller profile first")
+    if not is_premium_profile(profile):
+        cap = max_products_for_basic_tier(db)
+        current = count_vendor_menu_items(db, profile.vendor_id)
+        if current >= cap:
+            raise ValidationDomainError(
+                f"Limite atteinte: {cap} plat(s) maximum pour les comptes hors Premium. "
+                "Passez en formule Premium pour un menu illimite, ou retirez des plats."
+            )
 
     menu_item = RestaurantMenuItem(
         vendor_id=profile.vendor_id,
