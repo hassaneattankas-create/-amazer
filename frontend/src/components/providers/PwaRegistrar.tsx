@@ -8,20 +8,18 @@ export function PwaRegistrar() {
       return;
     }
 
-    const isLocalhost =
-      window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-
-    if (process.env.NODE_ENV !== "production" || isLocalhost) {
-      navigator.serviceWorker
-        .getRegistrations()
-        .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
-        .catch(() => undefined);
-      return;
-    }
-
-    navigator.serviceWorker.register("/sw.js?v=4", { updateViaCache: "none" }).catch((error) => {
-      console.error("PWA service worker registration failed:", error);
-    });
+    // Temporary safety mode: aggressively unregister old service workers so
+    // production phones stop serving stale cached assets and outdated image logic.
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((registrations) =>
+        Promise.all(
+          registrations.map((registration) =>
+            registration.unregister().catch(() => false)
+          )
+        )
+      )
+      .catch(() => undefined);
   }, []);
 
   return null;
