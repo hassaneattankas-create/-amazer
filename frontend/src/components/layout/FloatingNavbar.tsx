@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { useAdminMe } from "@/hooks/use-admin-me";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { isAdminEmail } from "@/lib/admin";
 import { clearAppMode, persistAppMode } from "@/lib/session-mode";
 import { logout } from "@/services/auth-service";
 import { getSellerProfile } from "@/services/seller-service";
@@ -53,7 +54,7 @@ export function FloatingNavbar() {
     staleTime: 60_000,
   });
 
-  const showAdminLink = Boolean(adminMe?.is_admin);
+  const showAdminLink = Boolean(adminMe?.is_admin) || isAdminEmail(user?.email);
   const showSellerLink = Boolean(sellerProfile?.id);
   const isAuthenticated = Boolean(user?.id);
   const showClientDashboard = isAuthenticated && appMode !== "seller";

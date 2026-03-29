@@ -10,6 +10,7 @@ import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
 import { createRestaurantOrder, createRestaurantReservation } from "@/services/restaurant-service";
@@ -113,7 +114,10 @@ export default function VendorShopPage() {
       setOrderStatus(`Commande envoyee au restaurant ${order.vendor_name}.`);
       setSelectedItems([]);
     },
-    onError: () => setOrderStatus("Echec envoi commande. Verifie les champs et reconnecte-toi."),
+    onError: (error) =>
+      setOrderStatus(
+        getApiErrorMessage(error, "Echec envoi commande. Verifie les champs et reconnecte-toi.")
+      ),
   });
 
   const hotelBookingMutation = useMutation({
@@ -264,13 +268,28 @@ export default function VendorShopPage() {
   };
 
   const submitOrder = () => {
-    if (!selectedItems.length) return;
+    if (!selectedItems.length) {
+      setOrderStatus("Ajoute au moins un plat avant de commander.");
+      return;
+    }
+    if (!requireSession()) {
+      return;
+    }
+    if (!customerName.trim() || !customerPhone.trim() || !deliveryAddress.trim()) {
+      setOrderStatus("Renseigne ton nom, ton telephone et l'adresse de livraison.");
+      return;
+    }
+    const parsedDistance = Number(distanceKm || 0);
+    if (!Number.isFinite(parsedDistance) || parsedDistance < 0.1) {
+      setOrderStatus("Indique une distance de livraison valide.");
+      return;
+    }
     orderMutation.mutate({
       vendor_id: vendorId,
-      customer_name: customerName,
-      customer_phone: customerPhone,
-      delivery_address: deliveryAddress,
-      distance_km: Number(distanceKm || 0),
+      customer_name: customerName.trim(),
+      customer_phone: customerPhone.trim(),
+      delivery_address: deliveryAddress.trim(),
+      distance_km: parsedDistance,
       payment_mode: paymentMode,
       items: selectedItems.map((item) => ({
         menu_item_id: item.menu_item_id,

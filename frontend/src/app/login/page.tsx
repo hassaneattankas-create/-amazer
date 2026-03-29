@@ -8,9 +8,10 @@ import { useSearchParams } from "next/navigation";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { isAdminEmail } from "@/lib/admin";
 import { persistAppMode } from "@/lib/session-mode";
 import { getAdminMe } from "@/services/admin-service";
-import { login } from "@/services/auth-service";
+import { getCurrentUser, login } from "@/services/auth-service";
 import { requestAndRegisterNotifications } from "@/services/notification-service";
 import { getSellerProfile } from "@/services/seller-service";
 import { useAuthStore } from "@/store/auth-store";
@@ -38,7 +39,8 @@ function LoginPageContent() {
       // Demande opt-in notifications apres premiere connexion reussie.
       void requestAndRegisterNotifications();
       const adminMe = await getAdminMe().catch(() => null);
-      if (adminMe?.is_admin) {
+      const currentUser = await getCurrentUser().catch(() => null);
+      if (adminMe?.is_admin || isAdminEmail(currentUser?.email || identifier)) {
         setAppMode("client");
         persistAppMode("client");
         window.location.assign("/admin");

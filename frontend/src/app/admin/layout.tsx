@@ -8,6 +8,7 @@ import { BarChart3, CreditCard, FolderTree, QrCode, SlidersHorizontal, Users } f
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { useAdminMe } from "@/hooks/use-admin-me";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { isAdminEmail } from "@/lib/admin";
 
 const adminNavItems = [
   { href: "/admin", label: "Vue Generale", icon: BarChart3 },
@@ -27,13 +28,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     isPending: isAdminPending,
     isError: isAdminError,
   } = useAdminMe(Boolean(user?.id));
-  const isAdmin = Boolean(adminMe?.is_admin);
+  const isAdmin = Boolean(adminMe?.is_admin) || isAdminEmail(user?.email);
 
   useEffect(() => {
     if (isPending || (user && isAdminPending)) {
       return;
     }
-    if (isError || !user || isAdminError) {
+    if (isError || !user) {
       router.replace(`/login?next=${encodeURIComponent(pathname || "/admin")}`);
       return;
     }
