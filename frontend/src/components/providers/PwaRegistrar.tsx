@@ -19,7 +19,7 @@ export function PwaRegistrar() {
       return;
     }
 
-    navigator.serviceWorker.register("/sw.js?v=3", { updateViaCache: "none" }).catch((error) => {
+    navigator.serviceWorker.register("/sw.js?v=4", { updateViaCache: "none" }).catch((error) => {
       console.error("PWA service worker registration failed:", error);
     });
   }, []);

@@ -1,5 +1,5 @@
-const CACHE_NAME = "amazer-v3";
-const DATA_CACHE = "amazer-data-v1";
+const CACHE_NAME = "amazer-v4";
+const DATA_CACHE = "amazer-data-v2";
 const APP_SHELL = ["/", "/manifest.json", "/favicon.ico"];
 const OFFLINE_PRICE_KEYS = [
   "/api/v1/products/search",
@@ -18,9 +18,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
-      )
+      .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
@@ -60,26 +58,21 @@ self.addEventListener("fetch", (event) => {
       return;
     }
 
-    // Cache-first strategy for favorite prices and product data so they stay available offline.
+    // Network-first for catalog data so newly created products and storefront changes appear quickly.
     event.respondWith(
       caches.open(DATA_CACHE).then((cache) =>
-        cache.match(event.request).then((cached) => {
-          if (cached) {
-            return cached;
-          }
-          return fetch(event.request)
-            .then((response) => {
-              if (!response) {
-                return response;
-              }
-              const cacheable = response.status === 200 || response.status === 0;
-              if (cacheable) {
-                cache.put(event.request, response.clone());
-              }
+        fetch(event.request)
+          .then((response) => {
+            if (!response) {
               return response;
-            })
-            .catch(() => cached || Response.error());
-        })
+            }
+            const cacheable = response.status === 200 || response.status === 0;
+            if (cacheable) {
+              cache.put(event.request, response.clone());
+            }
+            return response;
+          })
+          .catch(() => cache.match(event.request).then((cached) => cached || Response.error()))
       )
     );
     return;
