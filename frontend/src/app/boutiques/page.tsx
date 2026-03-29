@@ -21,7 +21,21 @@ export default function BoutiquesPage() {
   });
   const visibleStores = useMemo(() => {
     const copy = [...stores];
-    copy.sort((a, b) => Number(b.is_verified) - Number(a.is_verified));
+    copy.sort((a, b) => {
+      const byProducts = b.product_count - a.product_count;
+      if (byProducts !== 0) {
+        return byProducts;
+      }
+      const byStartingPrice = Number(Boolean(b.starting_price)) - Number(Boolean(a.starting_price));
+      if (byStartingPrice !== 0) {
+        return byStartingPrice;
+      }
+      const byVerification = Number(b.is_verified) - Number(a.is_verified);
+      if (byVerification !== 0) {
+        return byVerification;
+      }
+      return (a.business_name || a.name).localeCompare(b.business_name || b.name);
+    });
     return copy;
   }, [stores]);
 
@@ -32,7 +46,7 @@ export default function BoutiquesPage() {
           <div>
             <h1 className="luxury-title text-3xl font-semibold">Boutiques</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-600">
-              Explorez les produits de la place.
+              Explorez les boutiques actives, avec priorite aux enseignes qui ont deja du stock visible.
             </p>
           </div>
           <Link href="/hotels" className="text-sm font-medium text-[#FF4D00]">

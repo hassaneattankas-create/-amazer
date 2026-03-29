@@ -23,6 +23,7 @@ import { getPublicContactInfo } from "@/services/finance-service";
 import { listStorefronts } from "@/services/catalog-service";
 import { useProductSearch } from "@/hooks/use-product-search";
 import { useAuthStore } from "@/store/auth-store";
+import { VendorStorefront } from "@/types/catalog";
 import { HomeContentProduct } from "@/types/content";
 import { ProductSearchItem } from "@/types/product";
 
@@ -61,6 +62,24 @@ function withBoostRotation<T extends { is_boosted: boolean }>(items: T[]): T[] {
   return [...rotated.slice(0, 3), ...regular, ...rotated.slice(3)];
 }
 
+function rankStorefrontsForDiscovery(stores: VendorStorefront[]): VendorStorefront[] {
+  return [...stores].sort((a, b) => {
+    const byProducts = b.product_count - a.product_count;
+    if (byProducts !== 0) {
+      return byProducts;
+    }
+    const byStartingPrice = Number(Boolean(b.starting_price)) - Number(Boolean(a.starting_price));
+    if (byStartingPrice !== 0) {
+      return byStartingPrice;
+    }
+    const byVerification = Number(b.is_verified) - Number(a.is_verified);
+    if (byVerification !== 0) {
+      return byVerification;
+    }
+    return (a.business_name || a.name).localeCompare(b.business_name || b.name);
+  });
+}
+
 export default function HomePage() {
   const [query, setQuery] = useState("");
   const [barcode, setBarcode] = useState("");
@@ -80,9 +99,14 @@ export default function HomePage() {
     queryFn: getPublicContactInfo,
     staleTime: 60_000,
   });
-  const { data: storefronts = [] } = useQuery({
-    queryKey: ["home-storefronts"],
+  const { data: premiumStorefronts = [] } = useQuery({
+    queryKey: ["home-premium-storefronts"],
     queryFn: () => listStorefronts({ storefrontTier: "premium", limit: 24 }),
+    staleTime: 120_000,
+  });
+  const { data: shopStorefronts = [] } = useQuery({
+    queryKey: ["home-shop-storefronts"],
+    queryFn: () => listStorefronts({ activityType: "shop", limit: 48 }),
     staleTime: 120_000,
   });
   const { data, isPending, isFetching, isError, error } = useProductSearch({
@@ -119,17 +143,14 @@ export default function HomePage() {
 
   const featuredPremium = useMemo(
     () =>
-      storefronts
+      premiumStorefronts
         .filter((store) => store.storefront_tier === "premium" && store.is_verified)
         .slice(0, 3),
-    [storefronts]
+    [premiumStorefronts]
   );
   const featuredBoutiques = useMemo(
-    () =>
-      storefronts
-        .filter((store) => store.activity_type === "shop" && store.is_verified)
-        .slice(0, 6),
-    [storefronts]
+    () => rankStorefrontsForDiscovery(shopStorefronts).slice(0, 6),
+    [shopStorefronts]
   );
 
   const showSkeletons = isPending || (isFetching && boostedResults.length === 0);
@@ -232,9 +253,9 @@ export default function HomePage() {
         <article className="premium-card mt-5 border border-slate-200 bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="luxury-title text-lg font-semibold text-slate-900">Boutiques & Enseignes</h2>
+              <h2 className="luxury-title text-lg font-semibold text-slate-900">Boutiques Actives</h2>
               <p className="mt-1 text-xs text-slate-500">
-                Mini-sites premium pour artisanat, tech et gourmet.
+                Les enseignes avec stock visible remontent en premier, y compris les nouvelles boutiques vendeurs.
               </p>
             </div>
             <Link href="/boutiques" className="text-sm font-medium text-[#FF4D00]">
@@ -339,6 +360,9 @@ export default function HomePage() {
       ) : null}
 
       <div className="mt-8">
+        {!hasActiveFilter ? (
+          <h2 className="luxury-title text-xl font-semibold text-slate-900">Derniers produits actifs</h2>
+        ) : null}
         <p className="text-sm text-slate-600">
           {statusLabel}
           {isFetching && !isPending ? " (mise a jour...)" : ""}
