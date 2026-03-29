@@ -76,6 +76,12 @@ class SellerProfileResponse(BaseModel):
     room_types: list[HotelRoomTypeSchema]
     deposit_payment_method: Literal["nita", "amana"] | None
     deposit_amount: float | None
+    commission_rate_override: float | None = None
+    service_fee_override: float | None = None
+    seller_subscription_fee_override: float | None = None
+    effective_commission_rate: float
+    effective_service_fee: float
+    effective_seller_subscription_fee: float
     accepts_table_reservations: bool
     accepts_hotel_bookings: bool
     is_verified: bool

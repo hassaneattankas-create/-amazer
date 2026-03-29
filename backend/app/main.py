@@ -7,6 +7,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import ValidationError
 from sqlalchemy import func, select, text
 
@@ -52,6 +54,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(GZipMiddleware, minimum_size=800)
+
+_trusted_hosts = (
+    ["*"]
+    if not settings.is_production()
+    else [h.strip() for h in settings.allowed_hosts.split(",") if h.strip()]
+)
+if _trusted_hosts:
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=_trusted_hosts)
+
 
 def _bootstrap_database_if_needed() -> None:
     """Initialize schema and seed base marketplace data when DB is empty."""
@@ -86,6 +98,9 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS room_types JSONB DEFAULT '[]'::jsonb",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS deposit_payment_method VARCHAR(20)",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS deposit_amount DOUBLE PRECISION",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS commission_rate_override DOUBLE PRECISION",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS service_fee_override DOUBLE PRECISION",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS seller_subscription_fee_override DOUBLE PRECISION",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS accepts_table_reservations BOOLEAN DEFAULT FALSE",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS accepts_hotel_bookings BOOLEAN DEFAULT FALSE",
         "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS delivery_fee DOUBLE PRECISION DEFAULT 0",
@@ -125,6 +140,12 @@ def _bootstrap_database_if_needed() -> None:
 def on_startup() -> None:
     if settings.should_bootstrap_db():
         _bootstrap_database_if_needed()
+
+
+@app.get("/health")
+def health_check() -> dict[str, str]:
+    """Point de controle pour hebergeurs (Render, etc.) sans dependance base."""
+    return {"status": "ok"}
 
 
 @app.exception_handler(DomainError)
@@ -178,6 +199,18 @@ async def security_access_logger(
     ):
         enforce_csrf(request)
     response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault(
+        "Permissions-Policy",
+        "camera=(), microphone=(), geolocation=()",
+    )
+    if settings.is_production():
+        response.headers.setdefault(
+            "Strict-Transport-Security",
+            "max-age=63072000; includeSubDomains; preload",
+        )
     path = request.url.path
     if path.startswith(f"{settings.api_prefix}/admin") or path.startswith(f"{settings.api_prefix}/seller"):
         db = SessionLocal()

@@ -45,6 +45,10 @@ from app.services.listing_limit_service import (
     is_premium_profile,
     max_products_for_basic_tier,
 )
+from app.services.seller_finance_service import (
+    build_effective_seller_finance_settings,
+    get_or_create_global_settings,
+)
 from app.services.seller_profile_service import create_or_update_seller_profile
 
 router = APIRouter(prefix="/seller", tags=["seller"])
@@ -89,7 +93,8 @@ def _sync_product_flags(product: Product) -> tuple[float | None, datetime | None
     return promo_price, promo_until, boost_until
 
 
-def _profile_response(profile: SellerProfile) -> SellerProfileResponse:
+def _profile_response(profile: SellerProfile, db: Session) -> SellerProfileResponse:
+    finance = build_effective_seller_finance_settings(get_or_create_global_settings(db), profile)
     return SellerProfileResponse(
         id=profile.id,
         user_id=profile.user_id,
@@ -111,6 +116,12 @@ def _profile_response(profile: SellerProfile) -> SellerProfileResponse:
         room_types=list(profile.room_types or []),
         deposit_payment_method=profile.deposit_payment_method,
         deposit_amount=profile.deposit_amount,
+        commission_rate_override=profile.commission_rate_override,
+        service_fee_override=profile.service_fee_override,
+        seller_subscription_fee_override=profile.seller_subscription_fee_override,
+        effective_commission_rate=finance.commission_rate,
+        effective_service_fee=finance.service_fee,
+        effective_seller_subscription_fee=finance.seller_subscription_fee,
         accepts_table_reservations=bool(profile.accepts_table_reservations),
         accepts_hotel_bookings=bool(profile.accepts_hotel_bookings),
         is_verified=profile.is_verified,
@@ -147,7 +158,7 @@ def get_profile(
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
         return None
-    return _profile_response(profile)
+    return _profile_response(profile, db)
 
 
 @router.post("/profile", response_model=SellerProfileResponse, status_code=status.HTTP_201_CREATED)
@@ -167,7 +178,7 @@ def upsert_profile(
     )
     db.commit()
     db.refresh(profile)
-    return _profile_response(profile)
+    return _profile_response(profile, db)
 
 
 @router.get("/storefront/{vendor_id}", response_model=SellerStorefrontResponse)

@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     cors_allowed_origins: str = Field(
         default="https://amazer.vercel.app,https://www.amazer.vercel.app,https://amazerniger.vercel.app,https://www.amazerniger.vercel.app"
     )
+    # Hostnames acceptes par l API (header Host). En production, lister explicitement (ex: api.tondomaine.com).
+    allowed_hosts: str = Field(default="*")
     payment_encryption_key: str = Field(
         default="REPLACE_WITH_BASE64URL_32BYTE_KEY_REPLACE_WITH_KEY_1234="
     )
@@ -90,6 +92,12 @@ class Settings(BaseSettings):
 
         if not self.cors_allowed_origins.strip():
             raise ValueError("CORS_ALLOWED_ORIGINS must be configured in production")
+
+        hosts = self.allowed_hosts.strip()
+        if not hosts or hosts == "*":
+            raise ValueError(
+                "ALLOWED_HOSTS must list explicit API hostnames in production (comma-separated, e.g. api.example.com)"
+            )
 
         return self
 

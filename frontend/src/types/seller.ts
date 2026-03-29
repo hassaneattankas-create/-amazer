@@ -41,6 +41,12 @@ export type SellerProfile = {
   room_types: HotelRoomType[];
   deposit_payment_method: "nita" | "amana" | null;
   deposit_amount: number | null;
+  commission_rate_override: number | null;
+  service_fee_override: number | null;
+  seller_subscription_fee_override: number | null;
+  effective_commission_rate: number;
+  effective_service_fee: number;
+  effective_seller_subscription_fee: number;
   accepts_table_reservations: boolean;
   accepts_hotel_bookings: boolean;
   is_verified: boolean;

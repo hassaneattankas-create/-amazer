@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Rocket, Store } from "lucide-react";
 
+import { PremiumSellerPitch } from "@/components/PremiumSellerPitch";
 import { Button } from "@/components/ui/button";
 import { formatXOF } from "@/lib/currency";
 import { getPublicFinanceSettings } from "@/services/finance-service";
@@ -39,6 +40,8 @@ export default function VendrePage() {
           </Link>
         </Button>
       </header>
+
+      <PremiumSellerPitch variant="featured" />
 
       {pricing ? (
         <article className="premium-card border border-slate-200 bg-white p-6">

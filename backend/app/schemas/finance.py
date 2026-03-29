@@ -165,7 +165,21 @@ class AdminSellerResponse(BaseModel):
     phone: str | None
     is_verified: bool
     is_active: bool
+    commission_rate_override: float | None = None
+    service_fee_override: float | None = None
+    seller_subscription_fee_override: float | None = None
+    effective_commission_rate: float
+    effective_service_fee: float
+    effective_seller_subscription_fee: float
     created_at: str
+
+
+class AdminSellerPricingUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    commission_rate_override: float | None = Field(default=None, ge=0)
+    service_fee_override: float | None = Field(default=None, ge=0)
+    seller_subscription_fee_override: float | None = Field(default=None, ge=0)
 
 
 class AdminUserStatsResponse(BaseModel):

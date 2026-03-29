@@ -29,6 +29,7 @@ from app.models.user import User
 from app.models.vendor import Vendor
 from app.schemas.finance import (
     AdminSellerResponse,
+    AdminSellerPricingUpdateRequest,
     AdminUserResponse,
     AdminUserStatsResponse,
     AdminOrderStatusUpdateRequest,
@@ -47,40 +48,21 @@ from app.schemas.finance import (
     WalletSummaryResponse,
 )
 from app.services.audit_log_service import append_audit_log
+from app.services.seller_finance_service import (
+    build_effective_seller_finance_settings,
+    get_or_create_global_settings,
+)
 
 router = APIRouter(prefix="/admin/finance", tags=["admin-finance"])
 settings = get_settings()
 AUTO_RECEIPT_TIMEOUT_HOURS = 24
 
 def _get_or_create_settings(db: Session) -> GlobalSettings:
-    row = db.scalar(select(GlobalSettings).order_by(GlobalSettings.id.asc()))
-    if row is None:
-        row = GlobalSettings(
-            commission_rate=0.05,
-            service_fee=200,
-            default_delivery_fee=1500,
-            urban_delivery_fee=1500,
-            peripheral_delivery_fee=2200,
-            seller_subscription_fee=5000,
-            ad_boost_price=2000,
-            ad_boost_duration_days=7,
-            ad_boost_price_24h=1000,
-            ad_boost_price_7d=2000,
-            launch_mode_zero_commission=False,
-            max_products_basic_tier=10,
-            platform_wallet_phone=None,
-            support_email=None,
-            support_phone=None,
-            support_whatsapp=None,
-        )
-        db.add(row)
-        db.commit()
-        db.refresh(row)
-    return row
+    return get_or_create_global_settings(db)
 
 
-def _effective_commission_rate(settings: GlobalSettings) -> float:
-    return 0.0 if settings.launch_mode_zero_commission else settings.commission_rate
+def _effective_commission_rate(settings: GlobalSettings, profile: SellerProfile | None = None) -> float:
+    return build_effective_seller_finance_settings(settings, profile).commission_rate
 
 
 def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
@@ -112,6 +94,67 @@ def _require_finance_pin(request: Request) -> None:
 
 def _commission_from_order(amount: float, finance: GlobalSettings) -> float:
     return (amount * _effective_commission_rate(finance)) + finance.service_fee
+
+
+def _build_admin_seller_response(
+    profile: SellerProfile,
+    vendor: Vendor | None,
+    settings: GlobalSettings,
+) -> AdminSellerResponse:
+    finance = build_effective_seller_finance_settings(settings, profile)
+    return AdminSellerResponse(
+        profile_id=profile.id,
+        user_id=profile.user_id,
+        vendor_id=profile.vendor_id,
+        business_name=profile.business_name,
+        city=profile.city,
+        phone=decrypt_phone_value(profile.phone),
+        is_verified=profile.is_verified,
+        is_active=bool(vendor.is_active) if vendor else False,
+        commission_rate_override=profile.commission_rate_override,
+        service_fee_override=profile.service_fee_override,
+        seller_subscription_fee_override=profile.seller_subscription_fee_override,
+        effective_commission_rate=finance.commission_rate,
+        effective_service_fee=finance.service_fee,
+        effective_seller_subscription_fee=finance.seller_subscription_fee,
+        created_at=profile.created_at.isoformat(),
+    )
+
+
+def _seller_profile_map(db: Session, vendor_ids: set[str]) -> dict[str, SellerProfile]:
+    if not vendor_ids:
+        return {}
+    rows = db.scalars(select(SellerProfile).where(SellerProfile.vendor_id.in_(vendor_ids))).all()
+    return {row.vendor_id: row for row in rows}
+
+
+def _platform_fee_breakdown_for_order(
+    order: Order,
+    settings: GlobalSettings,
+    profiles_by_vendor: dict[str, SellerProfile],
+) -> tuple[float, float]:
+    subtotal_by_vendor: dict[str, float] = {}
+    for item in order.items:
+        subtotal_by_vendor[item.vendor_id] = subtotal_by_vendor.get(item.vendor_id, 0.0) + (
+            float(item.unit_price) * int(item.quantity)
+        )
+
+    commission_total = 0.0
+    service_fee_total = 0.0
+    for vendor_id, subtotal in subtotal_by_vendor.items():
+        finance = build_effective_seller_finance_settings(settings, profiles_by_vendor.get(vendor_id))
+        commission_total += subtotal * finance.commission_rate
+        service_fee_total += finance.service_fee
+    return commission_total, service_fee_total
+
+
+def _platform_fee_breakdown_for_restaurant_order(
+    order: RestaurantOrder,
+    settings: GlobalSettings,
+    profiles_by_vendor: dict[str, SellerProfile],
+) -> tuple[float, float]:
+    finance = build_effective_seller_finance_settings(settings, profiles_by_vendor.get(order.vendor_id))
+    return float(order.total_amount) * finance.commission_rate, finance.service_fee
 
 
 def _safe_decrypt_code(token: str | None) -> str | None:
@@ -336,46 +379,43 @@ def get_finance_summary(
     active_sellers = db.scalar(select(func.count(SellerProfile.id))) or 0
 
     revenue_map: dict[date, float] = {start_date + timedelta(days=i): 0 for i in range(30)}
-
-    platform_daily = db.execute(
-        select(
-            func.date(Order.created_at).label("day"),
-            func.sum(Order.total_amount).label("amount"),
-            func.count(Order.id).label("count"),
-        )
+    platform_orders = db.scalars(
+        select(Order)
         .where(Order.created_at >= start_dt)
-        .group_by(func.date(Order.created_at))
+        .options(selectinload(Order.items))
     ).all()
-
-    restaurant_daily = db.execute(
-        select(
-            func.date(RestaurantOrder.created_at).label("day"),
-            func.sum(RestaurantOrder.total_amount).label("amount"),
-            func.count(RestaurantOrder.id).label("count"),
-        )
-        .where(RestaurantOrder.created_at >= start_dt)
-        .group_by(func.date(RestaurantOrder.created_at))
+    restaurant_orders = db.scalars(
+        select(RestaurantOrder).where(RestaurantOrder.created_at >= start_dt)
     ).all()
+    vendor_ids = {item.vendor_id for order in platform_orders for item in order.items}
+    vendor_ids.update(order.vendor_id for order in restaurant_orders)
+    profiles_by_vendor = _seller_profile_map(db, vendor_ids)
 
     total_commissions = 0.0
-    for row in platform_daily:
-        if row.amount is None or row.count is None:
-            continue
-        day_value = _normalize_day(row.day)
+    for order in platform_orders:
+        day_value = _normalize_day(order.created_at)
         if day_value is None:
             continue
-        amount = (float(row.amount) * _effective_commission_rate(settings)) + (int(row.count) * settings.service_fee)
+        commission_total, service_fee_total = _platform_fee_breakdown_for_order(
+            order,
+            settings,
+            profiles_by_vendor,
+        )
+        amount = commission_total + service_fee_total
         total_commissions += amount
         if day_value in revenue_map:
             revenue_map[day_value] += amount
 
-    for row in restaurant_daily:
-        if row.amount is None or row.count is None:
-            continue
-        day_value = _normalize_day(row.day)
+    for order in restaurant_orders:
+        day_value = _normalize_day(order.created_at)
         if day_value is None:
             continue
-        amount = (float(row.amount) * _effective_commission_rate(settings)) + (int(row.count) * settings.service_fee)
+        commission_total, service_fee_total = _platform_fee_breakdown_for_restaurant_order(
+            order,
+            settings,
+            profiles_by_vendor,
+        )
+        amount = commission_total + service_fee_total
         total_commissions += amount
         if day_value in revenue_map:
             revenue_map[day_value] += amount
@@ -404,9 +444,6 @@ def get_wallet_summary(
     restaurant_totals = db.execute(
         select(RestaurantOrder.payment_mode, func.sum(RestaurantOrder.total_amount)).group_by(RestaurantOrder.payment_mode)
     ).all()
-    platform_count = db.scalar(select(func.count(Order.id))) or 0
-    restaurant_count = db.scalar(select(func.count(RestaurantOrder.id))) or 0
-
     totals = {"nita": 0.0, "amana": 0.0, "cash_on_delivery": 0.0}
     for mode, amount in platform_totals:
         if amount is None:
@@ -418,9 +455,29 @@ def get_wallet_summary(
         totals[mode] = totals.get(mode, 0.0) + float(amount)
 
     total_all = sum(totals.values())
-    transaction_count = int(platform_count) + int(restaurant_count)
-    commission_total = total_all * _effective_commission_rate(finance)
-    service_fee_total = transaction_count * finance.service_fee
+    platform_orders = db.scalars(select(Order).options(selectinload(Order.items))).all()
+    restaurant_orders = db.scalars(select(RestaurantOrder)).all()
+    vendor_ids = {item.vendor_id for order in platform_orders for item in order.items}
+    vendor_ids.update(order.vendor_id for order in restaurant_orders)
+    profiles_by_vendor = _seller_profile_map(db, vendor_ids)
+    commission_total = 0.0
+    service_fee_total = 0.0
+    for order in platform_orders:
+        order_commission_total, order_service_fee_total = _platform_fee_breakdown_for_order(
+            order,
+            finance,
+            profiles_by_vendor,
+        )
+        commission_total += order_commission_total
+        service_fee_total += order_service_fee_total
+    for order in restaurant_orders:
+        order_commission_total, order_service_fee_total = _platform_fee_breakdown_for_restaurant_order(
+            order,
+            finance,
+            profiles_by_vendor,
+        )
+        commission_total += order_commission_total
+        service_fee_total += order_service_fee_total
     return WalletSummaryResponse(
         total_nita=round(totals.get("nita", 0.0), 2),
         total_amana=round(totals.get("amana", 0.0), 2),
@@ -887,26 +944,14 @@ def list_sellers_admin(
     _: Annotated[User, Depends(get_admin_user)],
 ) -> list[AdminSellerResponse]:
     _require_finance_pin(request)
+    settings_row = _get_or_create_settings(db)
     rows = db.scalars(select(SellerProfile).order_by(desc(SellerProfile.created_at)).limit(500)).all()
     vendor_ids = {row.vendor_id for row in rows}
     vendors = db.scalars(select(Vendor).where(Vendor.id.in_(vendor_ids))).all() if vendor_ids else []
     vendor_map = {vendor.id: vendor for vendor in vendors}
     payload: list[AdminSellerResponse] = []
     for row in rows:
-        vendor = vendor_map.get(row.vendor_id)
-        payload.append(
-            AdminSellerResponse(
-                profile_id=row.id,
-                user_id=row.user_id,
-                vendor_id=row.vendor_id,
-                business_name=row.business_name,
-                city=row.city,
-                phone=decrypt_phone_value(row.phone),
-                is_verified=row.is_verified,
-                is_active=bool(vendor.is_active) if vendor else False,
-                created_at=row.created_at.isoformat(),
-            )
-        )
+        payload.append(_build_admin_seller_response(row, vendor_map.get(row.vendor_id), settings_row))
     return payload
 
 
@@ -974,17 +1019,7 @@ def restore_seller(
     db.commit()
     db.refresh(profile)
     vendor = db.get(Vendor, profile.vendor_id)
-    return AdminSellerResponse(
-        profile_id=profile.id,
-        user_id=profile.user_id,
-        vendor_id=profile.vendor_id,
-        business_name=profile.business_name,
-        city=profile.city,
-        phone=profile.phone,
-        is_verified=profile.is_verified,
-        is_active=bool(vendor.is_active) if vendor else False,
-        created_at=profile.created_at.isoformat(),
-    )
+    return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
 
 
 @router.post("/sellers/{profile_id}/verify", response_model=AdminSellerResponse)
@@ -1014,14 +1049,37 @@ def verify_seller(
     db.commit()
     db.refresh(profile)
     vendor = db.get(Vendor, profile.vendor_id)
-    return AdminSellerResponse(
-        profile_id=profile.id,
-        user_id=profile.user_id,
-        vendor_id=profile.vendor_id,
-        business_name=profile.business_name,
-        city=profile.city,
-        phone=profile.phone,
-        is_verified=profile.is_verified,
-        is_active=bool(vendor.is_active) if vendor else False,
-        created_at=profile.created_at.isoformat(),
+    return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
+
+
+@router.put("/sellers/{profile_id}/pricing", response_model=AdminSellerResponse)
+def update_seller_pricing(
+    profile_id: str,
+    payload: AdminSellerPricingUpdateRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminSellerResponse:
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    profile = db.get(SellerProfile, profile_id)
+    if profile is None:
+        raise ValidationDomainError("Seller profile not found")
+
+    profile.commission_rate_override = payload.commission_rate_override
+    profile.service_fee_override = payload.service_fee_override
+    profile.seller_subscription_fee_override = payload.seller_subscription_fee_override
+    append_audit_log(
+        db,
+        event_type="admin_seller_pricing_updated",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="seller_profile",
+        entity_id=profile.id,
+        details=payload.model_dump(),
     )
+    db.commit()
+    db.refresh(profile)
+    vendor = db.get(Vendor, profile.vendor_id)
+    return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))

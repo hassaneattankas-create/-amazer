@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import {
   AdminSeller,
+  AdminSellerPricingPayload,
   AdminUser,
   AdminUserStats,
   AdminOrderTracking,
@@ -119,6 +120,14 @@ export async function verifyAdminSeller(profileId: string, verified: boolean): P
   const response = await api.post<AdminSeller>(`/api/v1/admin/finance/sellers/${profileId}/verify`, null, {
     params: { verified },
   });
+  return response.data;
+}
+
+export async function updateAdminSellerPricing(
+  profileId: string,
+  payload: AdminSellerPricingPayload,
+): Promise<AdminSeller> {
+  const response = await api.put<AdminSeller>(`/api/v1/admin/finance/sellers/${profileId}/pricing`, payload);
   return response.data;
 }
 

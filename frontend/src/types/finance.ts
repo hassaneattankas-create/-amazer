@@ -105,7 +105,19 @@ export type AdminSeller = {
   phone: string | null;
   is_verified: boolean;
   is_active: boolean;
+  commission_rate_override: number | null;
+  service_fee_override: number | null;
+  seller_subscription_fee_override: number | null;
+  effective_commission_rate: number;
+  effective_service_fee: number;
+  effective_seller_subscription_fee: number;
   created_at: string;
+};
+
+export type AdminSellerPricingPayload = {
+  commission_rate_override: number | null;
+  service_fee_override: number | null;
+  seller_subscription_fee_override: number | null;
 };
 
 export type AdminUserStats = {

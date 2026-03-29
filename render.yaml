@@ -1,0 +1,23 @@
+# Blueprint Render — API FastAPI (dossier backend/)
+# Apres connexion du depot GitHub : chaque push sur `main` declenche un deploiement (autoDeployTrigger: commit).
+# Secrets (DATABASE_URL, JWT, CORS, etc.) : a renseigner dans le dashboard Render ou via sync: false.
+# https://render.com/docs/blueprint-spec
+
+version: "1"
+services:
+  - type: web
+    name: amazer-api
+    runtime: python
+    plan: starter
+    region: frankfurt
+    branch: main
+    autoDeployTrigger: commit
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: "3.12"

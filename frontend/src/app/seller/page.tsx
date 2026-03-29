@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { Suspense, useEffect, useId, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, CheckCircle2, Circle, ImageUp, PlusCircle, UtensilsCrossed } from "lucide-react";
 
+import { PremiumSellerPitch } from "@/components/PremiumSellerPitch";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,9 +102,10 @@ function loadDraft<T>(key: string, fallback: T): T {
   }
 }
 
-export default function SellerPage() {
+function SellerPageContent() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { data: user, isPending: isAuthPending } = useCurrentUser();
   const queryClient = useQueryClient();
   const setAppMode = useAuthStore((state) => state.setAppMode);
@@ -352,6 +354,16 @@ export default function SellerPage() {
         : hasPremiumConfig
           ? "Ajoute une offre ou mets en avant tes services."
           : "Configure services, galerie et chambres premium.";
+  const pricingSnapshot = {
+    commissionRate: profile?.effective_commission_rate ?? publicFinance?.commission_rate ?? 0,
+    serviceFee: profile?.effective_service_fee ?? publicFinance?.service_fee ?? 0,
+    sellerSubscriptionFee:
+      profile?.effective_seller_subscription_fee ?? publicFinance?.seller_subscription_fee ?? 0,
+  };
+  const welcomeMessage =
+    searchParams.get("welcome") === "1"
+      ? "Compte vendeur cree. Choisis ton type de boutique puis termine la configuration ci-dessous."
+      : "";
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
@@ -370,6 +382,7 @@ export default function SellerPage() {
         <p className="mt-1 text-sm text-slate-600">
           Experience type Shopify, sans connexion Shopify. Suis ces etapes pour activer ta boutique.
         </p>
+        {welcomeMessage ? <p className="mt-3 text-sm font-medium text-emerald-700">{welcomeMessage}</p> : null}
         <div className="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
           <div className="flex items-start gap-2">
             {hasProfile ? (
@@ -413,6 +426,33 @@ export default function SellerPage() {
         <p className="mt-4 text-sm font-medium text-[#FF4D00]">Prochaine action: {nextStep}</p>
       </article>
 
+      <article className="premium-card border border-slate-200 bg-white p-6">
+        <h2 className="text-lg font-semibold text-slate-900">Tarification appliquee a cette boutique</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Les valeurs ci-dessous suivent soit le tarif global AMAZER, soit une surcharge definie pour ta boutique.
+        </p>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Commission</p>
+            <p className="mt-2 text-xl font-semibold text-slate-900">
+              {(pricingSnapshot.commissionRate * 100).toFixed(2)}%
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Frais plateforme</p>
+            <p className="mt-2 text-xl font-semibold text-slate-900">
+              {formatXOF(pricingSnapshot.serviceFee)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Abonnement vendeur</p>
+            <p className="mt-2 text-xl font-semibold text-slate-900">
+              {formatXOF(pricingSnapshot.sellerSubscriptionFee)}
+            </p>
+          </div>
+        </div>
+      </article>
+
       {isPending ? (
         <ProductCardSkeleton />
       ) : (
@@ -433,6 +473,7 @@ export default function SellerPage() {
             Boutique: publier des produits. Restaurant: menu digital, commandes et reservations. Premium: toutes les
             fonctions boutique + restaurant + mini-site complet (galerie, services, chambres, paiement avec acompte).
         </p>
+          <PremiumSellerPitch variant="compact" showEspaceVendeurLink={false} className="mt-5" />
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Input
               placeholder="Nom du commerce"
@@ -883,6 +924,20 @@ export default function SellerPage() {
 
       {status ? <p className="text-sm text-slate-700">{status}</p> : null}
     </section>
+  );
+}
+
+export default function SellerPage() {
+  return (
+    <Suspense
+      fallback={
+        <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
+          <ProductCardSkeleton />
+        </section>
+      }
+    >
+      <SellerPageContent />
+    </Suspense>
   );
 }
 

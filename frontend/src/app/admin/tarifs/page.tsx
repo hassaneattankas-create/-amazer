@@ -17,6 +17,7 @@ import {
   restoreAdminSeller,
   toggleLaunchMode,
   updateAdminFinanceSettings,
+  updateAdminSellerPricing,
   verifyAdminFinancePin,
   verifyAdminSeller,
 } from "@/services/finance-service";
@@ -83,6 +84,9 @@ export default function AdminTarifsPage() {
   const [status, setStatus] = useState("");
   const [draft, setDraft] = useState<FinanceSettings | null>(null);
   const [districtDraft, setDistrictDraft] = useState<string | null>(null);
+  const [sellerPricingDrafts, setSellerPricingDrafts] = useState<
+    Record<string, { commission: string; serviceFee: string; subscriptionFee: string }>
+  >({});
 
   const pinMutation = useMutation({
     mutationFn: verifyAdminFinancePin,
@@ -176,6 +180,30 @@ export default function AdminTarifsPage() {
     },
     onError: () => setStatus("Verification vendeur impossible."),
   });
+  const sellerPricingMutation = useMutation({
+    mutationFn: ({
+      profileId,
+      commissionRateOverride,
+      serviceFeeOverride,
+      sellerSubscriptionFeeOverride,
+    }: {
+      profileId: string;
+      commissionRateOverride: number | null;
+      serviceFeeOverride: number | null;
+      sellerSubscriptionFeeOverride: number | null;
+    }) =>
+      updateAdminSellerPricing(profileId, {
+        commission_rate_override: commissionRateOverride,
+        service_fee_override: serviceFeeOverride,
+        seller_subscription_fee_override: sellerSubscriptionFeeOverride,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
+      setStatus("Tarification boutique mise a jour.");
+    },
+    onError: () => setStatus("Impossible de sauvegarder la tarification boutique."),
+  });
 
   async function onExportAuditCsv() {
     try {
@@ -217,6 +245,19 @@ export default function AdminTarifsPage() {
         .filter((entry) => entry.district_name),
     [districtRaw]
   );
+
+  function getSellerDraft(profileId: string, seller: NonNullable<typeof sellers>[number]) {
+    return (
+      sellerPricingDrafts[profileId] ?? {
+        commission: seller.commission_rate_override !== null ? String(seller.commission_rate_override * 100) : "",
+        serviceFee: seller.service_fee_override !== null ? String(seller.service_fee_override) : "",
+        subscriptionFee:
+          seller.seller_subscription_fee_override !== null
+            ? String(seller.seller_subscription_fee_override)
+            : "",
+      }
+    );
+  }
 
   if (!pinVerified) {
     return (
@@ -496,36 +537,142 @@ export default function AdminTarifsPage() {
         <h2 className="text-lg font-semibold text-slate-900">Vendeurs</h2>
         <div className="mt-3 space-y-2">
           {(sellers ?? []).slice(0, 120).map((seller) => (
-            <div key={seller.profile_id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3">
-              <p className="text-sm text-slate-800">
-                {seller.business_name} - {seller.city} - {seller.is_verified ? "Verifie" : "Non verifie"} - {seller.is_active ? "Actif" : "Desactive"}
-              </p>
-              <div className="flex gap-2">
+            <div key={seller.profile_id} className="rounded-lg border border-slate-200 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm text-slate-800">
+                    {seller.business_name} - {seller.city} - {seller.is_verified ? "Verifie" : "Non verifie"} - {seller.is_active ? "Actif" : "Desactive"}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Effectif: commission {(seller.effective_commission_rate * 100).toFixed(2)}% | frais{" "}
+                    {seller.effective_service_fee} XOF | abonnement {seller.effective_seller_subscription_fee} XOF
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      verifySellerMutation.mutate({
+                        profileId: seller.profile_id,
+                        verified: !seller.is_verified,
+                      })
+                    }
+                  >
+                    {seller.is_verified ? "Retirer badge" : "Verifier"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                    onClick={() => deleteSellerMutation.mutate(seller.profile_id)}
+                  >
+                    Supprimer vendeur
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => restoreSellerMutation.mutate(seller.profile_id)}
+                  >
+                    Restaurer
+                  </Button>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={getSellerDraft(seller.profile_id, seller).commission}
+                  onChange={(event) =>
+                    setSellerPricingDrafts((prev) => ({
+                      ...prev,
+                      [seller.profile_id]: {
+                        ...getSellerDraft(seller.profile_id, seller),
+                        commission: event.target.value,
+                      },
+                    }))
+                  }
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                  placeholder="Commission override %"
+                />
+                <input
+                  type="number"
+                  step="1"
+                  value={getSellerDraft(seller.profile_id, seller).serviceFee}
+                  onChange={(event) =>
+                    setSellerPricingDrafts((prev) => ({
+                      ...prev,
+                      [seller.profile_id]: {
+                        ...getSellerDraft(seller.profile_id, seller),
+                        serviceFee: event.target.value,
+                      },
+                    }))
+                  }
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                  placeholder="Frais override XOF"
+                />
+                <input
+                  type="number"
+                  step="1"
+                  value={getSellerDraft(seller.profile_id, seller).subscriptionFee}
+                  onChange={(event) =>
+                    setSellerPricingDrafts((prev) => ({
+                      ...prev,
+                      [seller.profile_id]: {
+                        ...getSellerDraft(seller.profile_id, seller),
+                        subscriptionFee: event.target.value,
+                      },
+                    }))
+                  }
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                  placeholder="Abonnement override XOF"
+                />
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
                 <Button
                   size="sm"
-                  variant="outline"
                   onClick={() =>
-                    verifySellerMutation.mutate({
+                    sellerPricingMutation.mutate({
                       profileId: seller.profile_id,
-                      verified: !seller.is_verified,
+                      commissionRateOverride: getSellerDraft(seller.profile_id, seller).commission.trim()
+                        ? parseNonNegativeNumber(
+                            getSellerDraft(seller.profile_id, seller).commission,
+                            seller.effective_commission_rate * 100
+                          ) / 100
+                        : null,
+                      serviceFeeOverride: getSellerDraft(seller.profile_id, seller).serviceFee.trim()
+                        ? parseNonNegativeNumber(
+                            getSellerDraft(seller.profile_id, seller).serviceFee,
+                            seller.effective_service_fee
+                          )
+                        : null,
+                      sellerSubscriptionFeeOverride: getSellerDraft(seller.profile_id, seller).subscriptionFee.trim()
+                        ? parseNonNegativeNumber(
+                            getSellerDraft(seller.profile_id, seller).subscriptionFee,
+                            seller.effective_seller_subscription_fee
+                          )
+                        : null,
                     })
                   }
                 >
-                  {seller.is_verified ? "Retirer badge" : "Verifier"}
-                </Button>
-                <Button
-                  size="sm"
-                  className="border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
-                  onClick={() => deleteSellerMutation.mutate(seller.profile_id)}
-                >
-                  Supprimer vendeur
+                  Enregistrer tarif boutique
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => restoreSellerMutation.mutate(seller.profile_id)}
+                  onClick={() => {
+                    setSellerPricingDrafts((prev) => ({
+                      ...prev,
+                      [seller.profile_id]: { commission: "", serviceFee: "", subscriptionFee: "" },
+                    }));
+                    sellerPricingMutation.mutate({
+                      profileId: seller.profile_id,
+                      commissionRateOverride: null,
+                      serviceFeeOverride: null,
+                      sellerSubscriptionFeeOverride: null,
+                    });
+                  }}
                 >
-                  Restaurer
+                  Revenir au tarif global
                 </Button>
               </div>
             </div>
