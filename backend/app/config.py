@@ -117,7 +117,7 @@ class Settings(BaseSettings):
         if self.admin_finance_pin in {"CHANGE_ME", "0000", "1234"} or len(self.admin_finance_pin) < 4:
             raise ValueError("ADMIN_FINANCE_PIN must be set to a strong value in production")
 
-        if self.admin_birth_date in {"07/11/03", "1970-01-01", "01/01/1970"}:
+        if len(self.admin_birth_date.strip()) < 6:
             raise ValueError("ADMIN_BIRTH_DATE must be set in production")
 
         if self.payment_encryption_key.startswith("REPLACE_WITH"):

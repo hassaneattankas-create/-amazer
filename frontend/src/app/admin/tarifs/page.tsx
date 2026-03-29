@@ -5,6 +5,10 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
+import {
+  buildAdminFinanceVerifyPayload,
+  getAdminFinanceVerifyError,
+} from "@/lib/admin-finance-verification";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import {
   deleteAdminSeller,
@@ -96,7 +100,7 @@ export default function AdminTarifsPage() {
       setPin("");
       setBirthDate("");
     },
-    onError: () => setStatus("Verification admin invalide."),
+    onError: (error) => setStatus(getAdminFinanceVerifyError(error)),
   });
 
   const { data: settings, isPending } = useQuery({
@@ -265,21 +269,27 @@ export default function AdminTarifsPage() {
         <article className="premium-card border border-slate-200 bg-white p-6">
           <h1 className="luxury-title text-2xl font-semibold">Panneau Tarifs Admin</h1>
           <p className="mt-2 text-sm text-slate-600">Acces protege par MFA + secret admin + cle secondaire.</p>
+          <p className="mt-1 text-xs text-slate-500">
+            Si tu inverses la date et le PIN, l&apos;app corrige automatiquement.
+          </p>
           <div className="mt-4 flex gap-3">
             <input
               type="password"
               value={pin}
               onChange={(event) => setPin(event.target.value)}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="Secret admin"
+              placeholder="PIN admin"
             />
             <input
               value={birthDate}
               onChange={(event) => setBirthDate(event.target.value)}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="Cle secondaire"
+              placeholder="Date secondaire JJ/MM/AA"
             />
-            <Button onClick={() => pinMutation.mutate({ pin, birth_date: birthDate })} disabled={!pin || !birthDate}>
+            <Button
+              onClick={() => pinMutation.mutate(buildAdminFinanceVerifyPayload(pin, birthDate))}
+              disabled={!pin || !birthDate}
+            >
               Verifier
             </Button>
           </div>

@@ -8,6 +8,10 @@ import { AxiosError } from "axios";
 import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
+import {
+  buildAdminFinanceVerifyPayload,
+  getAdminFinanceVerifyError,
+} from "@/lib/admin-finance-verification";
 import { getAdminAdClickStats } from "@/services/content-service";
 import { formatXOF } from "@/lib/currency";
 import {
@@ -136,7 +140,7 @@ export default function AdminFinancePage() {
       setPin("");
       setBirthDate("");
     },
-    onError: () => setPinStatus("Verification admin invalide."),
+    onError: (error) => setPinStatus(getAdminFinanceVerifyError(error)),
   });
 
   const updateMutation = useMutation({
@@ -224,23 +228,26 @@ export default function AdminFinancePage() {
           <p className="mt-2 text-sm text-slate-600">
             Acces prive: saisissez le secret admin et la cle secondaire pour consulter les fonds.
           </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Si tu inverses la date et le PIN, l&apos;app corrige automatiquement.
+          </p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <input
               value={pin}
               onChange={(event) => setPin(event.target.value)}
               type="password"
-              placeholder="Secret admin"
+              placeholder="PIN admin"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
             />
             <input
               value={birthDate}
               onChange={(event) => setBirthDate(event.target.value)}
-              placeholder="Cle secondaire"
+              placeholder="Date secondaire JJ/MM/AA"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
             />
             <Button
               type="button"
-              onClick={() => pinMutation.mutate({ pin, birth_date: birthDate })}
+              onClick={() => pinMutation.mutate(buildAdminFinanceVerifyPayload(pin, birthDate))}
               disabled={!pin || !birthDate || pinMutation.isPending}
               className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
             >

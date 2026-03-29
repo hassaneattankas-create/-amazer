@@ -5,6 +5,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
+import {
+  buildAdminFinanceVerifyPayload,
+  getAdminFinanceVerifyError,
+} from "@/lib/admin-finance-verification";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
   getAdminUserStats,
@@ -33,7 +37,7 @@ export default function AdminUsersPage() {
       setBirthDate("");
     },
     onError: (error) => {
-      setPinStatus(getApiErrorMessage(error, "Verification admin invalide."));
+      setPinStatus(getAdminFinanceVerifyError(error));
     },
   });
 
@@ -84,23 +88,26 @@ export default function AdminUsersPage() {
           <p className="mt-2 text-sm text-slate-600">
             Verification requise pour gerer les comptes clients, vendeurs et administrateur.
           </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Si tu inverses la date et le PIN, l&apos;app corrige automatiquement.
+          </p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <input
               value={pin}
               onChange={(event) => setPin(event.target.value)}
               type="password"
-              placeholder="Secret admin"
+              placeholder="PIN admin"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
             />
             <input
               value={birthDate}
               onChange={(event) => setBirthDate(event.target.value)}
-              placeholder="Cle secondaire"
+              placeholder="Date secondaire JJ/MM/AA"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
             />
             <Button
               type="button"
-              onClick={() => pinMutation.mutate({ pin, birth_date: birthDate })}
+              onClick={() => pinMutation.mutate(buildAdminFinanceVerifyPayload(pin, birthDate))}
               disabled={!pin || !birthDate || pinMutation.isPending}
               className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
             >
