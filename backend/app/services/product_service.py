@@ -166,8 +166,8 @@ class ProductService:
             created_at = offer.row.product.created_at
             created_timestamp = self._to_timestamp(created_at)
             return (
-                boost_rank,
                 -created_timestamp,
+                boost_rank,
                 -offer.ranking.score_total,
                 offer.row.price.amount,
             )

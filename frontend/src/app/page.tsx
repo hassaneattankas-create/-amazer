@@ -80,6 +80,17 @@ function rankStorefrontsForDiscovery(stores: VendorStorefront[]): VendorStorefro
   });
 }
 
+function buildRecentBoutiques(stores: VendorStorefront[]): VendorStorefront[] {
+  const seen = new Set<string>();
+  return stores.filter((store) => {
+    if (seen.has(store.id)) {
+      return false;
+    }
+    seen.add(store.id);
+    return true;
+  });
+}
+
 export default function HomePage() {
   const [query, setQuery] = useState("");
   const [barcode, setBarcode] = useState("");
@@ -122,6 +133,10 @@ export default function HomePage() {
     return products.filter((entry) => entry.category?.slug === activeShelf);
   }, [activeShelf, products]);
   const boostedResults = useMemo(() => withBoostRotation(shelfFiltered), [shelfFiltered]);
+  const displayResults = useMemo(
+    () => (hasActiveFilter ? boostedResults : shelfFiltered),
+    [boostedResults, hasActiveFilter, shelfFiltered]
+  );
 
   const featuredOffers = useMemo(() => {
     const cards: Array<{ id: string; name: string; brand: string; amount: number; slug: string }> = [];
@@ -152,17 +167,21 @@ export default function HomePage() {
     () => rankStorefrontsForDiscovery(shopStorefronts).slice(0, 6),
     [shopStorefronts]
   );
+  const recentBoutiques = useMemo(
+    () => buildRecentBoutiques(shopStorefronts).slice(0, 6),
+    [shopStorefronts]
+  );
 
-  const showSkeletons = isPending || (isFetching && boostedResults.length === 0);
-  const isEmptyState = hasActiveFilter && !isPending && !isError && boostedResults.length === 0;
+  const showSkeletons = isPending || (isFetching && displayResults.length === 0);
+  const isEmptyState = hasActiveFilter && !isPending && !isError && displayResults.length === 0;
 
   const statusLabel = useMemo(() => {
     if (!hasActiveFilter) return "Top produits du marche Niger.";
     if (isPending) return "Recherche en cours...";
     if (isError) return `Erreur: ${(error as Error).message}`;
-    if (!boostedResults.length) return "Aucun produit trouve.";
-    return `${boostedResults.length} produit(s) trouves`;
-  }, [boostedResults.length, error, hasActiveFilter, isError, isPending]);
+    if (!displayResults.length) return "Aucun produit trouve.";
+    return `${displayResults.length} produit(s) trouves`;
+  }, [displayResults.length, error, hasActiveFilter, isError, isPending]);
 
   const onBarcodeDetected = (value: string) => {
     setBarcode(value);
@@ -265,6 +284,27 @@ export default function HomePage() {
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {featuredBoutiques.map((store) => (
               <StorefrontShowcaseCard key={store.id} store={store} />
+            ))}
+          </div>
+        </article>
+      ) : null}
+
+      {!hasActiveFilter && recentBoutiques.length ? (
+        <article className="premium-card mt-5 border border-slate-200 bg-white p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="luxury-title text-lg font-semibold text-slate-900">Nouvelles Boutiques</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Les boutiques creees ou mises a jour recemment remontent ici, meme avant un gros stock.
+              </p>
+            </div>
+            <Link href="/boutiques" className="text-sm font-medium text-[#FF4D00]">
+              Voir tout
+            </Link>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {recentBoutiques.map((store) => (
+              <StorefrontShowcaseCard key={`recent-${store.id}`} store={store} ctaLabel="Explorer" />
             ))}
           </div>
         </article>
@@ -386,7 +426,7 @@ export default function HomePage() {
             </motion.div>
           ) : null}
 
-          {!showSkeletons && boostedResults.length > 0 ? (
+          {!showSkeletons && displayResults.length > 0 ? (
             <motion.div
               key="results-grid"
               initial={{ opacity: 0 }}
@@ -395,7 +435,7 @@ export default function HomePage() {
               transition={{ type: "spring", stiffness: 200, damping: 22 }}
               className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3"
             >
-              {boostedResults.map((product: ProductSearchItem, index) => (
+              {displayResults.map((product: ProductSearchItem, index) => (
                 <motion.div
                   key={product.id}
                   initial={{ opacity: 0, y: 16 }}

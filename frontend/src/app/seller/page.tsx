@@ -102,10 +102,23 @@ function loadDraft<T>(key: string, fallback: T): T {
   }
 }
 
+function normalizeSellerActivityType(
+  value: string | null | undefined,
+): "shop" | "restaurant" | "enterprise" {
+  if (value === "restaurant") {
+    return "restaurant";
+  }
+  if (value === "enterprise" || value === "hotel") {
+    return "enterprise";
+  }
+  return "shop";
+}
+
 function SellerPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const requestedSellerType = normalizeSellerActivityType(searchParams.get("type"));
   const { data: user, isPending: isAuthPending } = useCurrentUser();
   const queryClient = useQueryClient();
   const setAppMode = useAuthStore((state) => state.setAppMode);
@@ -118,8 +131,9 @@ function SellerPageContent() {
       city: "Niamey",
       phone: "",
       address: "",
-      activity_type: "shop" as "shop" | "restaurant" | "hotel" | "enterprise",
-      storefront_tier: "basic" as "basic" | "premium",
+      activity_type: requestedSellerType as "shop" | "restaurant" | "hotel" | "enterprise",
+      storefront_tier:
+        (requestedSellerType === "enterprise" ? "premium" : "basic") as "basic" | "premium",
       description: "",
       logo_url: "",
       cover_image_url: "",
@@ -229,16 +243,11 @@ function SellerPageContent() {
       city: prev.city || profile.city || "Niamey",
       phone: prev.phone || profile.phone || "",
       address: prev.address || profile.address || "",
-      activity_type:
-        prev.activity_type ||
-        (profile.activity_type === "hotel" ? "enterprise" : profile.activity_type) ||
-        "shop",
+      activity_type: normalizeSellerActivityType(profile.activity_type),
       storefront_tier:
-        prev.storefront_tier ||
-        (profile.activity_type === "hotel" || profile.activity_type === "enterprise"
+        profile.activity_type === "hotel" || profile.activity_type === "enterprise"
           ? "premium"
-          : profile.storefront_tier) ||
-        "basic",
+          : profile.storefront_tier || "basic",
       description: prev.description || profile.description || "",
       logo_url: prev.logo_url || profile.logo_url || "",
       cover_image_url: prev.cover_image_url || profile.cover_image_url || "",

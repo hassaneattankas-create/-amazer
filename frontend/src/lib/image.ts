@@ -1,6 +1,12 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || "";
+const BACKEND_ORIGIN = (
+  process.env.NEXT_PUBLIC_BACKEND_ORIGIN?.trim() || "https://amazer-api.onrender.com"
+).replace(/\/$/, "");
 
 function getApiOrigin(): string {
+  if (BACKEND_ORIGIN) {
+    return BACKEND_ORIGIN;
+  }
   if (!API_BASE_URL) {
     return "";
   }
