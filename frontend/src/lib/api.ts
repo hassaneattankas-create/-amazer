@@ -1,12 +1,17 @@
 import axios from "axios";
 
+const API_PROXY_BASE_URL = "/backend-api";
+
 const API_BASE_URL = (() => {
   const fromEnv = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (typeof window !== "undefined" && /^https?:$/.test(window.location.protocol)) {
+    return API_PROXY_BASE_URL;
+  }
   if (fromEnv) {
     return fromEnv;
   }
   if (process.env.NODE_ENV === "production") {
-    throw new Error("NEXT_PUBLIC_API_URL must be defined in production builds.");
+    return API_PROXY_BASE_URL;
   }
   return "http://localhost:8000";
 })();

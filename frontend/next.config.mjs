@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const isProd = process.env.NODE_ENV === "production";
 const isStaticExport = process.env.NEXT_STATIC_EXPORT === "true";
+const backendOrigin = (process.env.NEXT_PUBLIC_BACKEND_ORIGIN || "https://amazer-api.onrender.com").trim().replace(/\/$/, "");
 
 function buildConnectSrc() {
   const origins = new Set(["'self'"]);
@@ -74,6 +75,17 @@ const nextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 7,
     deviceSizes: [360, 414, 640, 768, 1024, 1280],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
+  },
+  async rewrites() {
+    if (isStaticExport) {
+      return [];
+    }
+    return [
+      {
+        source: "/backend-api/:path*",
+        destination: `${backendOrigin}/:path*`,
+      },
+    ];
   },
   async headers() {
     if (!isProd) {
