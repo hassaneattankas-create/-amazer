@@ -6,8 +6,8 @@ import { ShoppingCart, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
+import { useAdminMe } from "@/hooks/use-admin-me";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { isAdminEmail } from "@/lib/admin";
 import { clearAppMode, persistAppMode } from "@/lib/session-mode";
 import { logout } from "@/services/auth-service";
 import { getSellerProfile } from "@/services/seller-service";
@@ -45,6 +45,7 @@ export function FloatingNavbar() {
   const appMode = useAuthStore((state) => state.appMode);
   const setAppMode = useAuthStore((state) => state.setAppMode);
   const resetSessionView = useAuthStore((state) => state.resetSessionView);
+  const { data: adminMe } = useAdminMe(Boolean(user?.id));
   const { data: sellerProfile, isFetched: sellerProfileFetched } = useQuery({
     queryKey: ["navbar-seller-profile", user?.id],
     queryFn: getSellerProfile,
@@ -52,7 +53,7 @@ export function FloatingNavbar() {
     staleTime: 60_000,
   });
 
-  const showAdminLink = isAdminEmail(user?.email);
+  const showAdminLink = Boolean(adminMe?.is_admin);
   const showSellerLink = Boolean(sellerProfile?.id);
   const isAuthenticated = Boolean(user?.id);
   const showClientDashboard = isAuthenticated && appMode !== "seller";

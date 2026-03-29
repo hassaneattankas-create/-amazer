@@ -9,6 +9,7 @@ import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { persistAppMode } from "@/lib/session-mode";
+import { getAdminMe } from "@/services/admin-service";
 import { login } from "@/services/auth-service";
 import { requestAndRegisterNotifications } from "@/services/notification-service";
 import { getSellerProfile } from "@/services/seller-service";
@@ -36,6 +37,13 @@ function LoginPageContent() {
       });
       // Demande opt-in notifications apres premiere connexion reussie.
       void requestAndRegisterNotifications();
+      const adminMe = await getAdminMe().catch(() => null);
+      if (adminMe?.is_admin) {
+        setAppMode("client");
+        persistAppMode("client");
+        window.location.assign("/admin");
+        return;
+      }
       const sellerProfile = await getSellerProfile().catch(() => null);
       if (sellerProfile?.id) {
         setAppMode("seller");

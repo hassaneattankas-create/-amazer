@@ -6,8 +6,8 @@ import { useEffect } from "react";
 import { BarChart3, CreditCard, FolderTree, QrCode, SlidersHorizontal, Users } from "lucide-react";
 
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
+import { useAdminMe } from "@/hooks/use-admin-me";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { isAdminEmail } from "@/lib/admin";
 
 const adminNavItems = [
   { href: "/admin", label: "Vue Generale", icon: BarChart3 },
@@ -22,22 +22,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const { data: user, isPending, isError } = useCurrentUser();
-  const isAdmin = isAdminEmail(user?.email);
+  const {
+    data: adminMe,
+    isPending: isAdminPending,
+    isError: isAdminError,
+  } = useAdminMe(Boolean(user?.id));
+  const isAdmin = Boolean(adminMe?.is_admin);
 
   useEffect(() => {
-    if (isPending) {
+    if (isPending || (user && isAdminPending)) {
       return;
     }
-    if (isError || !user) {
+    if (isError || !user || isAdminError) {
       router.replace(`/login?next=${encodeURIComponent(pathname || "/admin")}`);
       return;
     }
     if (!isAdmin) {
       router.replace("/dashboard");
     }
-  }, [isAdmin, isError, isPending, pathname, router, user]);
+  }, [isAdmin, isAdminError, isAdminPending, isError, isPending, pathname, router, user]);
 
-  if (isPending) {
+  if (isPending || (user && isAdminPending)) {
     return (
       <section className="mx-auto w-full max-w-7xl space-y-4 px-4 pb-14 sm:px-6">
         <ProductCardSkeleton />
