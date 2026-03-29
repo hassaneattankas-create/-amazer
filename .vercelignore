@@ -1,0 +1,14 @@
+.git/
+.vercel/
+backend/
+docs/
+render.yaml
+
+frontend/.vercel/
+frontend/node_modules/
+frontend/.next/
+frontend/.next_backup_before_prod_build/
+frontend/*.log
+frontend/*3000*.err.log
+frontend/*3000*.out.log
+frontend/tsconfig.tsbuildinfo
