@@ -26,7 +26,29 @@ class Settings(BaseSettings):
     admin_finance_pin: str = Field(default="CHANGE_ME")
     admin_birth_date: str = Field(default="07/11/03")
     cors_allowed_origins: str = Field(
-        default="https://amazer.vercel.app,https://www.amazer.vercel.app,https://amazerniger.vercel.app,https://www.amazerniger.vercel.app"
+        default=(
+            "https://amazer.vercel.app,"
+            "https://www.amazer.vercel.app,"
+            "https://amazerniger.vercel.app,"
+            "https://www.amazerniger.vercel.app,"
+            "https://amazerniger-hub-amazer.vercel.app,"
+            "https://amazerapp.com,"
+            "https://www.amazerapp.com,"
+            "http://localhost:3000,"
+            "http://127.0.0.1:3000,"
+            "http://localhost:3001,"
+            "http://127.0.0.1:3001"
+        )
+    )
+    cors_allowed_origin_regex: str = Field(
+        default=(
+            r"^("
+            r"https://.*\.vercel\.app"
+            r"|https://(www\.)?amazerapp\.com"
+            r"|http://localhost:\d+"
+            r"|http://127\.0\.0\.1:\d+"
+            r")$"
+        )
     )
     # Hostnames acceptes par l API (header Host). En production, lister explicitement (ex: api.tondomaine.com).
     allowed_hosts: str = Field(default="*")
@@ -52,11 +74,22 @@ class Settings(BaseSettings):
     s3_secret_access_key: str | None = Field(default=None)
 
     def get_cors_origins(self) -> list[str]:
-        if self.app_env.lower() == "development":
-            return ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", *[
-                origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()
-            ]]
-        return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
+        defaults = [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:3001",
+            "http://127.0.0.1:3001",
+        ]
+        configured = [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
+        merged: list[str] = []
+        for origin in [*defaults, *configured]:
+            if origin not in merged:
+                merged.append(origin)
+        return merged
+
+    def get_cors_origin_regex(self) -> str | None:
+        value = self.cors_allowed_origin_regex.strip()
+        return value or None
 
     def is_production(self) -> bool:
         return self.app_env.lower() == "production"

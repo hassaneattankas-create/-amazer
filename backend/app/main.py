@@ -49,6 +49,7 @@ if settings.media_storage_provider.lower() == "local":
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.get_cors_origins(),
+    allow_origin_regex=settings.get_cors_origin_regex(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
