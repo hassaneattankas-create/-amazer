@@ -170,6 +170,35 @@ export function FloatingNavbar() {
         </div>
 
         <div className="flex items-center gap-2">
+          <div className="relative md:hidden">
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen((open) => !open)}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/70 px-3 py-2 text-xs font-medium text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
+            >
+              Rubriques
+              <ChevronDown
+                className={`h-3.5 w-3.5 transition ${isMenuOpen ? "rotate-180 text-[#FF4D00]" : ""}`}
+              />
+            </button>
+
+            {isMenuOpen ? (
+              <div className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(18rem,calc(100vw-1.5rem))] overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.18)] backdrop-blur-xl">
+                <div className="max-h-72 overflow-y-auto p-3">
+                  {groupedNavItems.map((item) => (
+                    <Link
+                      key={`mobile-header-${item.href}`}
+                      href={item.href}
+                      onClick={() => setIsMenuOpen(false)}
+                      className="mb-2 flex rounded-2xl border border-transparent bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-[#FF4D00]/20 hover:bg-orange-50 hover:text-[#FF4D00]"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
           {showSellerLink ? null : (
             <Link
               href="/vendre"
@@ -229,7 +258,7 @@ export function FloatingNavbar() {
         </div>
       </div>
 
-      <nav className="flex items-center gap-2 overflow-x-auto border-t border-slate-100 px-3 py-2 md:hidden">
+      <nav className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-3 py-2 md:hidden">
         {!isAuthenticated ? (
           <Link
             href="/register"
@@ -247,33 +276,6 @@ export function FloatingNavbar() {
             {isLoggingOut ? "Deconnexion..." : "Deconnexion"}
           </button>
         )}
-        <div className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => setIsMenuOpen((open) => !open)}
-            className="inline-flex items-center gap-2 whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs font-medium text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
-          >
-            Rubriques
-            <ChevronDown className={`h-3.5 w-3.5 transition ${isMenuOpen ? "rotate-180 text-[#FF4D00]" : ""}`} />
-          </button>
-
-          {isMenuOpen ? (
-            <div className="absolute left-0 top-[calc(100%+0.5rem)] z-50 w-56 overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.18)] backdrop-blur-xl">
-              <div className="max-h-72 overflow-y-auto p-3">
-                {groupedNavItems.map((item) => (
-                  <Link
-                    key={`mobile-${item.href}`}
-                    href={item.href}
-                    onClick={() => setIsMenuOpen(false)}
-                    className="mb-2 flex rounded-2xl border border-transparent bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-[#FF4D00]/20 hover:bg-orange-50 hover:text-[#FF4D00]"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
         {showSellerLink ? null : (
           <Link
             href="/vendre"
