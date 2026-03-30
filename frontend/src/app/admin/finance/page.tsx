@@ -345,13 +345,44 @@ export default function AdminFinancePage() {
               }
             />
             <AdminNumberField
-              label="Abonnement Vendeur"
-              value={effective.seller_subscription_fee}
+              label="Abonnement boutique"
+              value={effective.seller_subscription_fee_shop}
               suffix="XOF / mois"
               onChange={(value) =>
                 setDraft({
                   ...effective,
-                  seller_subscription_fee: parseNonNegativeNumber(value, effective.seller_subscription_fee),
+                  seller_subscription_fee_shop: parseNonNegativeNumber(
+                    value,
+                    effective.seller_subscription_fee_shop
+                  ),
+                })
+              }
+            />
+            <AdminNumberField
+              label="Abonnement restaurant"
+              value={effective.seller_subscription_fee_restaurant}
+              suffix="XOF / mois"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  seller_subscription_fee_restaurant: parseNonNegativeNumber(
+                    value,
+                    effective.seller_subscription_fee_restaurant
+                  ),
+                })
+              }
+            />
+            <AdminNumberField
+              label="Abonnement premium"
+              value={effective.seller_subscription_fee_premium}
+              suffix="XOF / mois"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  seller_subscription_fee_premium: parseNonNegativeNumber(
+                    value,
+                    effective.seller_subscription_fee_premium
+                  ),
                 })
               }
             />

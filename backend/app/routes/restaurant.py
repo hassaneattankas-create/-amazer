@@ -2,8 +2,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
+from app.core.cache import cache_delete_prefixes
 from app.core.deps import get_current_user
 from app.core.csrf import enforce_csrf
 from app.core.crypto import decrypt_phone_value, encrypt_payment_code, payment_code_hash
@@ -33,6 +34,10 @@ from app.services.listing_limit_service import (
 from app.services.payment_security_service import verify_payment_code
 
 router = APIRouter(prefix="/restaurant", tags=["restaurant"])
+
+
+def _invalidate_public_marketplace_cache() -> None:
+    cache_delete_prefixes("catalog:", "content:")
 
 
 def _estimate_delivery_minutes(distance_km: float, prep_minutes: int) -> int:
@@ -106,6 +111,9 @@ def _get_or_create_settings(db: Session) -> GlobalSettings:
             urban_delivery_fee=1500,
             peripheral_delivery_fee=2200,
             seller_subscription_fee=5000,
+            seller_subscription_fee_shop=5000,
+            seller_subscription_fee_restaurant=5000,
+            seller_subscription_fee_premium=5000,
             ad_boost_price=2000,
             ad_boost_duration_days=7,
             ad_boost_price_24h=1000,
@@ -121,6 +129,15 @@ def _get_or_create_settings(db: Session) -> GlobalSettings:
         db.commit()
         db.refresh(settings_row)
     return settings_row
+
+
+def _is_public_restaurant_vendor(vendor: Vendor | None, profile: SellerProfile | None) -> bool:
+    if vendor is None or not vendor.is_active or profile is None:
+        return False
+    owner = getattr(profile, "user", None)
+    if owner is not None and not owner.is_active:
+        return False
+    return True
 
 
 @router.get("/storefronts", response_model=RestaurantStorefrontListResponse)
@@ -145,7 +162,11 @@ def list_restaurant_storefronts(
     vendors = db.scalars(
         select(Vendor).where(Vendor.id.in_(vendor_ids), Vendor.is_active.is_(True))
     ).all()
-    profiles = db.scalars(select(SellerProfile).where(SellerProfile.vendor_id.in_(vendor_ids))).all()
+    profiles = db.scalars(
+        select(SellerProfile)
+        .where(SellerProfile.vendor_id.in_(vendor_ids))
+        .options(selectinload(SellerProfile.user))
+    ).all()
     profile_by_vendor = {profile.vendor_id: profile for profile in profiles}
 
     needle = query.strip().lower() if query else ""
@@ -155,7 +176,7 @@ def list_restaurant_storefronts(
         if not vendor_menu:
             continue
         profile = profile_by_vendor.get(vendor.id)
-        if profile is None or not profile.is_verified:
+        if not _is_public_restaurant_vendor(vendor, profile) or not profile.is_verified:
             continue
         can_sell_restaurant = profile.activity_type == "restaurant" or profile.storefront_tier == "premium"
         if not can_sell_restaurant:
@@ -215,14 +236,18 @@ def list_restaurant_menu(
 
     vendor_ids = {row.vendor_id for row in rows}
     vendors = db.scalars(select(Vendor).where(Vendor.id.in_(vendor_ids))).all()
-    vendor_map = {vendor.id: vendor.name for vendor in vendors}
-    profiles = db.scalars(select(SellerProfile).where(SellerProfile.vendor_id.in_(vendor_ids))).all()
+    vendor_map = {vendor.id: vendor for vendor in vendors}
+    profiles = db.scalars(
+        select(SellerProfile)
+        .where(SellerProfile.vendor_id.in_(vendor_ids))
+        .options(selectinload(SellerProfile.user))
+    ).all()
     profile_map = {profile.vendor_id: profile for profile in profiles}
     filtered_rows = [
         row
         for row in rows
         if (
-            profile_map.get(row.vendor_id) is not None
+            _is_public_restaurant_vendor(vendor_map.get(row.vendor_id), profile_map.get(row.vendor_id))
             and (
                 profile_map[row.vendor_id].activity_type == "restaurant"
                 or profile_map[row.vendor_id].storefront_tier == "premium"
@@ -230,7 +255,10 @@ def list_restaurant_menu(
             and profile_map[row.vendor_id].is_verified
         )
     ]
-    return [_menu_response(row, vendor_map.get(row.vendor_id, "Restaurant")) for row in filtered_rows]
+    return [
+        _menu_response(row, vendor_map.get(row.vendor_id).name if vendor_map.get(row.vendor_id) else "Restaurant")
+        for row in filtered_rows
+    ]
 
 
 @router.post("/menu", response_model=RestaurantMenuItemResponse, status_code=status.HTTP_201_CREATED)
@@ -268,6 +296,7 @@ def create_restaurant_menu_item(
     db.add(menu_item)
     db.commit()
     db.refresh(menu_item)
+    _invalidate_public_marketplace_cache()
     vendor = db.get(Vendor, profile.vendor_id)
     vendor_name = vendor.name if vendor else "Restaurant"
     return _menu_response(menu_item, vendor_name)
@@ -283,7 +312,12 @@ def create_restaurant_order(
     enforce_csrf(request)
     enforce_rate_limit(request, key="payment_restaurant", limit=12, window_seconds=60)
     vendor = db.get(Vendor, payload.vendor_id)
-    if vendor is None:
+    profile = db.scalar(
+        select(SellerProfile)
+        .where(SellerProfile.vendor_id == payload.vendor_id)
+        .options(selectinload(SellerProfile.user))
+    )
+    if not _is_public_restaurant_vendor(vendor, profile):
         raise NotFoundError("Restaurant not found")
 
     menu_ids = [line.menu_item_id for line in payload.items]

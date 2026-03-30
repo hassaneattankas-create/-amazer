@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink } from "lucide-react";
 
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { formatXOF } from "@/lib/currency";
 import { getSecureReceipt } from "@/services/order-service";
+
+const MANUAL_PAYMENT_PHONE = "+227 96953163";
 
 export default function OrderReceiptPage() {
   const params = useParams<{ id: string }>();
@@ -30,13 +31,6 @@ export default function OrderReceiptPage() {
     }
     return window.location.href;
   }, []);
-
-  const paymentLabel = useMemo(() => {
-    if (!data) {
-      return "Payer";
-    }
-    return data.payment_mode === "nita" ? "Ouvrir le paiement Nita" : "Ouvrir le paiement Amana";
-  }, [data]);
 
   async function downloadPdf() {
     if (!receiptRef.current) {
@@ -194,21 +188,18 @@ export default function OrderReceiptPage() {
         <div className="mt-5 space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
           <p className="text-sm font-semibold text-slate-900">Paiement mobile ({data.payment_mode.toUpperCase()})</p>
           <p className="text-xs text-slate-600">
-            Utilise le lien officiel ci-dessous. Les versements AMAZER sont centralises sur le numero plateforme indique.
+            Faites le versement manuellement au numero AMAZER ci-dessous, puis revenez confirmer que le paiement est bien
+            effectue.
           </p>
-          {data.platform_wallet_phone ? (
-            <p className="text-sm text-slate-800">
-              <span className="font-semibold">Numero AMAZER (wallet):</span> {data.platform_wallet_phone}
-            </p>
-          ) : null}
-          <Button asChild className="primary-glow-btn w-full bg-[#FF4D00] text-white hover:bg-[#e74700]">
-            <a href={data.payment_url} target="_blank" rel="noreferrer">
-              <span className="inline-flex items-center justify-center gap-2">
-                {paymentLabel}
-                <ExternalLink className="h-4 w-4" />
-              </span>
-            </a>
-          </Button>
+          <p className="text-sm text-slate-800">
+            <span className="font-semibold">Numero AMAZER:</span> {MANUAL_PAYMENT_PHONE}
+          </p>
+          <p className="text-sm text-slate-800">
+            <span className="font-semibold">Montant a verser:</span> {formatXOF(data.total_amount)}
+          </p>
+          <p className="text-sm text-slate-800">
+            <span className="font-semibold">Reference a garder:</span> {data.payment_reference ?? "-"}
+          </p>
         </div>
       </article>
 

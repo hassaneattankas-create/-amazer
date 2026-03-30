@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.cache import cache_delete_prefixes
 from app.core.deps import get_admin_user, get_current_user, get_seller_user
 from app.core.crypto import decrypt_phone_value, encrypt_phone_value
 from app.core.csrf import enforce_csrf
@@ -52,6 +53,10 @@ from app.services.seller_finance_service import (
 from app.services.seller_profile_service import create_or_update_seller_profile
 
 router = APIRouter(prefix="/seller", tags=["seller"])
+
+
+def _invalidate_public_marketplace_cache() -> None:
+    cache_delete_prefixes("catalog:", "content:")
 
 
 def _slugify(value: str) -> str:
@@ -178,6 +183,7 @@ def upsert_profile(
     )
     db.commit()
     db.refresh(profile)
+    _invalidate_public_marketplace_cache()
     return _profile_response(profile, db)
 
 
@@ -187,8 +193,15 @@ def get_storefront(
     db: Annotated[Session, Depends(get_db)],
 ) -> SellerStorefrontResponse:
     vendor = db.get(Vendor, vendor_id)
-    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == vendor_id))
-    if vendor is None or profile is None:
+    profile = db.scalar(
+        select(SellerProfile).where(SellerProfile.vendor_id == vendor_id).options(selectinload(SellerProfile.user))
+    )
+    if (
+        vendor is None
+        or not vendor.is_active
+        or profile is None
+        or (profile.user is not None and not profile.user.is_active)
+    ):
         raise NotFoundError("Storefront not found")
 
     products = db.scalars(
@@ -336,6 +349,7 @@ def create_product_listing(
     )
 
     db.commit()
+    _invalidate_public_marketplace_cache()
     return SellerProductCreateResponse(
         product_id=product.id,
         price_id=price.id,
@@ -446,6 +460,7 @@ def update_inventory_item(
     )
     db.commit()
     db.refresh(price)
+    _invalidate_public_marketplace_cache()
 
     promo_price, promo_until, boost_until = _sync_product_flags(price.product)
     return SellerInventoryItemResponse(

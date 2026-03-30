@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy import select
 
 from app.core.deps import get_auth_service, get_current_user
+from app.core.cache import cache_delete_prefixes
 from app.core.csrf import enforce_csrf, generate_csrf_token
 from app.config import get_settings
 from app.core.exceptions import UnauthorizedError
@@ -28,6 +29,10 @@ from app.services.security_log_service import log_security_event
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
+
+
+def _invalidate_public_marketplace_cache() -> None:
+    cache_delete_prefixes("catalog:", "content:")
 
 
 def _set_auth_cookies(response: Response, tokens: dict[str, str]) -> None:
@@ -171,6 +176,7 @@ def delete_account(
     enforce_csrf(request)
     enforce_rate_limit(request, key="auth_delete_account", limit=4, window_seconds=600)
     auth_service.close_account(user=user, password=payload.password.get_secret_value())
+    _invalidate_public_marketplace_cache()
     log_security_event(
         auth_service.db,
         event_type="account_deleted_by_user",

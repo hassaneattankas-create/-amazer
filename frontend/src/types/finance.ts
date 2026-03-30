@@ -4,7 +4,9 @@ export type FinanceSettings = {
   default_delivery_fee: number;
   urban_delivery_fee: number;
   peripheral_delivery_fee: number;
-  seller_subscription_fee: number;
+  seller_subscription_fee_shop: number;
+  seller_subscription_fee_restaurant: number;
+  seller_subscription_fee_premium: number;
   ad_boost_price: number;
   ad_boost_duration_days: number;
   ad_boost_price_24h: number;

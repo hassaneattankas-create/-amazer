@@ -251,7 +251,11 @@ class ProductService:
         )
 
     def _rank_product_offers(self, product: Product) -> list[RankedOffer]:
-        active_prices = [price for price in product.prices if price.is_active]
+        active_prices = [
+            price
+            for price in product.prices
+            if price.is_active and self._is_vendor_publicly_visible(getattr(price, "vendor", None))
+        ]
         if not active_prices:
             return []
 
@@ -301,6 +305,15 @@ class ProductService:
             for point in history_points
         }
         return sorted(unique_points.values(), key=lambda point: point.changed_at)
+
+    def _is_vendor_publicly_visible(self, vendor) -> bool:
+        if vendor is None or not bool(getattr(vendor, "is_active", False)):
+            return False
+        profile = getattr(vendor, "seller_profile", None)
+        owner = getattr(profile, "user", None)
+        if owner is not None and not bool(getattr(owner, "is_active", False)):
+            return False
+        return True
 
     def _is_product_boosted(self, product: Product) -> bool:
         if not bool(getattr(product, "is_boosted", False)):

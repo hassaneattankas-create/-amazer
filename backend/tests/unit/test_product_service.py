@@ -93,3 +93,21 @@ def test_search_products_price_asc_sorts_by_price() -> None:
     )
 
     assert result.items[0].best_offer.amount <= result.items[1].best_offer.amount
+
+
+def test_rank_product_offers_ignores_inactive_vendor_account() -> None:
+    db = Mock()
+    service = ProductService(db)
+    active_vendor = SimpleNamespace(id="v1", is_active=True, seller_profile=SimpleNamespace(user=SimpleNamespace(is_active=True)))
+    deleted_vendor = SimpleNamespace(id="v2", is_active=True, seller_profile=SimpleNamespace(user=SimpleNamespace(is_active=False)))
+    product = SimpleNamespace(
+        prices=[
+            SimpleNamespace(id="p1", amount=100, stock_quantity=5, is_active=True, vendor=active_vendor),
+            SimpleNamespace(id="p2", amount=80, stock_quantity=5, is_active=True, vendor=deleted_vendor),
+        ]
+    )
+
+    ranked = service._rank_product_offers(product)  # type: ignore[arg-type]
+
+    assert len(ranked) == 1
+    assert ranked[0].row.price.id == "p1"

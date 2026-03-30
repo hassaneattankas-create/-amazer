@@ -108,6 +108,15 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE restaurant_order_items ADD COLUMN IF NOT EXISTS customer_note VARCHAR(500)",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS max_products_basic_tier INTEGER DEFAULT 10",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS platform_wallet_phone VARCHAR(40)",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS seller_subscription_fee_shop DOUBLE PRECISION DEFAULT 5000",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS seller_subscription_fee_restaurant DOUBLE PRECISION DEFAULT 5000",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS seller_subscription_fee_premium DOUBLE PRECISION DEFAULT 5000",
+        (
+            "UPDATE global_settings SET "
+            "seller_subscription_fee_shop = COALESCE(seller_subscription_fee_shop, seller_subscription_fee, 5000), "
+            "seller_subscription_fee_restaurant = COALESCE(seller_subscription_fee_restaurant, seller_subscription_fee, 5000), "
+            "seller_subscription_fee_premium = COALESCE(seller_subscription_fee_premium, seller_subscription_fee, 5000)"
+        ),
     ):
         _run_ddl_safely(statement)
 

@@ -9,7 +9,9 @@ class FinanceSettingsResponse(BaseModel):
     commission_rate: float
     service_fee: float
     default_delivery_fee: float
-    seller_subscription_fee: float
+    seller_subscription_fee_shop: float
+    seller_subscription_fee_restaurant: float
+    seller_subscription_fee_premium: float
     ad_boost_price: float
     ad_boost_duration_days: int
     urban_delivery_fee: float
@@ -30,7 +32,9 @@ class FinanceSettingsUpdateRequest(BaseModel):
     commission_rate: float = Field(ge=0)
     service_fee: float = Field(ge=0)
     default_delivery_fee: float = Field(ge=0)
-    seller_subscription_fee: float = Field(ge=0)
+    seller_subscription_fee_shop: float = Field(ge=0)
+    seller_subscription_fee_restaurant: float = Field(ge=0)
+    seller_subscription_fee_premium: float = Field(ge=0)
     ad_boost_price: float = Field(ge=0)
     ad_boost_duration_days: int = Field(ge=1, le=365)
     urban_delivery_fee: float = Field(ge=0)

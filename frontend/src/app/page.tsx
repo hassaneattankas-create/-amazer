@@ -12,7 +12,6 @@ import { BarcodeScannerDrawer } from "@/components/BarcodeScannerDrawer";
 import { HeroSection } from "@/components/HeroSection";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
-import { StorefrontShowcaseCard } from "@/components/storefront/StorefrontShowcaseCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -20,10 +19,8 @@ import { formatMoney } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
 import { getHomeContent, trackAdClick } from "@/services/content-service";
 import { getPublicContactInfo } from "@/services/finance-service";
-import { listStorefronts } from "@/services/catalog-service";
 import { useProductSearch } from "@/hooks/use-product-search";
 import { useAuthStore } from "@/store/auth-store";
-import { VendorStorefront } from "@/types/catalog";
 import { HomeContentProduct } from "@/types/content";
 import { ProductSearchItem } from "@/types/product";
 
@@ -62,35 +59,6 @@ function withBoostRotation<T extends { is_boosted: boolean }>(items: T[]): T[] {
   return [...rotated.slice(0, 3), ...regular, ...rotated.slice(3)];
 }
 
-function rankStorefrontsForDiscovery(stores: VendorStorefront[]): VendorStorefront[] {
-  return [...stores].sort((a, b) => {
-    const byProducts = b.product_count - a.product_count;
-    if (byProducts !== 0) {
-      return byProducts;
-    }
-    const byStartingPrice = Number(Boolean(b.starting_price)) - Number(Boolean(a.starting_price));
-    if (byStartingPrice !== 0) {
-      return byStartingPrice;
-    }
-    const byVerification = Number(b.is_verified) - Number(a.is_verified);
-    if (byVerification !== 0) {
-      return byVerification;
-    }
-    return (a.business_name || a.name).localeCompare(b.business_name || b.name);
-  });
-}
-
-function buildRecentBoutiques(stores: VendorStorefront[]): VendorStorefront[] {
-  const seen = new Set<string>();
-  return stores.filter((store) => {
-    if (seen.has(store.id)) {
-      return false;
-    }
-    seen.add(store.id);
-    return true;
-  });
-}
-
 export default function HomePage() {
   const [query, setQuery] = useState("");
   const [barcode, setBarcode] = useState("");
@@ -109,16 +77,6 @@ export default function HomePage() {
     queryKey: ["public-contact-info"],
     queryFn: getPublicContactInfo,
     staleTime: 60_000,
-  });
-  const { data: premiumStorefronts = [] } = useQuery({
-    queryKey: ["home-premium-storefronts"],
-    queryFn: () => listStorefronts({ storefrontTier: "premium", limit: 24 }),
-    staleTime: 120_000,
-  });
-  const { data: shopStorefronts = [] } = useQuery({
-    queryKey: ["home-shop-storefronts"],
-    queryFn: () => listStorefronts({ activityType: "shop", limit: 48 }),
-    staleTime: 120_000,
   });
   const { data, isPending, isFetching, isError, error } = useProductSearch({
     query: debouncedBarcode ? "" : debouncedQuery,
@@ -155,22 +113,6 @@ export default function HomePage() {
     }
     return shuffleItems(cards).slice(0, 12);
   }, [homeContent?.sections]);
-
-  const featuredPremium = useMemo(
-    () =>
-      premiumStorefronts
-        .filter((store) => store.storefront_tier === "premium" && store.is_verified)
-        .slice(0, 3),
-    [premiumStorefronts]
-  );
-  const featuredBoutiques = useMemo(
-    () => rankStorefrontsForDiscovery(shopStorefronts).slice(0, 6),
-    [shopStorefronts]
-  );
-  const recentBoutiques = useMemo(
-    () => buildRecentBoutiques(shopStorefronts).slice(0, 6),
-    [shopStorefronts]
-  );
 
   const showSkeletons = isPending || (isFetching && displayResults.length === 0);
   const isEmptyState = hasActiveFilter && !isPending && !isError && displayResults.length === 0;
@@ -247,69 +189,6 @@ export default function HomePage() {
         </article>
       ) : null}
 
-      {!hasActiveFilter && featuredPremium.length ? (
-        <article className="premium-card mt-5 border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="luxury-title text-lg font-semibold text-slate-900">Premium Entreprises</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Boutique + restaurant + services exclusifs dans un mini-site complet.
-              </p>
-            </div>
-            <Link href="/hotels" className="text-sm font-medium text-[#FF4D00]">
-              Voir tout
-            </Link>
-          </div>
-          <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-            {featuredPremium.map((store) => (
-              <StorefrontShowcaseCard key={store.id} store={store} ctaLabel="Voir le premium" />
-            ))}
-          </div>
-        </article>
-      ) : null}
-
-      {!hasActiveFilter && featuredBoutiques.length ? (
-        <article className="premium-card mt-5 border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="luxury-title text-lg font-semibold text-slate-900">Boutiques Actives</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Les enseignes avec stock visible remontent en premier, y compris les nouvelles boutiques vendeurs.
-              </p>
-            </div>
-            <Link href="/boutiques" className="text-sm font-medium text-[#FF4D00]">
-              Voir tout
-            </Link>
-          </div>
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {featuredBoutiques.map((store) => (
-              <StorefrontShowcaseCard key={store.id} store={store} />
-            ))}
-          </div>
-        </article>
-      ) : null}
-
-      {!hasActiveFilter && recentBoutiques.length ? (
-        <article className="premium-card mt-5 border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="luxury-title text-lg font-semibold text-slate-900">Nouvelles Boutiques</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Les boutiques creees ou mises a jour recemment remontent ici, meme avant un gros stock.
-              </p>
-            </div>
-            <Link href="/boutiques" className="text-sm font-medium text-[#FF4D00]">
-              Voir tout
-            </Link>
-          </div>
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {recentBoutiques.map((store) => (
-              <StorefrontShowcaseCard key={`recent-${store.id}`} store={store} ctaLabel="Explorer" />
-            ))}
-          </div>
-        </article>
-      ) : null}
-
       {homeContent?.top_banner_url && !hasActiveFilter ? (
         <Link
           href="/search"
@@ -372,32 +251,6 @@ export default function HomePage() {
           </Drawer.Root>
         </div>
       </div>
-
-      {activeShelf === "restaurant" ? (
-        <article className="premium-card mt-5 border border-orange-200 bg-gradient-to-br from-orange-50 via-amber-50 to-white p-5">
-          <h2 className="luxury-title text-xl font-semibold text-slate-900">Restaurant Appetissant</h2>
-          <p className="mt-1 text-sm text-slate-600">Selection chaude du jour pour livraison a Niamey.</p>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {(homeContent?.sections ?? [])
-              .flatMap((section) =>
-                section.restaurants.map((entry) => ({ ...entry, sectionSlug: section.slug }))
-              )
-              .slice(0, 6)
-              .map((restaurant) => (
-                <Link
-                  key={restaurant.id}
-                  href="/restaurant"
-                  className="rounded-xl border border-orange-200 bg-white p-4 shadow-[0_0_16px_rgba(251,146,60,0.2)]"
-                >
-                  <span className="rounded-full border border-rose-300 bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
-                    Plat du Jour
-                  </span>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">{restaurant.name}</p>
-                </Link>
-              ))}
-          </div>
-        </article>
-      ) : null}
 
       <div className="mt-8">
         {!hasActiveFilter ? (
@@ -482,6 +335,9 @@ export default function HomePage() {
         <div className="mt-10 space-y-7">
           {homeContent.sections.map((section) => {
             const sectionProducts = withBoostRotation(section.products);
+            if (!sectionProducts.length) {
+              return null;
+            }
             return (
               <section key={section.id} className="space-y-3">
                 <h2 className="luxury-title text-2xl font-semibold text-slate-900">{section.title}</h2>
@@ -523,23 +379,6 @@ export default function HomePage() {
                           </Link>
                         </Button>
                       </article>
-                    ))}
-                  </div>
-                ) : null}
-
-                {section.restaurants.length ? (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {section.restaurants.map((restaurant) => (
-                      <Link
-                        key={restaurant.id}
-                        href="/restaurant"
-                        className="premium-card border border-orange-200 bg-gradient-to-br from-orange-50 to-white p-4 text-sm font-medium text-slate-800"
-                      >
-                        <span className="rounded-full border border-rose-300 bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
-                          Plat du Jour
-                        </span>
-                        <p className="mt-2">{restaurant.name}</p>
-                      </Link>
                     ))}
                   </div>
                 ) : null}

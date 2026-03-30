@@ -10,6 +10,7 @@ from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.config import get_settings
+from app.core.cache import cache_delete_prefixes
 from app.core.crypto import decrypt_payment_code, decrypt_phone_value, encrypt_payment_code
 from app.core.csrf import enforce_csrf
 from app.core.deps import get_admin_user
@@ -57,6 +58,10 @@ router = APIRouter(prefix="/admin/finance", tags=["admin-finance"])
 settings = get_settings()
 AUTO_RECEIPT_TIMEOUT_HOURS = 24
 
+
+def _invalidate_public_marketplace_cache() -> None:
+    cache_delete_prefixes("catalog:", "content:")
+
 def _get_or_create_settings(db: Session) -> GlobalSettings:
     return get_or_create_global_settings(db)
 
@@ -70,7 +75,9 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
         commission_rate=_effective_commission_rate(settings),
         service_fee=settings.service_fee,
         default_delivery_fee=settings.default_delivery_fee,
-        seller_subscription_fee=settings.seller_subscription_fee,
+        seller_subscription_fee_shop=settings.seller_subscription_fee_shop,
+        seller_subscription_fee_restaurant=settings.seller_subscription_fee_restaurant,
+        seller_subscription_fee_premium=settings.seller_subscription_fee_premium,
         ad_boost_price=settings.ad_boost_price,
         ad_boost_duration_days=settings.ad_boost_duration_days,
         urban_delivery_fee=settings.urban_delivery_fee,
@@ -338,7 +345,10 @@ def update_finance_settings(
     settings_row.default_delivery_fee = payload.default_delivery_fee
     settings_row.urban_delivery_fee = payload.urban_delivery_fee
     settings_row.peripheral_delivery_fee = payload.peripheral_delivery_fee
-    settings_row.seller_subscription_fee = payload.seller_subscription_fee
+    settings_row.seller_subscription_fee_shop = payload.seller_subscription_fee_shop
+    settings_row.seller_subscription_fee_restaurant = payload.seller_subscription_fee_restaurant
+    settings_row.seller_subscription_fee_premium = payload.seller_subscription_fee_premium
+    settings_row.seller_subscription_fee = payload.seller_subscription_fee_shop
     settings_row.ad_boost_price = payload.ad_boost_price
     settings_row.ad_boost_duration_days = payload.ad_boost_duration_days
     settings_row.ad_boost_price_24h = payload.ad_boost_price_24h
@@ -900,6 +910,7 @@ def deactivate_user_admin(
         details={"email": target.email},
     )
     db.commit()
+    _invalidate_public_marketplace_cache()
 
 
 @router.post("/users/{user_id}/restore", response_model=AdminUserResponse)
@@ -933,6 +944,7 @@ def restore_user_admin(
     )
     db.commit()
     db.refresh(target)
+    _invalidate_public_marketplace_cache()
     seller_user_ids = {profile.user_id} if profile is not None else set()
     return _build_admin_user_response(target, seller_user_ids)
 
@@ -985,6 +997,7 @@ def disable_seller(
         details={"vendor_id": profile.vendor_id, "user_id": profile.user_id},
     )
     db.commit()
+    _invalidate_public_marketplace_cache()
 
 
 @router.post("/sellers/{profile_id}/restore", response_model=AdminSellerResponse)
@@ -1018,6 +1031,7 @@ def restore_seller(
     )
     db.commit()
     db.refresh(profile)
+    _invalidate_public_marketplace_cache()
     vendor = db.get(Vendor, profile.vendor_id)
     return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
 
@@ -1048,6 +1062,7 @@ def verify_seller(
     )
     db.commit()
     db.refresh(profile)
+    _invalidate_public_marketplace_cache()
     vendor = db.get(Vendor, profile.vendor_id)
     return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
 

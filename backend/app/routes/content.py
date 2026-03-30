@@ -16,6 +16,7 @@ from app.models.ad_click import AdClick
 from app.models.category import Category
 from app.models.dynamic_section import DynamicSection, DynamicSectionItem
 from app.models.product import Price, Product
+from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.schemas.content import (
@@ -42,11 +43,25 @@ ads_router = APIRouter(prefix="/ads", tags=["ads"])
 
 
 def _best_offer_price(product: Product) -> tuple[float, str] | None:
-    active = [price for price in product.prices if price.is_active and price.stock_quantity > 0]
+    active = [
+        price
+        for price in product.prices
+        if price.is_active and price.stock_quantity > 0 and _is_vendor_publicly_visible(price.vendor)
+    ]
     if not active:
         return None
     best = min(active, key=lambda row: row.amount)
     return best.amount, best.currency
+
+
+def _is_vendor_publicly_visible(vendor: Vendor | None) -> bool:
+    if vendor is None or not vendor.is_active:
+        return False
+    profile = getattr(vendor, "seller_profile", None)
+    owner = getattr(profile, "user", None)
+    if owner is not None and not owner.is_active:
+        return False
+    return True
 
 
 def _is_boost_active(product: Product) -> bool:
@@ -292,16 +307,40 @@ def get_home_content(
         select(DynamicSection)
         .where(DynamicSection.is_active.is_(True))
         .options(
-            selectinload(DynamicSection.items).selectinload(DynamicSectionItem.product).selectinload(Product.prices),
-            selectinload(DynamicSection.items).selectinload(DynamicSectionItem.vendor),
+            selectinload(DynamicSection.items)
+            .selectinload(DynamicSectionItem.product)
+            .selectinload(Product.prices)
+            .selectinload(Price.vendor)
+            .selectinload(Vendor.seller_profile)
+            .selectinload(SellerProfile.user),
+            selectinload(DynamicSection.items)
+            .selectinload(DynamicSectionItem.vendor)
+            .selectinload(Vendor.seller_profile)
+            .selectinload(SellerProfile.user),
         )
         .order_by(DynamicSection.sort_order.asc(), DynamicSection.created_at.desc())
     ).all()
 
     banner_candidates = db.scalars(
-        select(Product).where(Product.ad_banner_url.is_not(None)).order_by(Product.updated_at.desc()).limit(40)
+        select(Product)
+        .where(Product.ad_banner_url.is_not(None))
+        .options(
+            selectinload(Product.prices)
+            .selectinload(Price.vendor)
+            .selectinload(Vendor.seller_profile)
+            .selectinload(SellerProfile.user)
+        )
+        .order_by(Product.updated_at.desc())
+        .limit(40)
     ).all()
-    top_banner = next((entry.ad_banner_url for entry in banner_candidates if _is_boost_active(entry)), None)
+    top_banner = next(
+        (
+            entry.ad_banner_url
+            for entry in banner_candidates
+            if _is_boost_active(entry) and _best_offer_price(entry) is not None
+        ),
+        None,
+    )
 
     payload_sections: list[HomeSectionResponse] = []
     for section in sections:
@@ -326,7 +365,7 @@ def get_home_content(
                         currency=currency,
                     )
                 )
-            if item.target_type == "restaurant" and item.vendor is not None:
+            if item.target_type == "restaurant" and item.vendor is not None and _is_vendor_publicly_visible(item.vendor):
                 restaurants.append(
                     HomeRestaurantCard(
                         id=item.vendor.id,

@@ -114,6 +114,29 @@ function normalizeSellerActivityType(
   return "shop";
 }
 
+function resolveGlobalSubscriptionFeeByType(
+  finance:
+    | {
+        seller_subscription_fee_shop: number;
+        seller_subscription_fee_restaurant: number;
+        seller_subscription_fee_premium: number;
+      }
+    | null
+    | undefined,
+  activityType: "shop" | "restaurant" | "enterprise" | "hotel",
+): number {
+  if (!finance) {
+    return 0;
+  }
+  if (activityType === "restaurant") {
+    return finance.seller_subscription_fee_restaurant ?? 0;
+  }
+  if (activityType === "enterprise" || activityType === "hotel") {
+    return finance.seller_subscription_fee_premium ?? 0;
+  }
+  return finance.seller_subscription_fee_shop ?? 0;
+}
+
 function SellerPageContent() {
   const router = useRouter();
   const pathname = usePathname();
@@ -367,7 +390,12 @@ function SellerPageContent() {
     commissionRate: profile?.effective_commission_rate ?? publicFinance?.commission_rate ?? 0,
     serviceFee: profile?.effective_service_fee ?? publicFinance?.service_fee ?? 0,
     sellerSubscriptionFee:
-      profile?.effective_seller_subscription_fee ?? publicFinance?.seller_subscription_fee ?? 0,
+      profile?.effective_seller_subscription_fee ??
+      resolveGlobalSubscriptionFeeByType(
+        publicFinance,
+        (profile?.activity_type as "shop" | "restaurant" | "enterprise" | "hotel" | undefined) ??
+          profileForm.activity_type
+      ),
   };
   const welcomeMessage =
     searchParams.get("welcome") === "1"

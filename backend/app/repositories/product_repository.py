@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.category import Category
 from app.models.product import Price, Product
+from app.models.seller_profile import SellerProfile
+from app.models.user import User
 from app.models.vendor import Vendor
 
 
@@ -27,7 +29,10 @@ class ProductRepository:
             .where(Product.id == product_id)
             .options(
                 selectinload(Product.images),
-                selectinload(Product.prices).selectinload(Price.vendor),
+                selectinload(Product.prices)
+                .selectinload(Price.vendor)
+                .selectinload(Vendor.seller_profile)
+                .selectinload(SellerProfile.user),
                 selectinload(Product.prices).selectinload(Price.history_entries),
                 selectinload(Product.category),
             )
@@ -62,12 +67,19 @@ class ProductRepository:
             select(Product, Price, text_rank_expr.label("text_rank"))
             .join(Price, Price.product_id == Product.id)
             .join(Vendor, Vendor.id == Price.vendor_id)
+            .outerjoin(SellerProfile, SellerProfile.vendor_id == Vendor.id)
+            .outerjoin(User, User.id == SellerProfile.user_id)
             .outerjoin(Category, Category.id == Product.category_id)
             .where(Price.is_active.is_(True))
+            .where(Vendor.is_active.is_(True))
+            .where(or_(SellerProfile.user_id.is_(None), User.is_active.is_(True)))
             .options(
                 selectinload(Product.images),
                 selectinload(Product.category),
-                selectinload(Product.prices).selectinload(Price.vendor),
+                selectinload(Product.prices)
+                .selectinload(Price.vendor)
+                .selectinload(Vendor.seller_profile)
+                .selectinload(SellerProfile.user),
             )
         )
 

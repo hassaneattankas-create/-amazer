@@ -1,14 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { QRCodeCanvas } from "qrcode.react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatXOF } from "@/lib/currency";
 import { confirmPayment, getPaymentIntent } from "@/services/order-service";
+
+const MANUAL_PAYMENT_PHONE = "+227 96953163";
 
 export default function OrderPayPage() {
   const params = useParams<{ id: string }>();
@@ -34,19 +35,12 @@ export default function OrderPayPage() {
     onError: () => setStatus("Confirmation impossible. Reessayez."),
   });
 
-  const payLabel = useMemo(() => {
-    if (!data) {
-      return "Payer";
-    }
-    return data.payment_mode === "nita" ? "Payer avec Nita" : "Payer avec Amana";
-  }, [data]);
-
   return (
     <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="luxury-title text-3xl font-semibold">Finaliser le paiement</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Plus besoin de code long. Utilisez la reference courte puis confirmez.
+          Faites le versement manuellement puis revenez confirmer le paiement ici.
         </p>
 
         {isPending ? <p className="mt-3 text-sm text-slate-500">Preparation du paiement...</p> : null}
@@ -60,21 +54,24 @@ export default function OrderPayPage() {
               <p className="mt-2 text-sm text-slate-700">Montant: {formatXOF(data.amount)}</p>
             </div>
 
-            <div className="flex flex-col items-center gap-2 rounded-2xl border border-slate-200 p-4">
-              <QRCodeCanvas value={data.qr_payload} size={180} includeMargin />
-              <p className="text-xs text-slate-500">Scanner pour ouvrir le paiement</p>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-900">
+                Paiement {data.payment_mode === "nita" ? "Nita" : "Amana"} par versement manuel
+              </p>
+              <p className="mt-2 text-sm text-slate-700">
+                Envoyez exactement <span className="font-semibold">{formatXOF(data.amount)}</span> au numero{" "}
+                <span className="font-semibold text-[#FF4D00]">{MANUAL_PAYMENT_PHONE}</span>.
+              </p>
+              <p className="mt-2 text-sm text-slate-700">
+                Ajoutez la reference <span className="font-semibold">{data.payment_reference}</span> si votre operateur
+                le permet, puis revenez ici pour confirmer apres le versement.
+              </p>
             </div>
-
-            <Button asChild className="primary-glow-btn w-full bg-[#FF4D00] text-white hover:bg-[#e74700]">
-              <a href={data.payment_url} target="_blank" rel="noreferrer">
-                {payLabel}
-              </a>
-            </Button>
 
             <Input
               value={providerReference}
               onChange={(event) => setProviderReference(event.target.value)}
-              placeholder="Reference operateur (optionnel)"
+              placeholder="Reference operateur ou numero de transaction (optionnel)"
             />
 
             <Button

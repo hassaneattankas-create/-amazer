@@ -52,6 +52,29 @@ def cache_set_json(key: str, value: dict[str, Any] | list[Any], ttl_seconds: int
     client.setex(key, ttl_seconds, payload)
 
 
+def cache_delete_prefix(prefix: str) -> int:
+    client = _get_cache_client()
+    if client is None:
+        return 0
+    deleted = 0
+    try:
+        for key in client.scan_iter(match=f"{prefix}*"):
+            deleted += int(client.delete(key) or 0)
+    except Exception:
+        return 0
+    return deleted
+
+
+def cache_delete_prefixes(*prefixes: str) -> None:
+    seen: set[str] = set()
+    for prefix in prefixes:
+        normalized = prefix.strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        cache_delete_prefix(normalized)
+
+
 def build_cache_key(prefix: str, **params: Any) -> str:
     parts = [prefix]
     for key in sorted(params):

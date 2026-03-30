@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.models.category import Category
 from app.models.product import Price, Product
 from app.models.seller_profile import SellerProfile
+from app.models.user import User
 from app.models.vendor import Vendor
 
 
@@ -27,7 +28,10 @@ class CatalogRepository:
     def list_active_vendors(self, *, limit: int, offset: int, query: str | None = None) -> list[Vendor]:
         stmt = (
             select(Vendor)
+            .outerjoin(SellerProfile, SellerProfile.vendor_id == Vendor.id)
+            .outerjoin(User, User.id == SellerProfile.user_id)
             .where(Vendor.is_active.is_(True))
+            .where(or_(SellerProfile.user_id.is_(None), User.is_active.is_(True)))
             .order_by(Vendor.name.asc())
             .offset(offset)
             .limit(limit)
@@ -56,8 +60,10 @@ class CatalogRepository:
     ) -> list[Vendor]:
         stmt = (
             select(Vendor)
-            .outerjoin(SellerProfile, SellerProfile.vendor_id == Vendor.id)
+            .join(SellerProfile, SellerProfile.vendor_id == Vendor.id)
+            .join(User, User.id == SellerProfile.user_id)
             .options(selectinload(Vendor.seller_profile))
+            .where(Vendor.is_active.is_(True), User.is_active.is_(True))
             .order_by(Vendor.updated_at.desc(), Vendor.name.asc())
             .offset(offset)
             .limit(limit)
@@ -89,8 +95,13 @@ class CatalogRepository:
             return []
         stmt = (
             select(Price)
+            .join(Vendor, Vendor.id == Price.vendor_id)
+            .outerjoin(SellerProfile, SellerProfile.vendor_id == Vendor.id)
+            .outerjoin(User, User.id == SellerProfile.user_id)
             .where(Price.vendor_id.in_(vendor_ids))
             .where(Price.is_active.is_(True))
+            .where(Vendor.is_active.is_(True))
+            .where(or_(SellerProfile.user_id.is_(None), User.is_active.is_(True)))
             .options(
                 selectinload(Price.product).selectinload(Product.category),
                 selectinload(Price.vendor).selectinload(Vendor.seller_profile),

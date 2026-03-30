@@ -124,6 +124,10 @@ class CatalogService:
                     room_type_count=len(getattr(getattr(vendor, "seller_profile", None), "room_types", []) or []),
                 )
                 for vendor in vendors
+                if self._has_public_storefront_content(
+                    getattr(vendor, "seller_profile", None),
+                    product_count=len(product_counter.get(vendor.id, set())),
+                )
             ]
         )
 
@@ -137,6 +141,20 @@ class CatalogService:
         if tier == "premium":
             return "Premium"
         return None
+
+    def _has_public_storefront_content(self, profile, *, product_count: int) -> bool:
+        if profile is None:
+            return product_count > 0
+        activity_type = self._norm_optional_str(getattr(profile, "activity_type", None))
+        storefront_tier = self._norm_optional_str(getattr(profile, "storefront_tier", None))
+        service_count = len(list(getattr(profile, "service_offerings", []) or []))
+        room_type_count = len(list(getattr(profile, "room_types", []) or []))
+
+        if activity_type == "shop":
+            return product_count > 0
+        if storefront_tier == "premium" or activity_type in {"hotel", "enterprise"}:
+            return product_count > 0 or service_count > 0 or room_type_count > 0
+        return product_count > 0
 
     def _build_price_suffix(self, profile) -> str | None:
         if profile is None:

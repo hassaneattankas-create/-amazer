@@ -29,6 +29,9 @@ def get_or_create_global_settings(db: Session) -> GlobalSettings:
             urban_delivery_fee=1500,
             peripheral_delivery_fee=2200,
             seller_subscription_fee=5000,
+            seller_subscription_fee_shop=5000,
+            seller_subscription_fee_restaurant=5000,
+            seller_subscription_fee_premium=5000,
             ad_boost_price=2000,
             ad_boost_duration_days=7,
             ad_boost_price_24h=1000,
@@ -44,6 +47,25 @@ def get_or_create_global_settings(db: Session) -> GlobalSettings:
         db.commit()
         db.refresh(row)
     return row
+
+
+def _base_subscription_fee_for_profile(
+    settings: GlobalSettings,
+    profile: SellerProfile | None = None,
+) -> float:
+    legacy_default = float(getattr(settings, "seller_subscription_fee", 5000) or 5000)
+    if profile is None:
+        return float(getattr(settings, "seller_subscription_fee_shop", legacy_default) or legacy_default)
+
+    activity_type = str(getattr(profile, "activity_type", "")).strip().lower()
+    storefront_tier = str(getattr(profile, "storefront_tier", "")).strip().lower()
+    if storefront_tier == "premium" or activity_type in {"hotel", "enterprise"}:
+        configured = getattr(settings, "seller_subscription_fee_premium", None)
+    elif activity_type == "restaurant":
+        configured = getattr(settings, "seller_subscription_fee_restaurant", None)
+    else:
+        configured = getattr(settings, "seller_subscription_fee_shop", None)
+    return float(configured if configured is not None else legacy_default)
 
 
 def build_effective_seller_finance_settings(
@@ -70,7 +92,7 @@ def build_effective_seller_finance_settings(
     seller_subscription_fee = (
         float(profile.seller_subscription_fee_override)
         if subscription_overridden and profile is not None
-        else float(settings.seller_subscription_fee)
+        else _base_subscription_fee_for_profile(settings, profile)
     )
 
     return EffectiveSellerFinanceSettings(

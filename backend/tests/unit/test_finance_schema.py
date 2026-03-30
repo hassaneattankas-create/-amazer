@@ -6,7 +6,9 @@ def test_finance_settings_response_includes_global_tariff_fields() -> None:
         commission_rate=0.05,
         service_fee=200,
         default_delivery_fee=1500,
-        seller_subscription_fee=5000,
+        seller_subscription_fee_shop=5000,
+        seller_subscription_fee_restaurant=6500,
+        seller_subscription_fee_premium=12000,
         ad_boost_price=2000,
         ad_boost_duration_days=7,
         urban_delivery_fee=1500,
@@ -19,6 +21,7 @@ def test_finance_settings_response_includes_global_tariff_fields() -> None:
     )
     assert payload.urban_delivery_fee == 1500
     assert payload.peripheral_delivery_fee == 2200
+    assert payload.seller_subscription_fee_restaurant == 6500
 
 
 def test_finance_settings_update_accepts_commission_above_100_percent() -> None:
@@ -26,7 +29,9 @@ def test_finance_settings_update_accepts_commission_above_100_percent() -> None:
         commission_rate=2.5,
         service_fee=0,
         default_delivery_fee=0,
-        seller_subscription_fee=0,
+        seller_subscription_fee_shop=0,
+        seller_subscription_fee_restaurant=0,
+        seller_subscription_fee_premium=0,
         ad_boost_price=0,
         ad_boost_duration_days=7,
         urban_delivery_fee=0,

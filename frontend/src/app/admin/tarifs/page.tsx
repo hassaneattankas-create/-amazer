@@ -386,16 +386,49 @@ export default function AdminTarifsPage() {
               }
             />
             <AdminNumberField
-              label="Frais d'ouverture / abonnement vendeur (toutes boutiques)"
-              value={effective.seller_subscription_fee}
+              label="Abonnement boutique"
+              value={effective.seller_subscription_fee_shop}
               suffix="XOF"
               onChange={(value) =>
                 setDraft({
                   ...effective,
-                  seller_subscription_fee: parseNonNegativeNumber(value, effective.seller_subscription_fee),
+                  seller_subscription_fee_shop: parseNonNegativeNumber(
+                    value,
+                    effective.seller_subscription_fee_shop
+                  ),
                 })
               }
-              helper="Montant de reference pour activer ou ouvrir une boutique (affiche cote vendeurs selon ton processus)."
+              helper="Montant global applique aux boutiques classiques."
+            />
+            <AdminNumberField
+              label="Abonnement restaurant"
+              value={effective.seller_subscription_fee_restaurant}
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  seller_subscription_fee_restaurant: parseNonNegativeNumber(
+                    value,
+                    effective.seller_subscription_fee_restaurant
+                  ),
+                })
+              }
+              helper="Montant global applique aux restaurants."
+            />
+            <AdminNumberField
+              label="Abonnement premium"
+              value={effective.seller_subscription_fee_premium}
+              suffix="XOF"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  seller_subscription_fee_premium: parseNonNegativeNumber(
+                    value,
+                    effective.seller_subscription_fee_premium
+                  ),
+                })
+              }
+              helper="Montant global applique aux boutiques premium / mini-sites."
             />
             <AdminNumberField
               label="Max articles catalogue & menu (hors Premium)"

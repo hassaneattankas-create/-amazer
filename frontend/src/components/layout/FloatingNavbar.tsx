@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { ShoppingCart, User } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, ShoppingCart, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
@@ -18,10 +18,10 @@ import { useCartStore } from "@/store/cartStore";
 const clientNavItems = [
   { href: "/", label: "Accueil" },
   { href: "/boutiques", label: "Boutiques" },
+  { href: "/restaurant", label: "Restaurant" },
   { href: "/hotels", label: "Premium" },
   { href: "/promotions", label: "Promotions" },
   { href: "/avis", label: "Avis" },
-  { href: "/restaurant", label: "Restaurant" },
 ];
 
 const sellerNavItems = [
@@ -43,6 +43,8 @@ export function FloatingNavbar() {
   const cartCount = items.reduce((total, item) => total + item.quantity, 0);
   const { data: user } = useCurrentUser();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const appMode = useAuthStore((state) => state.appMode);
   const setAppMode = useAuthStore((state) => state.setAppMode);
   const resetSessionView = useAuthStore((state) => state.resetSessionView);
@@ -60,6 +62,9 @@ export function FloatingNavbar() {
   const showClientDashboard = isAuthenticated && appMode !== "seller";
   const activeNavItems =
     isAuthenticated && appMode === "seller" ? sellerNavItems : clientNavItems;
+  const groupedNavItems = showClientDashboard
+    ? [...activeNavItems, { href: "/dashboard", label: "Dashboard" }]
+    : activeNavItems;
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -88,6 +93,27 @@ export function FloatingNavbar() {
     persistAppMode(appMode);
   }, [appMode, isAuthenticated]);
 
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
   async function handleLogout() {
     setIsLoggingOut(true);
     try {
@@ -104,31 +130,54 @@ export function FloatingNavbar() {
   }
 
   return (
-    <header className="pointer-events-auto fixed left-1/2 top-3 z-50 w-[min(1160px,calc(100%-1rem))] -translate-x-1/2 rounded-3xl border border-white/20 bg-white/70 shadow-[0_20px_50px_rgba(255,77,0,0.15)] backdrop-blur-xl">
+    <header
+      ref={menuRef}
+      className="pointer-events-auto fixed left-1/2 top-3 z-50 w-[min(1160px,calc(100%-1rem))] -translate-x-1/2 rounded-3xl border border-white/20 bg-white/70 shadow-[0_20px_50px_rgba(255,77,0,0.15)] backdrop-blur-xl"
+    >
       <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
         <Link href="/" className="inline-flex shrink-0 items-center gap-2">
           <span className="luxury-title text-lg font-semibold tracking-tight">AMAZER</span>
         </Link>
 
-        <nav className="hidden items-center gap-5 text-sm text-slate-700 md:flex">
-          {activeNavItems.map((item) => (
-            <Link key={item.href} href={item.href} className="transition hover:text-[#FF4D00]">
-              {item.label}
-            </Link>
-          ))}
-          {showClientDashboard ? (
-            <Link href="/dashboard" className="transition hover:text-[#FF4D00]">
-              Dashboard
-            </Link>
+        <div className="relative hidden md:block">
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen((open) => !open)}
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
+          >
+            Rubriques
+            <ChevronDown
+              className={`h-4 w-4 transition ${isMenuOpen ? "rotate-180 text-[#FF4D00]" : ""}`}
+            />
+          </button>
+
+          {isMenuOpen ? (
+            <div className="absolute left-0 top-[calc(100%+0.75rem)] z-50 w-64 overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.18)] backdrop-blur-xl">
+              <div className="max-h-80 overflow-y-auto p-3">
+                {groupedNavItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsMenuOpen(false)}
+                    className="mb-2 flex items-center rounded-2xl border border-transparent bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-[#FF4D00]/20 hover:bg-orange-50 hover:text-[#FF4D00]"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
           ) : null}
+        </div>
+
+        <div className="flex items-center gap-2">
           {showSellerLink ? null : (
-            <Link href="/vendre" className="transition hover:text-[#FF4D00]">
+            <Link
+              href="/vendre"
+              className="hidden items-center gap-2 rounded-md border border-white/20 bg-white/70 px-3 py-2 text-sm text-slate-700 backdrop-blur-xl hover:bg-white sm:inline-flex"
+            >
               Devenir vendeur
             </Link>
           )}
-        </nav>
-
-        <div className="flex items-center gap-2">
           {showAdminLink ? (
             <Link
               href="/admin"
@@ -180,7 +229,7 @@ export function FloatingNavbar() {
         </div>
       </div>
 
-      <nav className="flex gap-2 overflow-x-auto border-t border-slate-100 px-3 py-2 md:hidden">
+      <nav className="flex items-center gap-2 overflow-x-auto border-t border-slate-100 px-3 py-2 md:hidden">
         {!isAuthenticated ? (
           <Link
             href="/register"
@@ -198,23 +247,33 @@ export function FloatingNavbar() {
             {isLoggingOut ? "Deconnexion..." : "Deconnexion"}
           </button>
         )}
-        {activeNavItems.map((item) => (
-          <Link
-            key={`mobile-${item.href}`}
-            href={item.href}
-            className="whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen((open) => !open)}
+            className="inline-flex items-center gap-2 whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs font-medium text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
           >
-            {item.label}
-          </Link>
-        ))}
-        {showClientDashboard ? (
-          <Link
-            href="/dashboard"
-            className="whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
-          >
-            Dashboard
-          </Link>
-        ) : null}
+            Rubriques
+            <ChevronDown className={`h-3.5 w-3.5 transition ${isMenuOpen ? "rotate-180 text-[#FF4D00]" : ""}`} />
+          </button>
+
+          {isMenuOpen ? (
+            <div className="absolute left-0 top-[calc(100%+0.5rem)] z-50 w-56 overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.18)] backdrop-blur-xl">
+              <div className="max-h-72 overflow-y-auto p-3">
+                {groupedNavItems.map((item) => (
+                  <Link
+                    key={`mobile-${item.href}`}
+                    href={item.href}
+                    onClick={() => setIsMenuOpen(false)}
+                    className="mb-2 flex rounded-2xl border border-transparent bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-[#FF4D00]/20 hover:bg-orange-50 hover:text-[#FF4D00]"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
         {showSellerLink ? null : (
           <Link
             href="/vendre"
