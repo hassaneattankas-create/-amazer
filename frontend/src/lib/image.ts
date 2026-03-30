@@ -2,6 +2,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || "";
 const BACKEND_ORIGIN = (
   process.env.NEXT_PUBLIC_BACKEND_ORIGIN?.trim() || "https://amazer-api.onrender.com"
 ).replace(/\/$/, "");
+const IMAGE_PROXY_ROUTE = "/api/image-proxy";
 
 function getApiOrigin(): string {
   if (BACKEND_ORIGIN) {
@@ -26,6 +27,28 @@ function toHttpsIfPossible(url: URL): string {
   return url.toString();
 }
 
+function shouldProxyImageUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    if (!/^https?:$/i.test(url.protocol)) {
+      return false;
+    }
+    if (LOCAL_HOSTS.has(url.hostname)) {
+      return false;
+    }
+    if (typeof window !== "undefined" && url.origin === window.location.origin) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function toImageProxyUrl(value: string): string {
+  return `${IMAGE_PROXY_ROUTE}?url=${encodeURIComponent(value)}`;
+}
+
 export function resolveImageUrl(raw: string | null | undefined): string | null {
   if (!raw) {
     return null;
@@ -41,19 +64,25 @@ export function resolveImageUrl(raw: string | null | undefined): string | null {
 
   if (value.startsWith("/")) {
     const origin = getApiOrigin();
-    return origin ? `${origin}${value}` : null;
+    if (!origin) {
+      return null;
+    }
+    const absoluteUrl = `${origin}${value}`;
+    return shouldProxyImageUrl(absoluteUrl) ? toImageProxyUrl(absoluteUrl) : absoluteUrl;
   }
 
   if (/^https?:\/\//i.test(value)) {
     try {
-      return toHttpsIfPossible(new URL(value));
+      const absoluteUrl = toHttpsIfPossible(new URL(value));
+      return shouldProxyImageUrl(absoluteUrl) ? toImageProxyUrl(absoluteUrl) : absoluteUrl;
     } catch {
       return null;
     }
   }
 
   try {
-    return toHttpsIfPossible(new URL(`https://${value}`));
+    const absoluteUrl = toHttpsIfPossible(new URL(`https://${value}`));
+    return shouldProxyImageUrl(absoluteUrl) ? toImageProxyUrl(absoluteUrl) : absoluteUrl;
   } catch {
     return null;
   }
