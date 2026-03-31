@@ -1,4 +1,5 @@
-import { api } from "@/lib/api";
+import axios from "axios";
+import { api, getClientAccessToken, getClientCookieValue } from "@/lib/api";
 import {
   AdminSeller,
   AdminSellerPricingPayload,
@@ -43,7 +44,20 @@ export async function getAdminFinanceSummary(): Promise<FinanceSummary> {
 }
 
 export async function verifyAdminFinancePin(payload: VerifyPinPayload): Promise<void> {
-  await api.post("/api/v1/admin/finance/pin/verify", payload);
+  const headers: Record<string, string> = {};
+  const accessToken = getClientAccessToken();
+  const csrfToken = getClientCookieValue("csrf_token");
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+  if (csrfToken) {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
+  await axios.post("/api/admin-finance/pin/verify", payload, {
+    headers,
+    withCredentials: true,
+    timeout: 10000,
+  });
 }
 
 export async function getAdminWalletSummary(): Promise<WalletSummary> {

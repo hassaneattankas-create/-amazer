@@ -83,6 +83,10 @@ function getAccessToken(): string | null {
   return readStoredToken(ACCESS_TOKEN_KEY);
 }
 
+export function getClientAccessToken(): string | null {
+  return getAccessToken();
+}
+
 function getCookieValue(name: string): string | null {
   if (typeof document === "undefined") {
     return null;
@@ -95,6 +99,10 @@ function getCookieValue(name: string): string | null {
     }
   }
   return null;
+}
+
+export function getClientCookieValue(name: string): string | null {
+  return getCookieValue(name);
 }
 
 export const api = axios.create({
