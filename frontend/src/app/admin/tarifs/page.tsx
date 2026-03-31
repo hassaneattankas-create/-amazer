@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import {
+  getAdminFinanceDataError,
   buildAdminFinanceVerifyPayload,
   getAdminFinanceVerifyError,
 } from "@/lib/admin-finance-verification";
@@ -103,22 +104,34 @@ export default function AdminTarifsPage() {
     onError: (error) => setStatus(getAdminFinanceVerifyError(error)),
   });
 
-  const { data: settings, isPending } = useQuery({
+  const { data: settings, isPending, isError: isSettingsError, error: settingsError } = useQuery({
     queryKey: ["admin-tarifs-settings"],
     queryFn: getAdminFinanceSettings,
     enabled: pinVerified,
   });
-  const { data: auditHistory } = useQuery({
+  const {
+    data: auditHistory,
+    isError: isAuditError,
+    error: auditError,
+  } = useQuery({
     queryKey: ["admin-audit-history"],
     queryFn: () => listAdminAuditHistory(80),
     enabled: pinVerified,
   });
-  const { data: sellers } = useQuery({
+  const {
+    data: sellers,
+    isError: isSellersError,
+    error: sellersError,
+  } = useQuery({
     queryKey: ["admin-sellers"],
     queryFn: listAdminSellers,
     enabled: pinVerified,
   });
-  const { data: districtFees } = useQuery({
+  const {
+    data: districtFees,
+    isError: isDistrictError,
+    error: districtError,
+  } = useQuery({
     queryKey: ["admin-district-fees"],
     queryFn: listAdminDistrictFees,
     enabled: pinVerified,
@@ -224,6 +237,15 @@ export default function AdminTarifsPage() {
   }
 
   const effective = useMemo(() => draft ?? settings ?? null, [draft, settings]);
+  const protectedPageError = useMemo(() => {
+    const firstError =
+      settingsError ??
+      auditError ??
+      sellersError ??
+      districtError ??
+      null;
+    return firstError ? getAdminFinanceDataError(firstError) : "";
+  }, [auditError, districtError, sellersError, settingsError]);
   const districtRaw = useMemo(() => {
     if (districtDraft !== null) {
       return districtDraft;
@@ -300,6 +322,24 @@ export default function AdminTarifsPage() {
   }
 
   if (isPending || !effective) {
+    if ((isSettingsError || isAuditError || isSellersError || isDistrictError) && protectedPageError) {
+      return (
+        <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
+          <article className="premium-card border border-rose-200 bg-rose-50 p-6">
+            <h1 className="text-xl font-semibold text-rose-700">Chargement admin impossible</h1>
+            <p className="mt-2 text-sm text-rose-700">{protectedPageError}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button type="button" onClick={() => setPinVerified(false)}>
+                Revalider le PIN
+              </Button>
+              <Button type="button" variant="outline" onClick={() => window.location.assign("/login?next=/admin/tarifs")}>
+                Me reconnecter
+              </Button>
+            </div>
+          </article>
+        </section>
+      );
+    }
     return (
       <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
         <ProductCardSkeleton />

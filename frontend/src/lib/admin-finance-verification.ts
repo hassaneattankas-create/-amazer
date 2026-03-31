@@ -39,3 +39,21 @@ export function getAdminFinanceVerifyError(error: unknown): string {
 
   return detail;
 }
+
+export function getAdminFinanceDataError(error: unknown): string {
+  const detail = getApiErrorMessage(error, "Impossible de charger les donnees admin.");
+
+  if (detail === "Finance PIN verification required") {
+    return "La verification admin a expire. Revalidez le PIN pour recharger cette page.";
+  }
+
+  if (detail === "Could not validate credentials") {
+    return "Votre session a expire. Reconnectez-vous puis revenez dans l'espace admin.";
+  }
+
+  if (detail === "Admin MFA is required") {
+    return "Le backend public n'est pas encore aligne sur la version admin actuelle. Le redeploiement Render est encore necessaire.";
+  }
+
+  return detail;
+}

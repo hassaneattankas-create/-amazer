@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import {
+  getAdminFinanceDataError,
   buildAdminFinanceVerifyPayload,
   getAdminFinanceVerifyError,
 } from "@/lib/admin-finance-verification";
@@ -41,13 +42,23 @@ export default function AdminUsersPage() {
     },
   });
 
-  const { data: stats, isPending: isStatsPending } = useQuery({
+  const {
+    data: stats,
+    isPending: isStatsPending,
+    isError: isStatsError,
+    error: statsError,
+  } = useQuery({
     queryKey: ["admin-user-stats"],
     queryFn: getAdminUserStats,
     enabled: pinVerified,
   });
 
-  const { data: users, isPending: isUsersPending } = useQuery({
+  const {
+    data: users,
+    isPending: isUsersPending,
+    isError: isUsersError,
+    error: usersError,
+  } = useQuery({
     queryKey: ["admin-users", searchTerm],
     queryFn: () => listAdminUsers(searchTerm || undefined, 250),
     enabled: pinVerified,
@@ -79,6 +90,10 @@ export default function AdminUsersPage() {
 
   const isBusy = removeMutation.isPending || restoreMutation.isPending;
   const rows = useMemo(() => users ?? [], [users]);
+  const protectedPageError = useMemo(() => {
+    const firstError = statsError ?? usersError ?? null;
+    return firstError ? getAdminFinanceDataError(firstError) : "";
+  }, [statsError, usersError]);
 
   if (!pinVerified) {
     return (
@@ -121,6 +136,24 @@ export default function AdminUsersPage() {
   }
 
   if (isStatsPending || isUsersPending || !stats) {
+    if ((isStatsError || isUsersError) && protectedPageError) {
+      return (
+        <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
+          <article className="premium-card border border-rose-200 bg-rose-50 p-6">
+            <h1 className="text-xl font-semibold text-rose-700">Utilisateurs admin indisponibles</h1>
+            <p className="mt-2 text-sm text-rose-700">{protectedPageError}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button type="button" onClick={() => setPinVerified(false)}>
+                Revalider le PIN
+              </Button>
+              <Button type="button" variant="outline" onClick={() => window.location.assign("/login?next=/admin/users")}>
+                Me reconnecter
+              </Button>
+            </div>
+          </article>
+        </section>
+      );
+    }
     return (
       <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
         <ProductCardSkeleton />

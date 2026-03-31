@@ -7,11 +7,12 @@ import { useQuery } from "@tanstack/react-query";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { StorefrontShowcaseCard } from "@/components/storefront/StorefrontShowcaseCard";
 import { Input } from "@/components/ui/input";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { listStorefronts } from "@/services/catalog-service";
 
 export default function BoutiquesPage() {
   const [query, setQuery] = useState("");
-  const { data: stores = [], isPending } = useQuery({
+  const { data: stores = [], isPending, isError, error } = useQuery({
     queryKey: ["catalog-storefronts-boutiques", query],
     queryFn: () =>
       listStorefronts({
@@ -67,6 +68,10 @@ export default function BoutiquesPage() {
             <ProductCardSkeleton key={`store-skeleton-${index}`} />
           ))}
         </div>
+      ) : isError ? (
+        <article className="premium-card border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
+          {getApiErrorMessage(error, "Impossible de charger les boutiques pour le moment.")}
+        </article>
       ) : visibleStores.length ? (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {visibleStores.map((store) => (

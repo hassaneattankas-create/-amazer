@@ -9,6 +9,7 @@ import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import {
+  getAdminFinanceDataError,
   buildAdminFinanceVerifyPayload,
   getAdminFinanceVerifyError,
 } from "@/lib/admin-finance-verification";
@@ -94,37 +95,61 @@ export default function AdminFinancePage() {
   const [transferStatus, setTransferStatus] = useState("");
   const [districtDraft, setDistrictDraft] = useState<string | null>(null);
 
-  const { data: settings, isPending: isSettingsPending } = useQuery({
+  const {
+    data: settings,
+    isPending: isSettingsPending,
+    isError: isSettingsError,
+    error: settingsError,
+  } = useQuery({
     queryKey: ["admin-finance-settings"],
     queryFn: getAdminFinanceSettings,
     enabled: pinVerified,
   });
-  const { data: summary, isPending: isSummaryPending } = useQuery({
+  const {
+    data: summary,
+    isPending: isSummaryPending,
+    isError: isSummaryError,
+    error: summaryError,
+  } = useQuery({
     queryKey: ["admin-finance-summary"],
     queryFn: getAdminFinanceSummary,
     enabled: pinVerified,
   });
-  const { data: wallet, isPending: isWalletPending } = useQuery({
+  const {
+    data: wallet,
+    isPending: isWalletPending,
+    isError: isWalletError,
+    error: walletError,
+  } = useQuery({
     queryKey: ["admin-wallet-summary"],
     queryFn: getAdminWalletSummary,
     enabled: pinVerified,
   });
-  const { data: history, isPending: isHistoryPending } = useQuery({
+  const {
+    data: history,
+    isPending: isHistoryPending,
+    isError: isHistoryError,
+    error: historyError,
+  } = useQuery({
     queryKey: ["admin-treasury-history"],
     queryFn: getAdminTreasuryHistory,
     enabled: pinVerified,
   });
-  const { data: adClicks } = useQuery({
+  const { data: adClicks, isError: isAdClicksError, error: adClicksError } = useQuery({
     queryKey: ["admin-ad-click-stats"],
     queryFn: getAdminAdClickStats,
     enabled: pinVerified,
   });
-  const { data: adminOrders } = useQuery({
+  const { data: adminOrders, isError: isOrdersError, error: ordersError } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: () => listAdminOrders(30),
     enabled: pinVerified,
   });
-  const { data: districtFees } = useQuery({
+  const {
+    data: districtFees,
+    isError: isDistrictError,
+    error: districtError,
+  } = useQuery({
     queryKey: ["admin-district-fees"],
     queryFn: listAdminDistrictFees,
     enabled: pinVerified,
@@ -186,6 +211,26 @@ export default function AdminFinancePage() {
   });
 
   const effective = draft ?? settings ?? null;
+  const protectedPageError = useMemo(() => {
+    const firstError =
+      settingsError ??
+      summaryError ??
+      walletError ??
+      historyError ??
+      adClicksError ??
+      ordersError ??
+      districtError ??
+      null;
+    return firstError ? getAdminFinanceDataError(firstError) : "";
+  }, [
+    adClicksError,
+    districtError,
+    historyError,
+    ordersError,
+    settingsError,
+    summaryError,
+    walletError,
+  ]);
   const chartData = useMemo(() => summary?.revenue_last_30_days ?? [], [summary]);
   const availableForTransfer = useMemo(() => {
     if (!wallet) {
@@ -268,6 +313,33 @@ export default function AdminFinancePage() {
     !effective ||
     !wallet
   ) {
+    if (
+      (isSettingsError ||
+        isSummaryError ||
+        isWalletError ||
+        isHistoryError ||
+        isAdClicksError ||
+        isOrdersError ||
+        isDistrictError) &&
+      protectedPageError
+    ) {
+      return (
+        <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
+          <article className="premium-card border border-rose-200 bg-rose-50 p-6">
+            <h1 className="text-xl font-semibold text-rose-700">Finance admin indisponible</h1>
+            <p className="mt-2 text-sm text-rose-700">{protectedPageError}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button type="button" onClick={() => setPinVerified(false)}>
+                Revalider le PIN
+              </Button>
+              <Button type="button" variant="outline" onClick={() => window.location.assign("/login?next=/admin/finance")}>
+                Me reconnecter
+              </Button>
+            </div>
+          </article>
+        </section>
+      );
+    }
     return (
       <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
         <ProductCardSkeleton />
