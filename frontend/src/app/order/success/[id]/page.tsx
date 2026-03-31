@@ -11,21 +11,12 @@ import { getReceiptLink } from "@/services/order-service";
 export default function OrderSuccessPage() {
   const params = useParams<{ id: string }>();
   const orderId = params.id;
-  const { data, isPending, isError } = useQuery({
+  const { data, isPending, isError, refetch, isFetching } = useQuery({
     queryKey: ["receipt-link", orderId],
     queryFn: () => getReceiptLink(orderId),
   });
 
-  const receiptUrl = data?.receipt_url ?? `/order/receipt/${orderId}`;
-  const absoluteReceiptUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}${receiptUrl}`
-      : receiptUrl;
-  const whatsappText = encodeURIComponent(
-    `Bonjour, voici mon recu securise AMAZER pour la commande ${orderId}: ${absoluteReceiptUrl}`
-  );
-  const whatsappDeepLink = `whatsapp://send?text=${whatsappText}`;
-  const whatsappWebLink = `https://wa.me/?text=${whatsappText}`;
+  const receiptUrl = data?.receipt_url ?? null;
 
   return (
     <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
@@ -36,29 +27,32 @@ export default function OrderSuccessPage() {
           Commande: <span className="font-semibold text-slate-900">{orderId}</span>
         </p>
         {isPending ? <p className="mt-3 text-sm text-slate-600">Preparation du recu securise...</p> : null}
-        {isError ? <p className="mt-3 text-sm text-rose-600">Impossible de generer le lien de recu.</p> : null}
-        <p className="mt-4 text-sm font-bold text-slate-900">
-          📸 VEUILLEZ CAPTURER VOTRE REÇU OU LE PARTAGER SUR WHATSAPP POUR LE PRÉSENTER AU VENDEUR
+        {isError ? (
+          <p className="mt-3 text-sm text-rose-600">
+            Impossible de generer le lien securise du recu pour l&apos;instant. Reessayez ci-dessous.
+          </p>
+        ) : null}
+        <p className="mt-4 text-sm font-semibold text-slate-900">
+          Ouvrez ensuite votre recu securise pour le telecharger ou le partager en PDF au vendeur.
         </p>
         <div className="mt-5 flex flex-wrap gap-2">
-          <Button asChild className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]">
-            <Link href={receiptUrl}>Voir mon recu securise</Link>
-          </Button>
-          <Button
-            asChild
-            className="min-h-12 border border-[#1da851] bg-[#25D366] px-6 text-base font-semibold text-white hover:bg-[#1fb857]"
-          >
-            <a href={whatsappDeepLink} target="_blank" rel="noreferrer">
-              Partager sur WhatsApp
-            </a>
-          </Button>
+          {receiptUrl ? (
+            <Button asChild className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]">
+              <Link href={receiptUrl}>Voir mon recu securise</Link>
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+              className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
+            >
+              {isFetching ? "Preparation..." : "Reessayer le recu"}
+            </Button>
+          )}
         </div>
         <p className="mt-3 text-xs text-slate-500">
-          Si WhatsApp ne s&apos;ouvre pas, utilisez{" "}
-          <a href={whatsappWebLink} target="_blank" rel="noreferrer" className="text-[#25D366] underline">
-            ce lien web
-          </a>
-          .
+          Le partage du recu par lien a ete retire. Utilisez uniquement le PDF du recu.
         </p>
       </article>
     </section>

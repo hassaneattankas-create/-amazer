@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
@@ -25,50 +25,81 @@ export default function OrderReceiptPage() {
     queryFn: () => getSecureReceipt(orderId, token),
   });
 
-  const absoluteReceiptUrl = useMemo(() => {
-    if (typeof window === "undefined") {
-      return "";
-    }
-    return window.location.href;
-  }, []);
-
-  async function downloadPdf() {
+  async function buildPdfBlob(): Promise<Blob> {
     if (!receiptRef.current) {
-      return;
+      throw new Error("Receipt container unavailable");
     }
-    try {
-      const { default: html2canvas } = await import("html2canvas");
-      const { jsPDF } = await import("jspdf");
-      const canvas = await html2canvas(receiptRef.current, {
-        scale: 2,
-        backgroundColor: "#ffffff",
-        useCORS: true,
-      });
-      const imgData = canvas.toDataURL("image/png", 1.0);
-      const pdf = new jsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 24;
-      const imgWidth = pageWidth - margin * 2;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      let heightLeft = imgHeight;
-      let position = margin;
+    const { default: html2canvas } = await import("html2canvas");
+    const { jsPDF } = await import("jspdf");
+    const canvas = await html2canvas(receiptRef.current, {
+      scale: 2,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+    });
+    const imgData = canvas.toDataURL("image/png", 1.0);
+    const pdf = new jsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 24;
+    const imgWidth = pageWidth - margin * 2;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
+    let heightLeft = imgHeight;
+    let position = margin;
+
+    pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight - margin * 2;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
       pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
       heightLeft -= pageHeight - margin * 2;
+    }
 
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight - margin * 2;
-      }
+    return pdf.output("blob");
+  }
 
-      pdf.save(`recu-amazer-${orderId}.pdf`);
+  async function downloadPdf() {
+    try {
+      const blob = await buildPdfBlob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = `recu-amazer-${orderId}.pdf`;
+      anchor.click();
+      URL.revokeObjectURL(objectUrl);
       setStatus("PDF telecharge.");
     } catch {
       setStatus("Erreur lors du telechargement PDF.");
+    }
+  }
+
+  async function sharePdf() {
+    try {
+      const blob = await buildPdfBlob();
+      const file = new File([blob], `recu-amazer-${orderId}.pdf`, { type: "application/pdf" });
+
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          title: `Recu AMAZER ${orderId}`,
+          text: `Recu AMAZER pour la commande ${orderId}`,
+          files: [file],
+        });
+        setStatus("PDF partage.");
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = file.name;
+      anchor.click();
+      URL.revokeObjectURL(objectUrl);
+      setStatus("Partage direct non disponible. Le PDF a ete telecharge.");
+    } catch {
+      setStatus("Erreur lors du partage PDF.");
     }
   }
 
@@ -96,11 +127,6 @@ export default function OrderReceiptPage() {
       </section>
     );
   }
-
-  const whatsappText = encodeURIComponent(
-    `Mon recu AMAZER (commande ${data.order_id}) : ${absoluteReceiptUrl}`
-  );
-  const whatsappUrl = `https://wa.me/?text=${whatsappText}`;
 
   return (
     <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
@@ -206,7 +232,7 @@ export default function OrderReceiptPage() {
       <article className="premium-card border border-emerald-200 bg-emerald-50 p-5">
         <h2 className="text-base font-semibold text-emerald-800">Conseils de Securite AMAZER</h2>
         <ul className="mt-3 space-y-2 text-sm text-emerald-900">
-          <li>Ne communique jamais ton code secret Nita/Amana par message ou appel.</li>
+          <li>Ne communique jamais ton code secret Nita ou Amana par message ou appel.</li>
           <li>Verifie que le montant et la reference correspondent avant de valider.</li>
           <li>Conserve ce recu comme preuve; le vendeur peut verifier la commande dans son espace.</li>
           <li>AMAZER ne te demandera jamais ton code secret par SMS ou appel.</li>
@@ -217,10 +243,8 @@ export default function OrderReceiptPage() {
         <Button onClick={downloadPdf} className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]">
           Telecharger le recu (PDF)
         </Button>
-        <Button asChild className="border border-slate-200 bg-white text-slate-800 hover:bg-slate-50">
-          <a href={whatsappUrl} target="_blank" rel="noreferrer">
-            Envoyer mon recu sur WhatsApp
-          </a>
+        <Button onClick={sharePdf} className="border border-slate-200 bg-white text-slate-800 hover:bg-slate-50">
+          Partager le recu (PDF)
         </Button>
       </div>
       {status ? <p className="text-sm text-slate-700">{status}</p> : null}
