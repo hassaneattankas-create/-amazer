@@ -211,26 +211,20 @@ export default function AdminFinancePage() {
   });
 
   const effective = draft ?? settings ?? null;
-  const protectedPageError = useMemo(() => {
-    const firstError =
-      settingsError ??
-      summaryError ??
-      walletError ??
-      historyError ??
-      adClicksError ??
-      ordersError ??
-      districtError ??
-      null;
+  const criticalPageError = useMemo(() => {
+    const firstError = settingsError ?? summaryError ?? walletError ?? null;
     return firstError ? getAdminFinanceDataError(firstError) : "";
-  }, [
-    adClicksError,
-    districtError,
-    historyError,
-    ordersError,
-    settingsError,
-    summaryError,
-    walletError,
-  ]);
+  }, [settingsError, summaryError, walletError]);
+  const secondaryErrors = useMemo(
+    () =>
+      [
+        historyError ? `Historique: ${getAdminFinanceDataError(historyError)}` : null,
+        adClicksError ? `Publicite: ${getAdminFinanceDataError(adClicksError)}` : null,
+        ordersError ? `Commandes: ${getAdminFinanceDataError(ordersError)}` : null,
+        districtError ? `Quartiers: ${getAdminFinanceDataError(districtError)}` : null,
+      ].filter(Boolean) as string[],
+    [adClicksError, districtError, historyError, ordersError]
+  );
   const chartData = useMemo(() => summary?.revenue_last_30_days ?? [], [summary]);
   const availableForTransfer = useMemo(() => {
     if (!wallet) {
@@ -309,25 +303,15 @@ export default function AdminFinancePage() {
     isSettingsPending ||
     isSummaryPending ||
     isWalletPending ||
-    isHistoryPending ||
     !effective ||
     !wallet
   ) {
-    if (
-      (isSettingsError ||
-        isSummaryError ||
-        isWalletError ||
-        isHistoryError ||
-        isAdClicksError ||
-        isOrdersError ||
-        isDistrictError) &&
-      protectedPageError
-    ) {
+    if ((isSettingsError || isSummaryError || isWalletError) && criticalPageError) {
       return (
         <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
           <article className="premium-card border border-rose-200 bg-rose-50 p-6">
             <h1 className="text-xl font-semibold text-rose-700">Finance admin indisponible</h1>
-            <p className="mt-2 text-sm text-rose-700">{protectedPageError}</p>
+            <p className="mt-2 text-sm text-rose-700">{criticalPageError}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button type="button" onClick={() => setPinVerified(false)}>
                 Revalider le PIN
@@ -349,6 +333,16 @@ export default function AdminFinancePage() {
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
+      {secondaryErrors.length ? (
+        <article className="premium-card border border-amber-200 bg-amber-50 p-4">
+          <h2 className="text-sm font-semibold text-amber-800">Certaines sections admin sont indisponibles</h2>
+          <div className="mt-2 space-y-1 text-sm text-amber-900">
+            {secondaryErrors.map((message) => (
+              <p key={message}>{message}</p>
+            ))}
+          </div>
+        </article>
+      ) : null}
       <header className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="luxury-title text-3xl font-semibold">Admin Finance</h1>
         <p className="mt-2 text-sm text-slate-600">
@@ -661,6 +655,11 @@ export default function AdminFinancePage() {
         <p className="mt-2 text-sm text-slate-600">
           Les codes sont stockes chiffres en base. Vue reservee a l admin.
         </p>
+        {isHistoryPending ? <p className="mt-4 text-sm text-slate-500">Chargement de l'historique...</p> : null}
+        {!isHistoryPending && isHistoryError ? (
+          <p className="mt-4 text-sm text-amber-700">{getAdminFinanceDataError(historyError)}</p>
+        ) : null}
+        {!isHistoryPending && !isHistoryError ? (
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[980px] text-left text-sm">
             <thead className="text-xs uppercase tracking-[0.12em] text-slate-500">
@@ -691,11 +690,13 @@ export default function AdminFinancePage() {
             </tbody>
           </table>
         </div>
+        ) : null}
       </article>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="luxury-title text-lg font-semibold">Pilotage Manuel Livraison</h2>
         <p className="mt-2 text-sm text-slate-600">Bouton &quot;Envoyer Livreur&quot; pour mise a jour temps reel.</p>
+        {isOrdersError ? <p className="mt-4 text-sm text-amber-700">{getAdminFinanceDataError(ordersError)}</p> : null}
         <div className="mt-4 space-y-3">
           {(adminOrders ?? []).slice(0, 12).map((order) => (
             <div key={order.id} className="rounded-xl border border-slate-200 p-3">

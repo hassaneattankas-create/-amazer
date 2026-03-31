@@ -91,8 +91,10 @@ export default function AdminUsersPage() {
   const isBusy = removeMutation.isPending || restoreMutation.isPending;
   const rows = useMemo(() => users ?? [], [users]);
   const protectedPageError = useMemo(() => {
-    const firstError = statsError ?? usersError ?? null;
-    return firstError ? getAdminFinanceDataError(firstError) : "";
+    if (statsError && usersError) {
+      return getAdminFinanceDataError(statsError);
+    }
+    return "";
   }, [statsError, usersError]);
 
   if (!pinVerified) {
@@ -136,7 +138,7 @@ export default function AdminUsersPage() {
   }
 
   if (isStatsPending || isUsersPending || !stats) {
-    if ((isStatsError || isUsersError) && protectedPageError) {
+    if (protectedPageError) {
       return (
         <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
           <article className="premium-card border border-rose-200 bg-rose-50 p-6">
@@ -163,6 +165,16 @@ export default function AdminUsersPage() {
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
+      {isStatsError && !isUsersError ? (
+        <article className="premium-card border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Statistiques indisponibles: {getAdminFinanceDataError(statsError)}
+        </article>
+      ) : null}
+      {isUsersError && !isStatsError ? (
+        <article className="premium-card border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Liste utilisateurs indisponible: {getAdminFinanceDataError(usersError)}
+        </article>
+      ) : null}
       <header className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="luxury-title text-3xl font-semibold">Gestion Complete Des Utilisateurs</h1>
         <p className="mt-2 text-sm text-slate-600">
@@ -170,6 +182,7 @@ export default function AdminUsersPage() {
         </p>
       </header>
 
+      {!isStatsError ? (
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <article className="premium-card border border-slate-200 bg-white p-4">
           <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Total Utilisateurs</p>
@@ -188,7 +201,9 @@ export default function AdminUsersPage() {
           <p className="mt-2 text-2xl font-semibold text-slate-900">{stats.seller_accounts}</p>
         </article>
       </div>
+      ) : null}
 
+      {!isUsersError ? (
       <article className="premium-card border border-slate-200 bg-white p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -274,6 +289,7 @@ export default function AdminUsersPage() {
         </div>
         {actionStatus ? <p className="mt-3 text-sm text-slate-700">{actionStatus}</p> : null}
       </article>
+      ) : null}
     </section>
   );
 }

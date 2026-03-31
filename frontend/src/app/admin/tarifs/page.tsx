@@ -237,15 +237,18 @@ export default function AdminTarifsPage() {
   }
 
   const effective = useMemo(() => draft ?? settings ?? null, [draft, settings]);
-  const protectedPageError = useMemo(() => {
-    const firstError =
-      settingsError ??
-      auditError ??
-      sellersError ??
-      districtError ??
-      null;
-    return firstError ? getAdminFinanceDataError(firstError) : "";
-  }, [auditError, districtError, sellersError, settingsError]);
+  const criticalPageError = useMemo(() => {
+    return settingsError ? getAdminFinanceDataError(settingsError) : "";
+  }, [settingsError]);
+  const secondaryErrors = useMemo(
+    () =>
+      [
+        auditError ? `Historique: ${getAdminFinanceDataError(auditError)}` : null,
+        sellersError ? `Vendeurs: ${getAdminFinanceDataError(sellersError)}` : null,
+        districtError ? `Quartiers: ${getAdminFinanceDataError(districtError)}` : null,
+      ].filter(Boolean) as string[],
+    [auditError, districtError, sellersError]
+  );
   const districtRaw = useMemo(() => {
     if (districtDraft !== null) {
       return districtDraft;
@@ -322,12 +325,12 @@ export default function AdminTarifsPage() {
   }
 
   if (isPending || !effective) {
-    if ((isSettingsError || isAuditError || isSellersError || isDistrictError) && protectedPageError) {
+    if (isSettingsError && criticalPageError) {
       return (
         <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
           <article className="premium-card border border-rose-200 bg-rose-50 p-6">
             <h1 className="text-xl font-semibold text-rose-700">Chargement admin impossible</h1>
-            <p className="mt-2 text-sm text-rose-700">{protectedPageError}</p>
+            <p className="mt-2 text-sm text-rose-700">{criticalPageError}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button type="button" onClick={() => setPinVerified(false)}>
                 Revalider le PIN
@@ -349,6 +352,16 @@ export default function AdminTarifsPage() {
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
+      {secondaryErrors.length ? (
+        <article className="premium-card border border-amber-200 bg-amber-50 p-4">
+          <h2 className="text-sm font-semibold text-amber-800">Certaines sections admin sont indisponibles</h2>
+          <div className="mt-2 space-y-1 text-sm text-amber-900">
+            {secondaryErrors.map((message) => (
+              <p key={message}>{message}</p>
+            ))}
+          </div>
+        </article>
+      ) : null}
       <header className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="luxury-title text-3xl font-semibold">Controle Financier Dynamique</h1>
         <p className="mt-2 text-sm text-slate-600">Commission, frais, livraison, boosts et controle vendeurs.</p>
@@ -774,6 +787,7 @@ export default function AdminTarifsPage() {
             Export CSV
           </button>
         </div>
+        {isAuditError ? <p className="mt-3 text-sm text-amber-700">{getAdminFinanceDataError(auditError)}</p> : null}
         <div className="mt-3 space-y-2">
           {(auditHistory ?? []).map((item) => (
             <div key={item.id} className="rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
