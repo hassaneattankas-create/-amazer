@@ -1,58 +1,21 @@
-# Connecter GitHub, Vercel et Render (deploiement continu)
+# Setup Complet Vercel + Render + GitHub
 
-Objectif : **chaque `git push` sur la branche `main`** met a jour l’API (Render) et le site (Vercel), sans action manuelle.
+Date de reference: 2026-04-01
 
-## Prerequis
+Objectif:
 
-- Le code est sur **GitHub** (ex. `amazerniger-hub/amazer`).
-- Comptes **Vercel** et **Render** (meme e-mail ou GitHub OAuth).
+- chaque `git push` sur `main` met a jour le backend Render
+- chaque `git push` sur `main` met a jour le frontend Vercel
+- le site public principal reste `https://amazerniger.vercel.app`
 
----
+## 1. Depot GitHub
 
-## 1. Render (API — dossier `backend/`)
+Le projet attendu est:
 
-1. [dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint**.
-2. Connecter le depot GitHub et choisir le repo **amazer**.
-3. Render detecte `render.yaml` a la racine : service **amazer-api** (`rootDir: backend`).
-4. **A la premiere creation**, renseigner les variables **manquantes** (souvent marquees a synchroniser) :
-   - `DATABASE_URL` (creer une base **PostgreSQL** sur Render puis lier, ou coller une URL externe),
-   - `JWT_SECRET_KEY`, `CORS_ALLOWED_ORIGINS`, `ALLOWED_HOSTS`, `PAYMENT_ENCRYPTION_KEY`, `ADMIN_FINANCE_PIN`, `ADMIN_BIRTH_DATE`, etc. (voir `docs/DEPLOYMENT.md`).
-5. **Deploy**. Noter l’URL publique HTTPS, ex. `https://amazer-api.onrender.com`.
+- repo: `amazerniger-hub/amazer`
+- branche de production: `main`
 
-Comportement ensuite :
-
-- **Branche** : `main` (definie dans `render.yaml`).
-- **Auto-deploy** : `autoDeployTrigger: commit` → un nouveau commit sur `main` **rebuild et redeploie** l’API.
-
----
-
-## 2. Vercel (frontend — dossier `frontend/`)
-
-1. [vercel.com](https://vercel.com) → **Add New** → **Project** → importer le **meme** repo GitHub.
-2. **Root Directory** : `frontend` (deja indique par `vercel.json` a la racine du repo).
-3. **Environment Variables** (Production) :
-   - `NEXT_PUBLIC_API_URL` = URL HTTPS de l’API Render (ex. `https://amazer-api.onrender.com`), **sans slash final**.
-   - `NEXT_PUBLIC_SITE_URL` = URL du site Vercel (ex. `https://amazer.vercel.app`) ou de ton domaine custom.
-4. **Deploy**.
-
-Comportement ensuite :
-
-- Dans **Project → Settings → Git** : branche de production = **`main`** (par defaut si le repo utilise `main`).
-- Chaque **push sur `main`** declenche un **nouveau build** et un deploiement Production.
-
-Si tu changes l’URL de l’API plus tard : mets a jour `NEXT_PUBLIC_API_URL` dans Vercel puis **Redeploy** le dernier deploiement (les variables `NEXT_PUBLIC_*` sont injectees au **build**).
-
----
-
-## 3. Ordre recommande pour la premiere fois
-
-1. Deploy **Render** (API) et verifier `GET https://ton-api.onrender.com/health` → `{"status":"ok"}`.
-2. Configurer **Vercel** avec la bonne `NEXT_PUBLIC_API_URL`, puis deploy du **frontend**.
-3. Dans **CORS** cote API : inclure l’URL exacte du site Vercel (ex. `https://amazer-xxx.vercel.app`).
-
----
-
-## 4. Workflow developpeur
+Workflow standard:
 
 ```bash
 git add .
@@ -60,24 +23,127 @@ git commit -m "feat: ..."
 git push origin main
 ```
 
-- **Render** et **Vercel** recoivent le webhook GitHub et lancent chacun leur pipeline.
-- Suivre l’avancement dans les onglets **Deployments** (Vercel / Render).
+## 2. Render
 
----
+Service attendu:
 
-## 5. Depannage rapide
+- nom: `amazer-api`
+- root directory: `backend`
+- runtime: `python`
+- start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 
-| Probleme | Piste |
-|----------|--------|
-| Vercel build OK mais app ne parle pas a l’API | `NEXT_PUBLIC_API_URL` incorrecte ou CORS / `ALLOWED_HOSTS` cote API. |
-| Render ne redeploie pas | Verifier que le push est bien sur `main` et que **Auto-Deploy** n’est pas desactive dans le service Render. |
-| Erreur `npm ci` sur Vercel | `package-lock.json` doit etre committe dans `frontend/`. |
+Fichier source:
 
----
+- `render.yaml`
 
-## Fichiers du repo utiles pour ce flux
+### Variables Render a garder
 
-| Fichier | Role |
-|---------|------|
-| `render.yaml` | Service API, branche `main`, auto-deploy sur commit |
-| `vercel.json` | Racine Next.js = `frontend`, `npm ci` + `npm run build` |
+- `APP_ENV=production`
+- `DATABASE_URL`
+- `JWT_SECRET_KEY`
+- `ADMIN_EMAIL`
+- `ADMIN_FINANCE_PIN`
+- `ADMIN_BIRTH_DATE`
+- `PAYMENT_ENCRYPTION_KEY`
+- `CORS_ALLOWED_ORIGINS`
+- `ALLOWED_HOSTS`
+
+### Verification Render
+
+Apres deploy:
+
+1. ouvrir `https://amazer-api.onrender.com/health`
+2. verifier la reponse `{"status":"ok"}`
+3. verifier `https://amazer-api.onrender.com/api/v1/auth/health`
+
+Si un deploy Render echoue:
+
+1. verifier `JWT_SECRET_KEY`
+2. verifier `ALLOWED_HOSTS`
+3. verifier `CORS_ALLOWED_ORIGINS`
+4. verifier les colonnes de base attendues par le code actuel
+
+## 3. Vercel
+
+Projet public principal:
+
+- `amazerniger`
+
+URL publique principale:
+
+- `https://amazerniger.vercel.app`
+
+Projet secondaire encore accessible:
+
+- `https://amazerniger-hub-amazer.vercel.app`
+
+### Variables Vercel a garder
+
+- `NEXT_PUBLIC_API_URL=https://amazer-api.onrender.com`
+- `NEXT_PUBLIC_SITE_URL=https://amazerniger.vercel.app`
+- `NEXT_PUBLIC_BACKEND_ORIGIN=https://amazer-api.onrender.com`
+
+### Verification Vercel
+
+1. ouvrir `https://amazerniger.vercel.app`
+2. tester:
+   - `/backend-api/api/v1/storefronts?limit=5&activity_type=shop`
+   - `/backend-api/api/v1/products/search?sort=newest&limit=5`
+
+Les deux doivent repondre en `200`.
+
+## 4. Liaison frontend-backend
+
+En production:
+
+- le frontend appelle l'API via `/backend-api`
+- Vercel rewrite ensuite vers `https://amazer-api.onrender.com`
+
+Avantage:
+
+- le public charge correctement les donnees meme si Render est strict cote navigateur
+
+## 5. Admin
+
+Connexion admin:
+
+- email: `Amazer.niger@gmail.com`
+
+Verification finance:
+
+- PIN: `7391`
+- date secondaire: `07/11/03`
+
+Etapes:
+
+1. se connecter sur `https://amazerniger.vercel.app/login`
+2. ouvrir `/admin`
+3. ouvrir finance, tarifs ou utilisateurs
+4. entrer les deux cles
+
+## 6. Quand tout est bon
+
+Tu peux considerer l'app en ligne si:
+
+- la home publique repond
+- les produits apparaissent
+- les boutiques apparaissent
+- le login fonctionne
+- l'espace vendeur fonctionne
+- l'admin fonctionne
+- les endpoints de sante Render sont en `200`
+
+## 7. Domaine custom plus tard
+
+Si tu achetes `amazerapp.com`:
+
+1. l'ajouter dans Vercel
+2. configurer le DNS
+3. mettre `NEXT_PUBLIC_SITE_URL=https://amazerapp.com`
+4. ajouter `https://amazerapp.com` et `https://www.amazerapp.com` dans `CORS_ALLOWED_ORIGINS`
+
+## 8. Recommandation pratique
+
+Tant que le domaine custom n'est pas branche, le lien officiel a communiquer est:
+
+- `https://amazerniger.vercel.app`

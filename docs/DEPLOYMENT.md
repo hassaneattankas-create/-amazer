@@ -1,118 +1,152 @@
-# Déploiement web AMAZER (site public avant les stores)
+# Deploiement AMAZER
 
-**Deploiement continu (GitHub + Vercel + Render)** : voir [`SETUP_VERCEL_RENDER_GITHUB.md`](./SETUP_VERCEL_RENDER_GITHUB.md) pour lier le depot et obtenir un deploiement automatique a chaque push sur `main`.
+Date de reference: 2026-04-01
 
-Ce guide décrit comment mettre le **frontend Next.js** et l’**API FastAPI** en ligne derrière un **nom de domaine .com**, avec des réglages de sécurité et de performance cohérents avec le code du dépôt.
+## URLs en production
 
-## Pourquoi l’IA ne peut pas « se connecter » à ton compte
+- site public principal: `https://amazerniger.vercel.app`
+- site public secondaire: `https://amazerniger-hub-amazer.vercel.app`
+- API backend: `https://amazer-api.onrender.com`
 
-Même si tu utilises **le même e-mail** (`amazer.niger@gmail.com`) sur Vercel et Render, **personne d’autre** (y compris un assistant) ne peut ouvrir ta session : il manque ton mot de passe, le 2FA et les jetons de déploiement. Sur ta machine, la commande `vercel whoami` doit afficher ton compte après `vercel login`.
+Aujourd'hui, le lien public a partager en priorite est:
 
-**Ce que tu fais en 10 minutes** (une fois le code poussé sur GitHub) :
+- `https://amazerniger.vercel.app`
 
-### Vercel (frontend)
+## Architecture en ligne
 
-1. [vercel.com](https://vercel.com) → **Log in** avec `amazer.niger@gmail.com`.
-2. **Add New… → Project** → importer le dépôt `amazerniger-hub/amazer` (ou le tien).
-3. **Root Directory** : `frontend` (le fichier `vercel.json` à la racine du repo le fixe aussi).
-4. **Environment Variables** : `NEXT_PUBLIC_API_URL` = URL HTTPS de ton API Render (voir ci‑dessous), puis `NEXT_PUBLIC_SITE_URL` = URL du site Vercel ou de ton domaine.
-5. **Deploy**.
+- frontend: Next.js deploye sur Vercel
+- backend: FastAPI deploye sur Render
+- base de donnees: PostgreSQL Neon branchee a Render
+- domaine public actuel: sous-domaine Vercel `amazerniger.vercel.app`
 
-### Render (API)
+Le frontend public passe par le proxy Vercel `/backend-api`, ce qui evite les blocages CORS navigateur sur les appels publics.
 
-1. [dashboard.render.com](https://dashboard.render.com) → même compte Google si tu l’utilises.
-2. **New → Blueprint** (ou **Web Service**) → même dépôt Git.
-3. Si tu utilises le fichier **`render.yaml`** à la racine : Render propose le service `amazer-api` (dossier `backend/`).
-4. Crée une **PostgreSQL** sur Render (ou colle une `DATABASE_URL` externe), puis dans l’API ajoute les variables **secrètes** : `DATABASE_URL`, `JWT_SECRET_KEY`, `CORS_ALLOWED_ORIGINS` (origines Vercel + domaine), `ALLOWED_HOSTS` (nom d’hôte de l’API Render, ex. `amazer-api.onrender.com`), `PAYMENT_ENCRYPTION_KEY`, `ADMIN_FINANCE_PIN`, `ADMIN_BIRTH_DATE`, etc. (voir tableau plus bas).
-5. **Deploy** ; l’URL publique de l’API (ex. `https://amazer-api.onrender.com`) sert pour **Vercel** `NEXT_PUBLIC_API_URL`.
+## Ce qui doit etre configure
 
-Ensuite : **redéploie Vercel** après avoir fixé l’URL de l’API.
+### Vercel
 
-### Option ligne de commande (sur ton PC)
+Variables attendues:
 
-```bash
-npm i -g vercel
-vercel login
-cd frontend
-vercel --prod
-```
+- `NEXT_PUBLIC_API_URL=https://amazer-api.onrender.com`
+- `NEXT_PUBLIC_SITE_URL=https://amazerniger.vercel.app`
+- `NEXT_PUBLIC_BACKEND_ORIGIN=https://amazer-api.onrender.com`
 
-Il te demandera de lier le projet au compte `amazer.niger@gmail.com`.
+Comportement attendu:
 
-## Architecture recommandée
+- l'accueil charge correctement
+- `/backend-api/api/v1/storefronts` renvoie les boutiques
+- `/backend-api/api/v1/products/search` renvoie les produits
 
-| Composant | Rôle | Exemple d’hébergeur |
-|-----------|------|---------------------|
-| Site vitrine + app web | Next.js | [Vercel](https://vercel.com) (recommandé pour Next.js) |
-| API REST | FastAPI (Uvicorn) | [Render](https://render.com), [Railway](https://railway.app), [Fly.io](https://fly.io) |
-| Base PostgreSQL | Données | Render / Railway / Neon / Supabase |
-| Redis (optionnel) | Cache / rate limit | Upstash / Redis Cloud |
-| Nom de domaine `.com` | DNS + HTTPS | Cloudflare, Namecheap, Google Domains, etc. |
+### Render
 
-Tu ne peux pas « obtenir » un `.com » dans le code : tu **achètes** le domaine chez un registrar, puis tu pointes les enregistrements DNS vers Vercel et ton hébergeur API.
+Variables minimales a garder:
 
-## 1. Domaine .com
+- `APP_ENV=production`
+- `DATABASE_URL=...`
+- `JWT_SECRET_KEY=...`
+- `ADMIN_EMAIL=Amazer.niger@gmail.com`
+- `ADMIN_FINANCE_PIN=7391`
+- `ADMIN_BIRTH_DATE=07/11/03`
+- `PAYMENT_ENCRYPTION_KEY=...`
+- `CORS_ALLOWED_ORIGINS=https://amazerniger.vercel.app,https://amazerniger-hub-amazer.vercel.app,https://amazerapp.com,https://www.amazerapp.com,...`
+- `ALLOWED_HOSTS=amazer-api.onrender.com`
 
-1. Acheter `tondomaine.com` (et souvent `www.tondomaine.com`).
-2. **Zone DNS** (souvent chez le même registrar ou Cloudflare) :
-   - **Site (Vercel)** : suivre l’assistant Vercel « Domains » (souvent un **CNAME** `www` → `cname.vercel-dns.com`, et une redirection apex `tondomaine.com` → `www`).
-   - **API** : un sous-domaine du type `api.tondomaine.com` en **CNAME** vers l’URL fournie par Render/Railway (ex. `xxx.onrender.com`), ou un **A** si l’hébergeur impose une IP fixe.
+Important:
 
-3. Attendre la propagation DNS (quelques minutes à 48 h).
+- `JWT_SECRET_KEY` doit etre long et fort
+- `ALLOWED_HOSTS` ne doit pas rester a `*` en production
+- si tu ajoutes un domaine custom, il faudra aussi l'ajouter dans `CORS_ALLOWED_ORIGINS`
 
-## 2. Variables d’environnement (production)
+## Procedure de verification apres deploiement
 
-### Frontend (Vercel / build Next.js)
+### Verification frontend
 
-| Variable | Obligatoire | Description |
-|----------|-------------|-------------|
-| `NEXT_PUBLIC_API_URL` | Oui | URL publique de l’API, ex. `https://api.tondomaine.com` (sans slash final). |
-| `NEXT_PUBLIC_SITE_URL` | Fortement conseillé | URL canonique du site, ex. `https://www.tondomaine.com` — utilisée pour la CSP (`connect-src`). |
-| `NEXT_PUBLIC_CSP_CONNECT_EXTRA` | Optionnel | Origines supplémentaires séparées par des virgules si besoin (analytics, etc.). |
+1. Ouvrir `https://amazerniger.vercel.app`
+2. Verifier que la home charge
+3. Verifier les boutiques
+4. Verifier les produits
+5. Verifier l'inscription vendeur
 
-Le build lit ces variables : sans `NEXT_PUBLIC_API_URL`, le build peut échouer ou la CSP bloquera les appels API.
+### Verification backend
 
-### Backend (API)
+1. Tester `https://amazer-api.onrender.com/health`
+2. Tester `https://amazer-api.onrender.com/api/v1/auth/health`
+3. Tester les listes publiques:
+   - `/api/v1/storefronts`
+   - `/api/v1/products/search`
 
-| Variable | Obligatoire | Description |
-|----------|-------------|-------------|
-| `APP_ENV` | Oui | `production` |
-| `DATABASE_URL` | Oui | URL PostgreSQL |
-| `JWT_SECRET_KEY` | Oui | Secret long (≥ 32 caractères en prod) |
-| `CORS_ALLOWED_ORIGINS` | Oui | Liste séparée par des virgules : **exactement** les origines du site, ex. `https://www.tondomaine.com,https://tondomaine.com` |
-| `ALLOWED_HOSTS` | Oui | Hostnames acceptés par l’API (header `Host`), ex. `api.tondomaine.com,xxx.onrender.com` si tu testes encore l’URL fournie par l’hébergeur |
-| `ADMIN_FINANCE_PIN`, `ADMIN_BIRTH_DATE`, `PAYMENT_ENCRYPTION_KEY` | Oui en prod | Voir validation dans `app/config.py` |
-| `REDIS_URL` | Optionnel | Améliore cache / rate limiting si configuré |
+### Verification admin
 
-Après changement de domaine, **aligne** `CORS_ALLOWED_ORIGINS` et `ALLOWED_HOSTS` avec les URLs réelles (www / non-www / API).
+Compte admin actuel:
 
-## 3. Sécurité déjà présente dans le code
+- email: `Amazer.niger@gmail.com`
 
-- **Frontend** : en production, en-têtes **CSP**, **HSTS**, **X-Frame-Options**, **COOP**, etc. (`next.config.mjs`).
-- **API** : **CORS** restreint aux origines listées, **CSRF** sur les requêtes mutantes, **Trusted Host** en production, **GZip**, en-têtes de sécurité sur les réponses, journalisation des accès sensibles.
+Verification finance:
 
-Renforcer encore : WAF / pare-feu (ex. Cloudflare en proxy devant le site et l’API), secrets forts, mises à jour régulières des dépendances (`npm audit`, `pip-audit`).
+- PIN admin: `7391`
+- cle secondaire: `07/11/03`
 
-## 4. Performance
+Parcours:
 
-- Next : compression activée, `optimizePackageImports` pour `lucide-react` / `recharts`, suppression des `console` non critiques en prod.
-- API : compression GZip pour les réponses volumineuses.
-- Côté infra : activer le **CDN** (Vercel le fait pour le frontend), mettre Redis pour le cache catalogue si le trafic augmente.
+1. se connecter
+2. ouvrir `/admin`
+3. ouvrir `Admin Finance`
+4. saisir `7391`
+5. saisir `07/11/03`
 
-## 5. Déploiement typique (Vercel + Render)
+Si tu inverses les deux champs, l'interface actuelle essaie maintenant de corriger automatiquement.
 
-1. Créer un **Web Service** Render pour le backend : commande du type `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
-2. Lier la base et les variables d’environnement.
-3. Connecter le dépôt GitHub au **projet Vercel** pour le dossier `frontend`, avec les variables `NEXT_PUBLIC_*`.
-4. Ajouter le domaine `.com` dans Vercel et configurer le DNS.
-5. Tester login, checkout, upload média et admin sur l’URL HTTPS finale.
+## Problemes deja rencontres et solution retenue
 
-## 6. Checklist avant ouverture au public
+### Boutiques et produits absents en public
 
-- [ ] HTTPS partout (site + API)
-- [ ] `CORS_ALLOWED_ORIGINS` et `NEXT_PUBLIC_API_URL` cohérents
-- [ ] `ALLOWED_HOSTS` inclut l’hôte réel de l’API
-- [ ] Secrets de production non commités (fichiers `.env` ignorés par Git)
-- [ ] Monitoring basique (logs Render/Vercel, alertes erreurs 5xx)
+Cause:
 
-Pour une **app mobile plus tard** (stores), tu réutilises la même API ; ajoute alors les origines ou clés API mobiles selon ton architecture.
+- appels frontend bloques ou mal resolves vers l'API
+
+Solution retenue:
+
+- proxy Vercel `/backend-api`
+
+### Ancienne version visible sur telephone
+
+Cause:
+
+- cache PWA / service worker
+
+Solution retenue:
+
+- desactivation du service worker stale
+- ouvrir en navigation privee si besoin
+
+### Verification admin qui bloque
+
+Causes deja corrigees:
+
+- backend Render pas redeploye sur la bonne revision
+- variables Render de prod incorrectes
+- colonnes manquantes dans la base
+
+## Domaine custom plus tard
+
+Si tu achetes `amazerapp.com`, la procedure sera:
+
+1. ajouter le domaine dans Vercel
+2. pointer le DNS vers Vercel
+3. garder `amazer-api.onrender.com` ou creer `api.amazerapp.com`
+4. ajouter le nouveau domaine dans:
+   - `NEXT_PUBLIC_SITE_URL`
+   - `CORS_ALLOWED_ORIGINS`
+   - `ALLOWED_HOSTS` si l'API passe aussi sur un domaine custom
+
+## Checklist finale
+
+- [x] frontend public disponible
+- [x] backend public disponible
+- [x] boutiques publiques chargees
+- [x] produits publics charges
+- [x] login admin fonctionnel
+- [x] verification PIN admin fonctionnelle
+- [x] guide utilisateur disponible
+- [ ] domaine custom branche
+- [ ] video publicitaire finale produite

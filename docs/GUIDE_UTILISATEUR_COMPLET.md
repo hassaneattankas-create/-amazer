@@ -12,6 +12,12 @@ AMAZER regroupe plusieurs parcours:
 - vendeur premium
 - administrateur
 
+Etat public actuel:
+
+- site principal en ligne: `https://amazerniger.vercel.app`
+- backend en ligne: `https://amazer-api.onrender.com`
+- usage public recommande: partager `https://amazerniger.vercel.app`
+
 Liens utiles:
 
 - site: `https://amazerniger.vercel.app`
@@ -137,6 +143,22 @@ Le dashboard permet maintenant:
 2. L'application redirige vers `/admin`
 3. Utiliser les pages admin pour le contenu, les tarifs, la finance et le suivi
 
+### Verification admin finance
+
+Pour les pages finance, tarifs et utilisateurs:
+
+1. saisir le PIN admin
+2. saisir la cle secondaire
+3. valider
+
+Informations actuelles:
+
+- compte admin: `Amazer.niger@gmail.com`
+- PIN finance: `7391`
+- cle secondaire: `07/11/03`
+
+Si plusieurs essais echouent d'affilee, attendre quelques minutes avant de recommencer, car la verification est limitee pour la securite.
+
 ## Questions frequentes
 
 ### Je suis vendeur et je n'accede pas au dashboard
@@ -179,3 +201,21 @@ En resume:
 
 - lancer sur le Play Store ne casse pas ce qui est en ligne
 - redeployer le frontend ou le backend peut changer a la fois le web et l'app mobile si les deux pointent vers les memes URLs
+
+## Exploitation quotidienne
+
+### Lien a partager
+
+Le lien officiel a partager aux clients, vendeurs et partenaires est:
+
+- `https://amazerniger.vercel.app`
+
+### Controle rapide chaque jour
+
+1. ouvrir la home
+2. verifier les boutiques
+3. verifier les produits
+4. verifier la connexion admin
+5. verifier Render:
+   - `https://amazer-api.onrender.com/health`
+   - `https://amazer-api.onrender.com/api/v1/auth/health`
