@@ -84,6 +84,25 @@ Le resultat attendu sera dans:
 frontend/android/app/build/outputs/bundle/release/app-release.aab
 ```
 
+## GitHub Actions
+
+Deux workflows sont prets dans le repo:
+
+- build du bundle signe:
+  - `.github/workflows/android-release.yml`
+- build + envoi automatique sur Google Play:
+  - `.github/workflows/play-store-release.yml`
+
+Secrets GitHub a renseigner dans le depot:
+
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+- `PLAY_SERVICE_ACCOUNT_JSON`
+
+Le workflow Play publie sur la piste `internal`.
+
 ## Checklist Play Console
 
 ### Fiche Play
@@ -146,3 +165,5 @@ Le repo est prepare, mais cette machine ne dispose pas encore des composants sys
 - build release `AAB` effectivement genere
 
 Sans ces composants, on ne peut pas produire ici un `app-release.aab` final pret a uploader.
+
+Sans acces au compte Google Play Developer ou a un `service account` Google Play, on ne peut pas pousser l'application sur le Play Store depuis cette session.
