@@ -148,7 +148,7 @@ def _bootstrap_database_if_needed() -> None:
 
 @app.on_event("startup")
 def on_startup() -> None:
-    if settings.should_bootstrap_db():
+    if settings.bootstrap_on_startup:
         _bootstrap_database_if_needed()
     if settings.is_production() and settings.curated_public_catalog_mode:
         from seed_demo_storefronts import main as seed_storefronts_main
