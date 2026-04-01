@@ -34,10 +34,15 @@ class Settings(BaseSettings):
             "https://amazerniger-hub-amazer.vercel.app,"
             "https://amazerapp.com,"
             "https://www.amazerapp.com,"
+            "https://localhost,"
             "http://localhost:3000,"
             "http://127.0.0.1:3000,"
             "http://localhost:3001,"
-            "http://127.0.0.1:3001"
+            "http://127.0.0.1:3001,"
+            "http://localhost,"
+            "http://127.0.0.1,"
+            "https://127.0.0.1,"
+            "capacitor://localhost"
         )
     )
     cors_allowed_origin_regex: str = Field(
@@ -45,8 +50,13 @@ class Settings(BaseSettings):
             r"^("
             r"https://.*\.vercel\.app"
             r"|https://(www\.)?amazerapp\.com"
+            r"|https://localhost(:\d+)?"
+            r"|https://127\.0\.0\.1(:\d+)?"
+            r"|capacitor://localhost"
             r"|http://localhost:\d+"
+            r"|http://localhost"
             r"|http://127\.0\.0\.1:\d+"
+            r"|http://127\.0\.0\.1"
             r")$"
         )
     )
@@ -75,10 +85,15 @@ class Settings(BaseSettings):
 
     def get_cors_origins(self) -> list[str]:
         defaults = [
+            "https://localhost",
+            "https://127.0.0.1",
+            "http://localhost",
+            "http://127.0.0.1",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
             "http://localhost:3001",
             "http://127.0.0.1:3001",
+            "capacitor://localhost",
         ]
         configured = [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
         merged: list[str] = []

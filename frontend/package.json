@@ -5,13 +5,15 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
-    "build:mobile": "cross-env NEXT_STATIC_EXPORT=true next build --webpack",
+    "build:mobile": "npm run build:mobile:bundled",
+    "build:mobile:bundled": "cross-env NEXT_STATIC_EXPORT=true NEXT_PUBLIC_MOBILE_APP=true node ./scripts/build-mobile.mjs",
     "start": "next start",
     "lint": "eslint .",
     "cap:sync": "npx cap sync android",
     "cap:open": "npx cap open android",
     "cap:add:ios": "npx cap add ios",
-    "mobile:prepare:android": "npm run build && npx cap sync android"
+    "mobile:prepare:android": "cross-env CAPACITOR_SERVER_URL=https://amazerniger.vercel.app npx cap sync android",
+    "mobile:prepare:android:bundled": "npm run build:mobile:bundled && npx cap sync android"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",

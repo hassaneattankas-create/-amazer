@@ -1,9 +1,15 @@
 import axios, { AxiosRequestConfig } from "axios";
 
+import { getBackendOriginFromEnv } from "@/lib/backend-origin";
 import { getClientAccessToken, getClientCookieValue } from "@/lib/api";
+import { isMobileAppBuild } from "@/lib/mobile-app";
+
+const ADMIN_PROXY_BASE_URL = isMobileAppBuild()
+  ? `${getBackendOriginFromEnv()}/api/v1`
+  : "/api/admin-proxy";
 
 const adminProxyApi = axios.create({
-  baseURL: "/api/admin-proxy",
+  baseURL: ADMIN_PROXY_BASE_URL,
   timeout: 60000,
   withCredentials: true,
 });

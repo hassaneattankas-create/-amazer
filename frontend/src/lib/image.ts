@@ -1,4 +1,5 @@
 import { getBackendOriginFromEnv } from "@/lib/backend-origin";
+import { isMobileAppBuild } from "@/lib/mobile-app";
 
 const IMAGE_PROXY_ROUTE = "/api/image-proxy";
 
@@ -16,6 +17,9 @@ function toHttpsIfPossible(url: URL): string {
 }
 
 function shouldProxyImageUrl(value: string): boolean {
+  if (isMobileAppBuild()) {
+    return false;
+  }
   try {
     const url = new URL(value);
     if (!/^https?:$/i.test(url.protocol)) {

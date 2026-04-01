@@ -1,17 +1,19 @@
 import axios from "axios";
+import { getBackendOriginFromEnv } from "@/lib/backend-origin";
+import { isMobileAppBuild } from "@/lib/mobile-app";
 
 const API_PROXY_BASE_URL = "/backend-api";
 
 function resolveApiBaseUrl(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (typeof window !== "undefined" && fromEnv && /^https?:\/\//i.test(fromEnv)) {
-    return fromEnv.replace(/\/$/, "");
+  const absoluteBackendOrigin = getBackendOriginFromEnv();
+  if (isMobileAppBuild()) {
+    return absoluteBackendOrigin;
   }
   if (typeof window !== "undefined" && /^https?:$/.test(window.location.protocol)) {
     return API_PROXY_BASE_URL;
   }
-  if (fromEnv) {
-    return fromEnv.replace(/\/$/, "");
+  if (process.env.NEXT_PUBLIC_API_URL?.trim() || process.env.NEXT_PUBLIC_BACKEND_ORIGIN?.trim()) {
+    return absoluteBackendOrigin;
   }
   if (process.env.NODE_ENV === "production") {
     return API_PROXY_BASE_URL;

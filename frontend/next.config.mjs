@@ -104,7 +104,7 @@ const nextConfig = {
     ];
   },
   async headers() {
-    if (!isProd) {
+    if (!isProd || isStaticExport) {
       return [];
     }
 

@@ -658,7 +658,7 @@ export default function AdminFinancePage() {
         <p className="mt-2 text-sm text-slate-600">
           Les codes sont stockes chiffres en base. Vue reservee a l admin.
         </p>
-        {isHistoryPending ? <p className="mt-4 text-sm text-slate-500">Chargement de l'historique...</p> : null}
+        {isHistoryPending ? <p className="mt-4 text-sm text-slate-500">Chargement de l&apos;historique...</p> : null}
         {!isHistoryPending && isHistoryError ? (
           <p className="mt-4 text-sm text-amber-700">{getAdminFinanceDataError(historyError)}</p>
         ) : null}

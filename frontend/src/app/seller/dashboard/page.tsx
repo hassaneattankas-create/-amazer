@@ -407,7 +407,7 @@ export default function SellerDashboardPage() {
 
       {!showProductTools && !showRestaurantTools && !isProfilePending ? (
         <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
-          Complete d'abord ton profil vendeur pour activer le bon dashboard.
+          Complete d&apos;abord ton profil vendeur pour activer le bon dashboard.
         </article>
       ) : null}
 

@@ -1,6 +1,8 @@
 import axios from "axios";
+import { getBackendOriginFromEnv } from "@/lib/backend-origin";
 import { adminProxyRequest } from "@/lib/admin-proxy-client";
 import { api, getClientAccessToken, getClientCookieValue } from "@/lib/api";
+import { isMobileAppBuild } from "@/lib/mobile-app";
 import {
   AdminSeller,
   AdminSellerPricingPayload,
@@ -18,6 +20,20 @@ import {
   VerifyPinPayload,
   WalletSummary,
 } from "@/types/finance";
+
+const DIRECT_ADMIN_FINANCE_BASE_URL = `${getBackendOriginFromEnv()}/api/v1/admin/finance`;
+
+function getAdminFinancePinVerifyUrl(): string {
+  return isMobileAppBuild()
+    ? `${DIRECT_ADMIN_FINANCE_BASE_URL}/pin/verify`
+    : "/api/admin-finance/pin/verify";
+}
+
+function getAdminFinanceAuditExportUrl(): string {
+  return isMobileAppBuild()
+    ? `${DIRECT_ADMIN_FINANCE_BASE_URL}/audit-history/export`
+    : "/api/admin-proxy/admin/finance/audit-history/export";
+}
 
 export async function getPublicFinanceSettings(): Promise<FinanceSettings> {
   const response = await api.get<FinanceSettings>("/api/v1/admin/finance/public-settings");
@@ -61,7 +77,7 @@ export async function verifyAdminFinancePin(payload: VerifyPinPayload): Promise<
   if (csrfToken) {
     headers["X-CSRF-Token"] = csrfToken;
   }
-  await axios.post("/api/admin-finance/pin/verify", payload, {
+  await axios.post(getAdminFinancePinVerifyUrl(), payload, {
     headers,
     withCredentials: true,
     timeout: 30000,
@@ -210,7 +226,7 @@ export async function restoreAdminUser(userId: string): Promise<AdminUser> {
 }
 
 export async function downloadAuditCsv(limit = 1000): Promise<Blob> {
-  const response = await axios.get("/api/admin-proxy/admin/finance/audit-history/export", {
+  const response = await axios.get(getAdminFinanceAuditExportUrl(), {
     params: { limit },
     responseType: "blob",
     withCredentials: true,
