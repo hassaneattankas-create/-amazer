@@ -17,6 +17,7 @@ from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.schemas.restaurant import (
+    RestaurantMenuAvailabilityUpdateRequest,
     RestaurantMenuCreateRequest,
     RestaurantMenuItemResponse,
     RestaurantOrderCreateRequest,
@@ -305,6 +306,54 @@ def create_restaurant_menu_item(
     db.commit()
     db.refresh(menu_item)
     _invalidate_public_marketplace_cache()
+    vendor = db.get(Vendor, profile.vendor_id)
+    vendor_name = vendor.name if vendor else "Restaurant"
+    return _menu_response(menu_item, vendor_name)
+
+
+@router.get("/seller/menu", response_model=list[RestaurantMenuItemResponse])
+def list_seller_restaurant_menu(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> list[RestaurantMenuItemResponse]:
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        return []
+
+    vendor = db.get(Vendor, profile.vendor_id)
+    vendor_name = vendor.name if vendor else "Restaurant"
+    rows = db.scalars(
+        select(RestaurantMenuItem)
+        .where(RestaurantMenuItem.vendor_id == profile.vendor_id)
+        .order_by(RestaurantMenuItem.updated_at.desc(), RestaurantMenuItem.created_at.desc())
+        .limit(limit)
+    ).all()
+    return [_menu_response(row, vendor_name) for row in rows]
+
+
+@router.patch("/seller/menu/{menu_item_id}", response_model=RestaurantMenuItemResponse)
+def update_seller_restaurant_menu_availability(
+    menu_item_id: str,
+    payload: RestaurantMenuAvailabilityUpdateRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> RestaurantMenuItemResponse:
+    enforce_csrf(request)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        raise NotFoundError("Seller profile not found")
+
+    menu_item = db.get(RestaurantMenuItem, menu_item_id)
+    if menu_item is None or menu_item.vendor_id != profile.vendor_id:
+        raise NotFoundError("Menu item not found")
+
+    menu_item.is_available = payload.is_available
+    db.commit()
+    db.refresh(menu_item)
+    _invalidate_public_marketplace_cache()
+
     vendor = db.get(Vendor, profile.vendor_id)
     vendor_name = vendor.name if vendor else "Restaurant"
     return _menu_response(menu_item, vendor_name)

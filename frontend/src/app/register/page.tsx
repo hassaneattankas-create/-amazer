@@ -82,7 +82,7 @@ function RegisterPageContent() {
   );
 
   async function finalizeRedirect() {
-    const sellerTarget = `/seller?welcome=1&type=${sellerType}`;
+    const sellerTarget = `/seller/dashboard?welcome=1&type=${sellerType}`;
     const target = isSellerFlow ? sellerTarget : next.startsWith("/") ? next : "/";
     window.location.assign(target);
   }

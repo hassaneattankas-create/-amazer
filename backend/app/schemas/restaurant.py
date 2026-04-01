@@ -41,6 +41,12 @@ class RestaurantMenuItemResponse(BaseModel):
     is_available: bool
 
 
+class RestaurantMenuAvailabilityUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    is_available: bool
+
+
 class RestaurantOrderLineRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

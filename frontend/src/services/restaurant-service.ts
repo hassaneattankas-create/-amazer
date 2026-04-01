@@ -58,6 +58,22 @@ export async function createRestaurantMenuItem(payload: {
   return response.data;
 }
 
+export async function listSellerRestaurantMenu(): Promise<RestaurantMenuItem[]> {
+  const response = await api.get<RestaurantMenuItem[]>("/api/v1/restaurant/seller/menu");
+  return response.data;
+}
+
+export async function updateSellerRestaurantMenuAvailability(
+  menuItemId: string,
+  isAvailable: boolean
+): Promise<RestaurantMenuItem> {
+  const response = await api.patch<RestaurantMenuItem>(
+    `/api/v1/restaurant/seller/menu/${menuItemId}`,
+    { is_available: isAvailable }
+  );
+  return response.data;
+}
+
 export async function createRestaurantReservation(
   vendorId: string,
   payload: RestaurantReservationRequest
