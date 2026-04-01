@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { filterPublicProductSearchResult } from "@/lib/public-catalog-filter";
 import { ProductDetailData, ProductSearchResult, SearchSort } from "@/types/product";
 
 type SearchProductsParams = {
@@ -32,7 +33,7 @@ export async function searchProducts({
   const response = await api.get<ProductSearchResult>("/api/v1/products/search", {
     params,
   });
-  return response.data;
+  return filterPublicProductSearchResult(response.data);
 }
 
 export async function getProductDetailById(productId: string): Promise<ProductDetailData> {
@@ -44,5 +45,5 @@ export async function getProductRecommendations(productId: string, limit = 4): P
   const response = await api.get<ProductSearchResult>(`/api/v1/products/${productId}/recommendations`, {
     params: { limit },
   });
-  return response.data;
+  return filterPublicProductSearchResult(response.data);
 }

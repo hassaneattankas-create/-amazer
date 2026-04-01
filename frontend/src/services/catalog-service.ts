@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { filterPublicPromotions, filterPublicStorefronts } from "@/lib/public-catalog-filter";
 import { CatalogCategory, PromotionItem, VendorStorefront } from "@/types/catalog";
 
 type StorefrontFilters = {
@@ -17,14 +18,14 @@ export async function listStorefronts(filters?: StorefrontFilters): Promise<Vend
       ...(filters?.storefrontTier ? { storefront_tier: filters.storefrontTier } : {}),
     },
   });
-  return response.data.items;
+  return filterPublicStorefronts(response.data.items);
 }
 
 export async function listPromotions(query?: string): Promise<PromotionItem[]> {
   const response = await api.get<{ items: PromotionItem[] }>("/api/v1/promotions", {
     params: query?.trim() ? { query: query.trim(), limit: 120 } : { limit: 120 },
   });
-  return response.data.items;
+  return filterPublicPromotions(response.data.items);
 }
 
 export async function listCatalogCategories(): Promise<CatalogCategory[]> {

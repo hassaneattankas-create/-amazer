@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import { adminProxyRequest } from "@/lib/admin-proxy-client";
+import { filterPublicHomeContent } from "@/lib/public-catalog-filter";
 import {
   AdClickStats,
   AdminCategory,
@@ -10,7 +11,7 @@ import {
 
 export async function getHomeContent(): Promise<HomeContent> {
   const response = await api.get<HomeContent>("/api/v1/home-content");
-  return response.data;
+  return filterPublicHomeContent(response.data);
 }
 
 export async function trackAdClick(productId: string, sectionSlug?: string): Promise<void> {

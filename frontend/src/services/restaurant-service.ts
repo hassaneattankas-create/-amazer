@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { filterPublicRestaurantStorefronts } from "@/lib/public-catalog-filter";
 import {
   RestaurantMenuItem,
   RestaurantOrder,
@@ -12,7 +13,7 @@ export async function listRestaurantStorefronts(query?: string): Promise<Restaur
   const response = await api.get<{ items: RestaurantStorefront[] }>("/api/v1/restaurant/storefronts", {
     params: query?.trim() ? { query: query.trim(), limit: 120 } : { limit: 120 },
   });
-  return response.data.items;
+  return filterPublicRestaurantStorefronts(response.data.items);
 }
 
 export async function listRestaurantMenu(vendorId?: string): Promise<RestaurantMenuItem[]> {
