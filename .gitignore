@@ -13,3 +13,4 @@ frontend/.env*
 __pycache__/
 
 .vercel
+.vercel-global/
