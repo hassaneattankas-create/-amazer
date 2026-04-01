@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Boxes, Clock3, UtensilsCrossed } from "lucide-react";
 
 import { AnimatedPrice } from "@/components/AnimatedPrice";
+import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,7 @@ import {
   listSellerRestaurantOrders,
   updateSellerRestaurantOrderStatus,
 } from "@/services/restaurant-service";
-import { listSellerInventory, updateSellerInventory } from "@/services/seller-service";
+import { getSellerProfile, listSellerInventory, updateSellerInventory } from "@/services/seller-service";
 
 export default function SellerDashboardPage() {
   const queryClient = useQueryClient();
@@ -30,15 +31,27 @@ export default function SellerDashboardPage() {
     base_price: "",
     prep: "20",
     tags: "Chaud,Populaire",
-    options: "Boisson:500,Sauce pimentee:250",
+      options: "Boisson:500,Sauce pimentee:250",
   });
+  const { data: profile, isPending: isProfilePending } = useQuery({
+    queryKey: ["seller-profile-dashboard"],
+    queryFn: getSellerProfile,
+  });
+  const sellerMode =
+    profile?.activity_type === "hotel" || profile?.activity_type === "enterprise"
+      ? "enterprise"
+      : profile?.activity_type || "shop";
+  const showProductTools = sellerMode === "shop" || sellerMode === "enterprise";
+  const showRestaurantTools = sellerMode === "restaurant" || sellerMode === "enterprise";
   const { data: inventory = [], isPending } = useQuery({
     queryKey: ["seller-inventory"],
     queryFn: listSellerInventory,
+    enabled: showProductTools,
   });
   const { data: restaurantOrders = [] } = useQuery({
     queryKey: ["seller-restaurant-orders"],
     queryFn: listSellerRestaurantOrders,
+    enabled: showRestaurantTools,
     refetchInterval: 5000,
   });
 
@@ -119,21 +132,33 @@ export default function SellerDashboardPage() {
       })
       .filter((entry) => entry.name && Number.isFinite(entry.price));
   const normalizeImageInput = (raw: string): string | undefined => resolveImageUrl(raw) ?? undefined;
+  const dashboardTitle =
+    sellerMode === "restaurant"
+      ? "Mon Restaurant AMAZER"
+      : sellerMode === "enterprise"
+        ? "Mon Premium AMAZER"
+        : "Ma Boutique AMAZER";
+  const dashboardDescription =
+    sellerMode === "restaurant"
+      ? "Dashboard restaurant: gere tes plats, boissons et commandes."
+      : sellerMode === "enterprise"
+        ? "Dashboard premium: produits, plats, boissons, commandes et outils avances dans un seul espace."
+        : "Dashboard boutique: gere uniquement tes articles, prix, stock et boosts.";
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
       <header className="premium-card border border-slate-200 bg-white p-6">
-        <h1 className="luxury-title text-3xl font-semibold">Ma Boutique AMAZER</h1>
+        <h1 className="luxury-title text-3xl font-semibold">{dashboardTitle}</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Back-office type Shopify adapte a ton profil (boutique, restaurant ou premium) pour gerer articles,
-          prix, boosts et commandes.
+          {dashboardDescription}
         </p>
       </header>
 
-      <article className="premium-card border border-slate-200 bg-white p-6">
+      {showRestaurantTools ? (
+        <article className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
           <UtensilsCrossed className="h-5 w-5 text-[#FF4D00]" />
-          Ajouter un plat restaurant
+          Ajouter un plat ou une boisson
         </h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <Input
@@ -196,11 +221,13 @@ export default function SellerDashboardPage() {
             })
           }
         >
-          Publier le plat
+          Publier au menu
         </Button>
       </article>
+      ) : null}
 
-      <article className="premium-card border border-slate-200 bg-white p-6">
+      {showRestaurantTools ? (
+        <article className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
           <Clock3 className="h-5 w-5 text-[#FF4D00]" />
           Commandes restaurant en temps reel
@@ -242,11 +269,25 @@ export default function SellerDashboardPage() {
           ) : null}
         </div>
       </article>
+      ) : null}
 
-      {isPending ? (
+      {showProductTools && (isPending || isProfilePending) ? (
         <ProductCardSkeleton />
-      ) : (
+      ) : null}
+
+      {showProductTools && !isPending && !isProfilePending ? (
         <div className="space-y-3">
+          <article className="premium-card border border-slate-200 bg-white p-6">
+            <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
+              <Boxes className="h-5 w-5 text-[#FF4D00]" />
+              {sellerMode === "enterprise" ? "Catalogue produits" : "Articles boutique"}
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              {sellerMode === "enterprise"
+                ? "Espace premium: gere ton catalogue produits en plus du menu restaurant."
+                : "Espace boutique: ici tu geres seulement tes produits, prix, stock et boosts."}
+            </p>
+          </article>
           {inventory.map((item) => (
             <article key={item.price_id} className="premium-card border border-slate-200 bg-white p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -362,7 +403,13 @@ export default function SellerDashboardPage() {
             </article>
           ) : null}
         </div>
-      )}
+      ) : null}
+
+      {!showProductTools && !showRestaurantTools && !isProfilePending ? (
+        <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
+          Complete d'abord ton profil vendeur pour activer le bon dashboard.
+        </article>
+      ) : null}
 
       {status ? <p className="text-sm text-slate-700">{status}</p> : null}
 
@@ -372,12 +419,12 @@ export default function SellerDashboardPage() {
           Action irreversible: votre compte sera desactive, votre boutique fermee et vos donnees personnelles anonymisees.
         </p>
         <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center" onSubmit={onDeleteAccount}>
-          <Input
-            type="password"
+          <PasswordInput
             value={deletePassword}
             onChange={(event) => setDeletePassword(event.target.value)}
             placeholder="Mot de passe actuel"
             required
+            wrapperClassName="w-full sm:flex-1"
           />
           <Button
             type="submit"

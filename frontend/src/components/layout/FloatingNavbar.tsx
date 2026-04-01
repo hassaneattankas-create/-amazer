@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
 import { useAdminMe } from "@/hooks/use-admin-me";
+import { useClientMounted } from "@/hooks/use-client-mounted";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { isAdminEmail } from "@/lib/admin";
 import { clearAppMode, persistAppMode } from "@/lib/session-mode";
@@ -38,9 +39,10 @@ const SESSION_DRAFT_KEYS = [
 ];
 
 export function FloatingNavbar() {
+  const isClient = useClientMounted();
   const items = useCartStore((state) => state.items);
   const resetCartSession = useCartStore((state) => state.resetSession);
-  const cartCount = items.reduce((total, item) => total + item.quantity, 0);
+  const cartCount = isClient ? items.reduce((total, item) => total + item.quantity, 0) : 0;
   const { data: user } = useCurrentUser();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -48,6 +50,7 @@ export function FloatingNavbar() {
   const appMode = useAuthStore((state) => state.appMode);
   const setAppMode = useAuthStore((state) => state.setAppMode);
   const resetSessionView = useAuthStore((state) => state.resetSessionView);
+  const effectiveAppMode = isClient ? appMode : "client";
   const { data: adminMe } = useAdminMe(Boolean(user?.id));
   const { data: sellerProfile, isFetched: sellerProfileFetched } = useQuery({
     queryKey: ["navbar-seller-profile", user?.id],
@@ -59,14 +62,17 @@ export function FloatingNavbar() {
   const showAdminLink = Boolean(adminMe?.is_admin) || isAdminEmail(user?.email);
   const showSellerLink = Boolean(sellerProfile?.id);
   const isAuthenticated = Boolean(user?.id);
-  const showClientDashboard = isAuthenticated && appMode !== "seller";
+  const showClientDashboard = isAuthenticated && effectiveAppMode !== "seller";
   const activeNavItems =
-    isAuthenticated && appMode === "seller" ? sellerNavItems : clientNavItems;
+    isAuthenticated && effectiveAppMode === "seller" ? sellerNavItems : clientNavItems;
   const groupedNavItems = showClientDashboard
     ? [...activeNavItems, { href: "/dashboard", label: "Dashboard" }]
     : activeNavItems;
 
   useEffect(() => {
+    if (!isClient) {
+      return;
+    }
     if (!isAuthenticated) {
       if (appMode !== "client") {
         setAppMode("client");
@@ -83,15 +89,18 @@ export function FloatingNavbar() {
     if (!showSellerLink && appMode !== "client") {
       setAppMode("client");
     }
-  }, [appMode, isAuthenticated, sellerProfileFetched, setAppMode, showSellerLink]);
+  }, [isClient, appMode, isAuthenticated, sellerProfileFetched, setAppMode, showSellerLink]);
 
   useEffect(() => {
+    if (!isClient) {
+      return;
+    }
     if (!isAuthenticated) {
       clearAppMode();
       return;
     }
     persistAppMode(appMode);
-  }, [appMode, isAuthenticated]);
+  }, [isClient, appMode, isAuthenticated]);
 
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
@@ -241,7 +250,7 @@ export function FloatingNavbar() {
               {isLoggingOut ? "Deconnexion..." : "Deconnexion"}
             </button>
           )}
-          {appMode !== "seller" ? (
+          {effectiveAppMode !== "seller" ? (
             <Link
               href="/cart"
               className="primary-glow-btn shine-btn relative inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-white"

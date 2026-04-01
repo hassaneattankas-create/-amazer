@@ -7,6 +7,7 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "rec
 
 import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { OrderStepper } from "@/components/OrderStepper";
+import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -211,13 +212,13 @@ export default function DashboardPage() {
           Action irreversible: votre compte sera desactive et vos donnees personnelles anonymisees.
         </p>
         <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center" onSubmit={onDeleteAccount}>
-          <input
-            type="password"
+          <PasswordInput
             value={deletePassword}
             onChange={(event) => setDeletePassword(event.target.value)}
             placeholder="Mot de passe actuel"
-            className="w-full rounded-md border border-rose-300 px-3 py-2 text-sm"
+            className="border-rose-300"
             required
+            wrapperClassName="w-full sm:flex-1"
           />
           <Button
             type="submit"

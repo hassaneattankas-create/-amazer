@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { PasswordInput } from "@/components/PasswordInput";
 import { Button } from "@/components/ui/button";
 import {
   getAdminFinanceDataError,
@@ -297,19 +298,21 @@ export default function AdminTarifsPage() {
           <p className="mt-1 text-xs text-slate-500">
             Si tu inverses la date et le PIN, l&apos;app corrige automatiquement.
           </p>
-          <div className="mt-4 flex gap-3">
-            <input
-              type="password"
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <PasswordInput
               value={pin}
               onChange={(event) => setPin(event.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
               placeholder="PIN admin"
+              masking="password"
+              wrapperClassName="min-w-0 flex-1"
             />
-            <input
+            <PasswordInput
               value={birthDate}
               onChange={(event) => setBirthDate(event.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
               placeholder="Date secondaire JJ/MM/AA"
+              masking="text"
+              autoComplete="off"
+              wrapperClassName="min-w-0 flex-1"
             />
             <Button
               onClick={() => pinMutation.mutate(buildAdminFinanceVerifyPayload(pin, birthDate))}

@@ -14,6 +14,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useClientMounted } from "@/hooks/use-client-mounted";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { formatMoney } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
@@ -59,10 +60,24 @@ function withBoostRotation<T extends { is_boosted: boolean }>(items: T[]): T[] {
   return [...rotated.slice(0, 3), ...regular, ...rotated.slice(3)];
 }
 
+/** Same ordering rules as withBoostRotation but deterministic (by id) — avoids SSR/client HTML mismatch. */
+function stableBoostOrder<T extends { is_boosted: boolean; id: string }>(items: T[]): T[] {
+  const boosted = items.filter((entry) => entry.is_boosted).sort((a, b) => a.id.localeCompare(b.id));
+  const regular = items.filter((entry) => !entry.is_boosted).sort((a, b) => a.id.localeCompare(b.id));
+  if (!boosted.length) {
+    return regular;
+  }
+  if (boosted.length <= 3) {
+    return [...boosted, ...regular];
+  }
+  return [...boosted.slice(0, 3), ...regular, ...boosted.slice(3)];
+}
+
 export default function HomePage() {
   const [query, setQuery] = useState("");
   const [barcode, setBarcode] = useState("");
   const [activeShelf, setActiveShelf] = useState<ShelfSlug>("all");
+  const mounted = useClientMounted();
   const preferredCurrency = useAuthStore((state) => state.preferredCurrency);
   const debouncedQuery = useDebouncedValue(query, DEBOUNCE_MS);
   const debouncedBarcode = useDebouncedValue(barcode, DEBOUNCE_MS);
@@ -90,7 +105,10 @@ export default function HomePage() {
     }
     return products.filter((entry) => entry.category?.slug === activeShelf);
   }, [activeShelf, products]);
-  const boostedResults = useMemo(() => withBoostRotation(shelfFiltered), [shelfFiltered]);
+  const boostedResults = useMemo(
+    () => (mounted ? withBoostRotation(shelfFiltered) : stableBoostOrder(shelfFiltered)),
+    [mounted, shelfFiltered],
+  );
   const displayResults = useMemo(
     () => (hasActiveFilter ? boostedResults : shelfFiltered),
     [boostedResults, hasActiveFilter, shelfFiltered]
@@ -118,7 +136,7 @@ export default function HomePage() {
   const isEmptyState = hasActiveFilter && !isPending && !isError && displayResults.length === 0;
 
   const statusLabel = useMemo(() => {
-    if (!hasActiveFilter) return "Top produits du marche Niger.";
+    if (!hasActiveFilter) return "Tous les produits publies sur AMAZER apparaissent ici.";
     if (isPending) return "Recherche en cours...";
     if (isError) return `Erreur: ${(error as Error).message}`;
     if (!displayResults.length) return "Aucun produit trouve.";
@@ -254,7 +272,9 @@ export default function HomePage() {
 
       <div className="mt-8">
         {!hasActiveFilter ? (
-          <h2 className="luxury-title text-xl font-semibold text-slate-900">Derniers produits actifs</h2>
+          <h2 className="luxury-title text-xl font-semibold text-slate-900">
+            Tous les produits publies
+          </h2>
         ) : null}
         <p className="text-sm text-slate-600">
           {statusLabel}
@@ -334,7 +354,9 @@ export default function HomePage() {
       {!hasActiveFilter && homeContent?.sections?.length ? (
         <div className="mt-10 space-y-7">
           {homeContent.sections.map((section) => {
-            const sectionProducts = withBoostRotation(section.products);
+            const sectionProducts = mounted
+              ? withBoostRotation(section.products)
+              : stableBoostOrder(section.products);
             if (!sectionProducts.length) {
               return null;
             }

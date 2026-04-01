@@ -1,21 +1,9 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || "";
-const BACKEND_ORIGIN = (
-  process.env.NEXT_PUBLIC_BACKEND_ORIGIN?.trim() || "https://amazer-api.onrender.com"
-).replace(/\/$/, "");
+import { getBackendOriginFromEnv } from "@/lib/backend-origin";
+
 const IMAGE_PROXY_ROUTE = "/api/image-proxy";
 
 function getApiOrigin(): string {
-  if (BACKEND_ORIGIN) {
-    return BACKEND_ORIGIN;
-  }
-  if (!API_BASE_URL) {
-    return "";
-  }
-  try {
-    return new URL(API_BASE_URL).origin;
-  } catch {
-    return "";
-  }
+  return getBackendOriginFromEnv();
 }
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0"]);

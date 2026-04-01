@@ -18,6 +18,10 @@ function isFrameworkOrStaticPath(pathname: string): boolean {
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/images/") ||
     pathname.startsWith("/api/") ||
+    pathname.startsWith("/backend-api/") ||
+    pathname === "/backend-api" ||
+    pathname.startsWith("/media/") ||
+    pathname === "/media" ||
     pathname === "/favicon.ico" ||
     pathname === "/manifest.json" ||
     pathname === "/sw.js" ||

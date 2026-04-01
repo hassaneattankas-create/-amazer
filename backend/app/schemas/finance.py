@@ -73,7 +73,7 @@ class FinanceSummaryResponse(BaseModel):
 
 
 class PinVerifyRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     pin: str = Field(min_length=4, max_length=32)
     birth_date: str = Field(min_length=6, max_length=16)

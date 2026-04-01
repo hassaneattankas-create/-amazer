@@ -1,4 +1,5 @@
 import axios from "axios";
+import { adminProxyRequest } from "@/lib/admin-proxy-client";
 import { api, getClientAccessToken, getClientCookieValue } from "@/lib/api";
 import {
   AdminSeller,
@@ -29,18 +30,25 @@ export async function getPublicContactInfo(): Promise<PublicContactInfo> {
 }
 
 export async function getAdminFinanceSettings(): Promise<FinanceSettings> {
-  const response = await api.get<FinanceSettings>("/api/v1/admin/finance/settings");
-  return response.data;
+  return adminProxyRequest<FinanceSettings>({
+    url: "/admin/finance/settings",
+    method: "GET",
+  });
 }
 
 export async function updateAdminFinanceSettings(payload: FinanceSettings): Promise<FinanceSettings> {
-  const response = await api.put<FinanceSettings>("/api/v1/admin/finance/settings", payload);
-  return response.data;
+  return adminProxyRequest<FinanceSettings>({
+    url: "/admin/finance/settings",
+    method: "PUT",
+    data: payload,
+  });
 }
 
 export async function getAdminFinanceSummary(): Promise<FinanceSummary> {
-  const response = await api.get<FinanceSummary>("/api/v1/admin/finance/summary");
-  return response.data;
+  return adminProxyRequest<FinanceSummary>({
+    url: "/admin/finance/summary",
+    method: "GET",
+  });
 }
 
 export async function verifyAdminFinancePin(payload: VerifyPinPayload): Promise<void> {
@@ -56,120 +64,160 @@ export async function verifyAdminFinancePin(payload: VerifyPinPayload): Promise<
   await axios.post("/api/admin-finance/pin/verify", payload, {
     headers,
     withCredentials: true,
-    timeout: 10000,
+    timeout: 30000,
   });
 }
 
 export async function getAdminWalletSummary(): Promise<WalletSummary> {
-  const response = await api.get<WalletSummary>("/api/v1/admin/finance/wallet-summary");
-  return response.data;
+  return adminProxyRequest<WalletSummary>({
+    url: "/admin/finance/wallet-summary",
+    method: "GET",
+  });
 }
 
 export async function getAdminTreasuryHistory(): Promise<TreasuryTransaction[]> {
-  const response = await api.get<TreasuryTransaction[]>("/api/v1/admin/finance/treasury-history");
-  return response.data;
+  return adminProxyRequest<TreasuryTransaction[]>({
+    url: "/admin/finance/treasury-history",
+    method: "GET",
+  });
 }
 
 export async function createAdminTransfer(payload: TransferPayload): Promise<TransferResult> {
-  const response = await api.post<TransferResult>("/api/v1/admin/finance/transfer", payload);
-  return response.data;
+  return adminProxyRequest<TransferResult>({
+    url: "/admin/finance/transfer",
+    method: "POST",
+    data: payload,
+  });
 }
 
 export async function listAdminOrders(limit = 40): Promise<AdminOrderTracking[]> {
-  const response = await api.get<AdminOrderTracking[]>("/api/v1/admin/finance/orders", {
+  return adminProxyRequest<AdminOrderTracking[]>({
+    url: "/admin/finance/orders",
+    method: "GET",
     params: { limit },
   });
-  return response.data;
 }
 
 export async function dispatchAdminOrder(
   orderId: string,
   status: AdminOrderTracking["status"] = "livraison"
 ): Promise<AdminOrderTracking> {
-  const response = await api.post<AdminOrderTracking>(`/api/v1/admin/finance/orders/${orderId}/dispatch`, {
-    status,
+  return adminProxyRequest<AdminOrderTracking>({
+    url: `/admin/finance/orders/${orderId}/dispatch`,
+    method: "POST",
+    data: { status },
   });
-  return response.data;
 }
 
 export async function listAdminDistrictFees(): Promise<DistrictFeeItem[]> {
-  const response = await api.get<DistrictFeeItem[]>("/api/v1/admin/finance/district-fees");
-  return response.data;
+  return adminProxyRequest<DistrictFeeItem[]>({
+    url: "/admin/finance/district-fees",
+    method: "GET",
+  });
 }
 
 export async function replaceAdminDistrictFees(payload: DistrictFeeItem[]): Promise<DistrictFeeItem[]> {
-  const response = await api.put<DistrictFeeItem[]>("/api/v1/admin/finance/district-fees", payload);
-  return response.data;
+  return adminProxyRequest<DistrictFeeItem[]>({
+    url: "/admin/finance/district-fees",
+    method: "PUT",
+    data: payload,
+  });
 }
 
 export async function toggleLaunchMode(enabled: boolean): Promise<FinanceSettings> {
-  const response = await api.post<FinanceSettings>("/api/v1/admin/finance/mode-launch", null, {
+  return adminProxyRequest<FinanceSettings>({
+    url: "/admin/finance/mode-launch",
+    method: "POST",
     params: { enabled },
   });
-  return response.data;
 }
 
 export async function listAdminAuditHistory(limit = 120): Promise<AuditLogItem[]> {
-  const response = await api.get<AuditLogItem[]>("/api/v1/admin/finance/audit-history", {
+  return adminProxyRequest<AuditLogItem[]>({
+    url: "/admin/finance/audit-history",
+    method: "GET",
     params: { limit },
   });
-  return response.data;
 }
 
 export async function listAdminSellers(): Promise<AdminSeller[]> {
-  const response = await api.get<AdminSeller[]>("/api/v1/admin/finance/sellers");
-  return response.data;
+  return adminProxyRequest<AdminSeller[]>({
+    url: "/admin/finance/sellers",
+    method: "GET",
+  });
 }
 
 export async function deleteAdminSeller(profileId: string): Promise<void> {
-  await api.delete(`/api/v1/admin/finance/sellers/${profileId}`);
+  await adminProxyRequest<void>({
+    url: `/admin/finance/sellers/${profileId}`,
+    method: "DELETE",
+  });
 }
 
 export async function restoreAdminSeller(profileId: string): Promise<AdminSeller> {
-  const response = await api.post<AdminSeller>(`/api/v1/admin/finance/sellers/${profileId}/restore`);
-  return response.data;
+  return adminProxyRequest<AdminSeller>({
+    url: `/admin/finance/sellers/${profileId}/restore`,
+    method: "POST",
+  });
 }
 
 export async function verifyAdminSeller(profileId: string, verified: boolean): Promise<AdminSeller> {
-  const response = await api.post<AdminSeller>(`/api/v1/admin/finance/sellers/${profileId}/verify`, null, {
+  return adminProxyRequest<AdminSeller>({
+    url: `/admin/finance/sellers/${profileId}/verify`,
+    method: "POST",
     params: { verified },
   });
-  return response.data;
 }
 
 export async function updateAdminSellerPricing(
   profileId: string,
   payload: AdminSellerPricingPayload,
 ): Promise<AdminSeller> {
-  const response = await api.put<AdminSeller>(`/api/v1/admin/finance/sellers/${profileId}/pricing`, payload);
-  return response.data;
+  return adminProxyRequest<AdminSeller>({
+    url: `/admin/finance/sellers/${profileId}/pricing`,
+    method: "PUT",
+    data: payload,
+  });
 }
 
 export async function getAdminUserStats(): Promise<AdminUserStats> {
-  const response = await api.get<AdminUserStats>("/api/v1/admin/finance/users/stats");
-  return response.data;
+  return adminProxyRequest<AdminUserStats>({
+    url: "/admin/finance/users/stats",
+    method: "GET",
+  });
 }
 
 export async function listAdminUsers(query?: string, limit = 200): Promise<AdminUser[]> {
-  const response = await api.get<AdminUser[]>("/api/v1/admin/finance/users", {
+  return adminProxyRequest<AdminUser[]>({
+    url: "/admin/finance/users",
+    method: "GET",
     params: { query, limit },
   });
-  return response.data;
 }
 
 export async function removeAdminUser(userId: string): Promise<void> {
-  await api.delete(`/api/v1/admin/finance/users/${userId}`);
+  await adminProxyRequest<void>({
+    url: `/admin/finance/users/${userId}`,
+    method: "DELETE",
+  });
 }
 
 export async function restoreAdminUser(userId: string): Promise<AdminUser> {
-  const response = await api.post<AdminUser>(`/api/v1/admin/finance/users/${userId}/restore`);
-  return response.data;
+  return adminProxyRequest<AdminUser>({
+    url: `/admin/finance/users/${userId}/restore`,
+    method: "POST",
+  });
 }
 
 export async function downloadAuditCsv(limit = 1000): Promise<Blob> {
-  const response = await api.get("/api/v1/admin/finance/audit-history/export", {
+  const response = await axios.get("/api/admin-proxy/admin/finance/audit-history/export", {
     params: { limit },
     responseType: "blob",
+    withCredentials: true,
+    timeout: 10000,
+    headers: {
+      ...(getClientAccessToken() ? { Authorization: `Bearer ${getClientAccessToken()}` } : {}),
+    },
   });
   return response.data as Blob;
 }

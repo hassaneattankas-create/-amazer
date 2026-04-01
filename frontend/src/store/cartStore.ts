@@ -3,6 +3,22 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 import { CartItem, SavingsHistoryRecord } from "@/types/cart";
 
+function getCartStorage(): Storage {
+  if (typeof window === "undefined") {
+    return {
+      getItem: () => null,
+      setItem: () => undefined,
+      removeItem: () => undefined,
+      clear: () => undefined,
+      key: () => null,
+      get length() {
+        return 0;
+      },
+    } as unknown as Storage;
+  }
+  return window.localStorage;
+}
+
 type CartStoreState = {
   items: CartItem[];
   savingsHistory: SavingsHistoryRecord[];
@@ -82,7 +98,7 @@ export const useCartStore = create<CartStoreState>()(
     }),
     {
       name: "amazer-smart-cart",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(getCartStorage),
       partialize: (state) => ({
         items: state.items,
         savingsHistory: state.savingsHistory,

@@ -2,9 +2,9 @@ import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const BACKEND_ORIGIN = (
-  process.env.NEXT_PUBLIC_BACKEND_ORIGIN || "https://amazer-api.onrender.com"
-).trim().replace(/\/$/, "");
+import { getBackendOriginFromEnv } from "@/lib/backend-origin";
+
+const BACKEND_ORIGIN = getBackendOriginFromEnv();
 
 export const runtime = "nodejs";
 

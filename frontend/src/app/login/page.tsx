@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
+import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -88,19 +89,13 @@ function LoginPageContent() {
             />
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-slate-800" htmlFor="password">
-              Mot de passe
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-            />
-          </div>
+          <PasswordInput
+            id="password"
+            label="Mot de passe"
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
 
           <Button
             type="submit"

@@ -5,11 +5,12 @@ import { FormEvent, Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Building2, Store, UtensilsCrossed } from "lucide-react";
 
+import { PasswordInput } from "@/components/PasswordInput";
 import { PremiumSellerPitch } from "@/components/PremiumSellerPitch";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
-import { getApiErrorMessage } from "@/lib/api-error";
-import { login, register } from "@/services/auth-service";
+import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
+import { login, register, verifyAccount, type RegisterResponse } from "@/services/auth-service";
 import type { SellerActivityType, StorefrontTier } from "@/types/seller";
 
 const PASSWORD_POLICY = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/;
@@ -67,6 +68,12 @@ function RegisterPageContent() {
   const [sellerType, setSellerType] = useState<SellerRegistrationType>("shop");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingVerification, setPendingVerification] = useState<{
+    channel: string;
+    masked: string;
+    preview: string | null;
+  } | null>(null);
+  const [verifyCode, setVerifyCode] = useState("");
 
   const next = searchParams.get("next") || "/";
   const isSellerFlow = useMemo(
@@ -85,7 +92,7 @@ function RegisterPageContent() {
     setStatus("");
     setIsLoading(true);
     try {
-      await register({
+      const reg: RegisterResponse = await register({
         identifier: identifier.trim(),
         full_name: fullName.trim(),
         password,
@@ -93,13 +100,51 @@ function RegisterPageContent() {
           ? buildSellerProfilePayload(sellerType, fullName, businessName)
           : undefined,
       });
+      if (reg.verification_channel && reg.verification_channel !== "none") {
+        setPendingVerification({
+          channel: reg.verification_channel,
+          masked: reg.verification_destination_masked,
+          preview: reg.verification_code_preview,
+        });
+        return;
+      }
+      try {
+        await login({
+          identifier: identifier.trim(),
+          password,
+        });
+      } catch (loginError) {
+        if (getHttpResponseStatus(loginError) === 403) {
+          setPendingVerification({
+            channel: "retry",
+            masked: identifier.trim(),
+            preview: null,
+          });
+          return;
+        }
+        throw loginError;
+      }
+      await finalizeRedirect();
+    } catch (error) {
+      setStatus(getApiErrorMessage(error, "Inscription impossible. Verifiez les informations saisies."));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function onVerifySubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus("");
+    setIsLoading(true);
+    try {
+      await verifyAccount({ identifier: identifier.trim(), code: verifyCode });
       await login({
         identifier: identifier.trim(),
         password,
       });
       await finalizeRedirect();
     } catch (error) {
-      setStatus(getApiErrorMessage(error, "Inscription impossible. Verifiez les informations saisies."));
+      setStatus(getApiErrorMessage(error, "Verification impossible. Verifiez le code."));
     } finally {
       setIsLoading(false);
     }
@@ -111,6 +156,77 @@ function RegisterPageContent() {
     PASSWORD_POLICY.test(password) &&
     acceptedLegal &&
     (!isSellerFlow || (businessName.trim().length >= 2 || fullName.trim().length >= 2));
+
+  const canVerify = verifyCode.trim().length >= 4 && identifier.trim().length >= 6;
+
+  if (pendingVerification) {
+    return (
+      <section className="mx-auto max-w-3xl px-4 py-10">
+        <article className="premium-card border border-slate-200 bg-white p-6">
+          <h1 className="luxury-title text-3xl font-semibold">Verifier votre compte</h1>
+          <p className="mt-2 text-sm text-slate-600">
+            {pendingVerification.channel === "retry" ? (
+              <>
+                Saisissez le code recu par WhatsApp ou e-mail pour{" "}
+                <span className="font-medium text-slate-900">{pendingVerification.masked}</span>.
+              </>
+            ) : (
+              <>
+                Un code a ete envoye
+                {pendingVerification.channel === "whatsapp"
+                  ? " par WhatsApp"
+                  : pendingVerification.channel === "email"
+                    ? " par e-mail"
+                    : ""}{" "}
+                vers <span className="font-medium text-slate-900">{pendingVerification.masked}</span>.
+              </>
+            )}
+          </p>
+          {pendingVerification.preview ? (
+            <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              Code de developpement (non visible en production): {pendingVerification.preview}
+            </p>
+          ) : null}
+          <form onSubmit={onVerifySubmit} className="mt-6 space-y-4">
+            <div>
+              <label className="text-sm font-medium text-slate-800" htmlFor="verify-code">
+                Code a 6 chiffres
+              </label>
+              <input
+                id="verify-code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                required
+                value={verifyCode}
+                onChange={(event) => setVerifyCode(event.target.value.replace(/\D/g, "").slice(0, 8))}
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm tracking-widest"
+                placeholder="000000"
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={isLoading || !canVerify}
+              className="primary-glow-btn w-full text-white"
+            >
+              {isLoading ? "Verification..." : "Activer mon compte"}
+            </Button>
+            <button
+              type="button"
+              className="text-sm text-[#FF4D00] hover:underline"
+              onClick={() => {
+                setPendingVerification(null);
+                setVerifyCode("");
+                setStatus("");
+              }}
+            >
+              Retour a l inscription
+            </button>
+          </form>
+          {status ? <p className="mt-3 text-sm text-slate-700">{status}</p> : null}
+        </article>
+      </section>
+    );
+  }
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-10">
@@ -207,17 +323,13 @@ function RegisterPageContent() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-slate-800" htmlFor="password">
-              Mot de passe
-            </label>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
+              label="Mot de passe"
               required
               minLength={8}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
             />
             <p className="mt-1 text-xs text-slate-500">
               Minimum 8 caracteres avec majuscule, minuscule, chiffre et caractere special.

@@ -14,6 +14,9 @@ export default function OrderSuccessPage() {
   const { data, isPending, isError, refetch, isFetching } = useQuery({
     queryKey: ["receipt-link", orderId],
     queryFn: () => getReceiptLink(orderId),
+    retry: 4,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+    staleTime: 60_000,
   });
 
   const receiptUrl = data?.receipt_url ?? null;

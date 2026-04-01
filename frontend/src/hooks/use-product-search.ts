@@ -19,7 +19,7 @@ export function useProductSearch({ query = "", barcode = "" }: ProductSearchPara
     queryFn: () =>
       hasActiveFilter
         ? searchProducts({ query: normalizedQuery, barcode: normalizedBarcode, limit: 20 })
-        : searchProducts({ sort: "newest", limit: 24 }),
+        : searchProducts({ sort: "newest", limit: 100 }),
     enabled: true,
     staleTime: 10_000,
     placeholderData: keepPreviousData,

@@ -122,7 +122,7 @@ def _build_receipt_payload(
                 "unit_price": round(item.unit_price, 2),
                 "subtotal": round(item.quantity * item.unit_price, 2),
             }
-            for item in order.items
+            for item in sorted(order.items, key=lambda row: row.product_id)
         ],
     }
 

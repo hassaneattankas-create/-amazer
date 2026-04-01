@@ -1,11 +1,17 @@
 type ApiErrorShape = {
   response?: {
+    status?: number;
     data?: {
       detail?: unknown;
       code?: string;
     };
   };
 };
+
+export function getHttpResponseStatus(error: unknown): number | null {
+  const status = (error as ApiErrorShape)?.response?.status;
+  return typeof status === "number" ? status : null;
+}
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   const maybe = error as ApiErrorShape;

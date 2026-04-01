@@ -2,19 +2,24 @@ import axios from "axios";
 
 const API_PROXY_BASE_URL = "/backend-api";
 
-const API_BASE_URL = (() => {
+function resolveApiBaseUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (typeof window !== "undefined" && fromEnv && /^https?:\/\//i.test(fromEnv)) {
+    return fromEnv.replace(/\/$/, "");
+  }
   if (typeof window !== "undefined" && /^https?:$/.test(window.location.protocol)) {
     return API_PROXY_BASE_URL;
   }
   if (fromEnv) {
-    return fromEnv;
+    return fromEnv.replace(/\/$/, "");
   }
   if (process.env.NODE_ENV === "production") {
     return API_PROXY_BASE_URL;
   }
   return "http://localhost:8000";
-})();
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 const ACCESS_TOKEN_KEY = "amazer_access_token";
 const ACCESS_TOKEN_COOKIE_KEY = "amazer_access_token";
 const LEGACY_REFRESH_TOKEN_KEY = "amazer_refresh_token";
@@ -107,7 +112,7 @@ export function getClientCookieValue(name: string): string | null {
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
   withCredentials: true,
 });
 
@@ -144,7 +149,7 @@ api.interceptors.response.use(
         const refreshResponse = await axios.post<TokenPair>(
           `${API_BASE_URL}/api/v1/auth/refresh`,
           {},
-          { timeout: 10000, withCredentials: true }
+          { timeout: 30000, withCredentials: true }
         );
         persistAuthTokens(refreshResponse.data);
         originalRequest.headers = originalRequest.headers || {};

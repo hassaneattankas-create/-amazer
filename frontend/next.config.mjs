@@ -1,7 +1,23 @@
 /** @type {import('next').NextConfig} */
 const isProd = process.env.NODE_ENV === "production";
 const isStaticExport = process.env.NEXT_STATIC_EXPORT === "true";
-const backendOrigin = (process.env.NEXT_PUBLIC_BACKEND_ORIGIN || "https://amazer-api.onrender.com").trim().replace(/\/$/, "");
+
+function getBackendOrigin() {
+  const explicit = process.env.NEXT_PUBLIC_BACKEND_ORIGIN?.trim();
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  const raw = explicit || apiUrl || "";
+  if (!raw) {
+    return "https://amazer-api.onrender.com";
+  }
+  try {
+    const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    return new URL(withProtocol).origin.replace(/\/$/, "");
+  } catch {
+    return "https://amazer-api.onrender.com";
+  }
+}
+
+const backendOrigin = getBackendOrigin();
 
 function buildConnectSrc() {
   const origins = new Set(["'self'"]);

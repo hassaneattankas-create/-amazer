@@ -17,6 +17,9 @@ from app.models.seller_profile import SellerProfile
 from app.models.vendor import Vendor
 from seed_demo_storefronts import COMMON_PASSWORD, ensure_profile, ensure_user
 
+ACTIVE_RESTAURANT_EMAILS = {
+    "demo.sahelrooftop@amazer.demo",
+}
 
 RESTAURANTS = [
     {
@@ -364,8 +367,9 @@ def ensure_product_order(db: Session, user_id: str, tracking_code: str, prices: 
 def main() -> None:
     db = SessionLocal()
     try:
+        active_restaurants = [item for item in RESTAURANTS if item["email"] in ACTIVE_RESTAURANT_EMAILS]
         profile_map: dict[str, SellerProfile] = {}
-        for restaurant in RESTAURANTS:
+        for restaurant in active_restaurants:
             user = ensure_user(db, restaurant["email"], restaurant["full_name"], restaurant["phone"])
             profile = ensure_profile(db, user, restaurant["profile"])
             profile_map[restaurant["profile"]["business_name"]] = profile
@@ -386,17 +390,9 @@ def main() -> None:
         if len(price_rows) >= 4:
             ensure_product_order(db, demo_customer.id, "ORDER-DEMO-CLIENT-2", price_rows[2:4])
 
-        ensure_restaurant_order(db, profile_map["Le Sahel Rooftop"].vendor_id, demo_customer.id, "Client Demo AMAZER", "+22790009999", "Plateau, immeuble A demo", 3.2, "nita", "preparation", [{"menu": RESTAURANTS[0]["menu"][0], "quantity": 1, "selected_options": [{"name": "Frites patates douces", "price": 2500}]}, {"menu": RESTAURANTS[0]["menu"][2], "quantity": 2}])
-        ensure_restaurant_order(db, profile_map["Maison Djerma Dining"].vendor_id, demo_customer.id, "Amina Audit Demo", "+22790009998", "Yantala, bureau demo 4", 5.4, "amana", "livraison", [{"menu": RESTAURANTS[1]["menu"][0], "quantity": 1, "selected_options": [{"name": "Legumes croquants", "price": 2000}]}])
-        ensure_restaurant_order(db, profile_map["Nomad Grill & Tea"].vendor_id, demo_customer.id, "Equipe Produit AMAZER", "+22790009997", "Rive droite, atelier demo", 2.1, "cash_on_delivery", "commande", [{"menu": RESTAURANTS[2]["menu"][0], "quantity": 2, "selected_options": [{"name": "Cheddar extra", "price": 1200}]}, {"menu": RESTAURANTS[2]["menu"][2], "quantity": 2, "selected_options": [{"name": "Citron confit", "price": 600}]}])
-        ensure_restaurant_order(db, profile_map["Le Fleuve Bistro"].vendor_id, demo_customer.id, "Kadi Demo", "+22790009996", "Boulevard du fleuve, terrasse 3", 4.6, "nita", "livraison", [{"menu": RESTAURANTS[3]["menu"][0], "quantity": 1, "selected_options": [{"name": "Sauce citron", "price": 1200}]}, {"menu": RESTAURANTS[3]["menu"][2], "quantity": 2}])
-        ensure_restaurant_order(db, profile_map["Zinder Spice House"].vendor_id, demo_customer.id, "Issa Demo", "+22790009995", "Yantala, rue demo 7", 2.8, "cash_on_delivery", "commande", [{"menu": RESTAURANTS[4]["menu"][0], "quantity": 1, "selected_options": [{"name": "Piment extra", "price": 500}]}, {"menu": RESTAURANTS[4]["menu"][2], "quantity": 2}])
+        ensure_restaurant_order(db, profile_map["Le Sahel Rooftop"].vendor_id, demo_customer.id, "Client Demo AMAZER", "+22790009999", "Plateau, immeuble A demo", 3.2, "nita", "preparation", [{"menu": active_restaurants[0]["menu"][0], "quantity": 1, "selected_options": [{"name": "Frites patates douces", "price": 2500}]}, {"menu": active_restaurants[0]["menu"][2], "quantity": 2}])
 
         ensure_restaurant_reservation(db, profile_map["Le Sahel Rooftop"].vendor_id, demo_customer.id, "Client Demo AMAZER", "+22790009999", datetime.now(UTC) + timedelta(days=1, hours=8), 4, "demo-seed-sahel-reservation", "confirmed")
-        ensure_restaurant_reservation(db, profile_map["Maison Djerma Dining"].vendor_id, demo_customer.id, "Amina Audit Demo", "+22790009998", datetime.now(UTC) + timedelta(days=2, hours=6), 2, "demo-seed-djerma-reservation", "pending")
-        ensure_restaurant_reservation(db, profile_map["Nomad Grill & Tea"].vendor_id, demo_customer.id, "Equipe Produit AMAZER", "+22790009997", datetime.now(UTC) + timedelta(days=3, hours=5), 6, "demo-seed-nomad-reservation", "confirmed")
-        ensure_restaurant_reservation(db, profile_map["Le Fleuve Bistro"].vendor_id, demo_customer.id, "Kadi Demo", "+22790009996", datetime.now(UTC) + timedelta(days=2, hours=4), 3, "demo-seed-fleuve-reservation", "confirmed")
-        ensure_restaurant_reservation(db, profile_map["Zinder Spice House"].vendor_id, demo_customer.id, "Issa Demo", "+22790009995", datetime.now(UTC) + timedelta(days=4, hours=3), 5, "demo-seed-zinder-reservation", "pending")
 
         for hotel_name, room_index, status, reference in [
             ("Radisson Blu Niamey", 0, "confirmed", "HOTEL-DEMO-RADISSON"),
@@ -411,7 +407,7 @@ def main() -> None:
 
         db.commit()
         print("Demo restaurants seed termine.")
-        print("- Restaurants premium: 5")
+        print(f"- Restaurants premium: {len(active_restaurants)}")
         print("- Orders/reservations/bookings: seeded")
         print(f"- Password: {COMMON_PASSWORD}")
     except Exception:

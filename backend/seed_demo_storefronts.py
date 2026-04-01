@@ -20,6 +20,15 @@ from app.services.seller_profile_service import create_or_update_seller_profile
 
 COMMON_PASSWORD = "AmazerDemo2026!"
 PROMO_UNTIL = (datetime.now(UTC) + timedelta(days=30)).isoformat()
+ACTIVE_DEMO_EMAILS = {
+    "demo.amazer.market@amazer.demo",
+    "demo.fragrance@amazer.demo",
+    "demo.radisson@amazer.demo",
+    "demo.soluxe@amazer.demo",
+    "demo.fleuve@amazer.demo",
+    "demo.azalai@amazer.demo",
+    "demo.sahelpalace@amazer.demo",
+}
 
 
 def ensure_category(db: Session, slug: str, name: str) -> Category:
@@ -576,12 +585,13 @@ DATA = [
 def main() -> None:
     db = SessionLocal()
     try:
+        active_data = [item for item in DATA if item["email"] in ACTIVE_DEMO_EMAILS]
         categories = {
             "accessoires": ensure_category(db, "accessoires", "Accessoires"),
             "technologie": ensure_category(db, "technologie", "Technologie"),
             "alimentation": ensure_category(db, "alimentation", "Alimentation"),
         }
-        for item in DATA:
+        for item in active_data:
             user = ensure_user(db, item["email"], item["full_name"], item["phone"])
             profile = ensure_profile(db, user, item["profile"])
             vendor = db.get(Vendor, profile.vendor_id)
@@ -591,7 +601,7 @@ def main() -> None:
                 ensure_product(db, vendor.id, categories[product["category_slug"]].id, product)
         db.commit()
         print("Demo storefront seed termine.")
-        print(f"- Storefronts: {len(DATA)}")
+        print(f"- Storefronts: {len(active_data)}")
         print(f"- Password: {COMMON_PASSWORD}")
     except Exception:
         db.rollback()

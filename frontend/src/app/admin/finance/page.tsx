@@ -6,6 +6,7 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "rec
 import { AxiosError } from "axios";
 
 import { AnimatedPrice } from "@/components/AnimatedPrice";
+import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import {
@@ -271,18 +272,20 @@ export default function AdminFinancePage() {
             Si tu inverses la date et le PIN, l&apos;app corrige automatiquement.
           </p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <input
+            <PasswordInput
               value={pin}
               onChange={(event) => setPin(event.target.value)}
-              type="password"
               placeholder="PIN admin"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              masking="password"
+              wrapperClassName="min-w-0 flex-1"
             />
-            <input
+            <PasswordInput
               value={birthDate}
               onChange={(event) => setBirthDate(event.target.value)}
               placeholder="Date secondaire JJ/MM/AA"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              masking="text"
+              autoComplete="off"
+              wrapperClassName="min-w-0 flex-1"
             />
             <Button
               type="button"

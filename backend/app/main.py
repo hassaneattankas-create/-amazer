@@ -137,13 +137,13 @@ def _bootstrap_database_if_needed() -> None:
         logger.info("Database empty detected, demo seeding disabled.")
         return
 
-    from seed_niger_market import main as seed_market_main
     from seed_demo_storefronts import main as seed_storefronts_main
+    from seed_demo_restaurants import main as seed_restaurants_main
 
-    logger.info("Database empty detected, running Niger market seed bootstrap.")
-    seed_market_main()
-    logger.info("Running premium storefront demo seed.")
+    logger.info("Database empty detected, running curated storefront demo seed.")
     seed_storefronts_main()
+    logger.info("Running curated restaurant demo seed.")
+    seed_restaurants_main()
 
 
 @app.on_event("startup")

@@ -141,7 +141,9 @@ function SellerPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const requestedSellerType = normalizeSellerActivityType(searchParams.get("type"));
+  const requestedSellerTypeParam = searchParams.get("type");
+  const requestedSellerType = normalizeSellerActivityType(requestedSellerTypeParam);
+  const hasRequestedSellerType = Boolean(requestedSellerTypeParam);
   const { data: user, isPending: isAuthPending } = useCurrentUser();
   const queryClient = useQueryClient();
   const setAppMode = useAuthStore((state) => state.setAppMode);
@@ -171,8 +173,9 @@ function SellerPageContent() {
       accepts_table_reservations: false,
       accepts_hotel_bookings: false,
     });
-    const normalizedActivity =
+    const normalizedDraftActivity =
       (draft.activity_type as string) === "hotel" ? "enterprise" : draft.activity_type;
+    const normalizedActivity = hasRequestedSellerType ? requestedSellerType : normalizedDraftActivity;
     return {
       ...draft,
       activity_type: normalizedActivity,

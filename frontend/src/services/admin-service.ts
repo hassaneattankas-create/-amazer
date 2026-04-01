@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import { adminProxyRequest } from "@/lib/admin-proxy-client";
 
 export type AdminMe = {
   is_admin: boolean;
@@ -6,7 +6,8 @@ export type AdminMe = {
 };
 
 export async function getAdminMe(): Promise<AdminMe> {
-  const response = await api.get<AdminMe>("/api/v1/admin/me");
-  return response.data;
+  return adminProxyRequest<AdminMe>({
+    url: "/admin/me",
+    method: "GET",
+  });
 }
-

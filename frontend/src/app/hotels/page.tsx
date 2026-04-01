@@ -16,6 +16,7 @@ export default function HotelsPage() {
     queryFn: () =>
       listStorefronts({
         query,
+        activityType: "shop",
         storefrontTier: "premium",
       }),
   });
@@ -32,7 +33,7 @@ export default function HotelsPage() {
           <div>
             <h1 className="luxury-title text-3xl font-semibold">Premium</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-600">
-              Grandes entreprises premium: boutique + restaurant + mini-site complet + services exclusifs.
+              Boutiques premium conservees sur AMAZER: Amazer et Fragrance.
             </p>
           </div>
           <Link href="/boutiques" className="text-sm font-medium text-[#FF4D00]">
@@ -42,7 +43,7 @@ export default function HotelsPage() {
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Rechercher une entreprise premium..."
+          placeholder="Rechercher une boutique premium..."
           className="mt-5"
         />
       </header>
@@ -61,7 +62,7 @@ export default function HotelsPage() {
         </div>
       ) : (
         <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
-          Aucune entreprise premium ne correspond a cette recherche.
+          Aucune boutique premium ne correspond a cette recherche.
         </article>
       )}
     </section>
