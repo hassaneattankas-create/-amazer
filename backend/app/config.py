@@ -65,6 +65,7 @@ class Settings(BaseSettings):
     payment_encryption_key: str = Field(
         default="REPLACE_WITH_BASE64URL_32BYTE_KEY_REPLACE_WITH_KEY_1234="
     )
+    curated_public_catalog_mode: bool = Field(default=True)
     bootstrap_on_startup: bool = Field(default=True)
     seed_demo_data: bool = Field(default=False)
     redis_url: str | None = Field(default=None)

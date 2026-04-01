@@ -32,6 +32,7 @@ from app.services.listing_limit_service import (
     max_products_for_basic_tier,
 )
 from app.services.payment_security_service import verify_payment_code
+from app.services.public_catalog_policy import is_allowed_public_restaurant_name
 
 router = APIRouter(prefix="/restaurant", tags=["restaurant"])
 
@@ -178,6 +179,8 @@ def list_restaurant_storefronts(
         profile = profile_by_vendor.get(vendor.id)
         if not _is_public_restaurant_vendor(vendor, profile) or not profile.is_verified:
             continue
+        if not is_allowed_public_restaurant_name(profile.business_name or vendor.name):
+            continue
         can_sell_restaurant = profile.activity_type == "restaurant" or profile.storefront_tier == "premium"
         if not can_sell_restaurant:
             continue
@@ -253,6 +256,11 @@ def list_restaurant_menu(
                 or profile_map[row.vendor_id].storefront_tier == "premium"
             )
             and profile_map[row.vendor_id].is_verified
+            and is_allowed_public_restaurant_name(
+                profile_map[row.vendor_id].business_name or (
+                    vendor_map.get(row.vendor_id).name if vendor_map.get(row.vendor_id) else None
+                )
+            )
         )
     ]
     return [

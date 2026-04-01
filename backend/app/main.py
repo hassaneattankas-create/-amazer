@@ -150,6 +150,14 @@ def _bootstrap_database_if_needed() -> None:
 def on_startup() -> None:
     if settings.should_bootstrap_db():
         _bootstrap_database_if_needed()
+    if settings.is_production() and settings.curated_public_catalog_mode:
+        from seed_demo_storefronts import main as seed_storefronts_main
+        from seed_demo_restaurants import main as seed_restaurants_main
+
+        logger.info("Ensuring curated public demo storefronts in production.")
+        seed_storefronts_main()
+        logger.info("Ensuring curated public demo restaurant in production.")
+        seed_restaurants_main()
 
 
 @app.get("/health")

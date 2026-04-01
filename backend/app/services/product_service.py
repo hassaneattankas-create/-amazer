@@ -22,6 +22,11 @@ from app.schemas.product import (
     VendorResponse,
 )
 from app.services.ranking_service import RankingBreakdown, RankingService
+from app.services.public_catalog_policy import (
+    is_allowed_public_home_brand,
+    is_allowed_public_product_offer,
+    product_seed_source,
+)
 
 
 @dataclass(frozen=True)
@@ -91,7 +96,13 @@ class ProductService:
                 ),
             )
             for row in rows
+            if self._is_public_offer_allowed(row)
         ]
+        if not ranked:
+            return ProductSearchResult(
+                items=[],
+                meta=ProductSearchMeta(limit=limit, offset=offset, returned=0),
+            )
 
         best_by_product: dict[str, RankedOffer] = {}
         for offer in ranked:
@@ -254,7 +265,11 @@ class ProductService:
         active_prices = [
             price
             for price in product.prices
-            if price.is_active and self._is_vendor_publicly_visible(getattr(price, "vendor", None))
+            if (
+                price.is_active
+                and self._is_vendor_publicly_visible(getattr(price, "vendor", None))
+                and is_allowed_public_product_offer(getattr(getattr(price, "vendor", None), "name", None))
+            )
         ]
         if not active_prices:
             return []
@@ -313,6 +328,21 @@ class ProductService:
         owner = getattr(profile, "user", None)
         if owner is not None and not bool(getattr(owner, "is_active", False)):
             return False
+        return True
+
+    def _is_public_offer_allowed(self, row: SearchOfferRow) -> bool:
+        vendor_name = getattr(getattr(row, "price", None), "vendor", None)
+        vendor_name = getattr(vendor_name, "name", None)
+        if not is_allowed_public_product_offer(vendor_name):
+            return False
+
+        seed_source = product_seed_source(getattr(getattr(row, "product", None), "specs", None))
+        if seed_source == "seed_niger_market_v1":
+            return False
+
+        if seed_source == "demo_storefronts_v1":
+            return is_allowed_public_home_brand(getattr(getattr(row, "product", None), "brand", None))
+
         return True
 
     def _is_product_boosted(self, product: Product) -> bool:

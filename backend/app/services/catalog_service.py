@@ -15,6 +15,10 @@ from app.schemas.catalog import (
     VendorStorefrontResponse,
 )
 from app.schemas.product import CategoryResponse, VendorResponse
+from app.services.public_catalog_policy import (
+    is_allowed_public_product_offer,
+    is_allowed_public_storefront,
+)
 
 
 class CatalogService:
@@ -128,6 +132,11 @@ class CatalogService:
                     getattr(vendor, "seller_profile", None),
                     product_count=len(product_counter.get(vendor.id, set())),
                 )
+                and is_allowed_public_storefront(
+                    activity_type=getattr(getattr(vendor, "seller_profile", None), "activity_type", None),
+                    vendor_name=vendor.name,
+                    business_name=getattr(getattr(vendor, "seller_profile", None), "business_name", None),
+                )
             ]
         )
 
@@ -230,6 +239,8 @@ class CatalogService:
             product = price.product
             vendor = price.vendor
             if product is None or vendor is None or not self._is_promo_active(product):
+                continue
+            if not is_allowed_public_product_offer(vendor.name):
                 continue
             if needle and needle not in product.name.lower() and needle not in product.brand.lower() and needle not in vendor.name.lower():
                 continue

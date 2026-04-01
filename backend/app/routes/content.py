@@ -36,6 +36,10 @@ from app.schemas.content import (
     HomeRestaurantCard,
     HomeSectionResponse,
 )
+from app.services.public_catalog_policy import (
+    is_allowed_public_home_brand,
+    is_allowed_public_restaurant_name,
+)
 
 router = APIRouter(tags=["content"])
 admin_router = APIRouter(prefix="/admin/content", tags=["admin-content"])
@@ -365,14 +369,17 @@ def get_home_content(
                         currency=currency,
                     )
                 )
+                if not is_allowed_public_home_brand(item.product.brand):
+                    products.pop()
             if item.target_type == "restaurant" and item.vendor is not None and _is_vendor_publicly_visible(item.vendor):
-                restaurants.append(
-                    HomeRestaurantCard(
-                        id=item.vendor.id,
-                        name=item.vendor.name,
-                        slug=item.vendor.slug,
+                if is_allowed_public_restaurant_name(item.vendor.name):
+                    restaurants.append(
+                        HomeRestaurantCard(
+                            id=item.vendor.id,
+                            name=item.vendor.name,
+                            slug=item.vendor.slug,
+                        )
                     )
-                )
         payload_sections.append(
             HomeSectionResponse(
                 id=section.id,
