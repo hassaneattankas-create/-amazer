@@ -84,6 +84,103 @@ def _is_boost_active(product: Product) -> bool:
     return parsed.astimezone(UTC) > datetime.now(UTC)
 
 
+def _build_fallback_home_sections(db: Session) -> list[HomeSectionResponse]:
+    product_candidates = db.scalars(
+        select(Product)
+        .options(
+            selectinload(Product.prices)
+            .selectinload(Price.vendor)
+            .selectinload(Vendor.seller_profile)
+            .selectinload(SellerProfile.user)
+        )
+        .order_by(Product.is_boosted.desc(), Product.is_sponsored.desc(), Product.updated_at.desc())
+        .limit(60)
+    ).all()
+
+    fallback_products: list[HomeProductCard] = []
+    for product in product_candidates:
+        if not is_allowed_public_home_brand(product.brand):
+            continue
+        price = _best_offer_price(product)
+        if price is None:
+            continue
+        amount, currency = price
+        fallback_products.append(
+            HomeProductCard(
+                id=product.id,
+                name=product.name,
+                brand=product.brand,
+                main_image_url=product.main_image_url,
+                is_sponsored=product.is_sponsored,
+                is_boosted=_is_boost_active(product),
+                amount=amount,
+                currency=currency,
+            )
+        )
+        if len(fallback_products) >= 12:
+            break
+
+    restaurant_candidates = db.scalars(
+        select(Vendor)
+        .join(Vendor.seller_profile)
+        .options(
+            selectinload(Vendor.seller_profile).selectinload(SellerProfile.user),
+        )
+        .where(Vendor.is_active.is_(True))
+        .order_by(Vendor.updated_at.desc())
+        .limit(40)
+    ).all()
+
+    fallback_restaurants: list[HomeRestaurantCard] = []
+    seen_restaurant_ids: set[str] = set()
+    for vendor in restaurant_candidates:
+        profile = vendor.seller_profile
+        if profile is None or profile.activity_type != "restaurant":
+            continue
+        if not _is_vendor_publicly_visible(vendor):
+            continue
+        preferred_name = profile.business_name or vendor.name
+        if not is_allowed_public_restaurant_name(preferred_name):
+            continue
+        if vendor.id in seen_restaurant_ids:
+            continue
+        fallback_restaurants.append(
+            HomeRestaurantCard(
+                id=vendor.id,
+                name=vendor.name,
+                slug=vendor.slug,
+            )
+        )
+        seen_restaurant_ids.add(vendor.id)
+        if len(fallback_restaurants) >= 6:
+            break
+
+    sections: list[HomeSectionResponse] = []
+    if fallback_products:
+        sections.append(
+            HomeSectionResponse(
+                id="fallback-products",
+                title="Offres du moment",
+                slug="fallback-products",
+                section_type="products",
+                products=fallback_products,
+                restaurants=[],
+            )
+        )
+    if fallback_restaurants:
+        sections.append(
+            HomeSectionResponse(
+                id="fallback-restaurants",
+                title="Restaurants en vue",
+                slug="fallback-restaurants",
+                section_type="restaurants",
+                products=[],
+                restaurants=fallback_restaurants,
+            )
+        )
+    return sections
+
+
 def _to_dynamic_section_response(section: DynamicSection) -> DynamicSectionResponse:
     return DynamicSectionResponse(
         id=section.id,
@@ -390,6 +487,9 @@ def get_home_content(
                 restaurants=restaurants,
             )
         )
+
+    if not any(section.products or section.restaurants for section in payload_sections):
+        payload_sections = _build_fallback_home_sections(db)
 
     response = HomeContentResponse(top_banner_url=top_banner, sections=payload_sections)
     cache_set_json(cache_key, response.model_dump(), ttl_seconds=60)
