@@ -15,10 +15,16 @@ const dynamicRouteDirs = [
   "order/receipt/[id]",
   "order/success/[id]",
 ];
+const defaultMobileBackendOrigin = "https://amazer-api.onrender.com";
+const requestedMobileBackendOrigin =
+  process.env.MOBILE_BACKEND_ORIGIN?.trim() ||
+  process.env.NEXT_PUBLIC_MOBILE_BACKEND_ORIGIN?.trim() ||
+  defaultMobileBackendOrigin;
 
-if (!process.env.NEXT_PUBLIC_BACKEND_ORIGIN?.trim() && !process.env.NEXT_PUBLIC_API_URL?.trim()) {
-  process.env.NEXT_PUBLIC_BACKEND_ORIGIN = "https://amazer-api.onrender.com";
-}
+// Mobile bundled builds must always target a reachable absolute backend origin.
+// We intentionally override local web dev values such as /backend-api or localhost.
+process.env.NEXT_PUBLIC_BACKEND_ORIGIN = requestedMobileBackendOrigin;
+delete process.env.NEXT_PUBLIC_API_URL;
 
 if (existsSync(disabledApiDir)) {
   throw new Error("Temporary mobile API folder already exists. Restore it before running build:mobile.");
@@ -75,6 +81,7 @@ function restoreDynamicRoutes() {
 }
 
 try {
+  console.log(`[mobile-build] Using backend origin: ${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}`);
   await new Promise((resolve, reject) => {
     const command = process.platform === "win32" ? "cmd.exe" : "npx";
     const args =
