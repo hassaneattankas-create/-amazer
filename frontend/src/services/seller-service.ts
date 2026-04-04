@@ -3,6 +3,8 @@ import {
   HotelBooking,
   HotelBookingRequest,
   SellerInventoryItem,
+  SellerShopOrder,
+  SellerShopOrderStatus,
   SellerProductPayload,
   SellerProfile,
   SellerProfilePayload,
@@ -56,6 +58,21 @@ export async function updateSellerInventory(
     `/api/v1/seller/inventory/${priceId}`,
     payload,
   );
+  return response.data;
+}
+
+export async function listSellerOrders(): Promise<SellerShopOrder[]> {
+  const response = await api.get<SellerShopOrder[]>("/api/v1/seller/orders");
+  return response.data;
+}
+
+export async function updateSellerOrderStatus(
+  orderId: string,
+  status: SellerShopOrderStatus
+): Promise<SellerShopOrder> {
+  const response = await api.patch<SellerShopOrder>(`/api/v1/seller/orders/${orderId}/status`, {
+    status,
+  });
   return response.data;
 }
 

@@ -2,6 +2,13 @@ name: Play Store Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version_name:
+        description: Version affichee dans le Play Store
+        required: false
+      version_code:
+        description: Version code Android entier et unique
+        required: false
 
 jobs:
   publish-internal:
@@ -11,6 +18,8 @@ jobs:
         shell: bash
     env:
       CAPACITOR_SERVER_URL: https://amazerniger.vercel.app
+      ANDROID_VERSION_NAME: ${{ github.event.inputs.version_name || format('1.0.{0}', github.run_number) }}
+      ANDROID_VERSION_CODE: ${{ github.event.inputs.version_code || github.run_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,7 +35,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -51,7 +60,7 @@ jobs:
           mkdir -p keystore
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > keystore/amazer-release.jks
           cat > keystore.properties <<EOF
-          storeFile=keystore/amazer-release.jks
+          storeFile=../keystore/amazer-release.jks
           storePassword=$ANDROID_KEYSTORE_PASSWORD
           keyAlias=$ANDROID_KEY_ALIAS
           keyPassword=$ANDROID_KEY_PASSWORD

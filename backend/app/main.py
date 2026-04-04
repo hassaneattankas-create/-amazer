@@ -15,10 +15,13 @@ from sqlalchemy import func, select, text
 from app import models as _models  # noqa: F401
 from app.config import get_settings
 from app.core.csrf import enforce_csrf
+from app.core.security import hash_password
 from app.core.exceptions import DomainError
 from app.database import Base, engine
 from app.database import SessionLocal
 from app.models.product import Price, Product
+from app.models.user import User
+from app.models.user_preferences import UserPreferences
 from app.models.vendor import Vendor
 from app.routes.alerts import router as alerts_router
 from app.routes.auth import router as auth_router
@@ -146,10 +149,47 @@ def _bootstrap_database_if_needed() -> None:
     seed_restaurants_main()
 
 
+def _ensure_admin_account() -> None:
+    admin_password = settings.admin_password
+    if not admin_password:
+        return
+
+    db = SessionLocal()
+    try:
+        admin_email = settings.admin_email.strip().lower()
+        admin_user = db.scalar(select(User).where(User.email == admin_email))
+        if admin_user is None:
+            admin_user = User(
+                email=admin_email,
+                full_name="Admin Amazer",
+                hashed_password=hash_password(admin_password),
+                is_active=True,
+            )
+            db.add(admin_user)
+            db.flush()
+        else:
+            admin_user.email = admin_email
+            admin_user.is_active = True
+            admin_user.hashed_password = hash_password(admin_password)
+            if not admin_user.full_name.strip():
+                admin_user.full_name = "Admin Amazer"
+
+        if db.scalar(select(UserPreferences).where(UserPreferences.user_id == admin_user.id)) is None:
+            db.add(UserPreferences(user_id=admin_user.id, preferred_currency="XOF"))
+
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     if settings.bootstrap_on_startup:
         _bootstrap_database_if_needed()
+    _ensure_admin_account()
     if settings.is_production() and settings.curated_public_catalog_mode:
         from seed_demo_storefronts import main as seed_storefronts_main
         from seed_demo_restaurants import main as seed_restaurants_main
@@ -215,7 +255,20 @@ async def security_access_logger(
     if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.url.path.startswith(
         settings.api_prefix
     ):
-        enforce_csrf(request)
+        csrf_exempt_paths = {
+            f"{settings.api_prefix}/auth/login",
+            f"{settings.api_prefix}/auth/register",
+            f"{settings.api_prefix}/auth/refresh",
+            f"{settings.api_prefix}/auth/verify-account",
+        }
+        if request.url.path not in csrf_exempt_paths:
+            try:
+                enforce_csrf(request)
+            except DomainError as exc:
+                return JSONResponse(
+                    status_code=exc.status_code,
+                    content={"detail": exc.message, "code": exc.code},
+                )
     response = await call_next(request)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")

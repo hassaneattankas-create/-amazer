@@ -24,7 +24,7 @@ function resolveApiBaseUrl(): string {
 const API_BASE_URL = resolveApiBaseUrl();
 const ACCESS_TOKEN_KEY = "amazer_access_token";
 const ACCESS_TOKEN_COOKIE_KEY = "amazer_access_token";
-const LEGACY_REFRESH_TOKEN_KEY = "amazer_refresh_token";
+const REFRESH_TOKEN_KEY = "amazer_refresh_token";
 export const AUTH_CHANGE_EVENT = "amazer-auth-changed";
 const AUTH_COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
@@ -70,7 +70,7 @@ export function persistAuthTokens(tokens: TokenPair): void {
     return;
   }
   writeStoredToken(ACCESS_TOKEN_KEY, tokens.access_token);
-  removeStoredToken(LEGACY_REFRESH_TOKEN_KEY);
+  writeStoredToken(REFRESH_TOKEN_KEY, tokens.refresh_token);
   const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
   document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=1; Path=/; SameSite=Lax; Max-Age=${AUTH_COOKIE_MAX_AGE_SECONDS}${secureFlag}`;
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
@@ -81,7 +81,7 @@ export function clearAuthTokens(): void {
     return;
   }
   removeStoredToken(ACCESS_TOKEN_KEY);
-  removeStoredToken(LEGACY_REFRESH_TOKEN_KEY);
+  removeStoredToken(REFRESH_TOKEN_KEY);
   document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
@@ -92,6 +92,10 @@ function getAccessToken(): string | null {
 
 export function getClientAccessToken(): string | null {
   return getAccessToken();
+}
+
+export function getClientRefreshToken(): string | null {
+  return readStoredToken(REFRESH_TOKEN_KEY);
 }
 
 function getCookieValue(name: string): string | null {
@@ -148,9 +152,10 @@ api.interceptors.response.use(
     if (status === 401 && originalRequest && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true;
       try {
+        const refreshToken = getClientRefreshToken();
         const refreshResponse = await axios.post<TokenPair>(
           `${API_BASE_URL}/api/v1/auth/refresh`,
-          {},
+          refreshToken ? { refresh_token: refreshToken } : {},
           { timeout: 30000, withCredentials: true }
         );
         persistAuthTokens(refreshResponse.data);

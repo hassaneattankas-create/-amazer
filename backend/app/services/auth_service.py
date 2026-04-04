@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -229,10 +230,11 @@ class AuthService:
         }
 
     def _ensure_default_preferences(self, user_id: str) -> None:
-        row = self.db.scalar(select(UserPreferences).where(UserPreferences.user_id == user_id))
-        if row is None:
-            self.db.add(UserPreferences(user_id=user_id, preferred_currency="XOF"))
-            self.db.flush()
+        self.db.execute(
+            insert(UserPreferences)
+            .values(user_id=user_id, preferred_currency="XOF")
+            .on_conflict_do_nothing(index_elements=[UserPreferences.user_id])
+        )
 
     def _build_registration_verification(self, user: User) -> dict[str, str | None]:
         settings = get_settings()

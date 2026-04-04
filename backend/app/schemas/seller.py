@@ -137,6 +137,38 @@ class SellerInventoryUpdateRequest(BaseModel):
     boost_duration_hours: int | None = Field(default=None, ge=24, le=168)
 
 
+class SellerShopOrderItemResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    product_id: str
+    quantity: int
+    unit_price: float
+    subtotal: float
+
+
+class SellerShopOrderResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    customer_name: str
+    status: Literal["payment_pending", "commande", "preparation", "livraison", "recu", "CLAIMED"]
+    payment_mode: Literal["nita", "amana"]
+    payment_status: Literal["pending", "paid"]
+    delivery_type: Literal["standard", "express_niamey"]
+    tracking_code: str | None
+    total_amount: float
+    currency: str
+    created_at: datetime
+    items: list[SellerShopOrderItemResponse]
+
+
+class SellerShopOrderStatusUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["commande", "preparation", "livraison", "recu"]
+
+
 class SellerStorefrontProductResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

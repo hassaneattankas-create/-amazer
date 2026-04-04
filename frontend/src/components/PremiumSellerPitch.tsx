@@ -31,7 +31,10 @@ export function PremiumSellerPitch({
         {showEspaceVendeurLink ? (
           <p className="mt-2 text-xs text-slate-600">
             Tu choisis ton mode apres inscription dans{" "}
-            <Link href="/seller" className="font-medium text-[#FF4D00] hover:underline">
+            <Link
+              href="/register?next=/seller&seller=1"
+              className="font-medium text-[#FF4D00] hover:underline"
+            >
               Espace vendeur
             </Link>
             .

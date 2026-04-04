@@ -13,6 +13,7 @@ from app.core.csrf import enforce_csrf
 from app.core.exceptions import ConflictError, NotFoundError, ValidationDomainError
 from app.database import get_db
 from app.models.hospitality import HotelBooking, RestaurantReservation
+from app.models.order import Order, OrderItem
 from app.models.price_history import PriceHistory
 from app.models.product import Price, Product
 from app.models.restaurant import RestaurantMenuItem
@@ -32,6 +33,9 @@ from app.schemas.seller import (
     HotelBookingStatusUpdateRequest,
     SellerInventoryItemResponse,
     SellerInventoryUpdateRequest,
+    SellerShopOrderItemResponse,
+    SellerShopOrderResponse,
+    SellerShopOrderStatusUpdateRequest,
     SellerProductCreateRequest,
     SellerProductCreateResponse,
     SellerProfileRequest,
@@ -152,6 +156,33 @@ def _hotel_booking_response(row: HotelBooking) -> HotelBookingResponse:
         special_request=row.special_request,
         status=row.status,  # type: ignore[arg-type]
         created_at=row.created_at,
+    )
+
+
+def _seller_shop_order_response(order: Order, vendor_id: str) -> SellerShopOrderResponse:
+    scoped_items = [item for item in order.items if item.vendor_id == vendor_id]
+    scoped_total = sum(float(item.unit_price) * int(item.quantity) for item in scoped_items)
+    return SellerShopOrderResponse(
+        id=order.id,
+        customer_name=order.user.full_name if order.user else "Client AMAZER",
+        status=order.status,
+        payment_mode=order.payment_mode,
+        payment_status=order.payment_status,
+        delivery_type=order.delivery_type,
+        tracking_code=order.tracking_code,
+        total_amount=scoped_total,
+        currency=order.currency,
+        created_at=order.created_at,
+        items=[
+            SellerShopOrderItemResponse(
+                id=item.id,
+                product_id=item.product_id,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                subtotal=float(item.unit_price) * int(item.quantity),
+            )
+            for item in scoped_items
+        ],
     )
 
 
@@ -392,6 +423,53 @@ def list_inventory(
             )
         )
     return payload
+
+
+@router.get("/orders", response_model=list[SellerShopOrderResponse])
+def list_seller_orders(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> list[SellerShopOrderResponse]:
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        return []
+
+    rows = db.scalars(
+        select(Order)
+        .join(Order.items)
+        .where(OrderItem.vendor_id == profile.vendor_id)
+        .options(selectinload(Order.user), selectinload(Order.items))
+        .order_by(Order.created_at.desc())
+        .limit(50)
+    ).unique().all()
+    return [_seller_shop_order_response(order, profile.vendor_id) for order in rows]
+
+
+@router.patch("/orders/{order_id}/status", response_model=SellerShopOrderResponse)
+def update_seller_order_status(
+    order_id: str,
+    payload: SellerShopOrderStatusUpdateRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> SellerShopOrderResponse:
+    enforce_csrf(request)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        raise NotFoundError("Seller profile not found")
+
+    order = db.scalar(
+        select(Order)
+        .where(Order.id == order_id)
+        .options(selectinload(Order.user), selectinload(Order.items))
+    )
+    if order is None or not any(item.vendor_id == profile.vendor_id for item in order.items):
+        raise NotFoundError("Order not found")
+
+    order.status = payload.status
+    db.commit()
+    db.refresh(order)
+    return _seller_shop_order_response(order, profile.vendor_id)
 
 
 @router.patch("/inventory/{price_id}", response_model=SellerInventoryItemResponse)

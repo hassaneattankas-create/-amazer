@@ -34,7 +34,7 @@ export default function VendrePage() {
           asChild
           className="primary-glow-btn mt-5 bg-[#FF4D00] text-white hover:bg-[#e74700]"
         >
-          <Link href="/seller">
+          <Link href="/register?next=/seller&seller=1">
             <Rocket className="h-4 w-4" />
             Ouvrir mon espace vendeur
           </Link>

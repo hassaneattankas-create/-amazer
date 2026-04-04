@@ -18,6 +18,7 @@ import { useClientMounted } from "@/hooks/use-client-mounted";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { formatMoney } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
+import { getProductRoute } from "@/lib/mobile-routes";
 import { getHomeContent, trackAdClick } from "@/services/content-service";
 import { getPublicContactInfo } from "@/services/finance-service";
 import { useProductSearch } from "@/hooks/use-product-search";
@@ -189,7 +190,7 @@ export default function HomePage() {
             {featuredOffers.map((item) => (
               <Link
                 key={item.id}
-                href={`/product/${item.id}`}
+                href={getProductRoute(item.id)}
                 onClick={() => void trackAdClick(item.id, item.slug)}
                 className="min-w-56 rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-50 to-white p-3 shadow-[0_0_18px_rgba(245,158,11,0.28)]"
               >
@@ -390,7 +391,7 @@ export default function HomePage() {
                           className="primary-glow-btn mt-3 w-full bg-[#FF4D00] text-white hover:bg-[#e74700]"
                         >
                           <Link
-                            href={`/product/${item.id}`}
+                            href={getProductRoute(item.id)}
                             onClick={() => {
                               if (item.is_boosted || item.is_sponsored) {
                                 void trackAdClick(item.id, section.slug);

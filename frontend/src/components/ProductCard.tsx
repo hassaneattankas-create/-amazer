@@ -7,6 +7,7 @@ import { Package, Store } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { getProductRoute } from "@/lib/mobile-routes";
 import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { resolveProductImageUrl } from "@/lib/product-image";
 import { trackAdClick } from "@/services/content-service";
@@ -109,7 +110,7 @@ export function ProductCard({ product }: ProductCardProps) {
           size="sm"
           className="primary-glow-btn shine-btn w-full"
         >
-          <Link href={`/product/${product.id}`} onClick={onOpenDetail}>
+          <Link href={getProductRoute(product.id)} onClick={onOpenDetail}>
             Voir le detail
           </Link>
         </Button>

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { getCurrentUser, UserResponse } from "@/services/auth-service";
-import { AUTH_CHANGE_EVENT } from "@/lib/api";
+import { AUTH_CHANGE_EVENT, getClientRefreshToken } from "@/lib/api";
 
 const ACCESS_TOKEN_KEY = "amazer_access_token";
 
@@ -18,7 +18,7 @@ function hasSessionToken(): boolean {
     cookie.includes("amazer_access_token=") ||
     cookie.includes("access_token=") ||
     cookie.includes("csrf_token=");
-  return Boolean(storedToken || hasCookieSession);
+  return Boolean(storedToken || hasCookieSession || getClientRefreshToken());
 }
 
 export function useCurrentUser() {

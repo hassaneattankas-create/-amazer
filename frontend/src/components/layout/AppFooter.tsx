@@ -9,6 +9,9 @@ export function AppFooter() {
           <Link href="/legal/privacy" className="hover:text-[#FF4D00] hover:underline">
             Politique de confidentialite
           </Link>
+          <Link href="/legal/account-deletion" className="hover:text-[#FF4D00] hover:underline">
+            Suppression de compte
+          </Link>
           <Link href="/legal/terms" className="hover:text-[#FF4D00] hover:underline">
             Conditions d utilisation
           </Link>

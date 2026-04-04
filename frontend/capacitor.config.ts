@@ -2,6 +2,15 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const mobileServerUrl = process.env.CAPACITOR_SERVER_URL?.trim();
 const usesRemoteServer = Boolean(mobileServerUrl);
+const allowedNavigationHosts = new Set(["amazerniger.vercel.app", "amazer-api.onrender.com"]);
+
+if (mobileServerUrl) {
+  try {
+    allowedNavigationHosts.add(new URL(mobileServerUrl).hostname);
+  } catch {
+    // Ignore invalid CAPACITOR_SERVER_URL values and keep the safe defaults.
+  }
+}
 
 const config: CapacitorConfig = {
   appId: "ne.amazer.app",
@@ -12,10 +21,12 @@ const config: CapacitorConfig = {
         url: mobileServerUrl,
         cleartext: false,
         androidScheme: "https",
+        allowNavigation: [...allowedNavigationHosts],
       }
     : {
         cleartext: false,
         androidScheme: "https",
+        allowNavigation: [...allowedNavigationHosts],
       },
   plugins: {
     SplashScreen: {

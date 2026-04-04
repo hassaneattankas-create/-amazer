@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AxiosError } from "axios";
@@ -16,6 +16,7 @@ import {
 } from "@/lib/admin-finance-verification";
 import { getAdminAdClickStats } from "@/services/content-service";
 import { formatXOF } from "@/lib/currency";
+import { notifyLocalOrderEvent } from "@/services/notification-service";
 import {
   createAdminTransfer,
   dispatchAdminOrder,
@@ -86,6 +87,7 @@ function AdminNumberField({
 
 export default function AdminFinancePage() {
   const queryClient = useQueryClient();
+  const seenAdminOrderIdsRef = useRef<Set<string>>(new Set());
   const [settingsStatus, setSettingsStatus] = useState("");
   const [pinStatus, setPinStatus] = useState("");
   const [pin, setPin] = useState("");
@@ -136,7 +138,7 @@ export default function AdminFinancePage() {
     queryFn: getAdminTreasuryHistory,
     enabled: pinVerified,
   });
-  const { data: adClicks, isError: isAdClicksError, error: adClicksError } = useQuery({
+  const { data: adClicks, error: adClicksError } = useQuery({
     queryKey: ["admin-ad-click-stats"],
     queryFn: getAdminAdClickStats,
     enabled: pinVerified,
@@ -145,10 +147,10 @@ export default function AdminFinancePage() {
     queryKey: ["admin-orders"],
     queryFn: () => listAdminOrders(30),
     enabled: pinVerified,
+    refetchInterval: 5000,
   });
   const {
     data: districtFees,
-    isError: isDistrictError,
     error: districtError,
   } = useQuery({
     queryKey: ["admin-district-fees"],
@@ -259,6 +261,28 @@ export default function AdminFinancePage() {
         .filter((entry) => entry.district_name && Number.isFinite(entry.delivery_fee)),
     [districtRaw]
   );
+
+  useEffect(() => {
+    const known = seenAdminOrderIdsRef.current;
+    if (!pinVerified || !adminOrders?.length) {
+      return;
+    }
+    const newOrders = adminOrders.filter((order) => order.status === "commande" && !known.has(order.id));
+    for (const order of adminOrders) {
+      known.add(order.id);
+    }
+    if (!newOrders.length) {
+      return;
+    }
+    const latest = newOrders[0];
+    notifyLocalOrderEvent({
+      title: "Nouvelle commande client",
+      body: `${latest.customer_name} a passe une commande de ${formatXOF(latest.total_amount)}.`,
+      tag: `admin-order-${latest.id}`,
+      href: "/admin/finance",
+    });
+    setTransferStatus(`Nouvelle commande detectee: ${latest.customer_name} (${formatXOF(latest.total_amount)}).`);
+  }, [adminOrders, pinVerified]);
 
   if (!pinVerified) {
     return (

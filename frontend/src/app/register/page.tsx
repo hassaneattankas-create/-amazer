@@ -82,7 +82,7 @@ function RegisterPageContent() {
   );
 
   async function finalizeRedirect() {
-    const sellerTarget = `/seller/dashboard?welcome=1&type=${sellerType}`;
+    const sellerTarget = `/seller?welcome=1&type=${sellerType}`;
     const target = isSellerFlow ? sellerTarget : next.startsWith("/") ? next : "/";
     window.location.assign(target);
   }
@@ -282,14 +282,14 @@ function RegisterPageContent() {
             <div>
               <label className="text-sm font-medium text-slate-800" htmlFor="business-name">
                 Nom de la boutique
+                <span className="ml-1 text-xs font-normal text-slate-500">(optionnel)</span>
               </label>
               <input
                 id="business-name"
-                required={isSellerFlow}
                 value={businessName}
                 onChange={(event) => setBusinessName(event.target.value)}
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                placeholder="Ex: Boutique Amazer, Restaurant Amazer..."
+                placeholder="Ex: Boutique Amazer, Restaurant Amazer... sinon ton nom sera utilise"
               />
             </div>
           ) : null}

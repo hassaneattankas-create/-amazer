@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ShoppingCart, User } from "lucide-react";
+import { Bell, ChevronDown, ShoppingCart, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import { logout } from "@/services/auth-service";
 import { getSellerProfile } from "@/services/seller-service";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cartStore";
+import { useNotificationStore } from "@/store/notification-store";
 
 const clientNavItems = [
   { href: "/", label: "Accueil" },
@@ -50,9 +51,11 @@ export function FloatingNavbar() {
   const appMode = useAuthStore((state) => state.appMode);
   const setAppMode = useAuthStore((state) => state.setAppMode);
   const resetSessionView = useAuthStore((state) => state.resetSessionView);
-  const effectiveAppMode = isClient ? appMode : "client";
   const { data: adminMe } = useAdminMe(Boolean(user?.id));
-  const { data: sellerProfile, isFetched: sellerProfileFetched } = useQuery({
+  const unreadNotifications = useNotificationStore((state) =>
+    state.items.reduce((count, item) => count + (item.unread ? 1 : 0), 0)
+  );
+  const { data: sellerProfile } = useQuery({
     queryKey: ["navbar-seller-profile", user?.id],
     queryFn: getSellerProfile,
     enabled: Boolean(user?.id),
@@ -62,12 +65,13 @@ export function FloatingNavbar() {
   const showAdminLink = Boolean(adminMe?.is_admin) || isAdminEmail(user?.email);
   const showSellerLink = Boolean(sellerProfile?.id);
   const isAuthenticated = Boolean(user?.id);
-  const showClientDashboard = isAuthenticated && effectiveAppMode !== "seller";
-  const activeNavItems =
-    isAuthenticated && effectiveAppMode === "seller" ? sellerNavItems : clientNavItems;
-  const groupedNavItems = showClientDashboard
-    ? [...activeNavItems, { href: "/dashboard", label: "Dashboard" }]
-    : activeNavItems;
+  const groupedNavItems = [
+    ...clientNavItems,
+    ...(isAuthenticated ? [{ href: "/dashboard", label: "Dashboard" }] : []),
+    ...(isAuthenticated ? [{ href: "/notifications", label: "Notifications" }] : []),
+    ...(showSellerLink ? sellerNavItems : []),
+    ...(showAdminLink ? [{ href: "/admin", label: "Espace Admin" }] : []),
+  ].filter((item, index, array) => array.findIndex((entry) => entry.href === item.href) === index);
 
   useEffect(() => {
     if (!isClient) {
@@ -79,17 +83,10 @@ export function FloatingNavbar() {
       }
       return;
     }
-    if (!sellerProfileFetched) {
-      return;
-    }
-    if (showSellerLink && appMode !== "seller") {
-      setAppMode("seller");
-      return;
-    }
-    if (!showSellerLink && appMode !== "client") {
+    if (appMode !== "client" && !showSellerLink) {
       setAppMode("client");
     }
-  }, [isClient, appMode, isAuthenticated, sellerProfileFetched, setAppMode, showSellerLink]);
+  }, [isClient, appMode, isAuthenticated, setAppMode, showSellerLink]);
 
   useEffect(() => {
     if (!isClient) {
@@ -234,7 +231,7 @@ export function FloatingNavbar() {
               </Link>
               <Link
                 href="/login"
-                className="hidden items-center gap-2 rounded-md border border-white/20 bg-white/70 px-3 py-2 text-sm text-slate-700 backdrop-blur-xl hover:bg-white sm:inline-flex"
+                className="hidden items-center gap-2 rounded-md border border-[#FF4D00]/35 bg-[#FF4D00]/10 px-4 py-2.5 text-sm font-medium text-[#FF4D00] shadow-sm hover:bg-[#FF4D00]/15 sm:inline-flex"
               >
                 <User className="h-4 w-4" />
                 Connexion
@@ -250,20 +247,30 @@ export function FloatingNavbar() {
               {isLoggingOut ? "Deconnexion..." : "Deconnexion"}
             </button>
           )}
-          {effectiveAppMode !== "seller" ? (
-            <Link
-              href="/cart"
-              className="primary-glow-btn shine-btn relative inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-white"
-            >
-              <ShoppingCart className="h-4 w-4" />
-              <span className="hidden sm:inline">Panier</span>
-              {cartCount > 0 ? (
-                <Badge className="absolute -right-2 -top-2 bg-white text-[#FF4D00] hover:bg-white">
-                  {cartCount}
-                </Badge>
-              ) : null}
-            </Link>
-          ) : null}
+          <Link
+            href="/notifications"
+            className="relative inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/70 px-3 py-2 text-sm text-slate-700 backdrop-blur-xl hover:bg-white"
+          >
+            <Bell className="h-4 w-4" />
+            <span className="hidden sm:inline">Notifications</span>
+            {unreadNotifications > 0 ? (
+              <Badge className="absolute -right-2 -top-2 bg-[#FF4D00] text-white hover:bg-[#FF4D00]">
+                {unreadNotifications}
+              </Badge>
+            ) : null}
+          </Link>
+          <Link
+            href="/cart"
+            className="primary-glow-btn shine-btn relative inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-white"
+          >
+            <ShoppingCart className="h-4 w-4" />
+            <span className="hidden sm:inline">Panier</span>
+            {cartCount > 0 ? (
+              <Badge className="absolute -right-2 -top-2 bg-white text-[#FF4D00] hover:bg-white">
+                {cartCount}
+              </Badge>
+            ) : null}
+          </Link>
         </div>
       </div>
 
@@ -299,6 +306,17 @@ export function FloatingNavbar() {
             className="whitespace-nowrap rounded-xl border border-[#FF4D00]/35 bg-[#FF4D00]/10 px-3 py-1.5 text-xs text-[#FF4D00] hover:bg-[#FF4D00]/15"
           >
             Espace Admin
+          </Link>
+        ) : null}
+        {isAuthenticated ? (
+          <Link
+            href="/notifications"
+            className="relative whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
+          >
+            Notifications
+            {unreadNotifications > 0 ? (
+              <span className="ml-1 font-semibold text-[#FF4D00]">({unreadNotifications})</span>
+            ) : null}
           </Link>
         ) : null}
       </nav>

@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Input } from "@/components/ui/input";
+import { getProductRoute } from "@/lib/mobile-routes";
 import { resolveProductImageUrl } from "@/lib/product-image";
 import { listPromotions } from "@/services/catalog-service";
 
@@ -62,7 +63,7 @@ export default function PromotionsPage() {
                   {item.promo_until ? `Valable jusqu'au ${new Date(item.promo_until).toLocaleString("fr-FR")}` : "Promo active"}
                 </p>
                 <Link
-                  href={`/product/${item.product_id}`}
+                  href={getProductRoute(item.product_id)}
                   className="primary-glow-btn mt-3 inline-flex w-full items-center justify-center rounded-md px-3 py-2 text-sm text-white"
                 >
                   Voir le produit

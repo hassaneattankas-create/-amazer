@@ -6,6 +6,7 @@ import { BedDouble, ShieldCheck, Store, UtensilsCrossed } from "lucide-react";
 
 import { formatXOF } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
+import { getShopRoute } from "@/lib/mobile-routes";
 import type { VendorStorefront } from "@/types/catalog";
 
 const activityMeta = {
@@ -115,7 +116,7 @@ export function StorefrontShowcaseCard({
             </p>
           </div>
           <Link
-            href={`/shop/${store.id}`}
+            href={getShopRoute(store.id)}
             className="primary-glow-btn inline-flex shrink-0 items-center rounded-xl px-4 py-2 text-sm font-semibold text-white"
           >
             {ctaLabel}

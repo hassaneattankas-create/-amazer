@@ -4,7 +4,15 @@ import Link from "next/link";
 import { Suspense, useEffect, useId, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, CheckCircle2, Circle, ImageUp, PlusCircle, UtensilsCrossed } from "lucide-react";
+import {
+  Building2,
+  CheckCircle2,
+  Circle,
+  ImageUp,
+  PenSquare,
+  PlusCircle,
+  UtensilsCrossed,
+} from "lucide-react";
 
 import { PremiumSellerPitch } from "@/components/PremiumSellerPitch";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
@@ -149,6 +157,7 @@ function SellerPageContent() {
   const setAppMode = useAuthStore((state) => state.setAppMode);
   const [status, setStatus] = useState("");
   const [profileHydratedFromServer, setProfileHydratedFromServer] = useState(false);
+  const [showProfileEditor, setShowProfileEditor] = useState(searchParams.get("welcome") !== "1");
 
   const [profileForm, setProfileForm] = useState(() => {
     const draft = loadDraft(SELLER_PROFILE_DRAFT_KEY, {
@@ -402,15 +411,16 @@ function SellerPageContent() {
   };
   const welcomeMessage =
     searchParams.get("welcome") === "1"
-      ? "Compte vendeur cree. Choisis ton type de boutique puis termine la configuration ci-dessous."
+      ? "Compte vendeur cree. Les informations de base sont deja enregistrees. Tu peux publier tout de suite puis completer les details plus tard."
       : "";
+  const compactProfileSetup = searchParams.get("welcome") === "1" && Boolean(profile?.id);
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
       <header className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="luxury-title text-3xl font-semibold">Espace vendeur</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Choisis ton profil vendeur (boutique, restaurant ou premium) puis publie tes offres.
+          Gere ta boutique, ton menu et tes operations vendeur depuis un seul espace.
         </p>
         <Button asChild variant="outline" className="mt-4">
           <Link href="/seller/dashboard">Aller au dashboard de stock</Link>
@@ -430,7 +440,7 @@ function SellerPageContent() {
             ) : (
               <Circle className="mt-0.5 h-4 w-4 text-slate-400" />
             )}
-            <span>1. Enregistre ton profil vendeur.</span>
+            <span>{hasProfile ? "1. Profil vendeur de base deja cree." : "1. Enregistre ton profil vendeur."}</span>
           </div>
           {showProductSection ? (
             <div className="flex items-start gap-2">
@@ -509,15 +519,50 @@ function SellerPageContent() {
           ) : (
             <p className="mt-2 text-sm text-slate-600">Aucun profil actif pour ce compte.</p>
           )}
-        <p className="mt-3 text-sm text-slate-600">
-            Boutique: publier des produits. Restaurant: menu digital, commandes et reservations. Premium: toutes les
-            fonctions boutique + restaurant + mini-site complet (galerie, services, chambres, paiement avec acompte).
-        </p>
+          <p className="mt-3 text-sm text-slate-600">
+              Boutique: publier des produits. Restaurant: menu digital, commandes et reservations. Premium: toutes les
+              fonctions boutique + restaurant + mini-site complet (galerie, services, chambres, paiement avec acompte).
+          </p>
           <PremiumSellerPitch variant="compact" showEspaceVendeurLink={false} className="mt-5" />
+          {compactProfileSetup ? (
+            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+              <p className="font-semibold">Infos deja reprises depuis l inscription</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.12em] text-emerald-700/80">Commerce</p>
+                  <p className="mt-1 font-medium">{profileForm.business_name || "Non renseigne"}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.12em] text-emerald-700/80">Type</p>
+                  <p className="mt-1 font-medium">
+                    {profileForm.activity_type === "shop"
+                      ? "Boutique"
+                      : profileForm.activity_type === "restaurant"
+                        ? "Restaurant"
+                        : "Premium"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.12em] text-emerald-700/80">Ville</p>
+                  <p className="mt-1 font-medium">{profileForm.city || "Niamey"}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-white px-4 py-2 text-xs font-medium text-emerald-800 hover:bg-emerald-100"
+                onClick={() => setShowProfileEditor((value) => !value)}
+              >
+                <PenSquare className="h-3.5 w-3.5" />
+                {showProfileEditor ? "Masquer les details" : "Modifier ou completer mon profil"}
+              </button>
+            </div>
+          ) : null}
+          {!compactProfileSetup || showProfileEditor ? (
+            <>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Input
-              placeholder="Nom du commerce"
-              value={profileForm.business_name}
+              <Input
+                placeholder="Nom du commerce"
+                value={profileForm.business_name}
               onChange={(event) =>
                 setProfileForm((prev) => ({ ...prev, business_name: event.target.value }))
               }
@@ -694,9 +739,9 @@ function SellerPageContent() {
               />
             ) : null}
           </div>
-          <Button
-            className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
-            onClick={() =>
+            <Button
+              className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
+              onClick={() =>
               profileMutation.mutate({
                 business_name: profileForm.business_name,
                 city: profileForm.city,
@@ -724,10 +769,12 @@ function SellerPageContent() {
                   : false,
                 accepts_hotel_bookings: isPremium ? profileForm.accepts_hotel_bookings : false,
               })
-            }
-          >
-            Enregistrer le profil
-          </Button>
+              }
+            >
+              Enregistrer le profil
+            </Button>
+            </>
+          ) : null}
         </article>
       )}
 

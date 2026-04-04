@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Boxes, CalendarClock, Clock3, Hotel, PlusCircle, Settings2, UtensilsCrossed } from "lucide-react";
 
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { formatXOF } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
 import { deleteMyAccount } from "@/services/auth-service";
+import { notifyLocalOrderEvent } from "@/services/notification-service";
 import { listCatalogCategories } from "@/services/catalog-service";
 import {
   createRestaurantMenuItem,
@@ -28,6 +29,8 @@ import {
   getSellerProfile,
   listSellerHotelBookings,
   listSellerInventory,
+  listSellerOrders,
+  updateSellerOrderStatus,
   updateSellerHotelBookingStatus,
   updateSellerInventory,
 } from "@/services/seller-service";
@@ -38,6 +41,8 @@ function formatDateTime(value: string): string {
 
 export default function SellerDashboardPage() {
   const queryClient = useQueryClient();
+  const seenShopOrderIdsRef = useRef<Set<string>>(new Set());
+  const seenRestaurantOrderIdsRef = useRef<Set<string>>(new Set());
   const [status, setStatus] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteStatus, setDeleteStatus] = useState("");
@@ -87,6 +92,12 @@ export default function SellerDashboardPage() {
     queryKey: ["seller-inventory"],
     queryFn: listSellerInventory,
     enabled: showProductTools,
+  });
+  const { data: shopOrders = [] } = useQuery({
+    queryKey: ["seller-shop-orders"],
+    queryFn: listSellerOrders,
+    enabled: showProductTools,
+    refetchInterval: 5000,
   });
   const { data: sellerMenu = [] } = useQuery({
     queryKey: ["seller-restaurant-menu-dashboard"],
@@ -140,6 +151,21 @@ export default function SellerDashboardPage() {
       setStatus("Stock mis a jour.");
     },
     onError: () => setStatus("Erreur mise a jour stock."),
+  });
+
+  const shopOrderStatusMutation = useMutation({
+    mutationFn: ({
+      orderId,
+      status,
+    }: {
+      orderId: string;
+      status: "commande" | "preparation" | "livraison" | "recu";
+    }) => updateSellerOrderStatus(orderId, status),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["seller-shop-orders"] });
+      setStatus("Commande boutique mise a jour.");
+    },
+    onError: () => setStatus("Erreur lors de la mise a jour de la commande boutique."),
   });
 
   const productMutation = useMutation({
@@ -260,6 +286,50 @@ export default function SellerDashboardPage() {
       : sellerMode === "enterprise"
         ? "Dashboard premium: produits, menu, reservations restaurant, reservations hotel et outils avances."
         : "Dashboard boutique: gere tes produits, ton stock et tes boosts.";
+
+  useEffect(() => {
+    const known = seenShopOrderIdsRef.current;
+    if (!shopOrders.length) {
+      return;
+    }
+    const newOrders = shopOrders.filter((order) => order.status === "commande" && !known.has(order.id));
+    for (const order of shopOrders) {
+      known.add(order.id);
+    }
+    if (!newOrders.length) {
+      return;
+    }
+    const latest = newOrders[0];
+    notifyLocalOrderEvent({
+      title: "Nouvelle commande boutique",
+      body: `${latest.customer_name} a lance une commande ${latest.tracking_code ? `(${latest.tracking_code})` : ""}`.trim(),
+      tag: `seller-shop-order-${latest.id}`,
+      href: "/seller/dashboard",
+    });
+    setStatus(`Nouvelle commande boutique detectee pour ${latest.customer_name}.`);
+  }, [shopOrders]);
+
+  useEffect(() => {
+    const known = seenRestaurantOrderIdsRef.current;
+    if (!restaurantOrders.length) {
+      return;
+    }
+    const newOrders = restaurantOrders.filter((order) => order.status === "commande" && !known.has(order.id));
+    for (const order of restaurantOrders) {
+      known.add(order.id);
+    }
+    if (!newOrders.length) {
+      return;
+    }
+    const latest = newOrders[0];
+    notifyLocalOrderEvent({
+      title: "Nouvelle commande restaurant",
+      body: `${latest.customer_name} vient de commander.`,
+      tag: `seller-restaurant-order-${latest.id}`,
+      href: "/seller/dashboard",
+    });
+    setStatus(`Nouvelle commande restaurant detectee pour ${latest.customer_name}.`);
+  }, [restaurantOrders]);
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
@@ -527,6 +597,53 @@ export default function SellerDashboardPage() {
               ))}
               {!restaurantOrders.length ? (
                 <p className="text-sm text-slate-500">Aucune commande restaurant en cours.</p>
+              ) : null}
+            </div>
+          </article>
+        ) : null}
+
+        {showProductTools ? (
+          <article className="premium-card border border-slate-200 bg-white p-6">
+            <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
+              <Clock3 className="h-5 w-5 text-[#FF4D00]" />
+              Commandes boutique en temps reel
+            </h2>
+            <div className="mt-4 space-y-3">
+              {shopOrders.map((order) => (
+                <div key={order.id} className="rounded-2xl border border-slate-200 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-slate-900">
+                      {order.customer_name} {order.tracking_code ? `- ${order.tracking_code}` : ""}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {order.status} | {order.delivery_type}
+                    </p>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {order.items.length} article(s) | paiement {order.payment_mode} |{" "}
+                    {new Date(order.created_at).toLocaleString("fr-FR")}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-[#FF4D00]">{formatXOF(order.total_amount)}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {(["commande", "preparation", "livraison", "recu"] as const).map((step) => (
+                      <Button
+                        key={`${order.id}-${step}`}
+                        type="button"
+                        onClick={() => shopOrderStatusMutation.mutate({ orderId: order.id, status: step })}
+                        className={
+                          order.status === step
+                            ? "border border-[#FF4D00]/35 bg-[#FF4D00]/10 text-[#FF4D00]"
+                            : "border border-slate-200 bg-white text-slate-700"
+                        }
+                      >
+                        {step}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {!shopOrders.length ? (
+                <p className="text-sm text-slate-500">Aucune commande boutique en cours.</p>
               ) : null}
             </div>
           </article>

@@ -101,6 +101,30 @@ export type SellerInventoryItem = {
   boost_until: string | null;
 };
 
+export type SellerShopOrderItem = {
+  id: string;
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+};
+
+export type SellerShopOrder = {
+  id: string;
+  customer_name: string;
+  status: "payment_pending" | "commande" | "preparation" | "livraison" | "recu" | "CLAIMED";
+  payment_mode: "nita" | "amana";
+  payment_status: "pending" | "paid";
+  delivery_type: "standard" | "express_niamey";
+  tracking_code: string | null;
+  total_amount: number;
+  currency: string;
+  created_at: string;
+  items: SellerShopOrderItem[];
+};
+
+export type SellerShopOrderStatus = "commande" | "preparation" | "livraison" | "recu";
+
 export type SellerStorefrontProduct = {
   price_id: string;
   product_id: string;

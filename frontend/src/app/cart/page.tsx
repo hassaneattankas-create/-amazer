@@ -10,6 +10,7 @@ import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatXOF } from "@/lib/currency";
+import { getOrderPayRoute, getOrderSuccessRoute } from "@/lib/mobile-routes";
 import { DEFAULT_SHIPPING_COST, optimizeCart } from "@/lib/optimize-cart";
 import { getPublicFinanceSettings } from "@/services/finance-service";
 import { checkout } from "@/services/order-service";
@@ -99,9 +100,9 @@ export default function CartPage() {
         currency: "XOF",
       });
       if (order.payment_status === "paid") {
-        router.push(`/order/success/${order.id}`);
+        router.push(getOrderSuccessRoute(order.id));
       } else {
-        router.push(`/order/pay/${order.id}`);
+        router.push(getOrderPayRoute(order.id));
       }
       return;
     } catch {
