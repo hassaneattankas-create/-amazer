@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { AppFooter } from "@/components/layout/AppFooter";
+import { AndroidBackButtonHandler } from "@/components/providers/AndroidBackButtonHandler";
 import { FloatingNavbar } from "@/components/layout/FloatingNavbar";
 import { AuthPreferenceBootstrap } from "@/components/providers/AuthPreferenceBootstrap";
 import { PwaRegistrar } from "@/components/providers/PwaRegistrar";
@@ -57,6 +58,7 @@ export default function RootLayout({
       >
         <QueryProvider>
           <PwaRegistrar />
+          <AndroidBackButtonHandler />
           <AuthPreferenceBootstrap />
           <FloatingNavbar />
           <main className="min-h-screen pt-24">{children}</main>

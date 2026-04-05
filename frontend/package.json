@@ -16,6 +16,7 @@
     "mobile:prepare:android:bundled": "npm run build:mobile:bundled && npx cap sync android"
   },
   "dependencies": {
+    "@capacitor/app": "^7.0.2",
     "@capacitor/android": "^7.4.3",
     "@capacitor/core": "^7.4.3",
     "@radix-ui/react-slot": "^1.2.4",
