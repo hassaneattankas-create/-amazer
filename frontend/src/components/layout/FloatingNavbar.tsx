@@ -276,12 +276,21 @@ export function FloatingNavbar() {
 
       <nav className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-3 py-2 md:hidden">
         {!isAuthenticated ? (
-          <Link
-            href="/register"
-            className="whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
-          >
-            Inscription client
-          </Link>
+          <>
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1 whitespace-nowrap rounded-xl border border-[#FF4D00]/35 bg-[#FF4D00]/10 px-3 py-1.5 text-xs font-medium text-[#FF4D00] hover:bg-[#FF4D00]/15"
+            >
+              <User className="h-3.5 w-3.5" />
+              Connexion
+            </Link>
+            <Link
+              href="/register"
+              className="whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
+            >
+              Inscription client
+            </Link>
+          </>
         ) : (
           <button
             type="button"
