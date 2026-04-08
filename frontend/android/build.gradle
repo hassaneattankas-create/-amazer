@@ -24,6 +24,19 @@ allprojects {
     }
 }
 
+// Capacitor 7 déclare Java 21 dans node_modules ; forcer Java 17 si la machine n’a que un JDK 17.
+subprojects { subproject ->
+    subproject.afterEvaluate {
+        def androidExt = subproject.extensions.findByName("android")
+        if (androidExt != null) {
+            androidExt.compileOptions {
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
+            }
+        }
+    }
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
