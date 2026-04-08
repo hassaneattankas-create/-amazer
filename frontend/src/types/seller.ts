@@ -44,6 +44,9 @@ export type SellerProfile = {
   commission_rate_override: number | null;
   service_fee_override: number | null;
   seller_subscription_fee_override: number | null;
+  onboarding_fee_paid_at: string | null;
+  subscription_paid_until: string | null;
+  subscription_last_payment_reference: string | null;
   effective_commission_rate: number;
   effective_service_fee: number;
   effective_seller_subscription_fee: number;
@@ -51,6 +54,19 @@ export type SellerProfile = {
   accepts_hotel_bookings: boolean;
   is_verified: boolean;
   created_at: string;
+};
+
+export type SellerSubscriptionStatus = {
+  has_seller_profile: boolean;
+  onboarding_fee_paid: boolean;
+  onboarding_fee_paid_at: string | null;
+  subscription_paid_until: string | null;
+  subscription_active: boolean;
+  monthly_fee: number;
+  onboarding_fee: number;
+  amount_due_now: number;
+  currency: "XOF";
+  has_pending_payment_request: boolean;
 };
 
 export type SellerProfilePayload = {

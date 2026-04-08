@@ -8,6 +8,7 @@ import {
   SellerProductPayload,
   SellerProfile,
   SellerProfilePayload,
+  SellerSubscriptionStatus,
   SellerStorefront,
 } from "@/types/seller";
 
@@ -107,5 +108,19 @@ export async function updateSellerHotelBookingStatus(
       status,
     },
   );
+  return response.data;
+}
+
+export async function getSellerSubscriptionStatus(): Promise<SellerSubscriptionStatus> {
+  const response = await api.get<SellerSubscriptionStatus>("/api/v1/seller/subscription-status");
+  return response.data;
+}
+
+export async function paySellerSubscription(payload: {
+  payment_mode: "nita" | "amana";
+  transaction_reference: string;
+  months: number;
+}): Promise<SellerSubscriptionStatus> {
+  const response = await api.post<SellerSubscriptionStatus>("/api/v1/seller/subscription/pay", payload);
   return response.data;
 }

@@ -292,7 +292,9 @@ export default function SellerDashboardPage() {
     if (!shopOrders.length) {
       return;
     }
-    const newOrders = shopOrders.filter((order) => order.status === "commande" && !known.has(order.id));
+    const newOrders = shopOrders.filter(
+      (order) => (order.status === "commande" || order.status === "payment_pending") && !known.has(order.id)
+    );
     for (const order of shopOrders) {
       known.add(order.id);
     }
@@ -314,7 +316,9 @@ export default function SellerDashboardPage() {
     if (!restaurantOrders.length) {
       return;
     }
-    const newOrders = restaurantOrders.filter((order) => order.status === "commande" && !known.has(order.id));
+    const newOrders = restaurantOrders.filter(
+      (order) => (order.status === "commande" || order.status === "payment_pending") && !known.has(order.id)
+    );
     for (const order of restaurantOrders) {
       known.add(order.id);
     }

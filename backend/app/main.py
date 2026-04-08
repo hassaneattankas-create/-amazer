@@ -105,6 +105,27 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS commission_rate_override DOUBLE PRECISION",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS service_fee_override DOUBLE PRECISION",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS seller_subscription_fee_override DOUBLE PRECISION",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS onboarding_fee_paid_at TIMESTAMPTZ",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS subscription_paid_until TIMESTAMPTZ",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS subscription_last_payment_reference VARCHAR(180)",
+        (
+            "CREATE TABLE IF NOT EXISTS seller_subscription_payments ("
+            "id VARCHAR(36) PRIMARY KEY, "
+            "seller_profile_id VARCHAR(36) NOT NULL REFERENCES seller_profiles(id) ON DELETE CASCADE, "
+            "seller_user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE, "
+            "payment_mode VARCHAR(20) NOT NULL, "
+            "transaction_reference VARCHAR(180) NOT NULL, "
+            "months INTEGER NOT NULL DEFAULT 1, "
+            "amount_claimed DOUBLE PRECISION NOT NULL DEFAULT 0, "
+            "status VARCHAR(20) NOT NULL DEFAULT 'pending', "
+            "admin_note TEXT, "
+            "reviewed_by_user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL, "
+            "reviewed_at TIMESTAMPTZ, "
+            "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+            ")"
+        ),
+        "CREATE INDEX IF NOT EXISTS ix_seller_subscription_payments_profile ON seller_subscription_payments (seller_profile_id)",
+        "CREATE INDEX IF NOT EXISTS ix_seller_subscription_payments_status ON seller_subscription_payments (status)",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS accepts_table_reservations BOOLEAN DEFAULT FALSE",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS accepts_hotel_bookings BOOLEAN DEFAULT FALSE",
         "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS delivery_fee DOUBLE PRECISION DEFAULT 0",

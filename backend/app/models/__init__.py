@@ -7,6 +7,7 @@ from app.models.review import Review
 from app.models.order import Order, OrderItem
 from app.models.restaurant import RestaurantMenuItem, RestaurantOrder, RestaurantOrderItem
 from app.models.seller_profile import SellerProfile
+from app.models.seller_subscription_payment import SellerSubscriptionPayment
 from app.models.seller_lead import SellerLead
 from app.models.finance import FinanceDistrictFee, FinanceSettings, FinanceTransfer
 from app.models.security_event import SecurityEvent
@@ -38,6 +39,7 @@ __all__ = [
     "Category",
     "Vendor",
     "SellerProfile",
+    "SellerSubscriptionPayment",
     "Review",
     "Order",
     "OrderItem",

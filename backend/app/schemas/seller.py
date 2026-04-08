@@ -79,6 +79,9 @@ class SellerProfileResponse(BaseModel):
     commission_rate_override: float | None = None
     service_fee_override: float | None = None
     seller_subscription_fee_override: float | None = None
+    onboarding_fee_paid_at: datetime | None = None
+    subscription_paid_until: datetime | None = None
+    subscription_last_payment_reference: str | None = None
     effective_commission_rate: float
     effective_service_fee: float
     effective_seller_subscription_fee: float
@@ -167,6 +170,46 @@ class SellerShopOrderStatusUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     status: Literal["commande", "preparation", "livraison", "recu"]
+
+
+class SellerSubscriptionStatusResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    has_seller_profile: bool
+    onboarding_fee_paid: bool
+    onboarding_fee_paid_at: datetime | None = None
+    subscription_paid_until: datetime | None = None
+    subscription_active: bool
+    monthly_fee: float
+    onboarding_fee: float
+    amount_due_now: float
+    currency: str = "XOF"
+    has_pending_payment_request: bool = False
+
+
+class SellerSubscriptionPayRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    payment_mode: Literal["nita", "amana"]
+    transaction_reference: str = Field(min_length=2, max_length=180)
+    months: int = Field(default=1, ge=1, le=12)
+
+
+class SellerSubscriptionPaymentRequestResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    seller_profile_id: str
+    seller_user_id: str
+    payment_mode: Literal["nita", "amana"]
+    transaction_reference: str
+    months: int
+    amount_claimed: float
+    status: Literal["pending", "approved", "rejected"]
+    admin_note: str | None = None
+    reviewed_by_user_id: str | None = None
+    reviewed_at: datetime | None = None
+    created_at: datetime
 
 
 class SellerStorefrontProductResponse(BaseModel):

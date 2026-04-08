@@ -13,6 +13,7 @@ import { formatXOF } from "@/lib/currency";
 import { getOrderPayRoute, getOrderSuccessRoute } from "@/lib/mobile-routes";
 import { DEFAULT_SHIPPING_COST, optimizeCart } from "@/lib/optimize-cart";
 import { getPublicFinanceSettings } from "@/services/finance-service";
+import { notifyLocalOrderEvent } from "@/services/notification-service";
 import { checkout } from "@/services/order-service";
 import { useCartStore } from "@/store/cartStore";
 import { OptimizeCartResult } from "@/types/cart";
@@ -98,6 +99,12 @@ export default function CartPage() {
         delivery_type: deliveryType,
         transaction_code: transactionCode || undefined,
         currency: "XOF",
+      });
+      notifyLocalOrderEvent({
+        title: "Commande envoyee",
+        body: `Ta commande ${order.tracking_code ?? order.id.slice(0, 8)} est en statut ${order.status}.`,
+        tag: `customer-order-${order.id}`,
+        href: `/order/receipt/${order.id}`,
       });
       if (order.payment_status === "paid") {
         router.push(getOrderSuccessRoute(order.id));

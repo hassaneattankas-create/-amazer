@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Bell } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ type PriceAlertButtonProps = {
 };
 
 export function PriceAlertButton({ productId, currentPrice }: PriceAlertButtonProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [targetPrice, setTargetPrice] = useState(
     currentPrice ? String(Math.max(1, Number((currentPrice * 0.95).toFixed(2)))) : ""
@@ -47,8 +48,21 @@ export function PriceAlertButton({ productId, currentPrice }: PriceAlertButtonPr
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    const onClickOutside = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [isOpen]);
+
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <motion.button
         type="button"
         onClick={() => setIsOpen((value) => !value)}
@@ -72,7 +86,7 @@ export function PriceAlertButton({ productId, currentPrice }: PriceAlertButtonPr
       </motion.button>
 
       {isOpen ? (
-        <div className="premium-card absolute right-0 z-20 mt-2 w-72 border border-slate-200 bg-white p-3">
+        <div className="premium-card absolute left-0 right-0 top-full z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] border border-slate-200 bg-white p-3 sm:left-auto sm:right-0">
           <p className="text-xs text-slate-500">Prix cible souhaite</p>
           <Input
             type="number"

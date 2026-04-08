@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Store } from "lucide-react";
 
 import { AnimatedPrice } from "@/components/AnimatedPrice";
@@ -27,11 +28,11 @@ export function VendorOffer({ offer }: VendorOfferProps) {
         <div className="text-right">
           <AnimatedPrice value={offer.amount} className="text-lg font-semibold text-[#FF4D00]" />
           <Button
-            type="button"
+            asChild
             size="sm"
             className="mt-2 border border-[#FF4D00]/25 bg-[#FF4D00]/10 text-[#FF4D00] hover:bg-[#FF4D00]/15"
           >
-            Voir l&apos;offre
+            <Link href={`/shop/${offer.vendor.id}`}>Voir l&apos;offre</Link>
           </Button>
         </div>
       </div>

@@ -26,10 +26,13 @@ from app.models.product import Price
 from app.models.receipt_scan import ReceiptScan
 from app.models.restaurant import RestaurantOrder
 from app.models.seller_profile import SellerProfile
+from app.models.seller_subscription_payment import SellerSubscriptionPayment
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.schemas.finance import (
     AdminSellerResponse,
+    AdminSellerSubscriptionPaymentDecisionRequest,
+    AdminSellerSubscriptionPaymentRequestResponse,
     AdminSellerPricingUpdateRequest,
     AdminUserResponse,
     AdminUserStatsResponse,
@@ -125,6 +128,27 @@ def _build_admin_seller_response(
         effective_service_fee=finance.service_fee,
         effective_seller_subscription_fee=finance.seller_subscription_fee,
         created_at=profile.created_at.isoformat(),
+    )
+
+
+def _build_admin_subscription_payment_response(
+    row: SellerSubscriptionPayment, profile: SellerProfile | None, user: User | None
+) -> AdminSellerSubscriptionPaymentRequestResponse:
+    return AdminSellerSubscriptionPaymentRequestResponse(
+        id=row.id,
+        seller_profile_id=row.seller_profile_id,
+        seller_user_id=row.seller_user_id,
+        business_name=profile.business_name if profile else "Seller",
+        seller_email=user.email if user else "",
+        payment_mode=row.payment_mode,
+        transaction_reference=row.transaction_reference,
+        months=row.months,
+        amount_claimed=row.amount_claimed,
+        status=row.status,
+        admin_note=row.admin_note,
+        reviewed_by_user_id=row.reviewed_by_user_id,
+        reviewed_at=row.reviewed_at.isoformat() if row.reviewed_at else None,
+        created_at=row.created_at.isoformat(),
     )
 
 
@@ -1098,3 +1122,95 @@ def update_seller_pricing(
     db.refresh(profile)
     vendor = db.get(Vendor, profile.vendor_id)
     return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
+
+
+@router.get(
+    "/seller-subscription-payments",
+    response_model=list[AdminSellerSubscriptionPaymentRequestResponse],
+)
+def list_seller_subscription_payment_requests(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+    status: str = "pending",
+    limit: int = 100,
+) -> list[AdminSellerSubscriptionPaymentRequestResponse]:
+    _require_finance_pin(request)
+    _audit_admin_access(db, request, admin_user, "admin_seller_subscription_payments_read")
+    safe_limit = min(max(limit, 1), 500)
+    stmt = select(SellerSubscriptionPayment).order_by(desc(SellerSubscriptionPayment.created_at)).limit(safe_limit)
+    if status in {"pending", "approved", "rejected"}:
+        stmt = stmt.where(SellerSubscriptionPayment.status == status)
+    rows = db.scalars(stmt).all()
+    profile_ids = {row.seller_profile_id for row in rows}
+    user_ids = {row.seller_user_id for row in rows}
+    profiles = (
+        db.scalars(select(SellerProfile).where(SellerProfile.id.in_(profile_ids))).all() if profile_ids else []
+    )
+    users = db.scalars(select(User).where(User.id.in_(user_ids))).all() if user_ids else []
+    profile_map = {row.id: row for row in profiles}
+    user_map = {row.id: row for row in users}
+    return [
+        _build_admin_subscription_payment_response(row, profile_map.get(row.seller_profile_id), user_map.get(row.seller_user_id))
+        for row in rows
+    ]
+
+
+@router.post(
+    "/seller-subscription-payments/{payment_id}/decision",
+    response_model=AdminSellerSubscriptionPaymentRequestResponse,
+)
+def decide_seller_subscription_payment(
+    payment_id: str,
+    payload: AdminSellerSubscriptionPaymentDecisionRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminSellerSubscriptionPaymentRequestResponse:
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    row = db.get(SellerSubscriptionPayment, payment_id)
+    if row is None:
+        raise ValidationDomainError("Demande de paiement introuvable")
+    if row.status != "pending":
+        raise ValidationDomainError("Cette demande a deja ete traitee")
+    profile = db.get(SellerProfile, row.seller_profile_id)
+    if profile is None:
+        raise ValidationDomainError("Profil vendeur introuvable")
+
+    now = datetime.now(UTC)
+    row.status = payload.decision
+    row.admin_note = payload.admin_note
+    row.reviewed_at = now
+    row.reviewed_by_user_id = admin_user.id
+
+    if payload.decision == "approved":
+        if profile.onboarding_fee_paid_at is None:
+            profile.onboarding_fee_paid_at = now
+        start_from = profile.subscription_paid_until if profile.subscription_paid_until and profile.subscription_paid_until > now else now
+        profile.subscription_paid_until = start_from + timedelta(days=30 * max(1, row.months))
+        profile.subscription_last_payment_reference = f"{row.payment_mode.upper()}::{row.transaction_reference}"[:180]
+        vendor = db.get(Vendor, profile.vendor_id)
+        if vendor is not None:
+            vendor.is_active = True
+
+    append_audit_log(
+        db,
+        event_type="admin_seller_subscription_payment_decision",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="seller_subscription_payment",
+        entity_id=row.id,
+        details={
+            "decision": payload.decision,
+            "months": row.months,
+            "seller_profile_id": row.seller_profile_id,
+            "seller_user_id": row.seller_user_id,
+            "admin_note": payload.admin_note,
+        },
+    )
+    db.commit()
+    db.refresh(row)
+    seller_user = db.get(User, row.seller_user_id)
+    return _build_admin_subscription_payment_response(row, profile, seller_user)

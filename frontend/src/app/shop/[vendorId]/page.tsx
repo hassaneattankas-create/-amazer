@@ -589,7 +589,7 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
             className="object-cover opacity-80"
           />
         ) : null}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/35 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/35 to-transparent" />
         <div className="absolute bottom-5 left-5 right-5 flex flex-wrap items-end justify-between gap-4">
           <div className="flex items-end gap-4">
             <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl border border-white/25 bg-white/10 backdrop-blur">

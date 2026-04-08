@@ -1,12 +1,15 @@
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import DomainError, UnauthorizedError
+from app.core.exceptions import DomainError, ForbiddenError, UnauthorizedError
 from app.config import get_settings
 from app.database import get_db
+from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.services.auth_service import AuthService
 
@@ -65,4 +68,15 @@ def get_seller_user(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> User:
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        return current_user
+    if profile.onboarding_fee_paid_at is None:
+        raise ForbiddenError(
+            "Activation vendeur requise: reglez d'abord les frais de creation vendeur."
+        )
+    if profile.subscription_paid_until is None or profile.subscription_paid_until <= datetime.now(UTC):
+        raise ForbiddenError(
+            "Abonnement vendeur expire: reglez votre mensualite pour reactiver le compte vendeur."
+        )
     return current_user

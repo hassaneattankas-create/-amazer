@@ -14,3 +14,8 @@ __pycache__/
 
 .vercel
 .vercel-global/
+
+# Artefacts locaux (ne jamais committer)
+.android-sdk/
+jdk-*/
+temp_ad_review/

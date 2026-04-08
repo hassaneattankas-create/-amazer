@@ -30,7 +30,9 @@ import { createRestaurantMenuItem, listRestaurantMenu } from "@/services/restaur
 import {
   createSellerProduct,
   getSellerProfile,
+  getSellerSubscriptionStatus,
   listSellerInventory,
+  paySellerSubscription,
   upsertSellerProfile,
 } from "@/services/seller-service";
 import { useAuthStore } from "@/store/auth-store";
@@ -158,6 +160,7 @@ function SellerPageContent() {
   const [status, setStatus] = useState("");
   const [profileHydratedFromServer, setProfileHydratedFromServer] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(searchParams.get("welcome") !== "1");
+  const [subscriptionPaymentRef, setSubscriptionPaymentRef] = useState("");
 
   const [profileForm, setProfileForm] = useState(() => {
     const draft = loadDraft(SELLER_PROFILE_DRAFT_KEY, {
@@ -240,6 +243,11 @@ function SellerPageContent() {
   const { data: profile, isPending } = useQuery({
     queryKey: ["seller-profile"],
     queryFn: getSellerProfile,
+  });
+  const { data: subscriptionStatus } = useQuery({
+    queryKey: ["seller-subscription-status"],
+    queryFn: getSellerSubscriptionStatus,
+    enabled: Boolean(user),
   });
   const { data: restaurantItems = [] } = useQuery({
     queryKey: ["seller-restaurant-menu", profile?.vendor_id],
@@ -360,6 +368,15 @@ function SellerPageContent() {
     },
     onError: () => setStatus("Erreur lors de la publication de l'article restaurant."),
   });
+  const subscriptionMutation = useMutation({
+    mutationFn: paySellerSubscription,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seller-subscription-status"] });
+      setSubscriptionPaymentRef("");
+      setStatus("Paiement soumis. En attente de validation admin.");
+    },
+    onError: (error) => setStatus(getApiErrorMessage(error, "Paiement vendeur impossible.")),
+  });
 
   const normalizeImageInput = (raw: string): string | undefined => resolveImageUrl(raw) ?? undefined;
   const isShop = profileForm.activity_type === "shop";
@@ -379,6 +396,9 @@ function SellerPageContent() {
   const menuListingLimitReached =
     showRestaurantSection && !isPremiumTier && restaurantItems.length >= maxBasicListings;
   const hasProfile = Boolean(profile?.id);
+  const hasActiveSubscription = Boolean(subscriptionStatus?.subscription_active);
+  const sellerOnboardingFlow = hasProfile || hasRequestedSellerType || searchParams.get("welcome") === "1";
+  const sellerPaymentRequired = sellerOnboardingFlow && !hasActiveSubscription;
   const hasProducts = inventory.length > 0;
   const hasMenu = restaurantItems.length > 0;
   const hasPremiumConfig =
@@ -427,6 +447,59 @@ function SellerPageContent() {
         </Button>
       </header>
 
+      {sellerPaymentRequired ? (
+        <article className="premium-card border border-amber-200 bg-amber-50 p-6">
+          <h2 className="text-lg font-semibold text-amber-900">Activation vendeur requise</h2>
+          <p className="mt-1 text-sm text-amber-800">
+            Le compte vendeur est en pause tant que les frais ne sont pas regles. Le paiement d&apos;activation
+            couvre les frais de creation puis l&apos;abonnement mensuel.
+          </p>
+          {!hasProfile ? (
+            <p className="mt-2 text-sm text-amber-900">
+              Commence par enregistrer le profil vendeur ci-dessous. Le paiement sera ensuite requis
+              immediatement pour activer le compte.
+            </p>
+          ) : null}
+          <div className="mt-3 grid gap-2 text-sm text-amber-900 sm:grid-cols-3">
+            <p>Frais creation: {formatXOF(subscriptionStatus?.onboarding_fee ?? 0)}</p>
+            <p>Mensualite: {formatXOF(subscriptionStatus?.monthly_fee ?? 0)}</p>
+            <p>A payer maintenant: {formatXOF(subscriptionStatus?.amount_due_now ?? 0)}</p>
+          </div>
+          {subscriptionStatus?.has_pending_payment_request ? (
+            <p className="mt-3 text-sm font-medium text-amber-900">
+              Paiement deja soumis. En attente de validation par l&apos;admin.
+            </p>
+          ) : null}
+          {hasProfile ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+              <Input
+                placeholder="Reference transaction Nita/Amana"
+                value={subscriptionPaymentRef}
+                onChange={(event) => setSubscriptionPaymentRef(event.target.value)}
+              />
+              <Button
+                type="button"
+                disabled={
+                  subscriptionMutation.isPending ||
+                  subscriptionPaymentRef.trim().length < 3 ||
+                  Boolean(subscriptionStatus?.has_pending_payment_request)
+                }
+                className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
+                onClick={() =>
+                  subscriptionMutation.mutate({
+                    payment_mode: "nita",
+                    transaction_reference: subscriptionPaymentRef.trim(),
+                    months: 1,
+                  })
+                }
+              >
+                {subscriptionMutation.isPending ? "Envoi..." : "Soumettre paiement (validation admin)"}
+              </Button>
+            </div>
+          ) : null}
+        </article>
+      ) : null}
+
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-slate-900">Assistant d&apos;inscription vendeur</h2>
         <p className="mt-1 text-sm text-slate-600">
@@ -442,7 +515,7 @@ function SellerPageContent() {
             )}
             <span>{hasProfile ? "1. Profil vendeur de base deja cree." : "1. Enregistre ton profil vendeur."}</span>
           </div>
-          {showProductSection ? (
+          {showProductSection && !sellerPaymentRequired ? (
             <div className="flex items-start gap-2">
               {hasProducts ? (
                 <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
@@ -452,7 +525,7 @@ function SellerPageContent() {
               <span>2. Publie au moins un produit.</span>
             </div>
           ) : null}
-          {showRestaurantSection ? (
+          {showRestaurantSection && !sellerPaymentRequired ? (
             <div className="flex items-start gap-2">
               {hasMenu ? (
                 <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
@@ -668,7 +741,7 @@ function SellerPageContent() {
                 <option value="amana">Amana</option>
               </select>
             ) : null}
-            {showRestaurantSection ? (
+            {showRestaurantSection && !sellerPaymentRequired ? (
               <div className="rounded-md border border-slate-200 p-3 text-sm text-slate-700">
                 <label className="flex items-center gap-2">
                   <input
@@ -778,7 +851,7 @@ function SellerPageContent() {
         </article>
       )}
 
-      {showProductSection ? (
+      {showProductSection && !sellerPaymentRequired ? (
         <article className="premium-card border border-slate-200 bg-white p-6">
           <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
             <PlusCircle className="h-5 w-5 text-[#FF4D00]" />
@@ -885,7 +958,7 @@ function SellerPageContent() {
         </article>
       ) : null}
 
-      {showRestaurantSection ? (
+      {showRestaurantSection && !sellerPaymentRequired ? (
         <article className="premium-card border border-slate-200 bg-white p-6">
           <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
             <UtensilsCrossed className="h-5 w-5 text-[#FF4D00]" />

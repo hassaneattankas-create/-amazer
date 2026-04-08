@@ -31,6 +31,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# android signing keys
+/keys/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

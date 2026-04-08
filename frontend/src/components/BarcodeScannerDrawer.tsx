@@ -104,7 +104,7 @@ export function BarcodeScannerDrawer({ onDetected }: BarcodeScannerDrawerProps) 
         </Button>
       </Drawer.Trigger>
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 bg-black/30" />
+        <Drawer.Overlay className="pointer-events-none fixed inset-0 bg-black/30" />
         <Drawer.Content className="fixed bottom-0 left-0 right-0 rounded-t-2xl bg-white p-4 shadow-xl">
           <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200" />
           <div className="mt-4 flex items-center gap-2">

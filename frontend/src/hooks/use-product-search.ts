@@ -19,10 +19,13 @@ export function useProductSearch({ query = "", barcode = "" }: ProductSearchPara
     queryFn: () =>
       hasActiveFilter
         ? searchProducts({ query: normalizedQuery, barcode: normalizedBarcode, limit: 20 })
-        : searchProducts({ sort: "newest", limit: 100 }),
+        : searchProducts({ sort: "newest", limit: 48 }),
     enabled: true,
-    staleTime: 10_000,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
     placeholderData: keepPreviousData,
     retry: 1,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }

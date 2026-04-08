@@ -6,6 +6,7 @@ import { isMobileAppBuild } from "@/lib/mobile-app";
 import {
   AdminSeller,
   AdminSellerPricingPayload,
+  AdminSellerSubscriptionPaymentRequest,
   AdminUser,
   AdminUserStats,
   AdminOrderTracking,
@@ -222,6 +223,28 @@ export async function restoreAdminUser(userId: string): Promise<AdminUser> {
   return adminProxyRequest<AdminUser>({
     url: `/admin/finance/users/${userId}/restore`,
     method: "POST",
+  });
+}
+
+export async function listAdminSellerSubscriptionPayments(
+  status: "pending" | "approved" | "rejected" | "all" = "pending",
+  limit = 100
+): Promise<AdminSellerSubscriptionPaymentRequest[]> {
+  return adminProxyRequest<AdminSellerSubscriptionPaymentRequest[]>({
+    url: "/admin/finance/seller-subscription-payments",
+    method: "GET",
+    params: { status, limit },
+  });
+}
+
+export async function decideAdminSellerSubscriptionPayment(
+  paymentId: string,
+  payload: { decision: "approved" | "rejected"; admin_note?: string }
+): Promise<AdminSellerSubscriptionPaymentRequest> {
+  return adminProxyRequest<AdminSellerSubscriptionPaymentRequest>({
+    url: `/admin/finance/seller-subscription-payments/${paymentId}/decision`,
+    method: "POST",
+    data: payload,
   });
 }
 

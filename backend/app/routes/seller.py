@@ -18,6 +18,7 @@ from app.models.price_history import PriceHistory
 from app.models.product import Price, Product
 from app.models.restaurant import RestaurantMenuItem
 from app.models.seller_profile import SellerProfile
+from app.models.seller_subscription_payment import SellerSubscriptionPayment
 from app.models.seller_lead import SellerLead
 from app.models.user import User
 from app.models.vendor import Vendor
@@ -36,6 +37,9 @@ from app.schemas.seller import (
     SellerShopOrderItemResponse,
     SellerShopOrderResponse,
     SellerShopOrderStatusUpdateRequest,
+    SellerSubscriptionPayRequest,
+    SellerSubscriptionPaymentRequestResponse,
+    SellerSubscriptionStatusResponse,
     SellerProductCreateRequest,
     SellerProductCreateResponse,
     SellerProfileRequest,
@@ -128,6 +132,9 @@ def _profile_response(profile: SellerProfile, db: Session) -> SellerProfileRespo
         commission_rate_override=profile.commission_rate_override,
         service_fee_override=profile.service_fee_override,
         seller_subscription_fee_override=profile.seller_subscription_fee_override,
+        onboarding_fee_paid_at=profile.onboarding_fee_paid_at,
+        subscription_paid_until=profile.subscription_paid_until,
+        subscription_last_payment_reference=profile.subscription_last_payment_reference,
         effective_commission_rate=finance.commission_rate,
         effective_service_fee=finance.service_fee,
         effective_seller_subscription_fee=finance.seller_subscription_fee,
@@ -135,6 +142,68 @@ def _profile_response(profile: SellerProfile, db: Session) -> SellerProfileRespo
         accepts_hotel_bookings=bool(profile.accepts_hotel_bookings),
         is_verified=profile.is_verified,
         created_at=profile.created_at,
+    )
+
+
+def _build_subscription_status(profile: SellerProfile | None, db: Session) -> SellerSubscriptionStatusResponse:
+    monthly_fee = 0.0
+    onboarding_fee = 0.0
+    onboarding_fee_paid = False
+    subscription_paid_until = None
+    subscription_active = False
+    if profile is not None:
+        finance = build_effective_seller_finance_settings(get_or_create_global_settings(db), profile)
+        monthly_fee = float(finance.seller_subscription_fee)
+        onboarding_fee = float(finance.seller_subscription_fee)
+        onboarding_fee_paid = profile.onboarding_fee_paid_at is not None
+        subscription_paid_until = profile.subscription_paid_until
+        subscription_active = (
+            subscription_paid_until is not None and subscription_paid_until > datetime.now(UTC)
+        )
+    amount_due_now = 0.0
+    if profile is not None:
+        amount_due_now += monthly_fee
+        if not onboarding_fee_paid:
+            amount_due_now += onboarding_fee
+    has_pending_payment_request = False
+    if profile is not None:
+        has_pending_payment_request = (
+            db.scalar(
+                select(SellerSubscriptionPayment.id).where(
+                    SellerSubscriptionPayment.seller_profile_id == profile.id,
+                    SellerSubscriptionPayment.status == "pending",
+                )
+            )
+            is not None
+        )
+    return SellerSubscriptionStatusResponse(
+        has_seller_profile=profile is not None,
+        onboarding_fee_paid=onboarding_fee_paid,
+        onboarding_fee_paid_at=profile.onboarding_fee_paid_at if profile else None,
+        subscription_paid_until=subscription_paid_until,
+        subscription_active=subscription_active,
+        monthly_fee=monthly_fee,
+        onboarding_fee=onboarding_fee,
+        amount_due_now=amount_due_now,
+        currency="XOF",
+        has_pending_payment_request=has_pending_payment_request,
+    )
+
+
+def _payment_request_response(row: SellerSubscriptionPayment) -> SellerSubscriptionPaymentRequestResponse:
+    return SellerSubscriptionPaymentRequestResponse(
+        id=row.id,
+        seller_profile_id=row.seller_profile_id,
+        seller_user_id=row.seller_user_id,
+        payment_mode=row.payment_mode,  # type: ignore[arg-type]
+        transaction_reference=row.transaction_reference,
+        months=row.months,
+        amount_claimed=row.amount_claimed,
+        status=row.status,  # type: ignore[arg-type]
+        admin_note=row.admin_note,
+        reviewed_by_user_id=row.reviewed_by_user_id,
+        reviewed_at=row.reviewed_at,
+        created_at=row.created_at,
     )
 
 
@@ -189,7 +258,7 @@ def _seller_shop_order_response(order: Order, vendor_id: str) -> SellerShopOrder
 @router.get("/profile", response_model=SellerProfileResponse | None)
 def get_profile(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> SellerProfileResponse | None:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -202,7 +271,7 @@ def upsert_profile(
     payload: SellerProfileRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> SellerProfileResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
@@ -216,6 +285,84 @@ def upsert_profile(
     db.refresh(profile)
     _invalidate_public_marketplace_cache()
     return _profile_response(profile, db)
+
+
+@router.get("/subscription-status", response_model=SellerSubscriptionStatusResponse)
+def get_subscription_status(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> SellerSubscriptionStatusResponse:
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    return _build_subscription_status(profile, db)
+
+
+@router.post("/subscription/pay", response_model=SellerSubscriptionStatusResponse)
+def pay_seller_subscription(
+    payload: SellerSubscriptionPayRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> SellerSubscriptionStatusResponse:
+    enforce_csrf(request)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        raise NotFoundError("Create a seller profile first")
+    finance = build_effective_seller_finance_settings(get_or_create_global_settings(db), profile)
+    pending_exists = (
+        db.scalar(
+            select(SellerSubscriptionPayment.id).where(
+                SellerSubscriptionPayment.seller_profile_id == profile.id,
+                SellerSubscriptionPayment.status == "pending",
+            )
+        )
+        is not None
+    )
+    if pending_exists:
+        raise ConflictError("Une demande de paiement est deja en attente de validation admin.")
+    payment_request = SellerSubscriptionPayment(
+        seller_profile_id=profile.id,
+        seller_user_id=current_user.id,
+        payment_mode=payload.payment_mode,
+        transaction_reference=payload.transaction_reference.strip(),
+        months=payload.months,
+        amount_claimed=float(finance.seller_subscription_fee) * float(payload.months),
+        status="pending",
+    )
+    db.add(payment_request)
+    append_audit_log(
+        db,
+        event_type="seller_subscription_payment_submitted",
+        actor=current_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="seller_profile",
+        entity_id=profile.id,
+        details={
+            "months": payload.months,
+            "payment_mode": payload.payment_mode,
+            "transaction_reference": payload.transaction_reference.strip(),
+            "monthly_fee": float(finance.seller_subscription_fee),
+        },
+    )
+    db.commit()
+    return _build_subscription_status(profile, db)
+
+
+@router.get("/subscription/payment-requests", response_model=list[SellerSubscriptionPaymentRequestResponse])
+def list_my_subscription_payment_requests(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> list[SellerSubscriptionPaymentRequestResponse]:
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        return []
+    rows = db.scalars(
+        select(SellerSubscriptionPayment)
+        .where(SellerSubscriptionPayment.seller_profile_id == profile.id)
+        .order_by(SellerSubscriptionPayment.created_at.desc())
+        .limit(30)
+    ).all()
+    return [_payment_request_response(row) for row in rows]
 
 
 @router.get("/storefront/{vendor_id}", response_model=SellerStorefrontResponse)

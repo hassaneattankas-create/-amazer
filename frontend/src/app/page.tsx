@@ -87,12 +87,16 @@ export default function HomePage() {
   const { data: homeContent } = useQuery({
     queryKey: ["home-content"],
     queryFn: getHomeContent,
-    staleTime: 15_000,
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
   });
   const { data: contactInfo } = useQuery({
     queryKey: ["public-contact-info"],
     queryFn: getPublicContactInfo,
     staleTime: 60_000,
+    gcTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
   });
   const { data, isPending, isFetching, isError, error } = useProductSearch({
     query: debouncedBarcode ? "" : debouncedQuery,
@@ -256,7 +260,7 @@ export default function HomePage() {
               </Button>
             </Drawer.Trigger>
             <Drawer.Portal>
-              <Drawer.Overlay className="fixed inset-0 bg-black/30" />
+              <Drawer.Overlay className="pointer-events-none fixed inset-0 bg-black/30" />
               <Drawer.Content className="fixed bottom-0 left-0 right-0 rounded-t-2xl bg-white p-4 shadow-xl">
                 <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200" />
                 <p className="mt-4 text-sm font-semibold text-slate-900">Scanner mobile</p>

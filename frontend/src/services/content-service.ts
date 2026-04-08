@@ -15,10 +15,18 @@ export async function getHomeContent(): Promise<HomeContent> {
 }
 
 export async function trackAdClick(productId: string, sectionSlug?: string): Promise<void> {
-  await api.post("/api/v1/ads/click", {
-    product_id: productId,
-    section_slug: sectionSlug,
-  });
+  try {
+    await api.post(
+      "/api/v1/ads/click",
+      {
+        product_id: productId,
+        section_slug: sectionSlug,
+      },
+      { timeout: 4000 }
+    );
+  } catch {
+    // Ad click tracking must never block product navigation.
+  }
 }
 
 export async function listAdminSections(): Promise<DynamicSection[]> {

@@ -210,3 +210,29 @@ class AdminUserResponse(BaseModel):
     is_admin: bool
     is_seller: bool
     created_at: str
+
+
+class AdminSellerSubscriptionPaymentRequestResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    seller_profile_id: str
+    seller_user_id: str
+    business_name: str
+    seller_email: str
+    payment_mode: str
+    transaction_reference: str
+    months: int
+    amount_claimed: float
+    status: str
+    admin_note: str | None = None
+    reviewed_by_user_id: str | None = None
+    reviewed_at: str | None = None
+    created_at: str
+
+
+class AdminSellerSubscriptionPaymentDecisionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    decision: str = Field(pattern="^(approved|rejected)$")
+    admin_note: str | None = Field(default=None, max_length=500)

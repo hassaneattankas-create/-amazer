@@ -1,8 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AxiosError } from "axios";
 
 import { AnimatedPrice } from "@/components/AnimatedPrice";
@@ -19,11 +19,13 @@ import { formatXOF } from "@/lib/currency";
 import { notifyLocalOrderEvent } from "@/services/notification-service";
 import {
   createAdminTransfer,
+  decideAdminSellerSubscriptionPayment,
   dispatchAdminOrder,
   getAdminFinanceSettings,
   getAdminFinanceSummary,
   listAdminDistrictFees,
   listAdminOrders,
+  listAdminSellerSubscriptionPayments,
   getAdminTreasuryHistory,
   getAdminWalletSummary,
   replaceAdminDistrictFees,
@@ -31,6 +33,14 @@ import {
   verifyAdminFinancePin,
 } from "@/services/finance-service";
 import { FinanceSettings } from "@/types/finance";
+
+const AdminRevenueChart = dynamic(
+  () => import("@/components/admin/AdminRevenueChart").then((m) => m.AdminRevenueChart),
+  {
+    ssr: false,
+    loading: () => <div className="mt-5 h-72 animate-pulse rounded-xl bg-slate-100" />,
+  }
+);
 
 function parseNonNegativeNumber(value: string, fallback: number) {
   const normalized = value.replace(",", ".").trim();
@@ -97,6 +107,7 @@ export default function AdminFinancePage() {
   const [bankName, setBankName] = useState<"BOA" | "SONIBANK">("BOA");
   const [transferStatus, setTransferStatus] = useState("");
   const [districtDraft, setDistrictDraft] = useState<string | null>(null);
+  const [paymentDecisionNote, setPaymentDecisionNote] = useState("");
 
   const {
     data: settings,
@@ -148,6 +159,12 @@ export default function AdminFinancePage() {
     queryFn: () => listAdminOrders(30),
     enabled: pinVerified,
     refetchInterval: 5000,
+  });
+  const { data: sellerPayments = [], error: sellerPaymentsError } = useQuery({
+    queryKey: ["admin-seller-subscription-payments"],
+    queryFn: () => listAdminSellerSubscriptionPayments("pending", 100),
+    enabled: pinVerified,
+    refetchInterval: 8000,
   });
   const {
     data: districtFees,
@@ -212,6 +229,23 @@ export default function AdminFinancePage() {
     },
     onError: () => setSettingsStatus("Erreur sauvegarde frais quartiers."),
   });
+  const sellerPaymentDecisionMutation = useMutation({
+    mutationFn: ({
+      paymentId,
+      decision,
+      admin_note,
+    }: {
+      paymentId: string;
+      decision: "approved" | "rejected";
+      admin_note?: string;
+    }) => decideAdminSellerSubscriptionPayment(paymentId, { decision, admin_note }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-seller-subscription-payments"] });
+      setPaymentDecisionNote("");
+      setSettingsStatus("Decision paiement vendeur enregistree.");
+    },
+    onError: (error) => setSettingsStatus(getAdminFinanceDataError(error)),
+  });
 
   const effective = draft ?? settings ?? null;
   const criticalPageError = useMemo(() => {
@@ -225,8 +259,9 @@ export default function AdminFinancePage() {
         adClicksError ? `Publicite: ${getAdminFinanceDataError(adClicksError)}` : null,
         ordersError ? `Commandes: ${getAdminFinanceDataError(ordersError)}` : null,
         districtError ? `Quartiers: ${getAdminFinanceDataError(districtError)}` : null,
+        sellerPaymentsError ? `Paiements vendeurs: ${getAdminFinanceDataError(sellerPaymentsError)}` : null,
       ].filter(Boolean) as string[],
-    [adClicksError, districtError, historyError, ordersError]
+    [adClicksError, districtError, historyError, ordersError, sellerPaymentsError]
   );
   const chartData = useMemo(() => summary?.revenue_last_30_days ?? [], [summary]);
   const availableForTransfer = useMemo(() => {
@@ -658,22 +693,71 @@ export default function AdminFinancePage() {
       </article>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
+        <h2 className="luxury-title text-lg font-semibold">Validations paiements vendeurs</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          Les comptes vendeurs restent bloques tant que le paiement n&apos;est pas approuve.
+        </p>
+        <input
+          value={paymentDecisionNote}
+          onChange={(event) => setPaymentDecisionNote(event.target.value)}
+          placeholder="Note admin (optionnel)"
+          className="mt-3 h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+        />
+        <div className="mt-4 space-y-3">
+          {sellerPayments.length ? (
+            sellerPayments.map((row) => (
+              <div key={row.id} className="rounded-xl border border-slate-200 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-slate-900">
+                    {row.business_name} ({row.seller_email || "email inconnu"})
+                  </p>
+                  <p className="text-sm text-[#FF4D00]">{formatXOF(row.amount_claimed)}</p>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">
+                  Ref: {row.transaction_reference} | {row.payment_mode.toUpperCase()} | {row.months} mois
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    disabled={sellerPaymentDecisionMutation.isPending}
+                    onClick={() =>
+                      sellerPaymentDecisionMutation.mutate({
+                        paymentId: row.id,
+                        decision: "approved",
+                        admin_note: paymentDecisionNote.trim() || undefined,
+                      })
+                    }
+                    className="border border-emerald-300 bg-emerald-50 text-emerald-700"
+                  >
+                    Valider
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={sellerPaymentDecisionMutation.isPending}
+                    onClick={() =>
+                      sellerPaymentDecisionMutation.mutate({
+                        paymentId: row.id,
+                        decision: "rejected",
+                        admin_note: paymentDecisionNote.trim() || undefined,
+                      })
+                    }
+                    className="border border-rose-300 bg-rose-50 text-rose-700"
+                  >
+                    Refuser
+                  </Button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-slate-500">Aucune demande de paiement en attente.</p>
+          )}
+        </div>
+      </article>
+
+      <article className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="luxury-title text-lg font-semibold">Revenus AMAZER - 30 derniers jours</h2>
-        <div className="mt-5 h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#FF4D00" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#FF4D00" stopOpacity={0.05} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="day" tick={{ fill: "#64748b", fontSize: 12 }} />
-              <YAxis tick={{ fill: "#64748b", fontSize: 12 }} />
-              <Tooltip />
-              <Area dataKey="amount" stroke="#FF4D00" fill="url(#revFill)" strokeWidth={1.8} />
-            </AreaChart>
-          </ResponsiveContainer>
+        <div className="mt-5">
+          <AdminRevenueChart data={chartData} />
         </div>
       </article>
 

@@ -10,7 +10,7 @@ export function HeroSection() {
       transition={{ type: "spring", stiffness: 180, damping: 18 }}
       className="premium-card relative overflow-hidden border border-white/20 bg-white/70 px-6 py-10 sm:px-10"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-orange-500/15 via-amber-500/10 to-yellow-400/20" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-orange-500/15 via-amber-500/10 to-yellow-400/20" />
       <div className="relative">
         <p className="luxury-title text-xl font-semibold tracking-tight sm:text-2xl">AMAZER</p>
         <h1 className="luxury-title mt-4 text-3xl font-semibold sm:text-5xl">

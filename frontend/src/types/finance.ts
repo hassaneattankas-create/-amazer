@@ -143,3 +143,20 @@ export type AdminUser = {
   is_seller: boolean;
   created_at: string;
 };
+
+export type AdminSellerSubscriptionPaymentRequest = {
+  id: string;
+  seller_profile_id: string;
+  seller_user_id: string;
+  business_name: string;
+  seller_email: string;
+  payment_mode: "nita" | "amana";
+  transaction_reference: string;
+  months: number;
+  amount_claimed: number;
+  status: "pending" | "approved" | "rejected";
+  admin_note: string | null;
+  reviewed_by_user_id: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+};
