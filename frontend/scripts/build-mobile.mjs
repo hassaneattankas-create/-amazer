@@ -54,7 +54,7 @@ if (!requestedMobileBackendOrigin) {
     "[mobile-build] Définissez l’origine HTTPS de votre API FastAPI (sans /api/v1), par exemple :\n" +
       "  Windows PowerShell: $env:MOBILE_BACKEND_ORIGIN='https://api.mondomaine.ne'\n" +
       "  ou créez frontend/.env.mobile avec une ligne MOBILE_BACKEND_ORIGIN=https://...\n" +
-      "Copiez .env.mobile.example vers .env.mobile et adaptez l’URL.",
+      "Copiez frontend/.env.mobile.example vers frontend/.env.mobile et adaptez l’URL.",
   );
   process.exit(1);
 }
