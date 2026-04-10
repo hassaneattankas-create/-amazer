@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     admin_password: str | None = Field(default="AmazerAdmin@2026")
     # Si true, re-applique admin_password au demarrage (ecrase le hash en base). Defaut: false.
     admin_sync_password_on_startup: bool = Field(default=False)
-    admin_finance_pin: str = Field(default="CHANGE_ME")
+    admin_finance_pin: str = Field(default="7391")
     admin_birth_date: str = Field(default="07/11/03")
     cors_allowed_origins: str = Field(
         default=(
@@ -134,7 +134,7 @@ class Settings(BaseSettings):
         if self.jwt_secret_key.strip() in weak_jwt_values or len(self.jwt_secret_key.strip()) < 32:
             raise ValueError("JWT_SECRET_KEY must be a strong secret in production")
 
-        if self.admin_finance_pin in {"CHANGE_ME", "0000", "1234"} or len(self.admin_finance_pin) < 4:
+        if self.admin_finance_pin in {"CHANGE_ME", "0000", "1234"} or len(self.admin_finance_pin.strip()) < 4:
             raise ValueError("ADMIN_FINANCE_PIN must be set to a strong value in production")
 
         if len(self.admin_birth_date.strip()) < 6:

@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getBackendOriginFromEnv } from "@/lib/backend-origin";
+import { getBackendOriginFromEnv, getMobileBundledBackendApiBase } from "@/lib/backend-origin";
 import { isMobileAppBuild } from "@/lib/mobile-app";
 
 const API_PROXY_BASE_URL = "/backend-api";
@@ -7,7 +7,7 @@ const API_PROXY_BASE_URL = "/backend-api";
 function resolveApiBaseUrl(): string {
   const absoluteBackendOrigin = getBackendOriginFromEnv();
   if (isMobileAppBuild()) {
-    return absoluteBackendOrigin;
+    return getMobileBundledBackendApiBase();
   }
   // Web (local + heberge) doit passer par le proxy Next.js pour eviter
   // les problemes CORS/cookies/session entre frontend et backend.

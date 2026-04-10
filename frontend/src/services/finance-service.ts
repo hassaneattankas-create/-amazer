@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getBackendOriginFromEnv } from "@/lib/backend-origin";
+import { getMobileSiteOriginFromEnv } from "@/lib/backend-origin";
 import { adminProxyRequest } from "@/lib/admin-proxy-client";
 import { api, getClientAccessToken, getClientCookieValue } from "@/lib/api";
 import { isMobileAppBuild } from "@/lib/mobile-app";
@@ -22,17 +22,15 @@ import {
   WalletSummary,
 } from "@/types/finance";
 
-const DIRECT_ADMIN_FINANCE_BASE_URL = `${getBackendOriginFromEnv()}/api/v1/admin/finance`;
-
 function getAdminFinancePinVerifyUrl(): string {
   return isMobileAppBuild()
-    ? `${DIRECT_ADMIN_FINANCE_BASE_URL}/pin/verify`
+    ? `${getMobileSiteOriginFromEnv().replace(/\/$/, "")}/api/admin-finance/pin/verify`
     : "/api/admin-finance/pin/verify";
 }
 
 function getAdminFinanceAuditExportUrl(): string {
   return isMobileAppBuild()
-    ? `${DIRECT_ADMIN_FINANCE_BASE_URL}/audit-history/export`
+    ? `${getMobileSiteOriginFromEnv().replace(/\/$/, "")}/api/admin-proxy/admin/finance/audit-history/export`
     : "/api/admin-proxy/admin/finance/audit-history/export";
 }
 

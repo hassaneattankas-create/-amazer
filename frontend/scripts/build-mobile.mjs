@@ -25,6 +25,9 @@ const requestedMobileBackendOrigin =
 // We intentionally override local web dev values such as /backend-api or localhost.
 process.env.NEXT_PUBLIC_BACKEND_ORIGIN = requestedMobileBackendOrigin;
 delete process.env.NEXT_PUBLIC_API_URL;
+// API client (axios) passe par le proxy du site Vercel (comme le web) pour cookies + CORS.
+process.env.NEXT_PUBLIC_MOBILE_SITE_URL =
+  process.env.NEXT_PUBLIC_MOBILE_SITE_URL?.trim() || "https://amazerniger.vercel.app";
 
 if (existsSync(disabledApiDir)) {
   throw new Error("Temporary mobile API folder already exists. Restore it before running build:mobile.");

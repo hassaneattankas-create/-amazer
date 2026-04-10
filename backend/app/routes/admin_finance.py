@@ -2,6 +2,7 @@ from datetime import UTC, date, datetime, timedelta
 import csv
 import io
 import json
+import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -60,6 +61,44 @@ from app.services.seller_finance_service import (
 router = APIRouter(prefix="/admin/finance", tags=["admin-finance"])
 settings = get_settings()
 AUTO_RECEIPT_TIMEOUT_HOURS = 24
+
+
+def _looks_like_birth_date(value: str) -> bool:
+    return bool(re.match(r"^\d{2}/\d{2}/\d{2,4}$", (value or "").strip()))
+
+
+def _looks_like_pin(value: str) -> bool:
+    return bool(re.match(r"^\d{4,}$", (value or "").strip()))
+
+
+def _normalize_admin_birth_date(value: str) -> str:
+    raw = (value or "").strip().replace("-", "/").replace(".", "/")
+    parts = [p for p in raw.split("/") if p]
+    if len(parts) != 3:
+        return raw.lower()
+    day, month, year = parts[0].zfill(2), parts[1].zfill(2), parts[2]
+    if len(year) == 4:
+        year = year[-2:]
+    else:
+        year = year.zfill(2)
+    return f"{day}/{month}/{year}"
+
+
+def _admin_finance_keys_match(pin: str, birth_date: str) -> bool:
+    expected_pin = (settings.admin_finance_pin or "").strip()
+    expected_birth = (settings.admin_birth_date or "").strip()
+    if not expected_pin or not expected_birth:
+        return False
+
+    p, b = (pin or "").strip(), (birth_date or "").strip()
+    if p == expected_pin and _normalize_admin_birth_date(b) == _normalize_admin_birth_date(expected_birth):
+        return True
+    if _looks_like_birth_date(p) and _looks_like_pin(b):
+        return (
+            b == expected_pin
+            and _normalize_admin_birth_date(p) == _normalize_admin_birth_date(expected_birth)
+        )
+    return False
 
 
 def _invalidate_public_marketplace_cache() -> None:
@@ -318,7 +357,7 @@ def verify_admin_finance_pin(
 ) -> None:
     enforce_csrf(request)
     enforce_rate_limit(request, key="admin_finance_pin", limit=5, window_seconds=300)
-    if payload.pin != settings.admin_finance_pin or payload.birth_date != settings.admin_birth_date:
+    if not _admin_finance_keys_match(payload.pin, payload.birth_date):
         raise UnauthorizedError("Invalid finance PIN")
     same_site = "none" if settings.is_production() else "lax"
     response.set_cookie(
