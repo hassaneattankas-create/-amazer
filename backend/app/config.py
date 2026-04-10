@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     verification_code_ttl_minutes: int = Field(default=10, ge=3, le=30)
     verification_code_max_attempts: int = Field(default=5, ge=3, le=10)
     admin_email: str = Field(default="amazer.niger@gmail.com")
+    # Fallback de recuperation admin si la variable d'environnement n'est pas chargee.
     admin_password: str | None = Field(default="AmazerAdmin2026!")
     admin_finance_pin: str = Field(default="CHANGE_ME")
     admin_birth_date: str = Field(default="07/11/03")
