@@ -1,11 +1,59 @@
+import { Capacitor } from "@capacitor/core";
+import { LocalNotifications } from "@capacitor/local-notifications";
+
 import { api } from "@/lib/api";
 import { useNotificationStore } from "@/store/notification-store";
 
 const TOKEN_STORAGE_KEY = "amazer_notification_token_registered";
 const LAST_WEB_NOTIFICATION_KEY = "amazer_last_web_notification";
 
+let nativeNotificationReady: Promise<boolean> | null = null;
+
+async function ensureNativeNotificationChannel(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    return false;
+  }
+  if (nativeNotificationReady) {
+    return nativeNotificationReady;
+  }
+  nativeNotificationReady = (async () => {
+    try {
+      const current = await LocalNotifications.checkPermissions();
+      if (current.display === "granted") {
+        return true;
+      }
+      const perm = await LocalNotifications.requestPermissions();
+      return perm.display === "granted";
+    } catch {
+      return false;
+    }
+  })();
+  return nativeNotificationReady;
+}
+
 export async function requestAndRegisterNotifications() {
-  if (typeof window === "undefined" || typeof Notification === "undefined") {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (Capacitor.isNativePlatform()) {
+    const ok = await ensureNativeNotificationChannel();
+    if (!ok || window.localStorage.getItem(TOKEN_STORAGE_KEY) === "1") {
+      return;
+    }
+    const deviceToken = `cap-${Capacitor.getPlatform()}::${navigator.userAgent?.slice(0, 80) || "app"}::${Math.random().toString(36).slice(2)}`;
+    try {
+      await api.post("/api/v1/notifications/register-token", {
+        device_token: deviceToken,
+      });
+      window.localStorage.setItem(TOKEN_STORAGE_KEY, "1");
+    } catch {
+      // Ne bloque pas l’UX
+    }
+    return;
+  }
+
+  if (typeof Notification === "undefined") {
     return;
   }
   if (window.localStorage.getItem(TOKEN_STORAGE_KEY) === "1") {
@@ -22,7 +70,6 @@ export async function requestAndRegisterNotifications() {
     return;
   }
 
-  // Simple device fingerprint as token placeholder; can be replaced by FCM token later.
   const deviceToken = `${navigator.userAgent}::${Math.random().toString(36).slice(2)}`;
 
   try {
@@ -35,16 +82,48 @@ export async function requestAndRegisterNotifications() {
   }
 }
 
-export function notifyLocalOrderEvent(payload: {
+export async function notifyLocalOrderEvent(payload: {
   title: string;
   body: string;
   tag: string;
   href?: string;
 }) {
-  if (typeof window === "undefined" || typeof Notification === "undefined") {
+  if (typeof window === "undefined") {
     return;
   }
   useNotificationStore.getState().pushNotification(payload);
+
+  if (Capacitor.isNativePlatform()) {
+    const ok = await ensureNativeNotificationChannel();
+    if (!ok) {
+      return;
+    }
+    const dedupeKey = `${payload.tag}:${payload.body}`;
+    const previous = window.localStorage.getItem(LAST_WEB_NOTIFICATION_KEY);
+    if (previous === dedupeKey) {
+      return;
+    }
+    window.localStorage.setItem(LAST_WEB_NOTIFICATION_KEY, dedupeKey);
+    try {
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id: Math.floor(Math.random() * 2_000_000_000),
+            title: payload.title,
+            body: payload.body,
+            schedule: { at: new Date(Date.now() + 400) },
+          },
+        ],
+      });
+    } catch {
+      // Fallback: au moins le store Zustand a l’entrée
+    }
+    return;
+  }
+
+  if (typeof Notification === "undefined") {
+    return;
+  }
   if (Notification.permission !== "granted") {
     return;
   }
@@ -60,6 +139,6 @@ export function notifyLocalOrderEvent(payload: {
       tag: payload.tag,
     });
   } catch {
-    // Silencieux: on garde le polling meme si la notification locale echoue.
+    // Silencieux
   }
 }

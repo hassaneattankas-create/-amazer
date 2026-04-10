@@ -40,6 +40,7 @@ const config: CapacitorConfig = {
       backgroundColor: "#FFFFFF",
       showSpinner: false,
     },
+    LocalNotifications: {},
   },
 };
 

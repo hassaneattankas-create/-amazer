@@ -31,6 +31,16 @@ Les règles métier (abonnement, limite d’articles, boutique visible ou non, e
 
 Si un nouveau vendeur n’a « aucune restriction », vérifier d’abord la logique **backend** et les **données** (ex. abonnement, validation admin), pas seulement la version de l’APK. Une évolution de règles impose un **déploiement backend** + éventuellement un **nouveau build APK** si le front affiche de nouveaux messages ou écrans.
 
+## Notifications
+
+- **In-app** : la page Notifications utilise un stockage **local** (navigateur / WebView), pas une boîte serveur partagée entre tous les utilisateurs.
+- **Push « comme WhatsApp »** pour tous les appareils : il faudrait **Firebase Cloud Messaging (FCM)** côté serveur + configuration Play — le backend enregistre déjà des jetons d’appareil mais **n’envoie pas encore** de push réels (voir `NotificationService.send_to_user` dans le backend).
+- **APK** : des **notifications locales** Capacitor peuvent s’afficher pour les événements déjà déclenchés dans l’app (ex. commande) après acceptation des permissions Android.
+
+## Secrets (Vercel, Render, etc.)
+
+Ne commitez **jamais** de jetons dans le dépôt. Utilisez les variables d’environnement locales, le tableau de bord Vercel/Render, ou les secrets GitHub Actions.
+
 ## Déploiement du correctif cookie admin (tarifs / finance)
 
 Le cookie `finance_pin_verified` doit être posé avec **SameSite=None** en production pour l’APK (voir `frontend/src/app/api/admin-finance/pin/verify/route.ts`). Ce fichier s’exécute sur **Vercel** : il faut **redéployer le frontend** sur Vercel pour que le correctif soit actif pour les utilisateurs de l’APK.

@@ -77,12 +77,26 @@ def register(
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> dict[str, str | bool | None]:
     enforce_rate_limit(request, key="auth_register", limit=5, window_seconds=300)
-    return auth_service.register(
+    result = auth_service.register(
         identifier=payload.identifier or payload.email or payload.whatsapp_phone or "",
         full_name=payload.full_name,
         password=payload.password.get_secret_value(),
         seller_profile=payload.seller_profile.model_dump(exclude_none=True) if payload.seller_profile else None,
     )
+    if result.get("success"):
+        log_security_event(
+            auth_service.db,
+            event_type="account_registered",
+            ip_address=request.client.host if request.client else None,
+            path=str(request.url.path),
+            details={
+                "user_id": result.get("user_id"),
+                "verification_channel": result.get("verification_channel"),
+                "seller": bool(payload.seller_profile),
+            },
+        )
+        auth_service.db.commit()
+    return result
 
 
 @router.post("/verify-account", response_model=VerifyAccountResponse)
@@ -92,7 +106,17 @@ def verify_account(
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> dict[str, str | bool]:
     enforce_rate_limit(request, key="auth_verify_account", limit=8, window_seconds=300)
-    return auth_service.verify_account(identifier=payload.identifier, code=payload.code)
+    result = auth_service.verify_account(identifier=payload.identifier, code=payload.code)
+    if result.get("success") and result.get("message") != "Compte deja verifie":
+        log_security_event(
+            auth_service.db,
+            event_type="account_verified",
+            ip_address=request.client.host if request.client else None,
+            path=str(request.url.path),
+            details={"identifier": (payload.identifier or "").strip()[:120]},
+        )
+        auth_service.db.commit()
+    return result
 
 
 @router.post("/login", response_model=TokenPair)

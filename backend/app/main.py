@@ -282,6 +282,10 @@ async def security_access_logger(
             f"{settings.api_prefix}/auth/register",
             f"{settings.api_prefix}/auth/refresh",
             f"{settings.api_prefix}/auth/verify-account",
+            # App mobile (Capacitor) : en-tête Bearer sans cookie csrf — évite les rejets si un proxy envoie des cookies partiels.
+            f"{settings.api_prefix}/auth/logout",
+            f"{settings.api_prefix}/auth/delete-account",
+            f"{settings.api_prefix}/notifications/register-token",
         }
         if request.url.path not in csrf_exempt_paths:
             try:
