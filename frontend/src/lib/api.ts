@@ -9,16 +9,10 @@ function resolveApiBaseUrl(): string {
   if (isMobileAppBuild()) {
     return absoluteBackendOrigin;
   }
+  // Web (local + heberge) doit passer par le proxy Next.js pour eviter
+  // les problemes CORS/cookies/session entre frontend et backend.
   if (typeof window !== "undefined" && /^https?:$/.test(window.location.protocol)) {
-    const host = window.location.hostname.toLowerCase();
-    const isHostedFrontend =
-      host.endsWith(".vercel.app") ||
-      host === "amazerniger.vercel.app" ||
-      host === "www.amazerniger.vercel.app" ||
-      host === "amazerapp.com" ||
-      host === "www.amazerapp.com";
-    // En hebergement, cibler directement l'API backend pour ne pas dependre des rewrites.
-    return isHostedFrontend ? absoluteBackendOrigin : API_PROXY_BASE_URL;
+    return API_PROXY_BASE_URL;
   }
   if (process.env.NEXT_PUBLIC_API_URL?.trim() || process.env.NEXT_PUBLIC_BACKEND_ORIGIN?.trim()) {
     return absoluteBackendOrigin;
