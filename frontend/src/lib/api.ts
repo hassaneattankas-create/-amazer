@@ -10,7 +10,15 @@ function resolveApiBaseUrl(): string {
     return absoluteBackendOrigin;
   }
   if (typeof window !== "undefined" && /^https?:$/.test(window.location.protocol)) {
-    return API_PROXY_BASE_URL;
+    const host = window.location.hostname.toLowerCase();
+    const isHostedFrontend =
+      host.endsWith(".vercel.app") ||
+      host === "amazerniger.vercel.app" ||
+      host === "www.amazerniger.vercel.app" ||
+      host === "amazerapp.com" ||
+      host === "www.amazerapp.com";
+    // En hebergement, cibler directement l'API backend pour ne pas dependre des rewrites.
+    return isHostedFrontend ? absoluteBackendOrigin : API_PROXY_BASE_URL;
   }
   if (process.env.NEXT_PUBLIC_API_URL?.trim() || process.env.NEXT_PUBLIC_BACKEND_ORIGIN?.trim()) {
     return absoluteBackendOrigin;
