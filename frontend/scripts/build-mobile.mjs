@@ -54,7 +54,7 @@ for (const relativePath of routesToDisable) {
 }
 
 if (existsSync(nextBuildDir)) {
-  rmSync(nextBuildDir, { recursive: true, force: true });
+  rmSync(nextBuildDir, { recursive: true, force: true, maxRetries: 8, retryDelay: 150 });
 }
 
 function restoreApiRoutes() {
