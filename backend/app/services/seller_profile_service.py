@@ -188,7 +188,7 @@ def create_or_update_seller_profile(
 
     apply_seller_profile_payload(profile, payload)
     vendor.name = profile.business_name
-    # Les listes "boutiques/mini-sites" ne remontent que si le vendor est actif.
-    # Un vendeur qui sauvegarde son profil doit pouvoir réactiver son mini-site.
-    vendor.is_active = True
+    # La reactivation du mini-site est reservee a la validation d'un paiement
+    # d'abonnement par l'admin finance.
+    vendor.is_active = False
     return profile

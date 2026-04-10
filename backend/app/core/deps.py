@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.database import get_db
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
+from app.models.vendor import Vendor
 from app.services.auth_service import AuthService
 
 http_bearer = HTTPBearer(auto_error=False)
@@ -72,10 +73,18 @@ def get_seller_user(
     if profile is None:
         return current_user
     if profile.onboarding_fee_paid_at is None:
+        vendor = db.get(Vendor, profile.vendor_id)
+        if vendor is not None and vendor.is_active:
+            vendor.is_active = False
+            db.commit()
         raise ForbiddenError(
             "Activation vendeur requise: reglez d'abord les frais de creation vendeur."
         )
     if profile.subscription_paid_until is None or profile.subscription_paid_until <= datetime.now(UTC):
+        vendor = db.get(Vendor, profile.vendor_id)
+        if vendor is not None and vendor.is_active:
+            vendor.is_active = False
+            db.commit()
         raise ForbiddenError(
             "Abonnement vendeur expire: reglez votre mensualite pour reactiver le compte vendeur."
         )

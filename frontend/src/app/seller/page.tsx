@@ -431,7 +431,7 @@ function SellerPageContent() {
   };
   const welcomeMessage =
     searchParams.get("welcome") === "1"
-      ? "Compte vendeur cree. Les informations de base sont deja enregistrees. Tu peux publier tout de suite puis completer les details plus tard."
+      ? "Compte vendeur cree. Les informations de base sont enregistrees. Active maintenant l'abonnement mensuel pour publier."
       : "";
   const compactProfileSetup = searchParams.get("welcome") === "1" && Boolean(profile?.id);
 
@@ -442,9 +442,11 @@ function SellerPageContent() {
         <p className="mt-2 text-sm text-slate-600">
           Gere ta boutique, ton menu et tes operations vendeur depuis un seul espace.
         </p>
-        <Button asChild variant="outline" className="mt-4">
-          <Link href="/seller/dashboard">Aller au dashboard de stock</Link>
-        </Button>
+        {!sellerPaymentRequired ? (
+          <Button asChild variant="outline" className="mt-4">
+            <Link href="/seller/dashboard">Aller au dashboard de stock</Link>
+          </Button>
+        ) : null}
       </header>
 
       {sellerPaymentRequired ? (
@@ -586,8 +588,12 @@ function SellerPageContent() {
           </h2>
           {profile ? (
             <p className="mt-2 text-sm text-emerald-700">
-              Profil actif immediatement: {profile.business_name} ({profile.city}) -{" "}
-              {profile.is_verified ? "Badge Confiance actif" : "Boutique operationnelle"}
+              Profil enregistre: {profile.business_name} ({profile.city}) -{" "}
+              {hasActiveSubscription
+                ? profile.is_verified
+                  ? "Boutique active avec badge Confiance"
+                  : "Boutique active"
+                : "Activation en attente d'un abonnement valide"}
             </p>
           ) : (
             <p className="mt-2 text-sm text-slate-600">Aucun profil actif pour ce compte.</p>

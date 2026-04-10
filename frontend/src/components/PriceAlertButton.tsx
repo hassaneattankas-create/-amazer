@@ -62,7 +62,7 @@ export function PriceAlertButton({ productId, currentPrice }: PriceAlertButtonPr
   }, [isOpen]);
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative z-40">
       <motion.button
         type="button"
         onClick={() => setIsOpen((value) => !value)}
@@ -86,7 +86,7 @@ export function PriceAlertButton({ productId, currentPrice }: PriceAlertButtonPr
       </motion.button>
 
       {isOpen ? (
-        <div className="premium-card absolute left-0 right-0 top-full z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] border border-slate-200 bg-white p-3 sm:left-auto sm:right-0">
+        <div className="premium-card absolute left-0 right-0 top-full z-[120] mt-2 w-[min(22rem,calc(100vw-2rem))] border border-slate-200 bg-white p-3 sm:left-auto sm:right-0">
           <p className="text-xs text-slate-500">Prix cible souhaite</p>
           <Input
             type="number"

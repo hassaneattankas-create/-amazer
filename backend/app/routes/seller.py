@@ -91,6 +91,14 @@ def _resolve_product_main_image(product: Product) -> str | None:
     return sorted(product.images, key=lambda image: image.sort_order)[0].image_url
 
 
+def _has_active_subscription(profile: SellerProfile) -> bool:
+    return (
+        profile.onboarding_fee_paid_at is not None
+        and profile.subscription_paid_until is not None
+        and profile.subscription_paid_until > datetime.now(UTC)
+    )
+
+
 def _sync_product_flags(product: Product) -> tuple[float | None, datetime | None, datetime | None]:
     specs = product.specs or {}
     now = datetime.now(UTC)
@@ -281,6 +289,9 @@ def upsert_profile(
         payload=payload.model_dump(exclude_none=True),
         existing_profile=profile,
     )
+    vendor = db.get(Vendor, profile.vendor_id)
+    if vendor is not None:
+        vendor.is_active = _has_active_subscription(profile)
     db.commit()
     db.refresh(profile)
     _invalidate_public_marketplace_cache()
@@ -379,6 +390,7 @@ def get_storefront(
         or not vendor.is_active
         or profile is None
         or (profile.user is not None and not profile.user.is_active)
+        or not _has_active_subscription(profile)
     ):
         raise NotFoundError("Storefront not found")
 
