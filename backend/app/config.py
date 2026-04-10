@@ -23,8 +23,10 @@ class Settings(BaseSettings):
     verification_code_ttl_minutes: int = Field(default=10, ge=3, le=30)
     verification_code_max_attempts: int = Field(default=5, ge=3, le=10)
     admin_email: str = Field(default="amazer.niger@gmail.com")
-    # Fallback de recuperation admin si la variable d'environnement n'est pas chargee.
-    admin_password: str | None = Field(default="AmazerAdmin2026!")
+    # Utilise uniquement a la creation du compte admin ou si admin_sync_password_on_startup=true.
+    admin_password: str | None = Field(default="AmazerAdmin@2026")
+    # Si true, re-applique admin_password au demarrage (ecrase le hash en base). Defaut: false.
+    admin_sync_password_on_startup: bool = Field(default=False)
     admin_finance_pin: str = Field(default="CHANGE_ME")
     admin_birth_date: str = Field(default="07/11/03")
     cors_allowed_origins: str = Field(

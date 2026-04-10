@@ -191,7 +191,8 @@ def _ensure_admin_account() -> None:
         else:
             admin_user.email = admin_email
             admin_user.is_active = True
-            admin_user.hashed_password = hash_password(admin_password)
+            if settings.admin_sync_password_on_startup:
+                admin_user.hashed_password = hash_password(admin_password)
             if not admin_user.full_name.strip():
                 admin_user.full_name = "Admin Amazer"
 
