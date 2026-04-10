@@ -15,12 +15,20 @@ def normalize_public_value(value: str | None) -> str:
     return (value or "").strip().lower()
 
 
+def _matches_allowed_name(value: str | None, allowed: set[str]) -> bool:
+    normalized = normalize_public_value(value)
+    if not normalized:
+        return False
+    # Autorise les variantes naturelles: "amazer boutique", "fragrance niger", etc.
+    return any(normalized == token or normalized.startswith(f"{token} ") or token in normalized for token in allowed)
+
+
 def is_public_catalog_restricted() -> bool:
     return settings.is_production() and settings.curated_public_catalog_mode
 
 
 def is_allowed_public_shop_name(name: str | None) -> bool:
-    return normalize_public_value(name) in ALLOWED_PUBLIC_SHOP_NAMES
+    return _matches_allowed_name(name, ALLOWED_PUBLIC_SHOP_NAMES)
 
 
 def is_allowed_public_restaurant_name(name: str | None) -> bool:
@@ -28,7 +36,7 @@ def is_allowed_public_restaurant_name(name: str | None) -> bool:
 
 
 def is_allowed_public_home_brand(name: str | None) -> bool:
-    return normalize_public_value(name) in ALLOWED_PUBLIC_HOME_BRANDS
+    return _matches_allowed_name(name, ALLOWED_PUBLIC_HOME_BRANDS)
 
 
 def is_allowed_public_storefront(
