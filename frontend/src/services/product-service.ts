@@ -32,7 +32,6 @@ export async function searchProducts({
 
   const response = await api.get<ProductSearchResult>("/api/v1/products/search", {
     params,
-    timeout: 8000,
   });
   return filterPublicProductSearchResult(response.data);
 }
