@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getMobileSiteOriginFromEnv } from "@/lib/backend-origin";
+import { getBackendOriginFromEnv, getMobileSiteOriginFromEnv } from "@/lib/backend-origin";
 import { adminProxyRequest } from "@/lib/admin-proxy-client";
 import { api, getClientAccessToken, getClientCookieValue } from "@/lib/api";
 import { isMobileAppBuild } from "@/lib/mobile-app";
@@ -23,15 +23,25 @@ import {
 } from "@/types/finance";
 
 function getAdminFinancePinVerifyUrl(): string {
-  return isMobileAppBuild()
-    ? `${getMobileSiteOriginFromEnv().replace(/\/$/, "")}/api/admin-finance/pin/verify`
-    : "/api/admin-finance/pin/verify";
+  if (!isMobileAppBuild()) {
+    return "/api/admin-finance/pin/verify";
+  }
+  const site = getMobileSiteOriginFromEnv();
+  if (site) {
+    return `${site.replace(/\/$/, "")}/api/admin-finance/pin/verify`;
+  }
+  return `${getBackendOriginFromEnv()}/api/v1/admin/finance/pin/verify`;
 }
 
 function getAdminFinanceAuditExportUrl(): string {
-  return isMobileAppBuild()
-    ? `${getMobileSiteOriginFromEnv().replace(/\/$/, "")}/api/admin-proxy/admin/finance/audit-history/export`
-    : "/api/admin-proxy/admin/finance/audit-history/export";
+  if (!isMobileAppBuild()) {
+    return "/api/admin-proxy/admin/finance/audit-history/export";
+  }
+  const site = getMobileSiteOriginFromEnv();
+  if (site) {
+    return `${site.replace(/\/$/, "")}/api/admin-proxy/admin/finance/audit-history/export`;
+  }
+  return `${getBackendOriginFromEnv()}/api/v1/admin/finance/audit-history/export`;
 }
 
 export async function getPublicFinanceSettings(): Promise<FinanceSettings> {

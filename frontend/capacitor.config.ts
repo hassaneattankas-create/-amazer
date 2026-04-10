@@ -1,12 +1,12 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
-/** Par défaut : même expérience que le site (évite écarts APK / cookies). Surcharge avec CAPACITOR_SERVER_URL. */
-const defaultHostedSite = "https://amazerniger.vercel.app";
+/**
+ * Vide par défaut = WebView charge le bundle `out/` (APK autonome côté UI).
+ * Pour charger un site distant : CAPACITOR_SERVER_URL=https://...
+ */
 const rawCapServer = process.env.CAPACITOR_SERVER_URL;
 const mobileServerUrl =
-  rawCapServer !== undefined && rawCapServer !== null
-    ? rawCapServer.trim() || ""
-    : defaultHostedSite;
+  rawCapServer !== undefined && rawCapServer !== null ? rawCapServer.trim() : "";
 const usesRemoteServer = Boolean(mobileServerUrl);
 const allowedNavigationHosts = new Set(["amazerniger.vercel.app", "amazer-api.onrender.com"]);
 

@@ -1,12 +1,18 @@
 import axios, { AxiosRequestConfig } from "axios";
 
-import { getMobileSiteOriginFromEnv } from "@/lib/backend-origin";
+import { getBackendOriginFromEnv, getMobileSiteOriginFromEnv } from "@/lib/backend-origin";
 import { getClientAccessToken, getClientCookieValue } from "@/lib/api";
 import { isMobileAppBuild } from "@/lib/mobile-app";
 
-const ADMIN_PROXY_BASE_URL = isMobileAppBuild()
-  ? `${getMobileSiteOriginFromEnv().replace(/\/$/, "")}/api/admin-proxy`
-  : "/api/admin-proxy";
+function resolveMobileAdminProxyBase(): string {
+  const site = getMobileSiteOriginFromEnv();
+  if (site) {
+    return `${site.replace(/\/$/, "")}/api/admin-proxy`;
+  }
+  return `${getBackendOriginFromEnv()}/api/v1`;
+}
+
+const ADMIN_PROXY_BASE_URL = isMobileAppBuild() ? resolveMobileAdminProxyBase() : "/api/admin-proxy";
 
 const adminProxyApi = axios.create({
   baseURL: ADMIN_PROXY_BASE_URL,

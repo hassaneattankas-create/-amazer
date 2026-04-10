@@ -12,7 +12,7 @@
     "cap:sync": "npx cap sync android",
     "cap:open": "npx cap open android",
     "cap:add:ios": "npx cap add ios",
-    "mobile:prepare:android": "cross-env CAPACITOR_SERVER_URL=https://amazerniger.vercel.app npx cap sync android",
+    "mobile:prepare:android": "npx cap sync android",
     "mobile:prepare:android:bundled": "npm run build:mobile:bundled && npx cap sync android",
     "mobile:android:bundle:release": "npm run build:mobile:bundled && npx cap sync android && cd android && gradlew.bat bundleRelease",
     "mobile:android:apk:release": "npm run build:mobile:bundled && npx cap sync android && cd android && gradlew.bat assembleRelease"
