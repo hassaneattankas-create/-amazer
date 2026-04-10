@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from datetime import UTC, datetime
 from uuid import uuid4
 from typing import Any, Mapping
 
@@ -11,6 +12,14 @@ from app.core.crypto import encrypt_phone_value
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
+
+
+def _seller_subscription_is_active(profile: SellerProfile) -> bool:
+    return (
+        profile.onboarding_fee_paid_at is not None
+        and profile.subscription_paid_until is not None
+        and profile.subscription_paid_until > datetime.now(UTC)
+    )
 
 
 def slugify(value: str) -> str:
@@ -188,7 +197,6 @@ def create_or_update_seller_profile(
 
     apply_seller_profile_payload(profile, payload)
     vendor.name = profile.business_name
-    # La reactivation du mini-site est reservee a la validation d'un paiement
-    # d'abonnement par l'admin finance.
-    vendor.is_active = False
+    # Mini-site visible uniquement si l'abonnement vendeur est à jour (même logique que /seller/profile).
+    vendor.is_active = _seller_subscription_is_active(profile)
     return profile
