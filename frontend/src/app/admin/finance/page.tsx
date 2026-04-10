@@ -21,18 +21,13 @@ import {
   createAdminTransfer,
   decideAdminSellerSubscriptionPayment,
   dispatchAdminOrder,
-  getAdminFinanceSettings,
   getAdminFinanceSummary,
-  listAdminDistrictFees,
   listAdminOrders,
   listAdminSellerSubscriptionPayments,
   getAdminTreasuryHistory,
   getAdminWalletSummary,
-  replaceAdminDistrictFees,
-  updateAdminFinanceSettings,
   verifyAdminFinancePin,
 } from "@/services/finance-service";
-import { FinanceSettings } from "@/types/finance";
 
 const AdminRevenueChart = dynamic(
   () => import("@/components/admin/AdminRevenueChart").then((m) => m.AdminRevenueChart),
@@ -41,59 +36,6 @@ const AdminRevenueChart = dynamic(
     loading: () => <div className="mt-5 h-72 animate-pulse rounded-xl bg-slate-100" />,
   }
 );
-
-function parseNonNegativeNumber(value: string, fallback: number) {
-  const normalized = value.replace(",", ".").trim();
-  if (!normalized) {
-    return 0;
-  }
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
-}
-
-function parsePositiveInteger(value: string, fallback: number) {
-  const parsed = Math.trunc(parseNonNegativeNumber(value, fallback));
-  return parsed >= 1 ? parsed : fallback;
-}
-
-function AdminNumberField({
-  label,
-  value,
-  onChange,
-  suffix,
-  step = "1",
-  min = 0,
-  helper,
-}: {
-  label: string;
-  value: number;
-  onChange: (value: string) => void;
-  suffix?: string;
-  step?: string;
-  min?: number;
-  helper?: string;
-}) {
-  return (
-    <label className="space-y-2">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-medium text-slate-800">{label}</span>
-        <span className="text-sm font-semibold text-slate-900">
-          {value}
-          {suffix ? ` ${suffix}` : ""}
-        </span>
-      </div>
-      <input
-        type="number"
-        min={min}
-        step={step}
-        value={Number.isFinite(value) ? value : 0}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
-      />
-      {helper ? <p className="text-xs text-slate-500">{helper}</p> : null}
-    </label>
-  );
-}
 
 export default function AdminFinancePage() {
   const queryClient = useQueryClient();
@@ -106,19 +48,8 @@ export default function AdminFinancePage() {
   const [transferAmount, setTransferAmount] = useState("");
   const [bankName, setBankName] = useState<"BOA" | "SONIBANK">("BOA");
   const [transferStatus, setTransferStatus] = useState("");
-  const [districtDraft, setDistrictDraft] = useState<string | null>(null);
   const [paymentDecisionNote, setPaymentDecisionNote] = useState("");
 
-  const {
-    data: settings,
-    isPending: isSettingsPending,
-    isError: isSettingsError,
-    error: settingsError,
-  } = useQuery({
-    queryKey: ["admin-finance-settings"],
-    queryFn: getAdminFinanceSettings,
-    enabled: pinVerified,
-  });
   const {
     data: summary,
     isPending: isSummaryPending,
@@ -166,16 +97,6 @@ export default function AdminFinancePage() {
     enabled: pinVerified,
     refetchInterval: 8000,
   });
-  const {
-    data: districtFees,
-    error: districtError,
-  } = useQuery({
-    queryKey: ["admin-district-fees"],
-    queryFn: listAdminDistrictFees,
-    enabled: pinVerified,
-  });
-
-  const [draft, setDraft] = useState<FinanceSettings | null>(null);
 
   const pinMutation = useMutation({
     mutationFn: verifyAdminFinancePin,
@@ -188,16 +109,6 @@ export default function AdminFinancePage() {
     onError: (error) => setPinStatus(getAdminFinanceVerifyError(error)),
   });
 
-  const updateMutation = useMutation({
-    mutationFn: updateAdminFinanceSettings,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-finance-settings"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-finance-summary"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-wallet-summary"] });
-      setSettingsStatus("Parametres financiers mis a jour.");
-    },
-    onError: () => setSettingsStatus("Erreur mise a jour."),
-  });
 
   const transferMutation = useMutation({
     mutationFn: createAdminTransfer,
@@ -220,15 +131,6 @@ export default function AdminFinancePage() {
       setTransferStatus("Statut client mis a jour.");
     },
   });
-  const districtMutation = useMutation({
-    mutationFn: replaceAdminDistrictFees,
-    onSuccess: (payload) => {
-      queryClient.invalidateQueries({ queryKey: ["admin-district-fees"] });
-      setDistrictDraft(payload.map((item) => `${item.district_name}:${Math.round(item.delivery_fee)}`).join("\n"));
-      setSettingsStatus("Frais de livraison par quartier enregistres.");
-    },
-    onError: () => setSettingsStatus("Erreur sauvegarde frais quartiers."),
-  });
   const sellerPaymentDecisionMutation = useMutation({
     mutationFn: ({
       paymentId,
@@ -247,21 +149,19 @@ export default function AdminFinancePage() {
     onError: (error) => setSettingsStatus(getAdminFinanceDataError(error)),
   });
 
-  const effective = draft ?? settings ?? null;
   const criticalPageError = useMemo(() => {
-    const firstError = settingsError ?? summaryError ?? walletError ?? null;
+    const firstError = summaryError ?? walletError ?? null;
     return firstError ? getAdminFinanceDataError(firstError) : "";
-  }, [settingsError, summaryError, walletError]);
+  }, [summaryError, walletError]);
   const secondaryErrors = useMemo(
     () =>
       [
         historyError ? `Historique: ${getAdminFinanceDataError(historyError)}` : null,
         adClicksError ? `Publicite: ${getAdminFinanceDataError(adClicksError)}` : null,
         ordersError ? `Commandes: ${getAdminFinanceDataError(ordersError)}` : null,
-        districtError ? `Quartiers: ${getAdminFinanceDataError(districtError)}` : null,
         sellerPaymentsError ? `Paiements vendeurs: ${getAdminFinanceDataError(sellerPaymentsError)}` : null,
       ].filter(Boolean) as string[],
-    [adClicksError, districtError, historyError, ordersError, sellerPaymentsError]
+    [adClicksError, historyError, ordersError, sellerPaymentsError]
   );
   const chartData = useMemo(() => summary?.revenue_last_30_days ?? [], [summary]);
   const availableForTransfer = useMemo(() => {
@@ -270,33 +170,6 @@ export default function AdminFinancePage() {
     }
     return Math.max(0, wallet.total_all - wallet.amazer_commission_total - wallet.service_fee_total);
   }, [wallet]);
-  const districtRaw = useMemo(() => {
-    if (districtDraft !== null) {
-      return districtDraft;
-    }
-    if (districtFees?.length) {
-      return districtFees.map((item) => `${item.district_name}:${Math.round(item.delivery_fee)}`).join("\n");
-    }
-    return "Centre Ville:1500\nYantala:2000\nLazaret:2200";
-  }, [districtDraft, districtFees]);
-
-  const parsedDistrictPayload = useMemo(
-    () =>
-      districtRaw
-        .split("\n")
-        .map((entry) => entry.trim())
-        .filter(Boolean)
-        .map((entry) => {
-          const [district_name, fee] = entry.split(":");
-          return {
-            district_name: (district_name || "").trim(),
-            delivery_fee: parseNonNegativeNumber(fee || "", 0),
-          };
-        })
-        .filter((entry) => entry.district_name && Number.isFinite(entry.delivery_fee)),
-    [districtRaw]
-  );
-
   useEffect(() => {
     const known = seenAdminOrderIdsRef.current;
     if (!pinVerified || !adminOrders?.length) {
@@ -362,13 +235,11 @@ export default function AdminFinancePage() {
   }
 
   if (
-    isSettingsPending ||
     isSummaryPending ||
     isWalletPending ||
-    !effective ||
     !wallet
   ) {
-    if ((isSettingsError || isSummaryError || isWalletError) && criticalPageError) {
+    if ((isSummaryError || isWalletError) && criticalPageError) {
       return (
         <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
           <article className="premium-card border border-rose-200 bg-rose-50 p-6">
@@ -416,183 +287,19 @@ export default function AdminFinancePage() {
       </header>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
-        <div className="space-y-5">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <AdminNumberField
-              label="Taux de Commission"
-              value={Number((effective.commission_rate * 100).toFixed(4))}
-              suffix="%"
-              step="0.01"
-              onChange={(value) =>
-                setDraft({
-                  ...effective,
-                  commission_rate: parseNonNegativeNumber(value, effective.commission_rate * 100) / 100,
-                })
-              }
-              helper="Saisie libre sans plafond. Exemple: 150 = 150%."
-            />
-            <AdminNumberField
-              label="Frais de Service Fixes"
-              value={effective.service_fee}
-              suffix="XOF"
-              onChange={(value) =>
-                setDraft({ ...effective, service_fee: parseNonNegativeNumber(value, effective.service_fee) })
-              }
-            />
-            <AdminNumberField
-              label="Frais Livraison par Defaut"
-              value={effective.default_delivery_fee}
-              suffix="XOF"
-              onChange={(value) =>
-                setDraft({
-                  ...effective,
-                  default_delivery_fee: parseNonNegativeNumber(value, effective.default_delivery_fee),
-                })
-              }
-            />
-            <AdminNumberField
-              label="Livraison urbaine"
-              value={effective.urban_delivery_fee}
-              suffix="XOF"
-              onChange={(value) =>
-                setDraft({
-                  ...effective,
-                  urban_delivery_fee: parseNonNegativeNumber(value, effective.urban_delivery_fee),
-                })
-              }
-            />
-            <AdminNumberField
-              label="Livraison peripherique"
-              value={effective.peripheral_delivery_fee}
-              suffix="XOF"
-              onChange={(value) =>
-                setDraft({
-                  ...effective,
-                  peripheral_delivery_fee: parseNonNegativeNumber(value, effective.peripheral_delivery_fee),
-                })
-              }
-            />
-            <AdminNumberField
-              label="Abonnement boutique"
-              value={effective.seller_subscription_fee_shop}
-              suffix="XOF / mois"
-              onChange={(value) =>
-                setDraft({
-                  ...effective,
-                  seller_subscription_fee_shop: parseNonNegativeNumber(
-                    value,
-                    effective.seller_subscription_fee_shop
-                  ),
-                })
-              }
-            />
-            <AdminNumberField
-              label="Abonnement restaurant"
-              value={effective.seller_subscription_fee_restaurant}
-              suffix="XOF / mois"
-              onChange={(value) =>
-                setDraft({
-                  ...effective,
-                  seller_subscription_fee_restaurant: parseNonNegativeNumber(
-                    value,
-                    effective.seller_subscription_fee_restaurant
-                  ),
-                })
-              }
-            />
-            <AdminNumberField
-              label="Abonnement premium"
-              value={effective.seller_subscription_fee_premium}
-              suffix="XOF / mois"
-              onChange={(value) =>
-                setDraft({
-                  ...effective,
-                  seller_subscription_fee_premium: parseNonNegativeNumber(
-                    value,
-                    effective.seller_subscription_fee_premium
-                  ),
-                })
-              }
-            />
-            <AdminNumberField
-              label="Tarif Boost Publicitaire"
-              value={effective.ad_boost_price}
-              suffix="XOF"
-              onChange={(value) =>
-                setDraft({
-                  ...effective,
-                  ad_boost_price: parseNonNegativeNumber(value, effective.ad_boost_price),
-                })
-              }
-            />
-            <AdminNumberField
-              label="Boost 24h"
-              value={effective.ad_boost_price_24h}
-              suffix="XOF"
-              onChange={(value) =>
-                setDraft({
-                  ...effective,
-                  ad_boost_price_24h: parseNonNegativeNumber(value, effective.ad_boost_price_24h),
-                })
-              }
-            />
-            <AdminNumberField
-              label="Boost 7 jours"
-              value={effective.ad_boost_price_7d}
-              suffix="XOF"
-              onChange={(value) =>
-                setDraft({
-                  ...effective,
-                  ad_boost_price_7d: parseNonNegativeNumber(value, effective.ad_boost_price_7d),
-                })
-              }
-            />
-            <AdminNumberField
-              label="Duree Boost"
-              value={effective.ad_boost_duration_days}
-              suffix="jours"
-              min={1}
-              step="1"
-              onChange={(value) =>
-                setDraft({
-                  ...effective,
-                  ad_boost_duration_days: parsePositiveInteger(value, effective.ad_boost_duration_days),
-                })
-              }
-            />
-          </div>
-        </div>
-
+        <h2 className="luxury-title text-lg font-semibold">Parametrage financier</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          Pour eviter les doublons, tous les parametres (commission, abonnements, livraison, boosts, support)
+          sont maintenant centralises dans une seule categorie: <strong>Admin Tarifs</strong>.
+        </p>
         <Button
           type="button"
-          onClick={() => updateMutation.mutate(effective)}
-          className="primary-glow-btn mt-5 bg-[#FF4D00] text-white hover:bg-[#e74700]"
+          className="mt-4 border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+          onClick={() => window.location.assign("/admin/tarifs")}
         >
-          Sauvegarder
+          Ouvrir Admin Tarifs
         </Button>
         {settingsStatus ? <p className="mt-2 text-sm text-slate-700">{settingsStatus}</p> : null}
-      </article>
-
-      <article className="premium-card border border-slate-200 bg-white p-6">
-        <h2 className="luxury-title text-lg font-semibold">Frais Livraison par Quartier</h2>
-        <p className="mt-2 text-sm text-slate-600">Format: `Quartier:Montant` (une ligne par quartier).</p>
-        <textarea
-          value={districtRaw}
-          onChange={(event) => setDistrictDraft(event.target.value)}
-          className="mt-3 min-h-32 w-full rounded-md border border-slate-300 p-3 text-sm"
-        />
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button
-            type="button"
-            onClick={() => districtMutation.mutate(parsedDistrictPayload)}
-            className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
-          >
-            Sauvegarder quartiers
-          </Button>
-          <p className="text-xs text-slate-500">
-            {districtFees?.length ? `${districtFees.length} quartier(s) configures.` : "Aucun quartier configure."}
-          </p>
-        </div>
       </article>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
