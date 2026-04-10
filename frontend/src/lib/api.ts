@@ -120,7 +120,8 @@ export function getClientCookieValue(name: string): string | null {
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  // Render free peut mettre ~50s a sortir de veille.
+  timeout: 65000,
   withCredentials: true,
 });
 
@@ -158,7 +159,7 @@ api.interceptors.response.use(
         const refreshResponse = await axios.post<TokenPair>(
           `${API_BASE_URL}/api/v1/auth/refresh`,
           refreshToken ? { refresh_token: refreshToken } : {},
-          { timeout: 30000, withCredentials: true }
+          { timeout: 65000, withCredentials: true }
         );
         persistAuthTokens(refreshResponse.data);
         originalRequest.headers = originalRequest.headers || {};

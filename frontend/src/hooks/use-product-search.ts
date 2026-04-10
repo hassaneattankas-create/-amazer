@@ -24,7 +24,7 @@ export function useProductSearch({ query = "", barcode = "" }: ProductSearchPara
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     placeholderData: keepPreviousData,
-    retry: 1,
+    retry: 2,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
