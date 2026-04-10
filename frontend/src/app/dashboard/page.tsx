@@ -16,6 +16,7 @@ import { listActiveAlerts } from "@/services/alert-service";
 import { deleteMyAccount } from "@/services/auth-service";
 import { listMyOrders } from "@/services/order-service";
 import { useCartStore } from "@/store/cartStore";
+import { MobileBuildStamp } from "@/components/MobileBuildStamp";
 
 function AnimatedCounter({ value }: { value: number }) {
   return (
@@ -230,6 +231,8 @@ export default function DashboardPage() {
         </form>
         {deleteStatus ? <p className="mt-2 text-sm text-rose-800">{deleteStatus}</p> : null}
       </article>
+
+      <MobileBuildStamp />
     </section>
   );
 }

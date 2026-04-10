@@ -1,6 +1,14 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { spawn } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
+
+function tryGitShortHead(cwd) {
+  try {
+    return execSync("git rev-parse --short HEAD", { encoding: "utf8", cwd }).trim();
+  } catch {
+    return "";
+  }
+}
 
 function loadEnvMobileFile() {
   const p = join(process.cwd(), ".env.mobile");
@@ -33,6 +41,11 @@ function loadEnvMobileFile() {
 
 loadEnvMobileFile();
 
+const repoRootGuess = join(process.cwd(), "..");
+const gitShort = tryGitShortHead(process.cwd()) || tryGitShortHead(repoRootGuess);
+const stamp = `${new Date().toISOString().slice(0, 19)}Z${gitShort ? ` ${gitShort}` : ""}`;
+process.env.NEXT_PUBLIC_BUILD_STAMP = stamp;
+
 const appDir = join(process.cwd(), "src", "app");
 const apiDir = join(appDir, "api");
 const disabledApiDir = join(appDir, "__api_disabled_for_mobile");
@@ -46,29 +59,22 @@ const dynamicRouteDirs = [
   "order/receipt/[id]",
   "order/success/[id]",
 ];
+const DEFAULT_MOBILE_BACKEND_ORIGIN = "https://amazer-api.onrender.com";
+const DEFAULT_MOBILE_SITE_URL = "https://amazerniger.vercel.app";
+
 const requestedMobileBackendOrigin =
-  process.env.MOBILE_BACKEND_ORIGIN?.trim() || process.env.NEXT_PUBLIC_MOBILE_BACKEND_ORIGIN?.trim();
+  process.env.MOBILE_BACKEND_ORIGIN?.trim() ||
+  process.env.NEXT_PUBLIC_MOBILE_BACKEND_ORIGIN?.trim() ||
+  DEFAULT_MOBILE_BACKEND_ORIGIN;
 
-if (!requestedMobileBackendOrigin) {
-  console.error(
-    "[mobile-build] Définissez l’origine HTTPS de votre API FastAPI (sans /api/v1), par exemple :\n" +
-      "  Windows PowerShell: $env:MOBILE_BACKEND_ORIGIN='https://api.mondomaine.ne'\n" +
-      "  ou créez frontend/.env.mobile avec une ligne MOBILE_BACKEND_ORIGIN=https://...\n" +
-      "Copiez frontend/.env.mobile.example vers frontend/.env.mobile et adaptez l’URL.",
-  );
-  process.exit(1);
-}
-
-// Mobile bundled builds must always target a reachable absolute backend origin.
+// Origine API (images, rewrites serveur) — l’APK consomme surtout le proxy du site via NEXT_PUBLIC_MOBILE_SITE_URL.
 process.env.NEXT_PUBLIC_BACKEND_ORIGIN = requestedMobileBackendOrigin;
 delete process.env.NEXT_PUBLIC_API_URL;
-// Optionnel : front Next déployé avec rewrites /backend-api (sinon l’APK appelle l’API directement).
-const mobileSite = process.env.NEXT_PUBLIC_MOBILE_SITE_URL?.trim();
-if (mobileSite) {
-  process.env.NEXT_PUBLIC_MOBILE_SITE_URL = mobileSite;
-} else {
-  delete process.env.NEXT_PUBLIC_MOBILE_SITE_URL;
-}
+
+// Par défaut : même chaîne que le site web (proxy /backend-api + routes Next), UI packagée dans l’APK (pas de WebView distante).
+const mobileSite =
+  process.env.NEXT_PUBLIC_MOBILE_SITE_URL?.trim() || DEFAULT_MOBILE_SITE_URL;
+process.env.NEXT_PUBLIC_MOBILE_SITE_URL = mobileSite;
 
 if (existsSync(disabledApiDir)) {
   throw new Error("Temporary mobile API folder already exists. Restore it before running build:mobile.");
@@ -125,7 +131,10 @@ function restoreDynamicRoutes() {
 }
 
 try {
+  console.log(`[mobile-build] Dossier frontend: ${process.cwd()}`);
+  console.log(`[mobile-build] Empreinte build (dans l'APK): ${stamp}`);
   console.log(`[mobile-build] Using backend origin: ${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}`);
+  console.log(`[mobile-build] Mobile site (API proxy): ${process.env.NEXT_PUBLIC_MOBILE_SITE_URL}`);
   await new Promise((resolve, reject) => {
     const command = process.platform === "win32" ? "cmd.exe" : "npx";
     const args =

@@ -1,11 +1,20 @@
 const DEFAULT_BACKEND_ORIGIN = "https://amazer-api.onrender.com";
+/** Aligné sur le déploiement web (rewrites /backend-api). Repli si la variable n’a pas été injectée au build. */
+const DEFAULT_MOBILE_SITE_ORIGIN = "https://amazerniger.vercel.app";
 
 /**
  * Si défini (ex. https://mondomaine.ne), l’APK packagée utilise le proxy Next `/backend-api` de ce site.
- * Sinon l’APK appelle directement `getBackendOriginFromEnv()` (API seule, sans Vercel).
+ * Sinon, en build mobile, repli sur le site de prod pour garder le même comportement que le web.
  */
 export function getMobileSiteOriginFromEnv(): string {
-  return typeof process !== "undefined" ? process.env.NEXT_PUBLIC_MOBILE_SITE_URL?.trim() || "" : "";
+  const raw = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_MOBILE_SITE_URL?.trim() : "";
+  if (raw) {
+    return raw;
+  }
+  if (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MOBILE_APP === "true") {
+    return DEFAULT_MOBILE_SITE_ORIGIN;
+  }
+  return "";
 }
 
 /**

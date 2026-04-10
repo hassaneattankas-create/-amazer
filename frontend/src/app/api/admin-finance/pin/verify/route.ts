@@ -55,12 +55,15 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const response = new NextResponse(null, { status: 204 });
+  // En production, SameSite=None + Secure est requis pour que le cookie soit envoyé depuis l’APK
+  // Capacitor (https://localhost) vers Vercel (cross-site). Avec Lax, les appels XHR ne portent pas le cookie.
+  const isProd = process.env.NODE_ENV === "production";
   response.cookies.set({
     name: "finance_pin_verified",
     value: "1",
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
     maxAge: 30 * 60,
     path: "/",
   });

@@ -181,26 +181,9 @@ Si plusieurs essais echouent d'affilee, attendre quelques minutes avant de recom
 - verifier que les chambres sont configurees
 - verifier que `reservations hotel` est active
 
-## Play Store et version en ligne
+## Play Store
 
-Mettre l'application sur le Play Store ne change pas automatiquement le site web en ligne.
-
-Dans la configuration actuelle:
-
-- `frontend/capacitor.config.ts` peut faire pointer l'app mobile vers `https://amazerniger.vercel.app`
-- `frontend/package.json` contient `mobile:prepare:android` avec cette URL
-
-Donc:
-
-- publier sur le Play Store ne remplace pas le site web
-- publier sur le Play Store n'efface pas la version en ligne
-- si l'app Android charge l'URL Vercel distante, elle affichera la version web actuellement deployee
-- si le web et le mobile utilisent la meme API Render, les donnees sont partagees
-
-En resume:
-
-- lancer sur le Play Store ne casse pas ce qui est en ligne
-- redeployer le frontend ou le backend peut changer a la fois le web et l'app mobile si les deux pointent vers les memes URLs
+Publier l’app sur le Play Store ne remplace pas le site web ; web et mobile peuvent partager la même API. Tout le détail (build `.aab`, signature, fiche, URLs) est dans **`docs/AMAZER_PUBLICATION_PLAY_STORE.md`**.
 
 ## Exploitation quotidienne
 
