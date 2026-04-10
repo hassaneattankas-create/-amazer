@@ -11,6 +11,7 @@ from app.core.deps import get_admin_user, get_current_user, get_seller_user
 from app.core.crypto import decrypt_phone_value, encrypt_phone_value
 from app.core.csrf import enforce_csrf
 from app.core.exceptions import ConflictError, NotFoundError, ValidationDomainError
+from app.core.rate_limit import enforce_rate_limit
 from app.database import get_db
 from app.models.hospitality import HotelBooking, RestaurantReservation
 from app.models.order import Order, OrderItem
@@ -315,6 +316,7 @@ def pay_seller_subscription(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> SellerSubscriptionStatusResponse:
     enforce_csrf(request)
+    enforce_rate_limit(request, key="seller_subscription_pay", limit=3, window_seconds=600)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
         raise NotFoundError("Create a seller profile first")
@@ -330,11 +332,15 @@ def pay_seller_subscription(
     )
     if pending_exists:
         raise ConflictError("Une demande de paiement est deja en attente de validation admin.")
+    transaction_reference = (payload.transaction_reference or "").strip()
+    if not transaction_reference:
+        # Flux semi-auto: l'admin valide sur releve operateur meme sans reference saisie.
+        transaction_reference = f"AUTO-{current_user.id[:8]}-{int(datetime.now(UTC).timestamp())}"
     payment_request = SellerSubscriptionPayment(
         seller_profile_id=profile.id,
         seller_user_id=current_user.id,
         payment_mode=payload.payment_mode,
-        transaction_reference=payload.transaction_reference.strip(),
+        transaction_reference=transaction_reference,
         months=payload.months,
         amount_claimed=float(finance.seller_subscription_fee) * float(payload.months),
         status="pending",
@@ -351,7 +357,7 @@ def pay_seller_subscription(
         details={
             "months": payload.months,
             "payment_mode": payload.payment_mode,
-            "transaction_reference": payload.transaction_reference.strip(),
+            "transaction_reference": transaction_reference,
             "monthly_fee": float(finance.seller_subscription_fee),
         },
     )

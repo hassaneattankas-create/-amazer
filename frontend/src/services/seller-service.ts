@@ -118,7 +118,7 @@ export async function getSellerSubscriptionStatus(): Promise<SellerSubscriptionS
 
 export async function paySellerSubscription(payload: {
   payment_mode: "nita" | "amana";
-  transaction_reference: string;
+  transaction_reference?: string;
   months: number;
 }): Promise<SellerSubscriptionStatus> {
   const response = await api.post<SellerSubscriptionStatus>("/api/v1/seller/subscription/pay", payload);

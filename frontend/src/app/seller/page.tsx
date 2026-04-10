@@ -160,7 +160,6 @@ function SellerPageContent() {
   const [status, setStatus] = useState("");
   const [profileHydratedFromServer, setProfileHydratedFromServer] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(searchParams.get("welcome") !== "1");
-  const [subscriptionPaymentRef, setSubscriptionPaymentRef] = useState("");
 
   const [profileForm, setProfileForm] = useState(() => {
     const draft = loadDraft(SELLER_PROFILE_DRAFT_KEY, {
@@ -372,8 +371,7 @@ function SellerPageContent() {
     mutationFn: paySellerSubscription,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["seller-subscription-status"] });
-      setSubscriptionPaymentRef("");
-      setStatus("Paiement soumis. En attente de validation admin.");
+      setStatus("Demande envoyee. Paiement a verifier par l'admin finance.");
     },
     onError: (error) => setStatus(getApiErrorMessage(error, "Paiement vendeur impossible.")),
   });
@@ -456,6 +454,9 @@ function SellerPageContent() {
             Le compte vendeur est en pause tant que les frais ne sont pas regles. Le paiement d&apos;activation
             couvre les frais de creation puis l&apos;abonnement mensuel.
           </p>
+          <p className="mt-1 text-sm text-amber-800">
+            Important : effectue le paiement avec le meme numero/identifiant que ton compte AMAZER.
+          </p>
           {!hasProfile ? (
             <p className="mt-2 text-sm text-amber-900">
               Commence par enregistrer le profil vendeur ci-dessous. Le paiement sera ensuite requis
@@ -473,29 +474,22 @@ function SellerPageContent() {
             </p>
           ) : null}
           {hasProfile ? (
-            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
-              <Input
-                placeholder="Reference transaction Nita/Amana"
-                value={subscriptionPaymentRef}
-                onChange={(event) => setSubscriptionPaymentRef(event.target.value)}
-              />
+            <div className="mt-4">
               <Button
                 type="button"
                 disabled={
                   subscriptionMutation.isPending ||
-                  subscriptionPaymentRef.trim().length < 3 ||
                   Boolean(subscriptionStatus?.has_pending_payment_request)
                 }
                 className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
                 onClick={() =>
                   subscriptionMutation.mutate({
                     payment_mode: "nita",
-                    transaction_reference: subscriptionPaymentRef.trim(),
                     months: 1,
                   })
                 }
               >
-                {subscriptionMutation.isPending ? "Envoi..." : "Soumettre paiement (validation admin)"}
+                {subscriptionMutation.isPending ? "Envoi..." : "J'ai paye (validation admin)"}
               </Button>
             </div>
           ) : null}

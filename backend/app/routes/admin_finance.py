@@ -1174,6 +1174,8 @@ def decide_seller_subscription_payment(
         raise ValidationDomainError("Demande de paiement introuvable")
     if row.status != "pending":
         raise ValidationDomainError("Cette demande a deja ete traitee")
+    if payload.decision == "rejected" and not (payload.admin_note or "").strip():
+        raise ValidationDomainError("Motif obligatoire: ajoutez une note admin pour rejeter cette demande")
     profile = db.get(SellerProfile, row.seller_profile_id)
     if profile is None:
         raise ValidationDomainError("Profil vendeur introuvable")

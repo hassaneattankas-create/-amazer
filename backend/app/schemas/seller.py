@@ -191,7 +191,7 @@ class SellerSubscriptionPayRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     payment_mode: Literal["nita", "amana"]
-    transaction_reference: str = Field(min_length=2, max_length=180)
+    transaction_reference: str | None = Field(default=None, max_length=180)
     months: int = Field(default=1, ge=1, le=12)
 
 
