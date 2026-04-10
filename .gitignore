@@ -8,6 +8,7 @@ amazer.db
 backend/.venv311/
 backend/venv/
 frontend/.env*
+!frontend/.env.mobile.example
 **/__pycache__/
 *.pyc
 __pycache__/
