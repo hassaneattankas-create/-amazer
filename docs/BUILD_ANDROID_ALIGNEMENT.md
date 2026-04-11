@@ -33,9 +33,9 @@ Si un nouveau vendeur n’a « aucune restriction », vérifier d’abord la log
 
 ## Notifications
 
-- **In-app** : la page Notifications utilise un stockage **local** (navigateur / WebView), pas une boîte serveur partagée entre tous les utilisateurs.
+- **In-app** : les notifications sont désormais **persistées côté backend** puis resynchronisées dans l’app (web / WebView). Elles restent donc visibles après reconnexion sur le même compte.
 - **Push « comme WhatsApp »** pour tous les appareils : il faudrait **Firebase Cloud Messaging (FCM)** côté serveur + configuration Play — le backend enregistre déjà des jetons d’appareil mais **n’envoie pas encore** de push réels (voir `NotificationService.send_to_user` dans le backend).
-- **APK** : des **notifications locales** Capacitor peuvent s’afficher pour les événements déjà déclenchés dans l’app (ex. commande) après acceptation des permissions Android.
+- **APK** : des **notifications locales** Capacitor peuvent s’afficher pour les nouvelles alertes remontées par l’app après acceptation des permissions Android.
 
 ## Secrets (Vercel, Render, etc.)
 
