@@ -217,6 +217,10 @@ export default function DashboardPage() {
         <p className="mt-1 text-sm text-rose-700/80">
           Action irreversible: votre compte sera desactive et vos donnees personnelles anonymisees.
         </p>
+        <p className="mt-2 text-xs text-rose-700/70">
+          Ceci concerne uniquement <strong>votre</strong> compte connecté. Pour retirer un autre utilisateur (compte test,
+          etc.), connectez-vous en admin et ouvrez <strong>Admin → Utilisateurs</strong>.
+        </p>
         <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center" onSubmit={onDeleteAccount}>
           <PasswordInput
             value={deletePassword}

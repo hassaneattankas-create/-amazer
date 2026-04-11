@@ -29,6 +29,7 @@ export default function AdminUsersPage() {
   const [actionStatus, setActionStatus] = useState("");
   const [searchDraft, setSearchDraft] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
 
   const pinMutation = useMutation({
     mutationFn: verifyAdminFinancePin,
@@ -90,7 +91,13 @@ export default function AdminUsersPage() {
   });
 
   const isBusy = removeMutation.isPending || restoreMutation.isPending;
-  const rows = useMemo(() => users ?? [], [users]);
+  const rows = useMemo(() => {
+    const list = users ?? [];
+    if (showInactive) {
+      return list;
+    }
+    return list.filter((u) => u.is_active);
+  }, [users, showInactive]);
   const protectedPageError = useMemo(() => {
     if (statsError && usersError) {
       return getAdminFinanceDataError(statsError);
@@ -181,7 +188,9 @@ export default function AdminUsersPage() {
       <header className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="luxury-title text-3xl font-semibold">Gestion Complete Des Utilisateurs</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Vous suivez ici l&apos;activite globale de l&apos;application et vous pouvez retirer/restaurer n&apos;importe quel compte.
+          Vous suivez ici l&apos;activite globale de l&apos;application et vous pouvez retirer/restaurer n&apos;importe quel compte
+          (sauf le compte administrateur protege). Pour retirer un utilisateur, utilisez <strong>Retirer</strong> ici — ce
+          n&apos;est pas la suppression depuis le tableau de bord client.
         </p>
       </header>
 
@@ -230,6 +239,15 @@ export default function AdminUsersPage() {
               Rechercher
             </Button>
           </div>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={showInactive}
+              onChange={(e) => setShowInactive(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300"
+            />
+            Afficher les comptes retirés (désactivés)
+          </label>
         </div>
 
         <div className="mt-4 overflow-x-auto">
