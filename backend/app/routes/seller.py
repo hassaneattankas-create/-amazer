@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.config import get_settings
 from app.core.cache import cache_delete_prefixes
 from app.core.deps import get_admin_user, get_current_user, get_seller_user
 from app.core.crypto import decrypt_phone_value, encrypt_phone_value
@@ -55,6 +56,7 @@ from app.services.listing_limit_service import (
     is_premium_profile,
     max_products_for_basic_tier,
 )
+from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.seller_finance_service import (
     build_effective_seller_finance_settings,
     get_or_create_global_settings,
@@ -62,10 +64,40 @@ from app.services.seller_finance_service import (
 from app.services.seller_profile_service import create_or_update_seller_profile
 
 router = APIRouter(prefix="/seller", tags=["seller"])
+settings = get_settings()
 
 
 def _invalidate_public_marketplace_cache() -> None:
     cache_delete_prefixes("catalog:", "content:")
+
+
+def _notify_admin_pending_seller_payment(
+    db: Session,
+    *,
+    seller_user: User,
+    profile: SellerProfile,
+    amount: float,
+    payment_mode: str,
+    payment_id: str,
+) -> None:
+    admin_user = db.scalar(select(User).where(User.email == settings.admin_email.strip().lower()))
+    if admin_user is None:
+        return
+    NotificationService(db).send_to_user(
+        user_id=admin_user.id,
+        payload=NotificationPayload(
+            title="Paiement vendeur en attente",
+            body=(
+                f"{profile.business_name} ({seller_user.email}) attend une validation "
+                f"de {int(amount)} XOF via {payment_mode.upper()}."
+            ),
+            data={
+                "tag": f"seller-payment-pending-{payment_id}",
+                "href": "/admin/finance",
+                "kind": "seller_payment_pending",
+            },
+        ),
+    )
 
 
 def _slugify(value: str) -> str:
@@ -360,6 +392,14 @@ def pay_seller_subscription(
             "transaction_reference": transaction_reference,
             "monthly_fee": float(finance.seller_subscription_fee),
         },
+    )
+    _notify_admin_pending_seller_payment(
+        db,
+        seller_user=current_user,
+        profile=profile,
+        amount=float(payment_request.amount_claimed),
+        payment_mode=payment_request.payment_mode,
+        payment_id=payment_request.id,
     )
     db.commit()
     return _build_subscription_status(profile, db)

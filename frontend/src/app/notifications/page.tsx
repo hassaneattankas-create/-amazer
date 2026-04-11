@@ -1,8 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
+import {
+  clearAllNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/services/notification-service";
 import { useNotificationStore } from "@/store/notification-store";
 
 function formatDateTime(value: string) {
@@ -10,10 +17,66 @@ function formatDateTime(value: string) {
 }
 
 export default function NotificationsPage() {
+  const queryClient = useQueryClient();
   const items = useNotificationStore((state) => state.items);
   const markAllAsRead = useNotificationStore((state) => state.markAllAsRead);
   const markAsRead = useNotificationStore((state) => state.markAsRead);
   const clearAll = useNotificationStore((state) => state.clearAll);
+  const [actionError, setActionError] = useState("");
+
+  const markOneMutation = useMutation({
+    mutationFn: markNotificationRead,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["remote-notifications"] });
+    },
+  });
+  const markAllMutation = useMutation({
+    mutationFn: markAllNotificationsRead,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["remote-notifications"] });
+    },
+  });
+  const clearAllMutation = useMutation({
+    mutationFn: clearAllNotifications,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["remote-notifications"] });
+    },
+  });
+
+  const isBusy = markOneMutation.isPending || markAllMutation.isPending || clearAllMutation.isPending;
+
+  async function handleMarkAsRead(id: string) {
+    setActionError("");
+    markAsRead(id);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+      return;
+    }
+    try {
+      await markOneMutation.mutateAsync(id);
+    } catch {
+      setActionError("Impossible de synchroniser cette notification avec le serveur.");
+    }
+  }
+
+  async function handleMarkAllAsRead() {
+    setActionError("");
+    markAllAsRead();
+    try {
+      await markAllMutation.mutateAsync();
+    } catch {
+      setActionError("Impossible de marquer toutes les notifications comme lues sur le serveur.");
+    }
+  }
+
+  async function handleClearAll() {
+    setActionError("");
+    clearAll();
+    try {
+      await clearAllMutation.mutateAsync();
+    } catch {
+      setActionError("Impossible de vider les notifications sur le serveur.");
+    }
+  }
 
   return (
     <section className="mx-auto w-full max-w-4xl space-y-6 px-4 pb-14 sm:px-6">
@@ -23,17 +86,19 @@ export default function NotificationsPage() {
           Historique des alertes internes: commandes, activites vendeur et suivi admin.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={markAllAsRead}>
+          <Button type="button" variant="outline" onClick={handleMarkAllAsRead} disabled={isBusy}>
             Tout marquer comme lu
           </Button>
           <Button
             type="button"
             className="border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
-            onClick={clearAll}
+            onClick={handleClearAll}
+            disabled={isBusy}
           >
             Vider
           </Button>
         </div>
+        {actionError ? <p className="mt-3 text-sm text-rose-700">{actionError}</p> : null}
       </header>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
@@ -56,7 +121,7 @@ export default function NotificationsPage() {
                   <button
                     type="button"
                     className="mt-3 text-xs font-medium text-[#FF4D00] hover:underline"
-                    onClick={() => markAsRead(item.id)}
+                    onClick={() => void handleMarkAsRead(item.id)}
                   >
                     Marquer comme lu
                   </button>
@@ -66,7 +131,7 @@ export default function NotificationsPage() {
 
             if (item.href) {
               return (
-                <Link key={item.id} href={item.href} onClick={() => markAsRead(item.id)}>
+                <Link key={item.id} href={item.href} onClick={() => void handleMarkAsRead(item.id)}>
                   {content}
                 </Link>
               );

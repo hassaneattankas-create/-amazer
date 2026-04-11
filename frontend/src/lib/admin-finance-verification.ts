@@ -47,8 +47,24 @@ export function getAdminFinanceDataError(error: unknown): string {
     return "La verification admin a expire. Revalidez le PIN pour recharger cette page.";
   }
 
+  if (detail === "Authorization header is missing") {
+    return "Votre session n'est plus reconnue. Reconnectez-vous puis revenez dans l'espace admin.";
+  }
+
+  if (detail === "Invalid or expired access token" || detail === "Invalid token") {
+    return "Votre session a expire. Reconnectez-vous puis revenez dans l'espace admin.";
+  }
+
   if (detail === "Could not validate credentials") {
     return "Votre session a expire. Reconnectez-vous puis revenez dans l'espace admin.";
+  }
+
+  if (detail === "Admin access required") {
+    return "Ce compte n'a pas les droits administrateur requis.";
+  }
+
+  if (detail === "Inactive user") {
+    return "Ce compte a ete desactive. Reconnectez-vous avec un compte actif.";
   }
 
   if (detail === "Admin MFA is required") {

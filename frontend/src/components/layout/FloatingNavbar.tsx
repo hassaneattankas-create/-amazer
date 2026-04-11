@@ -12,6 +12,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { isAdminEmail } from "@/lib/admin";
 import { clearAppMode, persistAppMode } from "@/lib/session-mode";
 import { logout } from "@/services/auth-service";
+import { listMyNotifications, notifyLocalOrderEvent } from "@/services/notification-service";
 import { getSellerProfile } from "@/services/seller-service";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cartStore";
@@ -55,11 +56,22 @@ export function FloatingNavbar() {
   const unreadNotifications = useNotificationStore((state) =>
     state.items.reduce((count, item) => count + (item.unread ? 1 : 0), 0)
   );
+  const clearNotifications = useNotificationStore((state) => state.clearAll);
   const { data: sellerProfile } = useQuery({
     queryKey: ["navbar-seller-profile", user?.id],
     queryFn: getSellerProfile,
     enabled: Boolean(user?.id),
     staleTime: 60_000,
+  });
+  const syncNotifications = useNotificationStore((state) => state.syncNotifications);
+  const seenRemoteNotificationsRef = useRef<Set<string>>(new Set());
+  const remoteNotificationsInitializedRef = useRef(false);
+  const { data: remoteNotifications = [] } = useQuery({
+    queryKey: ["remote-notifications", user?.id],
+    queryFn: () => listMyNotifications(60),
+    enabled: Boolean(user?.id),
+    refetchInterval: 15_000,
+    staleTime: 5_000,
   });
 
   const showAdminLink = Boolean(adminMe?.is_admin) || isAdminEmail(user?.email);
@@ -119,6 +131,35 @@ export function FloatingNavbar() {
       document.removeEventListener("keydown", handleEscape);
     };
   }, []);
+
+  useEffect(() => {
+    clearNotifications();
+    seenRemoteNotificationsRef.current = new Set();
+    remoteNotificationsInitializedRef.current = false;
+  }, [clearNotifications, user?.id]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+    syncNotifications(remoteNotifications);
+    const known = seenRemoteNotificationsRef.current;
+    if (!remoteNotificationsInitializedRef.current) {
+      remoteNotifications.forEach((item) => known.add(item.id));
+      remoteNotificationsInitializedRef.current = true;
+      return;
+    }
+    const freshUnread = remoteNotifications.filter((item) => item.unread && !known.has(item.id));
+    remoteNotifications.forEach((item) => known.add(item.id));
+    for (const item of freshUnread) {
+      void notifyLocalOrderEvent({
+        title: item.title,
+        body: item.body,
+        tag: item.tag || `remote-${item.id}`,
+        href: item.href,
+      });
+    }
+  }, [isAuthenticated, remoteNotifications, syncNotifications]);
 
   async function handleLogout() {
     setIsLoggingOut(true);

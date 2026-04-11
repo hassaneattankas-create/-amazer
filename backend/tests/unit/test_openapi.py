@@ -15,3 +15,7 @@ def test_openapi_contains_new_endpoints() -> None:
     assert "/api/v1/cart/items/{item_id}" in paths
     assert "/api/v1/categories" in paths
     assert "/api/v1/vendors" in paths
+    assert "/api/v1/notifications" in paths
+    assert "/api/v1/notifications/register-token" in paths
+    assert "/api/v1/notifications/{notification_id}/read" in paths
+    assert "/api/v1/notifications/mark-all-read" in paths

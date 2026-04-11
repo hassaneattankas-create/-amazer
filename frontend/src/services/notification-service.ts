@@ -2,7 +2,7 @@ import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 
 import { api } from "@/lib/api";
-import { useNotificationStore } from "@/store/notification-store";
+import { useNotificationStore, type AppNotification } from "@/store/notification-store";
 
 const TOKEN_STORAGE_KEY = "amazer_notification_token_registered";
 const LAST_WEB_NOTIFICATION_KEY = "amazer_last_web_notification";
@@ -141,4 +141,46 @@ export async function notifyLocalOrderEvent(payload: {
   } catch {
     // Silencieux
   }
+}
+
+export type ServerNotification = {
+  id: string;
+  title: string;
+  body: string;
+  tag: string;
+  href?: string | null;
+  data?: Record<string, unknown> | null;
+  unread: boolean;
+  created_at: string;
+};
+
+function mapServerNotification(row: ServerNotification): AppNotification {
+  return {
+    id: row.id,
+    title: row.title,
+    body: row.body,
+    tag: row.tag,
+    href: row.href || undefined,
+    createdAt: row.created_at,
+    unread: row.unread,
+  };
+}
+
+export async function listMyNotifications(limit = 100): Promise<AppNotification[]> {
+  const response = await api.get<ServerNotification[]>("/api/v1/notifications", {
+    params: { limit },
+  });
+  return response.data.map(mapServerNotification);
+}
+
+export async function markNotificationRead(notificationId: string): Promise<void> {
+  await api.post(`/api/v1/notifications/${notificationId}/read`);
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await api.post("/api/v1/notifications/mark-all-read");
+}
+
+export async function clearAllNotifications(): Promise<void> {
+  await api.delete("/api/v1/notifications");
 }

@@ -25,6 +25,7 @@ from app.schemas.auth import (
 )
 from app.schemas.user import UserResponse
 from app.services.auth_service import AuthService
+from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.security_log_service import log_security_event
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -33,6 +34,31 @@ settings = get_settings()
 
 def _invalidate_public_marketplace_cache() -> None:
     cache_delete_prefixes("catalog:", "content:")
+
+
+def _notify_admin_seller_registration(
+    auth_service: AuthService,
+    *,
+    user_id: str | None,
+    identifier: str,
+    full_name: str,
+) -> None:
+    admin_email = settings.admin_email.strip().lower()
+    admin_user = auth_service.db.scalar(select(User).where(User.email == admin_email))
+    if admin_user is None:
+        return
+    NotificationService(auth_service.db).send_to_user(
+        user_id=admin_user.id,
+        payload=NotificationPayload(
+            title="Nouveau compte vendeur",
+            body=f"{full_name} a cree un compte vendeur ({identifier.strip()}).",
+            data={
+                "tag": f"seller-register-{user_id or identifier.strip().lower()}",
+                "href": "/admin/users",
+                "kind": "seller_registration",
+            },
+        ),
+    )
 
 
 def _set_auth_cookies(response: Response, tokens: dict[str, str]) -> None:
@@ -95,6 +121,13 @@ def register(
                 "seller": bool(payload.seller_profile),
             },
         )
+        if payload.seller_profile:
+            _notify_admin_seller_registration(
+                auth_service,
+                user_id=result.get("user_id") if isinstance(result.get("user_id"), str) else None,
+                identifier=payload.identifier or payload.email or payload.whatsapp_phone or "",
+                full_name=payload.full_name,
+            )
         auth_service.db.commit()
     return result
 

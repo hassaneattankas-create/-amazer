@@ -1,4 +1,5 @@
 from app.models.cart import Cart, CartItem
+from app.models.app_notification import AppNotification
 from app.models.category import Category
 from app.models.price_history import PriceHistory
 from app.models.price_alert import PriceAlert
@@ -60,4 +61,5 @@ __all__ = [
     "HotelBooking",
     "Cart",
     "CartItem",
+    "AppNotification",
 ]

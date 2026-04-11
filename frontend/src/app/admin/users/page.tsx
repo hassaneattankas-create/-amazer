@@ -74,7 +74,9 @@ export default function AdminUsersPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-user-stats"] });
     },
     onError: (error) => {
-      setActionStatus(getApiErrorMessage(error, "Impossible de retirer cet utilisateur."));
+      setActionStatus(
+        getApiErrorMessage(error, getAdminFinanceDataError(error) || "Impossible de retirer cet utilisateur."),
+      );
     },
   });
 
@@ -86,7 +88,9 @@ export default function AdminUsersPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-user-stats"] });
     },
     onError: (error) => {
-      setActionStatus(getApiErrorMessage(error, "Impossible de restaurer cet utilisateur."));
+      setActionStatus(
+        getApiErrorMessage(error, getAdminFinanceDataError(error) || "Impossible de restaurer cet utilisateur."),
+      );
     },
   });
 
@@ -98,12 +102,10 @@ export default function AdminUsersPage() {
     }
     return list.filter((u) => u.is_active);
   }, [users, showInactive]);
-  const protectedPageError = useMemo(() => {
-    if (statsError && usersError) {
-      return getAdminFinanceDataError(statsError);
-    }
-    return "";
-  }, [statsError, usersError]);
+  const usersPageError = useMemo(
+    () => (usersError ? getAdminFinanceDataError(usersError) : ""),
+    [usersError]
+  );
 
   if (!pinVerified) {
     return (
@@ -147,28 +149,33 @@ export default function AdminUsersPage() {
     );
   }
 
-  if (isStatsPending || isUsersPending || !stats) {
-    if (protectedPageError) {
-      return (
-        <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
-          <article className="premium-card border border-rose-200 bg-rose-50 p-6">
-            <h1 className="text-xl font-semibold text-rose-700">Utilisateurs admin indisponibles</h1>
-            <p className="mt-2 text-sm text-rose-700">{protectedPageError}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button type="button" onClick={() => setPinVerified(false)}>
-                Revalider le PIN
-              </Button>
-              <Button type="button" variant="outline" onClick={() => window.location.assign("/login?next=/admin/users")}>
-                Me reconnecter
-              </Button>
-            </div>
-          </article>
-        </section>
-      );
-    }
+  if (isUsersPending || (isStatsPending && !users)) {
     return (
       <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
         <ProductCardSkeleton />
+      </section>
+    );
+  }
+
+  if (usersPageError) {
+    return (
+      <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
+        <article className="premium-card border border-rose-200 bg-rose-50 p-6">
+          <h1 className="text-xl font-semibold text-rose-700">Utilisateurs admin indisponibles</h1>
+          <p className="mt-2 text-sm text-rose-700">{usersPageError}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button type="button" onClick={() => setPinVerified(false)}>
+              Revalider le PIN
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => window.location.assign("/login?next=/admin/users")}
+            >
+              Me reconnecter
+            </Button>
+          </div>
+        </article>
       </section>
     );
   }
@@ -194,7 +201,7 @@ export default function AdminUsersPage() {
         </p>
       </header>
 
-      {!isStatsError ? (
+      {!isStatsError && stats ? (
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <article className="premium-card border border-slate-200 bg-white p-4">
           <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Total Utilisateurs</p>

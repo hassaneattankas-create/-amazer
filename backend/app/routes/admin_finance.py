@@ -53,6 +53,7 @@ from app.schemas.finance import (
     WalletSummaryResponse,
 )
 from app.services.audit_log_service import append_audit_log
+from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.seller_finance_service import (
     build_effective_seller_finance_settings,
     get_or_create_global_settings,
@@ -1251,6 +1252,27 @@ def decide_seller_subscription_payment(
             "admin_note": payload.admin_note,
         },
     )
+    if seller_user is not None:
+        decision_label = "valide" if payload.decision == "approved" else "refuse"
+        body_suffix = (
+            f" Motif admin: {payload.admin_note.strip()}." if (payload.admin_note or "").strip() else ""
+        )
+        NotificationService(db).send_to_user(
+            user_id=seller_user.id,
+            payload=NotificationPayload(
+                title="Decision sur votre paiement vendeur",
+                body=(
+                    f"Votre paiement vendeur a ete {decision_label} pour {row.months} mois."
+                    f"{body_suffix}"
+                ),
+                data={
+                    "tag": f"seller-payment-decision-{row.id}",
+                    "href": "/seller",
+                    "kind": "seller_payment_decision",
+                    "decision": payload.decision,
+                },
+            ),
+        )
     db.commit()
     db.refresh(row)
     seller_user = db.get(User, row.seller_user_id)
