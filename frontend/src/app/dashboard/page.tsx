@@ -53,7 +53,12 @@ export default function DashboardPage() {
       window.location.assign("/login");
     },
     onError: (error) => {
-      setDeleteStatus(getApiErrorMessage(error, "Suppression impossible. Verifie ton mot de passe."));
+      setDeleteStatus(
+        getApiErrorMessage(
+          error,
+          "Suppression impossible. Verifie ton mot de passe ou reconnecte-toi.",
+        ),
+      );
     },
   });
 

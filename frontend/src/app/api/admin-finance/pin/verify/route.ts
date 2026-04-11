@@ -26,15 +26,20 @@ export async function POST(request: NextRequest): Promise<Response> {
     upstreamHeaders.set("x-csrf-token", csrfHeader);
   }
 
-  const forwardedCookies: string[] = [];
-  for (const name of ["access_token", "refresh_token", "csrf_token"]) {
-    const value = cookieStore.get(name)?.value;
-    if (value) {
-      forwardedCookies.push(`${name}=${value}`);
+  const incomingCookie = request.headers.get("cookie");
+  if (incomingCookie?.trim()) {
+    upstreamHeaders.set("cookie", incomingCookie);
+  } else {
+    const forwardedCookies: string[] = [];
+    for (const name of ["access_token", "refresh_token", "csrf_token"]) {
+      const value = cookieStore.get(name)?.value;
+      if (value) {
+        forwardedCookies.push(`${name}=${value}`);
+      }
     }
-  }
-  if (forwardedCookies.length) {
-    upstreamHeaders.set("cookie", forwardedCookies.join("; "));
+    if (forwardedCookies.length) {
+      upstreamHeaders.set("cookie", forwardedCookies.join("; "));
+    }
   }
 
   const upstream = await fetch(`${BACKEND_ORIGIN}/api/v1/admin/finance/pin/verify`, {

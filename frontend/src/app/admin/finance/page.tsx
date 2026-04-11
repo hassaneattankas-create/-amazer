@@ -14,6 +14,7 @@ import {
   buildAdminFinanceVerifyPayload,
   getAdminFinanceVerifyError,
 } from "@/lib/admin-finance-verification";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { getAdminAdClickStats } from "@/services/content-service";
 import { formatXOF } from "@/lib/currency";
 import { notifyLocalOrderEvent } from "@/services/notification-service";
@@ -40,6 +41,7 @@ const AdminRevenueChart = dynamic(
 export default function AdminFinancePage() {
   const queryClient = useQueryClient();
   const seenAdminOrderIdsRef = useRef<Set<string>>(new Set());
+  const seenSellerPaymentIdsRef = useRef<Set<string>>(new Set());
   const [settingsStatus, setSettingsStatus] = useState("");
   const [pinStatus, setPinStatus] = useState("");
   const [pin, setPin] = useState("");
@@ -143,10 +145,14 @@ export default function AdminFinancePage() {
     }) => decideAdminSellerSubscriptionPayment(paymentId, { decision, admin_note }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-seller-subscription-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-finance-summary"] });
       setPaymentDecisionNote("");
       setSettingsStatus("Decision paiement vendeur enregistree.");
     },
-    onError: (error) => setSettingsStatus(getAdminFinanceDataError(error)),
+    onError: (error) =>
+      setSettingsStatus(
+        getApiErrorMessage(error, getAdminFinanceDataError(error)),
+      ),
   });
 
   const criticalPageError = useMemo(() => {
@@ -191,6 +197,30 @@ export default function AdminFinancePage() {
     });
     setTransferStatus(`Nouvelle commande detectee: ${latest.customer_name} (${formatXOF(latest.total_amount)}).`);
   }, [adminOrders, pinVerified]);
+
+  useEffect(() => {
+    if (!pinVerified || !sellerPayments?.length) {
+      return;
+    }
+    const known = seenSellerPaymentIdsRef.current;
+    const fresh = sellerPayments.filter((row) => !known.has(row.id));
+    for (const row of sellerPayments) {
+      known.add(row.id);
+    }
+    if (!fresh.length) {
+      return;
+    }
+    const latest = fresh[0];
+    notifyLocalOrderEvent({
+      title: "Paiement vendeur en attente",
+      body: `${latest.business_name} — ${formatXOF(latest.amount_claimed)} (${latest.payment_mode.toUpperCase()}).`,
+      tag: `seller-pay-${latest.id}`,
+      href: "/admin/finance",
+    });
+    setTransferStatus(
+      `Validation requise: ${latest.business_name} (${formatXOF(latest.amount_claimed)}).`,
+    );
+  }, [sellerPayments, pinVerified]);
 
   if (!pinVerified) {
     return (
@@ -440,17 +470,19 @@ export default function AdminFinancePage() {
                   </Button>
                   <Button
                     type="button"
-                    disabled={sellerPaymentDecisionMutation.isPending}
+                    disabled={
+                      sellerPaymentDecisionMutation.isPending || !paymentDecisionNote.trim()
+                    }
                     onClick={() =>
                       sellerPaymentDecisionMutation.mutate({
                         paymentId: row.id,
                         decision: "rejected",
-                        admin_note: paymentDecisionNote.trim() || undefined,
+                        admin_note: paymentDecisionNote.trim(),
                       })
                     }
                     className="border border-rose-300 bg-rose-50 text-rose-700"
                   >
-                    Refuser
+                    Refuser (note obligatoire)
                   </Button>
                 </div>
               </div>

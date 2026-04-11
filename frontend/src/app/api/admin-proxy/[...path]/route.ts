@@ -31,15 +31,23 @@ async function forward(request: NextRequest, context: { params: Promise<{ path: 
     headers.set("x-csrf-token", csrfHeader);
   }
 
-  const forwardedCookies: string[] = [];
-  for (const name of ["access_token", "refresh_token", "csrf_token", "finance_pin_verified"]) {
-    const value = cookieStore.get(name)?.value;
-    if (value) {
-      forwardedCookies.push(`${name}=${value}`);
+  // Priorité à l’en-tête Cookie brut (WebView / APK) : contient souvent les cookies HttpOnly
+  // (finance_pin_verified, access_token) que le client envoie à Vercel. Ne pas se fier uniquement
+  // à cookies() côté serveur, sinon les validations admin (POST) échouent sans message clair.
+  const incomingCookie = request.headers.get("cookie");
+  if (incomingCookie?.trim()) {
+    headers.set("cookie", incomingCookie);
+  } else {
+    const forwardedCookies: string[] = [];
+    for (const name of ["access_token", "refresh_token", "csrf_token", "finance_pin_verified"]) {
+      const value = cookieStore.get(name)?.value;
+      if (value) {
+        forwardedCookies.push(`${name}=${value}`);
+      }
     }
-  }
-  if (forwardedCookies.length) {
-    headers.set("cookie", forwardedCookies.join("; "));
+    if (forwardedCookies.length) {
+      headers.set("cookie", forwardedCookies.join("; "));
+    }
   }
 
   const body =

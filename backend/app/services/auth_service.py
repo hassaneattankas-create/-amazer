@@ -174,7 +174,9 @@ class AuthService:
     def close_account(self, user: User, password: str) -> None:
         settings = get_settings()
         if user.email.lower() == settings.admin_email.lower():
-            raise ForbiddenError("Admin account cannot be deleted from this action")
+            raise ForbiddenError(
+                "Le compte administrateur ne peut pas etre supprime depuis l'application."
+            )
         if not verify_password(password, user.hashed_password):
             raise UnauthorizedError("Invalid credentials")
 
