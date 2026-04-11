@@ -1,7 +1,14 @@
 import axios, { AxiosRequestConfig } from "axios";
 
 import { getBackendOriginFromEnv, getMobileSiteOriginFromEnv } from "@/lib/backend-origin";
-import { clearAuthTokens, getClientAccessToken, getClientCookieValue, getClientRefreshToken, persistAuthTokens } from "@/lib/api";
+import {
+  clearAuthTokens,
+  getClientAccessToken,
+  getClientCookieValue,
+  getClientRefreshToken,
+  hasAdminFinanceVerified,
+  persistAuthTokens,
+} from "@/lib/api";
 import { isMobileAppBuild } from "@/lib/mobile-app";
 
 function resolveMobileAdminProxyBase(): string {
@@ -43,6 +50,9 @@ adminProxyApi.interceptors.request.use((config) => {
   const method = (config.method || "get").toLowerCase();
   if (csrfToken && ["post", "put", "patch", "delete"].includes(method)) {
     config.headers["X-CSRF-Token"] = csrfToken;
+  }
+  if (hasAdminFinanceVerified()) {
+    config.headers["X-Finance-Pin-Verified"] = "1";
   }
   return config;
 });

@@ -27,6 +27,7 @@ const API_BASE_URL = resolveApiBaseUrl();
 const ACCESS_TOKEN_KEY = "amazer_access_token";
 const ACCESS_TOKEN_COOKIE_KEY = "amazer_access_token";
 const REFRESH_TOKEN_KEY = "amazer_refresh_token";
+const ADMIN_FINANCE_VERIFIED_KEY = "amazer_admin_finance_verified";
 export const AUTH_CHANGE_EVENT = "amazer-auth-changed";
 const AUTH_COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
@@ -84,6 +85,8 @@ export function clearAuthTokens(): void {
   }
   removeStoredToken(ACCESS_TOKEN_KEY);
   removeStoredToken(REFRESH_TOKEN_KEY);
+  window.localStorage.removeItem(ADMIN_FINANCE_VERIFIED_KEY);
+  window.sessionStorage.removeItem(ADMIN_FINANCE_VERIFIED_KEY);
   document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
@@ -116,6 +119,32 @@ function getCookieValue(name: string): string | null {
 
 export function getClientCookieValue(name: string): string | null {
   return getCookieValue(name);
+}
+
+export function persistAdminFinanceVerified(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(ADMIN_FINANCE_VERIFIED_KEY, "1");
+  window.sessionStorage.setItem(ADMIN_FINANCE_VERIFIED_KEY, "1");
+}
+
+export function clearAdminFinanceVerified(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.removeItem(ADMIN_FINANCE_VERIFIED_KEY);
+  window.sessionStorage.removeItem(ADMIN_FINANCE_VERIFIED_KEY);
+}
+
+export function hasAdminFinanceVerified(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  return (
+    window.localStorage.getItem(ADMIN_FINANCE_VERIFIED_KEY) === "1" ||
+    window.sessionStorage.getItem(ADMIN_FINANCE_VERIFIED_KEY) === "1"
+  );
 }
 
 export const api = axios.create({

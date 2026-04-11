@@ -1,7 +1,13 @@
 import axios from "axios";
 import { getBackendOriginFromEnv, getMobileSiteOriginFromEnv } from "@/lib/backend-origin";
 import { adminProxyRequest } from "@/lib/admin-proxy-client";
-import { api, getClientAccessToken, getClientCookieValue } from "@/lib/api";
+import {
+  api,
+  clearAdminFinanceVerified,
+  getClientAccessToken,
+  getClientCookieValue,
+  persistAdminFinanceVerified,
+} from "@/lib/api";
 import { isMobileAppBuild } from "@/lib/mobile-app";
 import {
   AdminSeller,
@@ -86,11 +92,17 @@ export async function verifyAdminFinancePin(payload: VerifyPinPayload): Promise<
   if (csrfToken) {
     headers["X-CSRF-Token"] = csrfToken;
   }
-  await axios.post(getAdminFinancePinVerifyUrl(), payload, {
-    headers,
-    withCredentials: true,
-    timeout: 30000,
-  });
+  try {
+    await axios.post(getAdminFinancePinVerifyUrl(), payload, {
+      headers,
+      withCredentials: true,
+      timeout: 30000,
+    });
+    persistAdminFinanceVerified();
+  } catch (error) {
+    clearAdminFinanceVerified();
+    throw error;
+  }
 }
 
 export async function getAdminWalletSummary(): Promise<WalletSummary> {

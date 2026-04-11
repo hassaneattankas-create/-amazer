@@ -31,23 +31,50 @@ async function forward(request: NextRequest, context: { params: Promise<{ path: 
     headers.set("x-csrf-token", csrfHeader);
   }
 
+  const forwardedCookies = new Map<string, string>();
+  const appendCookieHeader = (value: string | null) => {
+    if (!value?.trim()) {
+      return;
+    }
+    for (const rawCookie of value.split(";")) {
+      const trimmed = rawCookie.trim();
+      if (!trimmed) {
+        continue;
+      }
+      const separatorIndex = trimmed.indexOf("=");
+      if (separatorIndex <= 0) {
+        continue;
+      }
+      const name = trimmed.slice(0, separatorIndex).trim();
+      const cookieValue = trimmed.slice(separatorIndex + 1).trim();
+      if (name) {
+        forwardedCookies.set(name, cookieValue);
+      }
+    }
+  };
+
   // Priorité à l’en-tête Cookie brut (WebView / APK) : contient souvent les cookies HttpOnly
   // (finance_pin_verified, access_token) que le client envoie à Vercel. Ne pas se fier uniquement
   // à cookies() côté serveur, sinon les validations admin (POST) échouent sans message clair.
-  const incomingCookie = request.headers.get("cookie");
-  if (incomingCookie?.trim()) {
-    headers.set("cookie", incomingCookie);
-  } else {
-    const forwardedCookies: string[] = [];
-    for (const name of ["access_token", "refresh_token", "csrf_token", "finance_pin_verified"]) {
-      const value = cookieStore.get(name)?.value;
-      if (value) {
-        forwardedCookies.push(`${name}=${value}`);
-      }
+  appendCookieHeader(request.headers.get("cookie"));
+  for (const name of ["access_token", "refresh_token", "csrf_token", "finance_pin_verified"]) {
+    const value = cookieStore.get(name)?.value;
+    if (value) {
+      forwardedCookies.set(name, value);
     }
-    if (forwardedCookies.length) {
-      headers.set("cookie", forwardedCookies.join("; "));
-    }
+  }
+  // Filet de sécurité mobile: si la WebView refuse de rejouer le cookie cross-site de validation admin,
+  // le client envoie ce drapeau et on reconstruit le cookie attendu par le backend.
+  if (request.headers.get("x-finance-pin-verified") === "1") {
+    forwardedCookies.set("finance_pin_verified", "1");
+  }
+  if (forwardedCookies.size) {
+    headers.set(
+      "cookie",
+      Array.from(forwardedCookies.entries())
+        .map(([name, value]) => `${name}=${value}`)
+        .join("; ")
+    );
   }
 
   const body =
