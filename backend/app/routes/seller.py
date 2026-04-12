@@ -231,6 +231,20 @@ def _build_subscription_status(profile: SellerProfile | None, db: Session) -> Se
     )
 
 
+def _seller_subscription_amount_due(
+    *,
+    monthly_fee: float,
+    onboarding_fee: float,
+    onboarding_fee_paid: bool,
+    months: int,
+) -> float:
+    safe_months = max(1, months)
+    total = monthly_fee * safe_months
+    if not onboarding_fee_paid:
+        total += onboarding_fee
+    return total
+
+
 def _payment_request_response(row: SellerSubscriptionPayment) -> SellerSubscriptionPaymentRequestResponse:
     return SellerSubscriptionPaymentRequestResponse(
         id=row.id,
@@ -368,13 +382,19 @@ def pay_seller_subscription(
     if not transaction_reference:
         # Flux semi-auto: l'admin valide sur releve operateur meme sans reference saisie.
         transaction_reference = f"AUTO-{current_user.id[:8]}-{int(datetime.now(UTC).timestamp())}"
+    amount_claimed = _seller_subscription_amount_due(
+        monthly_fee=float(finance.seller_subscription_fee),
+        onboarding_fee=float(finance.seller_subscription_fee),
+        onboarding_fee_paid=profile.onboarding_fee_paid_at is not None,
+        months=payload.months,
+    )
     payment_request = SellerSubscriptionPayment(
         seller_profile_id=profile.id,
         seller_user_id=current_user.id,
         payment_mode=payload.payment_mode,
         transaction_reference=transaction_reference,
         months=payload.months,
-        amount_claimed=float(finance.seller_subscription_fee) * float(payload.months),
+        amount_claimed=amount_claimed,
         status="pending",
     )
     db.add(payment_request)
@@ -391,6 +411,8 @@ def pay_seller_subscription(
             "payment_mode": payload.payment_mode,
             "transaction_reference": transaction_reference,
             "monthly_fee": float(finance.seller_subscription_fee),
+            "onboarding_fee_applied": profile.onboarding_fee_paid_at is None,
+            "amount_claimed": amount_claimed,
         },
     )
     _notify_admin_pending_seller_payment(

@@ -456,6 +456,10 @@ function SellerPageContent() {
     publicFinance?.support_phone ||
     publicFinance?.support_whatsapp ||
     "";
+  const selectedSubscriptionMonths = Math.max(1, Math.min(12, Number(subscriptionForm.months || 1)));
+  const selectedSubscriptionAmount =
+    (subscriptionStatus?.monthly_fee ?? 0) * selectedSubscriptionMonths +
+    (subscriptionStatus?.onboarding_fee_paid ? 0 : (subscriptionStatus?.onboarding_fee ?? 0));
   const latestPaymentStatusLabel =
     latestSubscriptionPayment?.status === "approved"
       ? "Accepte"
@@ -507,11 +511,21 @@ function SellerPageContent() {
           <div className="mt-3 grid gap-2 text-sm text-amber-900 sm:grid-cols-3">
             <p>Frais creation: {formatXOF(subscriptionStatus?.onboarding_fee ?? 0)}</p>
             <p>Mensualite: {formatXOF(subscriptionStatus?.monthly_fee ?? 0)}</p>
-            <p>A payer maintenant: {formatXOF(subscriptionStatus?.amount_due_now ?? 0)}</p>
+            <p>A payer maintenant: {formatXOF(selectedSubscriptionAmount)}</p>
           </div>
+          <p className="mt-2 text-xs text-amber-900">
+            Si tu choisis {selectedSubscriptionMonths} mois, le total s&apos;adapte automatiquement. Au premier paiement,
+            les frais de creation s&apos;ajoutent une seule fois, puis seuls les mois choisis sont factures.
+          </p>
           {subscriptionStatus?.has_pending_payment_request ? (
             <p className="mt-3 text-sm font-medium text-amber-900">
               Paiement deja soumis. En attente de validation par l&apos;admin. Une notification t&apos;avertira des la decision.
+            </p>
+          ) : null}
+          {!hasActiveSubscription && hasProfile && subscriptionStatus?.onboarding_fee_paid ? (
+            <p className="mt-3 text-sm font-medium text-amber-900">
+              Abonnement expire: les publications, la gestion boutique et les actions vendeur restent bloquees jusqu&apos;a
+              validation d&apos;un nouveau paiement.
             </p>
           ) : null}
           {latestSubscriptionPayment ? (
@@ -579,6 +593,15 @@ function SellerPageContent() {
                   }
                 />
               </div>
+              <div className="rounded-2xl border border-amber-300 bg-white p-4 text-sm text-slate-800">
+                <p className="font-semibold text-slate-900">Resume avant envoi</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <p>Mode choisi : {subscriptionForm.payment_mode === "nita" ? "Nita" : "Amana"}</p>
+                  <p>Mois choisis : {selectedSubscriptionMonths}</p>
+                  <p>Frais de creation appliques : {subscriptionStatus?.onboarding_fee_paid ? "Non" : "Oui"}</p>
+                  <p>Total attendu : {formatXOF(selectedSubscriptionAmount)}</p>
+                </div>
+              </div>
               <p className="text-xs text-amber-900">
                 La reference est fortement recommandee pour accelerer la validation. Si tu ne la saisis pas, l&apos;admin devra verifier manuellement.
               </p>
@@ -593,7 +616,7 @@ function SellerPageContent() {
                   subscriptionMutation.mutate({
                     payment_mode: subscriptionForm.payment_mode,
                     transaction_reference: subscriptionForm.transaction_reference.trim() || undefined,
-                    months: Math.max(1, Math.min(12, Number(subscriptionForm.months || 1))),
+                    months: selectedSubscriptionMonths,
                   })
                 }
               >
