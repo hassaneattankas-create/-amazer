@@ -8,7 +8,11 @@ frontend/.vercel/
 frontend/node_modules/
 frontend/.next/
 frontend/.next_backup_before_prod_build/
+frontend/android/
+frontend/out/
 frontend/*.log
+frontend/*.err.log
+frontend/*.out.log
 frontend/*3000*.err.log
 frontend/*3000*.out.log
 frontend/tsconfig.tsbuildinfo

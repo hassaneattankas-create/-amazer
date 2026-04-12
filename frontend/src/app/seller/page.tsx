@@ -30,6 +30,7 @@ import { createRestaurantMenuItem, listRestaurantMenu } from "@/services/restaur
 import {
   createSellerProduct,
   getSellerProfile,
+  listSellerSubscriptionPaymentRequests,
   getSellerSubscriptionStatus,
   listSellerInventory,
   paySellerSubscription,
@@ -160,6 +161,15 @@ function SellerPageContent() {
   const [status, setStatus] = useState("");
   const [profileHydratedFromServer, setProfileHydratedFromServer] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(searchParams.get("welcome") !== "1");
+  const [subscriptionForm, setSubscriptionForm] = useState<{
+    payment_mode: "nita" | "amana";
+    transaction_reference: string;
+    months: string;
+  }>({
+    payment_mode: "nita",
+    transaction_reference: "",
+    months: "1",
+  });
 
   const [profileForm, setProfileForm] = useState(() => {
     const draft = loadDraft(SELLER_PROFILE_DRAFT_KEY, {
@@ -247,6 +257,12 @@ function SellerPageContent() {
     queryKey: ["seller-subscription-status"],
     queryFn: getSellerSubscriptionStatus,
     enabled: Boolean(user),
+  });
+  const { data: subscriptionPaymentRequests = [] } = useQuery({
+    queryKey: ["seller-subscription-payment-requests"],
+    queryFn: listSellerSubscriptionPaymentRequests,
+    enabled: Boolean(user),
+    staleTime: 10_000,
   });
   const { data: restaurantItems = [] } = useQuery({
     queryKey: ["seller-restaurant-menu", profile?.vendor_id],
@@ -371,7 +387,9 @@ function SellerPageContent() {
     mutationFn: paySellerSubscription,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["seller-subscription-status"] });
-      setStatus("Demande envoyee. Paiement a verifier par l'admin finance.");
+      queryClient.invalidateQueries({ queryKey: ["seller-subscription-payment-requests"] });
+      setSubscriptionForm((prev) => ({ ...prev, transaction_reference: "" }));
+      setStatus("Demande envoyee. Tu recevras une notification des que le paiement est accepte ou refuse.");
     },
     onError: (error) => setStatus(getApiErrorMessage(error, "Paiement vendeur impossible.")),
   });
@@ -432,6 +450,20 @@ function SellerPageContent() {
       ? "Compte vendeur cree. Les informations de base sont enregistrees. Active maintenant l'abonnement mensuel pour publier."
       : "";
   const compactProfileSetup = searchParams.get("welcome") === "1" && Boolean(profile?.id);
+  const latestSubscriptionPayment = subscriptionPaymentRequests[0] ?? null;
+  const paymentDestination =
+    publicFinance?.platform_wallet_phone ||
+    publicFinance?.support_phone ||
+    publicFinance?.support_whatsapp ||
+    "";
+  const latestPaymentStatusLabel =
+    latestSubscriptionPayment?.status === "approved"
+      ? "Accepte"
+      : latestSubscriptionPayment?.status === "rejected"
+        ? "Refuse"
+        : latestSubscriptionPayment?.status === "pending"
+          ? "En attente"
+          : null;
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
@@ -457,6 +489,15 @@ function SellerPageContent() {
           <p className="mt-1 text-sm text-amber-800">
             Important : effectue le paiement avec le meme numero/identifiant que ton compte AMAZER.
           </p>
+          <div className="mt-4 rounded-2xl border border-amber-300 bg-white/80 p-4 text-sm text-amber-950">
+            <p className="font-semibold">Paiement simple en 4 etapes</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <p>1. Termine ton profil vendeur.</p>
+              <p>2. Choisis Amana ou Nita.</p>
+              <p>3. Fais le versement sur le numero indique.</p>
+              <p>4. Entre ta reference puis attends la notification de validation.</p>
+            </div>
+          </div>
           {!hasProfile ? (
             <p className="mt-2 text-sm text-amber-900">
               Commence par enregistrer le profil vendeur ci-dessous. Le paiement sera ensuite requis
@@ -470,11 +511,77 @@ function SellerPageContent() {
           </div>
           {subscriptionStatus?.has_pending_payment_request ? (
             <p className="mt-3 text-sm font-medium text-amber-900">
-              Paiement deja soumis. En attente de validation par l&apos;admin.
+              Paiement deja soumis. En attente de validation par l&apos;admin. Une notification t&apos;avertira des la decision.
             </p>
           ) : null}
+          {latestSubscriptionPayment ? (
+            <div className="mt-4 rounded-2xl border border-amber-300 bg-amber-100/70 p-4 text-sm text-amber-950">
+              <p className="font-semibold">Derniere demande de paiement</p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <p>Statut : {latestPaymentStatusLabel}</p>
+                <p>Mode : {latestSubscriptionPayment.payment_mode === "nita" ? "Nita" : "Amana"}</p>
+                <p>Reference : {latestSubscriptionPayment.transaction_reference}</p>
+                <p>Mois : {latestSubscriptionPayment.months}</p>
+              </div>
+              {latestSubscriptionPayment.admin_note ? (
+                <p className="mt-2">
+                  Note admin : <span className="font-medium">{latestSubscriptionPayment.admin_note}</span>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           {hasProfile ? (
-            <div className="mt-4">
+            <div className="mt-4 space-y-4">
+              <div className="rounded-2xl border border-amber-300 bg-white p-4 text-sm text-slate-800">
+                <p className="font-semibold text-slate-900">Ou faire le versement ?</p>
+                <p className="mt-2">
+                  Numero de versement AMAZER :{" "}
+                  <span className="font-semibold text-[#FF4D00]">
+                    {paymentDestination || "Numero non renseigne pour le moment"}
+                  </span>
+                </p>
+                <p className="mt-2 text-slate-600">
+                  Choisis le meme operateur que celui utilise pour ton envoi, puis garde ta reference de transaction.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <select
+                  className="h-11 w-full rounded-md border border-amber-300 bg-white px-3 text-sm text-slate-900"
+                  value={subscriptionForm.payment_mode}
+                  onChange={(event) =>
+                    setSubscriptionForm((prev) => ({
+                      ...prev,
+                      payment_mode: event.target.value as "nita" | "amana",
+                    }))
+                  }
+                >
+                  <option value="nita">Versement via Nita</option>
+                  <option value="amana">Versement via Amana</option>
+                </select>
+                <Input
+                  type="number"
+                  min={1}
+                  max={12}
+                  placeholder="Nombre de mois"
+                  value={subscriptionForm.months}
+                  onChange={(event) =>
+                    setSubscriptionForm((prev) => ({ ...prev, months: event.target.value || "1" }))
+                  }
+                />
+                <Input
+                  placeholder="Reference de transaction"
+                  value={subscriptionForm.transaction_reference}
+                  onChange={(event) =>
+                    setSubscriptionForm((prev) => ({
+                      ...prev,
+                      transaction_reference: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <p className="text-xs text-amber-900">
+                La reference est fortement recommandee pour accelerer la validation. Si tu ne la saisis pas, l&apos;admin devra verifier manuellement.
+              </p>
               <Button
                 type="button"
                 disabled={
@@ -484,12 +591,13 @@ function SellerPageContent() {
                 className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
                 onClick={() =>
                   subscriptionMutation.mutate({
-                    payment_mode: "nita",
-                    months: 1,
+                    payment_mode: subscriptionForm.payment_mode,
+                    transaction_reference: subscriptionForm.transaction_reference.trim() || undefined,
+                    months: Math.max(1, Math.min(12, Number(subscriptionForm.months || 1))),
                   })
                 }
               >
-                {subscriptionMutation.isPending ? "Envoi..." : "J'ai paye (validation admin)"}
+                {subscriptionMutation.isPending ? "Envoi..." : "J'ai paye, verifier maintenant"}
               </Button>
             </div>
           ) : null}
@@ -511,6 +619,26 @@ function SellerPageContent() {
             )}
             <span>{hasProfile ? "1. Profil vendeur de base deja cree." : "1. Enregistre ton profil vendeur."}</span>
           </div>
+          {sellerPaymentRequired ? (
+            <div className="flex items-start gap-2">
+              {latestSubscriptionPayment?.status === "approved" ? (
+                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
+              ) : (
+                <Circle className="mt-0.5 h-4 w-4 text-slate-400" />
+              )}
+              <span>2. Choisis Amana ou Nita et fais ton versement au numero AMAZER.</span>
+            </div>
+          ) : null}
+          {sellerPaymentRequired ? (
+            <div className="flex items-start gap-2">
+              {subscriptionStatus?.has_pending_payment_request ? (
+                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
+              ) : (
+                <Circle className="mt-0.5 h-4 w-4 text-slate-400" />
+              )}
+              <span>3. Soumets ta reference puis attends la notification d&apos;acceptation ou de refus.</span>
+            </div>
+          ) : null}
           {showProductSection && !sellerPaymentRequired ? (
             <div className="flex items-start gap-2">
               {hasProducts ? (

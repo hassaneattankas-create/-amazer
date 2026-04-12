@@ -1235,6 +1235,7 @@ def decide_seller_subscription_payment(
         vendor = db.get(Vendor, profile.vendor_id)
         if vendor is not None:
             vendor.is_active = True
+    seller_user = db.get(User, row.seller_user_id)
 
     append_audit_log(
         db,
@@ -1253,17 +1254,22 @@ def decide_seller_subscription_payment(
         },
     )
     if seller_user is not None:
-        decision_label = "valide" if payload.decision == "approved" else "refuse"
+        decision_label = "accepte" if payload.decision == "approved" else "refuse"
+        next_step = (
+            "Votre boutique peut maintenant publier et recevoir des commandes."
+            if payload.decision == "approved"
+            else "Verifiez le numero de versement, l'operateur choisi et votre reference avant un nouvel envoi."
+        )
         body_suffix = (
             f" Motif admin: {payload.admin_note.strip()}." if (payload.admin_note or "").strip() else ""
         )
         NotificationService(db).send_to_user(
             user_id=seller_user.id,
             payload=NotificationPayload(
-                title="Decision sur votre paiement vendeur",
+                title="Paiement vendeur accepte" if payload.decision == "approved" else "Paiement vendeur refuse",
                 body=(
-                    f"Votre paiement vendeur a ete {decision_label} pour {row.months} mois."
-                    f"{body_suffix}"
+                    f"Votre paiement {row.payment_mode.upper()} de {row.months} mois a ete {decision_label}."
+                    f" Reference: {row.transaction_reference}. {next_step}{body_suffix}"
                 ),
                 data={
                     "tag": f"seller-payment-decision-{row.id}",
@@ -1275,5 +1281,4 @@ def decide_seller_subscription_payment(
         )
     db.commit()
     db.refresh(row)
-    seller_user = db.get(User, row.seller_user_id)
     return _build_admin_subscription_payment_response(row, profile, seller_user)

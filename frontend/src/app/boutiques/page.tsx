@@ -7,18 +7,23 @@ import { useQuery } from "@tanstack/react-query";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { StorefrontShowcaseCard } from "@/components/storefront/StorefrontShowcaseCard";
 import { Input } from "@/components/ui/input";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { listStorefronts } from "@/services/catalog-service";
 
 export default function BoutiquesPage() {
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebouncedValue(query, 250);
   const { data: stores = [], isPending, isError, error } = useQuery({
-    queryKey: ["catalog-storefronts-boutiques", query],
+    queryKey: ["catalog-storefronts-boutiques", debouncedQuery],
     queryFn: () =>
       listStorefronts({
-        query,
+        query: debouncedQuery,
         activityType: "shop",
       }),
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
   });
   const visibleStores = useMemo(() => {
     const copy = [...stores];

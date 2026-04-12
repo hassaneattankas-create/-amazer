@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Download, Share2, Sparkles, Store, Zap } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
@@ -37,7 +37,22 @@ export default function CartPage() {
   const { data: financeSettings } = useQuery({
     queryKey: ["public-finance-settings"],
     queryFn: getPublicFinanceSettings,
+    staleTime: 5 * 60_000,
+    gcTime: 15 * 60_000,
+    refetchOnWindowFocus: false,
   });
+
+  const selectedShippingFee =
+    deliveryType === "express_niamey"
+      ? (financeSettings?.urban_delivery_fee ?? financeSettings?.default_delivery_fee ?? DEFAULT_SHIPPING_COST)
+      : (financeSettings?.default_delivery_fee ?? DEFAULT_SHIPPING_COST);
+
+  const computeOptimization = () =>
+    optimizeCart(items, {
+      commissionRate: financeSettings?.commission_rate,
+      serviceFee: financeSettings?.service_fee,
+      defaultShippingFee: selectedShippingFee,
+    });
 
   const startOptimization = () => {
     if (!items.length) {
@@ -46,17 +61,18 @@ export default function CartPage() {
 
     setResult(null);
     setIsOptimizing(true);
-    window.setTimeout(() => {
-      const optimized = optimizeCart(items, {
-        commissionRate: financeSettings?.commission_rate,
-        serviceFee: financeSettings?.service_fee,
-        defaultShippingFee: financeSettings?.default_delivery_fee,
-      });
-      setResult(optimized);
-      addSavingsRecord(optimized.savings);
-      setIsOptimizing(false);
-    }, 1200);
+    const optimized = computeOptimization();
+    setResult(optimized);
+    addSavingsRecord(optimized.savings);
+    setIsOptimizing(false);
   };
+
+  useEffect(() => {
+    if (!result) {
+      return;
+    }
+    setResult(computeOptimization());
+  }, [deliveryType, items, selectedShippingFee, financeSettings?.commission_rate, financeSettings?.service_fee]);
 
   const downloadReceipt = () => {
     if (!result) {
@@ -217,7 +233,8 @@ export default function CartPage() {
         )}
 
         <p className="text-xs text-slate-300">
-          Frais de livraison par vendeur: {formatXOF(financeSettings?.default_delivery_fee ?? DEFAULT_SHIPPING_COST)} (Niamey).
+          Frais de livraison par vendeur: {formatXOF(selectedShippingFee)}
+          {deliveryType === "express_niamey" ? " (Express Niamey)." : " (Standard)."}
         </p>
 
         <div className="flex flex-wrap gap-2">

@@ -6,6 +6,8 @@ import { useNotificationStore, type AppNotification } from "@/store/notification
 
 const TOKEN_STORAGE_KEY = "amazer_notification_token_registered";
 const LAST_WEB_NOTIFICATION_KEY = "amazer_last_web_notification";
+const ANDROID_ALERT_CHANNEL_ID = "amazer-alerts";
+const NATIVE_ALERT_SOUND = "amazer_alert.wav";
 
 let nativeNotificationReady: Promise<boolean> | null = null;
 
@@ -20,9 +22,31 @@ async function ensureNativeNotificationChannel(): Promise<boolean> {
     try {
       const current = await LocalNotifications.checkPermissions();
       if (current.display === "granted") {
+        if (Capacitor.getPlatform() === "android") {
+          await LocalNotifications.createChannel({
+            id: ANDROID_ALERT_CHANNEL_ID,
+            name: "Alertes AMAZER",
+            description: "Notifications importantes vendeur, commande et compte.",
+            importance: 5,
+            visibility: 1,
+            vibration: true,
+            sound: NATIVE_ALERT_SOUND,
+          });
+        }
         return true;
       }
       const perm = await LocalNotifications.requestPermissions();
+      if (perm.display === "granted" && Capacitor.getPlatform() === "android") {
+        await LocalNotifications.createChannel({
+          id: ANDROID_ALERT_CHANNEL_ID,
+          name: "Alertes AMAZER",
+          description: "Notifications importantes vendeur, commande et compte.",
+          importance: 5,
+          visibility: 1,
+          vibration: true,
+          sound: NATIVE_ALERT_SOUND,
+        });
+      }
       return perm.display === "granted";
     } catch {
       return false;
@@ -112,6 +136,9 @@ export async function notifyLocalOrderEvent(payload: {
             title: payload.title,
             body: payload.body,
             schedule: { at: new Date(Date.now() + 400) },
+            sound: NATIVE_ALERT_SOUND,
+            channelId: ANDROID_ALERT_CHANNEL_ID,
+            extra: payload.href ? { href: payload.href } : undefined,
           },
         ],
       });
@@ -137,6 +164,7 @@ export async function notifyLocalOrderEvent(payload: {
     new Notification(payload.title, {
       body: payload.body,
       tag: payload.tag,
+      requireInteraction: true,
     });
   } catch {
     // Silencieux

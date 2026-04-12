@@ -207,6 +207,15 @@ def _resolve_platform_wallet_phone(db: Session) -> str | None:
     return fallback or None
 
 
+def _resolve_checkout_delivery_fee(db: Session, delivery_type: str) -> float:
+    settings_row = db.scalar(select(GlobalSettings).order_by(GlobalSettings.id.asc()))
+    if settings_row is None:
+        return 1500.0
+    if delivery_type == "express_niamey":
+        return float(settings_row.urban_delivery_fee or settings_row.default_delivery_fee or 1500)
+    return float(settings_row.default_delivery_fee or 1500)
+
+
 def _to_receipt_response(
     request: Request,
     order: Order,
@@ -286,6 +295,7 @@ def checkout(
     validated_items: list[tuple[Price, int]] = []
     total = 0.0
     order_currency: str | None = None
+    vendor_ids: set[str] = set()
     for item in payload.items:
         price = db.scalar(
             select(Price)
@@ -309,6 +319,7 @@ def checkout(
         line_total = float(price.amount) * item.quantity
         total += line_total
         validated_items.append((price, item.quantity))
+        vendor_ids.add(price.vendor_id)
     encrypted_code: str | None = None
     code_hash: str | None = None
     payment_status = "pending"
@@ -325,6 +336,9 @@ def checkout(
 
     if order_currency and payload.currency.upper() != order_currency:
         raise ValidationDomainError("Devise invalide pour cette commande")
+
+    delivery_fee_per_vendor = _resolve_checkout_delivery_fee(db, payload.delivery_type)
+    total += delivery_fee_per_vendor * len(vendor_ids)
 
     order = Order(
         user_id=current_user.id,

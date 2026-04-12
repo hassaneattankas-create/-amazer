@@ -7,6 +7,7 @@ import {
   SellerShopOrderStatus,
   SellerProductPayload,
   SellerProfile,
+  SellerSubscriptionPaymentRequest,
   SellerProfilePayload,
   SellerSubscriptionStatus,
   SellerStorefront,
@@ -122,5 +123,10 @@ export async function paySellerSubscription(payload: {
   months: number;
 }): Promise<SellerSubscriptionStatus> {
   const response = await api.post<SellerSubscriptionStatus>("/api/v1/seller/subscription/pay", payload);
+  return response.data;
+}
+
+export async function listSellerSubscriptionPaymentRequests(): Promise<SellerSubscriptionPaymentRequest[]> {
+  const response = await api.get<SellerSubscriptionPaymentRequest[]>("/api/v1/seller/subscription/payment-requests");
   return response.data;
 }

@@ -10,6 +10,7 @@ import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { StorefrontShowcaseCard } from "@/components/storefront/StorefrontShowcaseCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { formatXOF } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
 import { listStorefronts } from "@/services/catalog-service";
@@ -60,21 +61,28 @@ export default function RestaurantPage() {
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [distanceKm, setDistanceKm] = useState("3");
   const [storeQuery, setStoreQuery] = useState("");
+  const debouncedStoreQuery = useDebouncedValue(storeQuery, 250);
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [paymentMode, setPaymentMode] = useState<"nita" | "amana" | "cash_on_delivery">("nita");
   const [status, setStatus] = useState("");
 
   const { data: storefronts = [], isPending: isStorefrontsPending } = useQuery({
-    queryKey: ["catalog-storefronts-restaurants", storeQuery],
+    queryKey: ["catalog-storefronts-restaurants", debouncedStoreQuery],
     queryFn: () =>
       listStorefronts({
-        query: storeQuery,
+        query: debouncedStoreQuery,
         activityType: "restaurant",
       }),
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
   });
   const { data: financeSettings } = useQuery({
     queryKey: ["public-finance-settings"],
     queryFn: getPublicFinanceSettings,
+    staleTime: 5 * 60_000,
+    gcTime: 15 * 60_000,
+    refetchOnWindowFocus: false,
   });
   const deliveryFee = financeSettings?.default_delivery_fee ?? 1500;
 
@@ -82,6 +90,9 @@ export default function RestaurantPage() {
     queryKey: ["restaurant-menu", selectedVendorId],
     queryFn: () => listRestaurantMenu(selectedVendorId || undefined),
     enabled: Boolean(selectedVendorId),
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
   });
   const visibleStorefronts = useMemo(() => {
     const copy = [...storefronts];

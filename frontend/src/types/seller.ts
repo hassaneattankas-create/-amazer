@@ -69,6 +69,21 @@ export type SellerSubscriptionStatus = {
   has_pending_payment_request: boolean;
 };
 
+export type SellerSubscriptionPaymentRequest = {
+  id: string;
+  seller_profile_id: string;
+  seller_user_id: string;
+  payment_mode: "nita" | "amana";
+  transaction_reference: string;
+  months: number;
+  amount_claimed: number;
+  status: "pending" | "approved" | "rejected";
+  admin_note: string | null;
+  reviewed_by_user_id: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+};
+
 export type SellerProfilePayload = {
   business_name: string;
   phone?: string;
