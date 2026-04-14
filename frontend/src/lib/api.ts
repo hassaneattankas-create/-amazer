@@ -30,6 +30,12 @@ const REFRESH_TOKEN_KEY = "amazer_refresh_token";
 const ADMIN_FINANCE_VERIFIED_KEY = "amazer_admin_finance_verified";
 export const AUTH_CHANGE_EVENT = "amazer-auth-changed";
 const AUTH_COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+const PUBLIC_READONLY_PATH_PREFIXES = [
+  "/api/v1/products",
+  "/api/v1/home-content",
+  "/api/v1/admin/finance/public-settings",
+  "/api/v1/admin/finance/contact-info",
+];
 
 type TokenPair = {
   access_token: string;
@@ -68,14 +74,21 @@ function removeStoredToken(key: string): void {
   window.sessionStorage.removeItem(key);
 }
 
+function buildSessionIndicatorCookie(): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+  const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
+  return `${ACCESS_TOKEN_COOKIE_KEY}=1; Path=/; SameSite=Lax; Max-Age=${AUTH_COOKIE_MAX_AGE_SECONDS}${secureFlag}`;
+}
+
 export function persistAuthTokens(tokens: TokenPair): void {
   if (typeof window === "undefined") {
     return;
   }
   writeStoredToken(ACCESS_TOKEN_KEY, tokens.access_token);
   writeStoredToken(REFRESH_TOKEN_KEY, tokens.refresh_token);
-  const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=1; Path=/; SameSite=Lax; Max-Age=${AUTH_COOKIE_MAX_AGE_SECONDS}${secureFlag}`;
+  document.cookie = buildSessionIndicatorCookie();
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
 
@@ -103,6 +116,10 @@ export function getClientRefreshToken(): string | null {
   return readStoredToken(REFRESH_TOKEN_KEY);
 }
 
+export function hasPersistedAuthSession(): boolean {
+  return Boolean(readStoredToken(ACCESS_TOKEN_KEY) || readStoredToken(REFRESH_TOKEN_KEY));
+}
+
 function getCookieValue(name: string): string | null {
   if (typeof document === "undefined") {
     return null;
@@ -119,6 +136,21 @@ function getCookieValue(name: string): string | null {
 
 export function getClientCookieValue(name: string): string | null {
   return getCookieValue(name);
+}
+
+export function syncPersistedAuthSession(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const hasStoredSession = hasPersistedAuthSession();
+  const hasSessionCookie = getCookieValue(ACCESS_TOKEN_COOKIE_KEY) === "1";
+  if (hasStoredSession && !hasSessionCookie) {
+    document.cookie = buildSessionIndicatorCookie();
+    return;
+  }
+  if (!hasStoredSession && hasSessionCookie) {
+    document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
+  }
 }
 
 export function persistAdminFinanceVerified(): void {
@@ -180,6 +212,9 @@ api.interceptors.response.use(
     const status = error?.response?.status as number | undefined;
     const requestUrl = String(originalRequest?.url || "");
     const isAuthRoute = requestUrl.includes("/auth/login") || requestUrl.includes("/auth/refresh");
+    const method = String(originalRequest?.method || "get").toLowerCase();
+    const isPublicReadonlyRequest =
+      method === "get" && PUBLIC_READONLY_PATH_PREFIXES.some((prefix) => requestUrl.includes(prefix));
 
     if (status === 401 && originalRequest && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true;
@@ -196,6 +231,12 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch {
         clearAuthTokens();
+        if (isPublicReadonlyRequest) {
+          originalRequest.headers = originalRequest.headers || {};
+          delete originalRequest.headers.Authorization;
+          delete originalRequest.headers.authorization;
+          return api(originalRequest);
+        }
       }
     }
 

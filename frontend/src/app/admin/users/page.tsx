@@ -11,7 +11,8 @@ import {
   buildAdminFinanceVerifyPayload,
   getAdminFinanceVerifyError,
 } from "@/lib/admin-finance-verification";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { clearAdminFinanceVerified, hasAdminFinanceVerified } from "@/lib/api";
+import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
 import {
   getAdminUserStats,
   listAdminUsers,
@@ -24,12 +25,34 @@ export default function AdminUsersPage() {
   const queryClient = useQueryClient();
   const [pin, setPin] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [pinVerified, setPinVerified] = useState(false);
+  const [pinVerified, setPinVerified] = useState(() => hasAdminFinanceVerified());
   const [pinStatus, setPinStatus] = useState("");
   const [actionStatus, setActionStatus] = useState("");
   const [searchDraft, setSearchDraft] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [showInactive, setShowInactive] = useState(false);
+
+  const resetAdminVerification = (message: string) => {
+    clearAdminFinanceVerified();
+    setPinVerified(false);
+    setPinStatus(message);
+  };
+
+  const buildAdminActionMessage = (error: unknown, fallback: string) => {
+    const adminMessage = getAdminFinanceDataError(error);
+    const status = getHttpResponseStatus(error);
+    const message = getApiErrorMessage(error, adminMessage || fallback);
+
+    if (
+      adminMessage.includes("Revalidez le PIN") ||
+      adminMessage.includes("Reconnectez-vous") ||
+      status === 401
+    ) {
+      resetAdminVerification(adminMessage || message);
+    }
+
+    return message;
+  };
 
   const pinMutation = useMutation({
     mutationFn: verifyAdminFinancePin,
@@ -40,6 +63,8 @@ export default function AdminUsersPage() {
       setBirthDate("");
     },
     onError: (error) => {
+      clearAdminFinanceVerified();
+      setPinVerified(false);
       setPinStatus(getAdminFinanceVerifyError(error));
     },
   });
@@ -74,9 +99,7 @@ export default function AdminUsersPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-user-stats"] });
     },
     onError: (error) => {
-      setActionStatus(
-        getApiErrorMessage(error, getAdminFinanceDataError(error) || "Impossible de retirer cet utilisateur."),
-      );
+      setActionStatus(buildAdminActionMessage(error, "Impossible de retirer cet utilisateur."));
     },
   });
 
@@ -88,9 +111,7 @@ export default function AdminUsersPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-user-stats"] });
     },
     onError: (error) => {
-      setActionStatus(
-        getApiErrorMessage(error, getAdminFinanceDataError(error) || "Impossible de restaurer cet utilisateur."),
-      );
+      setActionStatus(buildAdminActionMessage(error, "Impossible de restaurer cet utilisateur."));
     },
   });
 
@@ -106,8 +127,19 @@ export default function AdminUsersPage() {
     () => (usersError ? getAdminFinanceDataError(usersError) : ""),
     [usersError]
   );
+  const statsPageError = useMemo(
+    () => (statsError ? getAdminFinanceDataError(statsError) : ""),
+    [statsError]
+  );
+  const pinGateMessage = useMemo(() => {
+    const adminError = usersPageError || (isStatsError ? statsPageError : "");
+    if (adminError.includes("Revalidez le PIN") || adminError.includes("Reconnectez-vous")) {
+      return adminError;
+    }
+    return pinVerified ? "" : pinStatus;
+  }, [isStatsError, pinStatus, pinVerified, statsPageError, usersPageError]);
 
-  if (!pinVerified) {
+  if (!pinVerified || Boolean(pinGateMessage)) {
     return (
       <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
         <article className="premium-card border border-slate-200 bg-white p-6">
@@ -143,7 +175,7 @@ export default function AdminUsersPage() {
               Verifier
             </Button>
           </div>
-          {pinStatus ? <p className="mt-3 text-sm text-slate-700">{pinStatus}</p> : null}
+          {pinGateMessage ? <p className="mt-3 text-sm text-slate-700">{pinGateMessage}</p> : null}
         </article>
       </section>
     );
