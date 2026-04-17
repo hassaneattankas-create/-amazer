@@ -2,6 +2,7 @@
 .vercel/
 backend/
 docs/
+output/
 render.yaml
 
 frontend/.vercel/

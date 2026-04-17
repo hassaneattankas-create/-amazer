@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const PROTECTED_PATHS = ["/seller", "/admin", "/dashboard", "/profile"];
+const PRIMARY_HOSTNAME = "amazer.store";
+const WWW_HOSTNAME = `www.${PRIMARY_HOSTNAME}`;
 
 /** APK Capacitor (https://localhost) appelle le site Vercel en cross-origin : CORS requis. */
 const CORS_PATH_PREFIXES = ["/backend-api", "/api/admin-proxy", "/api/admin-finance", "/api/image-proxy"];
@@ -44,7 +46,14 @@ function attachCorsHeaders(request: NextRequest, response: NextResponse): NextRe
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const hostname = request.nextUrl.hostname.toLowerCase();
   const origin = request.headers.get("origin");
+
+  if (hostname === WWW_HOSTNAME) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.hostname = PRIMARY_HOSTNAME;
+    return NextResponse.redirect(redirectUrl, 308);
+  }
 
   if (pathNeedsCors(pathname) && origin && isCapacitorApiOrigin(origin)) {
     if (request.method === "OPTIONS") {

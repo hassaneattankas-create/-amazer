@@ -8,6 +8,8 @@ import { PwaRegistrar } from "@/components/providers/PwaRegistrar";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import "./globals.css";
 
+const siteUrl = new URL("https://amazer.store");
+
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
@@ -22,7 +24,24 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "AMAZER",
   description: "AMAZER marketplace: boutique, restaurant, premium et livraison.",
+  metadataBase: siteUrl,
+  alternates: {
+    canonical: "/",
+  },
   manifest: "/manifest.json",
+  openGraph: {
+    title: "AMAZER",
+    description: "AMAZER marketplace: boutique, restaurant, premium et livraison.",
+    url: siteUrl,
+    siteName: "AMAZER",
+    locale: "fr_NE",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AMAZER",
+    description: "AMAZER marketplace: boutique, restaurant, premium et livraison.",
+  },
   icons: {
     icon: [
       { url: "/icon-amazer-titan.svg", sizes: "1024x1024", type: "image/svg+xml" },
