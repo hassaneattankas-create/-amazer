@@ -78,7 +78,7 @@ def get_seller_user(
             vendor.is_active = False
             db.commit()
         raise ForbiddenError(
-            "Activation vendeur requise: reglez d'abord les frais de creation vendeur."
+            "Activation vendeur requise: reglez d'abord votre premier abonnement vendeur."
         )
     if profile.subscription_paid_until is None or profile.subscription_paid_until <= datetime.now(UTC):
         vendor = db.get(Vendor, profile.vendor_id)

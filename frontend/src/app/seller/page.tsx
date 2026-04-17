@@ -457,9 +457,7 @@ function SellerPageContent() {
     publicFinance?.support_whatsapp ||
     "";
   const selectedSubscriptionMonths = Math.max(1, Math.min(12, Number(subscriptionForm.months || 1)));
-  const selectedSubscriptionAmount =
-    (subscriptionStatus?.monthly_fee ?? 0) * selectedSubscriptionMonths +
-    (subscriptionStatus?.onboarding_fee_paid ? 0 : (subscriptionStatus?.onboarding_fee ?? 0));
+  const selectedSubscriptionAmount = (subscriptionStatus?.monthly_fee ?? 0) * selectedSubscriptionMonths;
   const latestPaymentStatusLabel =
     latestSubscriptionPayment?.status === "approved"
       ? "Accepte"
@@ -487,8 +485,8 @@ function SellerPageContent() {
         <article className="premium-card border border-amber-200 bg-amber-50 p-6">
           <h2 className="text-lg font-semibold text-amber-900">Activation vendeur requise</h2>
           <p className="mt-1 text-sm text-amber-800">
-            Le compte vendeur est en pause tant que les frais ne sont pas regles. Le paiement d&apos;activation
-            couvre les frais de creation puis l&apos;abonnement mensuel.
+            Le compte vendeur est en pause tant que l&apos;abonnement n&apos;est pas regle. Les frais de creation sont
+            desactives: seul l&apos;abonnement vendeur est demande pour activer le compte.
           </p>
           <p className="mt-1 text-sm text-amber-800">
             Important : effectue le paiement avec le meme numero/identifiant que ton compte AMAZER.
@@ -509,13 +507,13 @@ function SellerPageContent() {
             </p>
           ) : null}
           <div className="mt-3 grid gap-2 text-sm text-amber-900 sm:grid-cols-3">
-            <p>Frais creation: {formatXOF(subscriptionStatus?.onboarding_fee ?? 0)}</p>
+            <p>Frais creation: desactives</p>
             <p>Mensualite: {formatXOF(subscriptionStatus?.monthly_fee ?? 0)}</p>
             <p>A payer maintenant: {formatXOF(selectedSubscriptionAmount)}</p>
           </div>
           <p className="mt-2 text-xs text-amber-900">
-            Si tu choisis {selectedSubscriptionMonths} mois, le total s&apos;adapte automatiquement. Au premier paiement,
-            les frais de creation s&apos;ajoutent une seule fois, puis seuls les mois choisis sont factures.
+            Si tu choisis {selectedSubscriptionMonths} mois, le total s&apos;adapte automatiquement selon le nombre de
+            mois selectionnes, sans frais de creation supplementaires.
           </p>
           {subscriptionStatus?.has_pending_payment_request ? (
             <p className="mt-3 text-sm font-medium text-amber-900">
@@ -598,7 +596,7 @@ function SellerPageContent() {
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
                   <p>Mode choisi : {subscriptionForm.payment_mode === "nita" ? "Nita" : "Amana"}</p>
                   <p>Mois choisis : {selectedSubscriptionMonths}</p>
-                  <p>Frais de creation appliques : {subscriptionStatus?.onboarding_fee_paid ? "Non" : "Oui"}</p>
+                  <p>Frais de creation appliques : Non</p>
                   <p>Total attendu : {formatXOF(selectedSubscriptionAmount)}</p>
                 </div>
               </div>

@@ -195,7 +195,8 @@ def _build_subscription_status(profile: SellerProfile | None, db: Session) -> Se
     if profile is not None:
         finance = build_effective_seller_finance_settings(get_or_create_global_settings(db), profile)
         monthly_fee = float(finance.seller_subscription_fee)
-        onboarding_fee = float(finance.seller_subscription_fee)
+        # Les frais de creation vendeur sont desactives: seul l'abonnement est facture.
+        onboarding_fee = 0.0
         onboarding_fee_paid = profile.onboarding_fee_paid_at is not None
         subscription_paid_until = profile.subscription_paid_until
         subscription_active = (
@@ -234,15 +235,10 @@ def _build_subscription_status(profile: SellerProfile | None, db: Session) -> Se
 def _seller_subscription_amount_due(
     *,
     monthly_fee: float,
-    onboarding_fee: float,
-    onboarding_fee_paid: bool,
     months: int,
 ) -> float:
     safe_months = max(1, months)
-    total = monthly_fee * safe_months
-    if not onboarding_fee_paid:
-        total += onboarding_fee
-    return total
+    return monthly_fee * safe_months
 
 
 def _payment_request_response(row: SellerSubscriptionPayment) -> SellerSubscriptionPaymentRequestResponse:
@@ -384,8 +380,6 @@ def pay_seller_subscription(
         transaction_reference = f"AUTO-{current_user.id[:8]}-{int(datetime.now(UTC).timestamp())}"
     amount_claimed = _seller_subscription_amount_due(
         monthly_fee=float(finance.seller_subscription_fee),
-        onboarding_fee=float(finance.seller_subscription_fee),
-        onboarding_fee_paid=profile.onboarding_fee_paid_at is not None,
         months=payload.months,
     )
     payment_request = SellerSubscriptionPayment(
@@ -411,7 +405,7 @@ def pay_seller_subscription(
             "payment_mode": payload.payment_mode,
             "transaction_reference": transaction_reference,
             "monthly_fee": float(finance.seller_subscription_fee),
-            "onboarding_fee_applied": profile.onboarding_fee_paid_at is None,
+            "onboarding_fee_applied": False,
             "amount_claimed": amount_claimed,
         },
     )
