@@ -252,17 +252,24 @@ function SellerPageContent() {
   const { data: profile, isPending } = useQuery({
     queryKey: ["seller-profile"],
     queryFn: getSellerProfile,
+    enabled: Boolean(user),
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
   });
   const { data: subscriptionStatus } = useQuery({
     queryKey: ["seller-subscription-status"],
     queryFn: getSellerSubscriptionStatus,
     enabled: Boolean(user),
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
   });
   const { data: subscriptionPaymentRequests = [] } = useQuery({
     queryKey: ["seller-subscription-payment-requests"],
     queryFn: listSellerSubscriptionPaymentRequests,
     enabled: Boolean(user),
-    staleTime: 10_000,
+    staleTime: 0,
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
   });
   const { data: restaurantItems = [] } = useQuery({
     queryKey: ["seller-restaurant-menu", profile?.vendor_id],

@@ -1,15 +1,114 @@
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
+import {
+  PushNotifications,
+  type PushNotificationActionPerformed,
+  type PushNotificationSchema,
+} from "@capacitor/push-notifications";
 
 import { api } from "@/lib/api";
 import { useNotificationStore, type AppNotification } from "@/store/notification-store";
 
 const TOKEN_STORAGE_KEY = "amazer_notification_token_registered";
-const LAST_WEB_NOTIFICATION_KEY = "amazer_last_web_notification";
 const ANDROID_ALERT_CHANNEL_ID = "amazer-alerts";
 const NATIVE_ALERT_SOUND = "amazer_alert.wav";
+const FCM_TOKEN_PREFIX = "fcm:";
+
+export const AMAZER_NOTIFICATION_EVENT = "amazer:notification-received";
 
 let nativeNotificationReady: Promise<boolean> | null = null;
+let nativePushListenersAttached = false;
+
+type LocalAlertPayload = {
+  title: string;
+  body: string;
+  tag: string;
+  href?: string;
+};
+
+function dispatchNotificationEvent(payload: LocalAlertPayload) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.dispatchEvent(
+    new CustomEvent(AMAZER_NOTIFICATION_EVENT, {
+      detail: payload,
+    })
+  );
+}
+
+function safeString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function mapPushNotificationPayload(notification: PushNotificationSchema): LocalAlertPayload {
+  const data =
+    notification.data && typeof notification.data === "object"
+      ? (notification.data as Record<string, unknown>)
+      : {};
+  const title = notification.title?.trim() || safeString(data.title) || "Nouvelle notification";
+  const body =
+    notification.body?.trim() || safeString(data.body) || "Consultez votre espace AMAZER.";
+  const href = safeString(data.href) || safeString(data.link);
+  const tag =
+    safeString(data.tag) ||
+    safeString(notification.id) ||
+    `push-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+  return {
+    title,
+    body,
+    tag,
+    href,
+  };
+}
+
+async function registerDeviceToken(deviceToken: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const normalizedToken = deviceToken.trim();
+  if (!normalizedToken || window.localStorage.getItem(TOKEN_STORAGE_KEY) === normalizedToken) {
+    return;
+  }
+  await api.post("/api/v1/notifications/register-token", {
+    device_token: normalizedToken,
+  });
+  window.localStorage.setItem(TOKEN_STORAGE_KEY, normalizedToken);
+}
+
+function attachNativePushListeners() {
+  if (!Capacitor.isNativePlatform() || nativePushListenersAttached) {
+    return;
+  }
+  nativePushListenersAttached = true;
+
+  PushNotifications.addListener("registration", (token) => {
+    void registerDeviceToken(`${FCM_TOKEN_PREFIX}${token.value}`);
+  });
+
+  PushNotifications.addListener("registrationError", () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+    }
+  });
+
+  PushNotifications.addListener("pushNotificationReceived", (notification) => {
+    const payload = mapPushNotificationPayload(notification);
+    void notifyLocalOrderEvent(payload);
+  });
+
+  PushNotifications.addListener(
+    "pushNotificationActionPerformed",
+    (action: PushNotificationActionPerformed) => {
+      const payload = mapPushNotificationPayload(action.notification);
+      dispatchNotificationEvent(payload);
+      if (typeof window !== "undefined" && payload.href) {
+        window.location.assign(payload.href);
+      }
+    }
+  );
+}
 
 async function ensureNativeNotificationChannel(): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
@@ -35,8 +134,8 @@ async function ensureNativeNotificationChannel(): Promise<boolean> {
         }
         return true;
       }
-      const perm = await LocalNotifications.requestPermissions();
-      if (perm.display === "granted" && Capacitor.getPlatform() === "android") {
+      const permission = await LocalNotifications.requestPermissions();
+      if (permission.display === "granted" && Capacitor.getPlatform() === "android") {
         await LocalNotifications.createChannel({
           id: ANDROID_ALERT_CHANNEL_ID,
           name: "Alertes AMAZER",
@@ -47,7 +146,7 @@ async function ensureNativeNotificationChannel(): Promise<boolean> {
           sound: NATIVE_ALERT_SOUND,
         });
       }
-      return perm.display === "granted";
+      return permission.display === "granted";
     } catch {
       return false;
     }
@@ -61,18 +160,23 @@ export async function requestAndRegisterNotifications() {
   }
 
   if (Capacitor.isNativePlatform()) {
-    const ok = await ensureNativeNotificationChannel();
-    if (!ok || window.localStorage.getItem(TOKEN_STORAGE_KEY) === "1") {
+    attachNativePushListeners();
+    await ensureNativeNotificationChannel();
+
+    const current = await PushNotifications.checkPermissions();
+    let receive = current.receive;
+    if (receive === "prompt") {
+      const permission = await PushNotifications.requestPermissions();
+      receive = permission.receive;
+    }
+    if (receive !== "granted") {
       return;
     }
-    const deviceToken = `cap-${Capacitor.getPlatform()}::${navigator.userAgent?.slice(0, 80) || "app"}::${Math.random().toString(36).slice(2)}`;
+
     try {
-      await api.post("/api/v1/notifications/register-token", {
-        device_token: deviceToken,
-      });
-      window.localStorage.setItem(TOKEN_STORAGE_KEY, "1");
+      await PushNotifications.register();
     } catch {
-      // Ne bloque pas l’UX
+      // Ne bloque pas l UX mobile si le registre FCM echoue.
     }
     return;
   }
@@ -80,7 +184,7 @@ export async function requestAndRegisterNotifications() {
   if (typeof Notification === "undefined") {
     return;
   }
-  if (window.localStorage.getItem(TOKEN_STORAGE_KEY) === "1") {
+  if (window.localStorage.getItem(TOKEN_STORAGE_KEY)) {
     return;
   }
 
@@ -94,13 +198,8 @@ export async function requestAndRegisterNotifications() {
     return;
   }
 
-  const deviceToken = `${navigator.userAgent}::${Math.random().toString(36).slice(2)}`;
-
   try {
-    await api.post("/api/v1/notifications/register-token", {
-      device_token: deviceToken,
-    });
-    window.localStorage.setItem(TOKEN_STORAGE_KEY, "1");
+    await registerDeviceToken(`web:${navigator.userAgent}::${Math.random().toString(36).slice(2)}`);
   } catch {
     // Silencieux: on ne bloque pas l UX si la notification echoue.
   }
@@ -116,18 +215,13 @@ export async function notifyLocalOrderEvent(payload: {
     return;
   }
   useNotificationStore.getState().pushNotification(payload);
+  dispatchNotificationEvent(payload);
 
   if (Capacitor.isNativePlatform()) {
     const ok = await ensureNativeNotificationChannel();
     if (!ok) {
       return;
     }
-    const dedupeKey = `${payload.tag}:${payload.body}`;
-    const previous = window.localStorage.getItem(LAST_WEB_NOTIFICATION_KEY);
-    if (previous === dedupeKey) {
-      return;
-    }
-    window.localStorage.setItem(LAST_WEB_NOTIFICATION_KEY, dedupeKey);
     try {
       await LocalNotifications.schedule({
         notifications: [
@@ -143,7 +237,7 @@ export async function notifyLocalOrderEvent(payload: {
         ],
       });
     } catch {
-      // Fallback: au moins le store Zustand a l’entrée
+      // Fallback: au moins le store Zustand conserve l entree.
     }
     return;
   }
@@ -154,12 +248,6 @@ export async function notifyLocalOrderEvent(payload: {
   if (Notification.permission !== "granted") {
     return;
   }
-  const dedupeKey = `${payload.tag}:${payload.body}`;
-  const previous = window.localStorage.getItem(LAST_WEB_NOTIFICATION_KEY);
-  if (previous === dedupeKey) {
-    return;
-  }
-  window.localStorage.setItem(LAST_WEB_NOTIFICATION_KEY, dedupeKey);
   try {
     new Notification(payload.title, {
       body: payload.body,

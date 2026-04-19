@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, ShoppingCart, User } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { App } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 
 import { Badge } from "@/components/ui/badge";
 import { useAdminMe } from "@/hooks/use-admin-me";
@@ -12,7 +14,12 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { isAdminEmail } from "@/lib/admin";
 import { clearAppMode, persistAppMode } from "@/lib/session-mode";
 import { logout } from "@/services/auth-service";
-import { listMyNotifications, notifyLocalOrderEvent } from "@/services/notification-service";
+import {
+  AMAZER_NOTIFICATION_EVENT,
+  listMyNotifications,
+  notifyLocalOrderEvent,
+  requestAndRegisterNotifications,
+} from "@/services/notification-service";
 import { getSellerProfile } from "@/services/seller-service";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cartStore";
@@ -42,6 +49,7 @@ const SESSION_DRAFT_KEYS = [
 
 export function FloatingNavbar() {
   const isClient = useClientMounted();
+  const queryClient = useQueryClient();
   const items = useCartStore((state) => state.items);
   const resetCartSession = useCartStore((state) => state.resetSession);
   const cartCount = isClient ? items.reduce((total, item) => total + item.quantity, 0) : 0;
@@ -70,8 +78,8 @@ export function FloatingNavbar() {
     queryKey: ["remote-notifications", user?.id],
     queryFn: () => listMyNotifications(60),
     enabled: Boolean(user?.id),
-    refetchInterval: 15_000,
-    staleTime: 5_000,
+    refetchInterval: 5_000,
+    staleTime: 0,
   });
 
   const showAdminLink = Boolean(adminMe?.is_admin) || isAdminEmail(user?.email);
@@ -84,6 +92,38 @@ export function FloatingNavbar() {
     ...(showSellerLink ? sellerNavItems : []),
     ...(showAdminLink ? [{ href: "/admin", label: "Espace Admin" }] : []),
   ].filter((item, index, array) => array.findIndex((entry) => entry.href === item.href) === index);
+
+  useEffect(() => {
+    if (!isClient) {
+      return;
+    }
+    if (!user?.id) {
+      return;
+    }
+    void requestAndRegisterNotifications();
+  }, [isClient, user?.id]);
+
+  useEffect(() => {
+    if (!isClient || !user?.id) {
+      return;
+    }
+
+    const handleNotification = (event: Event) => {
+      const detail = (event as CustomEvent<{ tag?: string }>).detail;
+      void queryClient.invalidateQueries({ queryKey: ["remote-notifications", user.id] });
+      if ((detail?.tag || "").startsWith("seller-payment-decision-")) {
+        void queryClient.invalidateQueries({ queryKey: ["seller-profile"] });
+        void queryClient.invalidateQueries({ queryKey: ["navbar-seller-profile"] });
+        void queryClient.invalidateQueries({ queryKey: ["seller-subscription-status"] });
+        void queryClient.invalidateQueries({ queryKey: ["seller-subscription-payment-requests"] });
+      }
+    };
+
+    window.addEventListener(AMAZER_NOTIFICATION_EVENT, handleNotification as EventListener);
+    return () => {
+      window.removeEventListener(AMAZER_NOTIFICATION_EVENT, handleNotification as EventListener);
+    };
+  }, [isClient, queryClient, user?.id]);
 
   useEffect(() => {
     if (!isClient) {
@@ -158,8 +198,44 @@ export function FloatingNavbar() {
         tag: item.tag || `remote-${item.id}`,
         href: item.href,
       });
+      if ((item.tag || "").startsWith("seller-payment-decision-")) {
+        void queryClient.invalidateQueries({ queryKey: ["seller-profile"] });
+        void queryClient.invalidateQueries({ queryKey: ["navbar-seller-profile"] });
+        void queryClient.invalidateQueries({ queryKey: ["seller-subscription-status"] });
+        void queryClient.invalidateQueries({ queryKey: ["seller-subscription-payment-requests"] });
+      }
     }
-  }, [isAuthenticated, remoteNotifications, syncNotifications]);
+  }, [isAuthenticated, queryClient, remoteNotifications, syncNotifications]);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+
+    let removeListener: (() => Promise<void>) | undefined;
+
+    const registerListener = async () => {
+      const listener = await App.addListener("appStateChange", ({ isActive }) => {
+        if (!isActive || !user?.id) {
+          return;
+        }
+        void queryClient.invalidateQueries({ queryKey: ["remote-notifications", user.id] });
+        void queryClient.invalidateQueries({ queryKey: ["seller-profile"] });
+        void queryClient.invalidateQueries({ queryKey: ["navbar-seller-profile"] });
+        void queryClient.invalidateQueries({ queryKey: ["seller-subscription-status"] });
+        void queryClient.invalidateQueries({ queryKey: ["seller-subscription-payment-requests"] });
+      });
+      removeListener = () => listener.remove();
+    };
+
+    void registerListener();
+
+    return () => {
+      if (removeListener) {
+        void removeListener();
+      }
+    };
+  }, [queryClient, user?.id]);
 
   async function handleLogout() {
     setIsLoggingOut(true);

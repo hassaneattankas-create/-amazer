@@ -87,6 +87,10 @@ class Settings(BaseSettings):
     s3_region: str | None = Field(default=None)
     s3_access_key_id: str | None = Field(default=None)
     s3_secret_access_key: str | None = Field(default=None)
+    firebase_project_id: str | None = Field(default=None)
+    firebase_service_account_json: str | None = Field(default=None)
+    firebase_service_account_base64: str | None = Field(default=None)
+    firebase_service_account_path: str | None = Field(default=None)
 
     def get_cors_origins(self) -> list[str]:
         defaults = [

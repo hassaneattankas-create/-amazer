@@ -38,28 +38,20 @@ export const useNotificationStore = create<NotificationState>()(
     (set) => ({
       items: [],
       pushNotification: (notification) =>
-        set((state) => {
-          const duplicate = state.items.find(
-            (item) => item.tag === notification.tag && item.body === notification.body
-          );
-          if (duplicate) {
-            return state;
-          }
-          return {
-            items: [
-              {
-                id: `${notification.tag}-${Date.now()}`,
-                title: notification.title,
-                body: notification.body,
-                tag: notification.tag,
-                href: notification.href,
-                createdAt: new Date().toISOString(),
-                unread: true,
-              },
-              ...state.items,
-            ].slice(0, 100),
-          };
-        }),
+        set((state) => ({
+          items: [
+            {
+              id: `${notification.tag}-${Date.now()}`,
+              title: notification.title,
+              body: notification.body,
+              tag: notification.tag,
+              href: notification.href,
+              createdAt: new Date().toISOString(),
+              unread: true,
+            },
+            ...state.items,
+          ].slice(0, 100),
+        })),
       syncNotifications: (notifications) =>
         set((state) => {
           const merged = [...state.items];
@@ -67,13 +59,6 @@ export const useNotificationStore = create<NotificationState>()(
             const sameId = merged.findIndex((item) => item.id === notification.id);
             if (sameId >= 0) {
               merged[sameId] = { ...merged[sameId], ...notification };
-              continue;
-            }
-            const sameContent = merged.findIndex(
-              (item) => item.tag === notification.tag && item.body === notification.body
-            );
-            if (sameContent >= 0) {
-              merged[sameContent] = { ...merged[sameContent], ...notification };
               continue;
             }
             merged.push(notification);

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models.app_notification import AppNotification
 from app.models.notification import NotificationToken
+from app.services.push_delivery_service import send_fcm_push
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,17 @@ class NotificationService:
       select(NotificationToken).where(NotificationToken.user_id == user_id)
     ).all()
     return list(rows)
+
+  def delete_tokens(self, *, user_id: str, device_tokens: list[str]) -> int:
+    if not device_tokens:
+      return 0
+    result = self.db.execute(
+      delete(NotificationToken).where(
+        NotificationToken.user_id == user_id,
+        NotificationToken.device_token.in_(device_tokens),
+      )
+    )
+    return int(result.rowcount or 0)
 
   def create_notification(
     self,
@@ -105,15 +117,24 @@ class NotificationService:
     tokens = self.list_tokens_for_user(user_id)
     if not tokens:
       return
-    # In production, integrate with FCM/APNS here.
-    # For now, we simply log the intent; this keeps the system opt-in and ready.
+    push_result = send_fcm_push(
+      device_tokens=[row.device_token for row in tokens],
+      title=payload.title,
+      body=payload.body,
+      data=payload.data or {},
+    )
+    if push_result.invalid_tokens:
+      self.delete_tokens(user_id=user_id, device_tokens=list(push_result.invalid_tokens))
     details = {
       "user_id": user_id,
       "device_tokens": [row.device_token for row in tokens],
       "title": payload.title,
       "body": payload.body,
       "data": payload.data or {},
+      "push_attempted": push_result.attempted,
+      "push_delivered": push_result.delivered,
+      "push_invalid_tokens": list(push_result.invalid_tokens),
+      "push_skipped": push_result.skipped,
+      "push_reason": push_result.reason,
     }
-    # Deferred to existing logging pipeline; avoids side-effects in tests.
     print(f"[notification] {details}")
-
