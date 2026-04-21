@@ -1,3 +1,5 @@
+import { isAxiosError } from "axios";
+
 import { api } from "@/lib/api";
 import {
   CheckoutPayload,
@@ -22,15 +24,30 @@ export async function checkout(payload: CheckoutPayload): Promise<Order> {
 }
 
 export async function getReceiptLink(orderId: string): Promise<ReceiptLink> {
-  const response = await api.get<ReceiptLink>(`/api/v1/orders/${orderId}/receipt-link`);
-  return response.data;
+  try {
+    const response = await api.get<ReceiptLink>(`/api/v1/orders/${orderId}/receipt-link`);
+    return response.data;
+  } catch (error) {
+    if (isAxiosError(error) && (error.response?.status === 404 || error.response?.status === 422)) {
+      const response = await api.get<ReceiptLink>(`/api/v1/restaurant/orders/${orderId}/receipt-link`);
+      return response.data;
+    }
+    throw error;
+  }
 }
 
 export async function getSecureReceipt(orderId: string, token?: string): Promise<Receipt> {
-  const response = await api.get<Receipt>(`/api/v1/orders/receipt/${orderId}`, {
-    params: token ? { token } : undefined,
-  });
-  return response.data;
+  const params = token ? { token } : undefined;
+  try {
+    const response = await api.get<Receipt>(`/api/v1/orders/receipt/${orderId}`, { params });
+    return response.data;
+  } catch (error) {
+    if (isAxiosError(error) && (error.response?.status === 404 || error.response?.status === 422)) {
+      const response = await api.get<Receipt>(`/api/v1/restaurant/receipt/${orderId}`, { params });
+      return response.data;
+    }
+    throw error;
+  }
 }
 
 export async function verifyReceipt(payload: ReceiptVerifyPayload): Promise<ReceiptVerifyResult> {
@@ -39,11 +56,30 @@ export async function verifyReceipt(payload: ReceiptVerifyPayload): Promise<Rece
 }
 
 export async function getPaymentIntent(orderId: string): Promise<PaymentIntent> {
-  const response = await api.get<PaymentIntent>(`/api/v1/orders/${orderId}/payment-intent`);
-  return response.data;
+  try {
+    const response = await api.get<PaymentIntent>(`/api/v1/orders/${orderId}/payment-intent`);
+    return response.data;
+  } catch (error) {
+    if (isAxiosError(error) && (error.response?.status === 404 || error.response?.status === 422)) {
+      const response = await api.get<PaymentIntent>(`/api/v1/restaurant/orders/${orderId}/payment-intent`);
+      return response.data;
+    }
+    throw error;
+  }
 }
 
 export async function confirmPayment(orderId: string, payload: PaymentConfirmPayload): Promise<PaymentConfirmResult> {
-  const response = await api.post<PaymentConfirmResult>(`/api/v1/orders/${orderId}/payment/confirm`, payload);
-  return response.data;
+  try {
+    const response = await api.post<PaymentConfirmResult>(`/api/v1/orders/${orderId}/payment/confirm`, payload);
+    return response.data;
+  } catch (error) {
+    if (isAxiosError(error) && (error.response?.status === 404 || error.response?.status === 422)) {
+      const response = await api.post<PaymentConfirmResult>(
+        `/api/v1/restaurant/orders/${orderId}/payment/confirm`,
+        payload
+      );
+      return response.data;
+    }
+    throw error;
+  }
 }

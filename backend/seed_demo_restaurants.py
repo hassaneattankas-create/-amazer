@@ -17,6 +17,11 @@ from app.models.seller_profile import SellerProfile
 from app.models.vendor import Vendor
 from seed_demo_storefronts import COMMON_PASSWORD, ensure_profile, ensure_user
 
+
+def _build_payment_reference(order_id: str) -> str:
+    return f"AMZ-{order_id[:6].upper()}-{order_id[-4:].upper()}"
+
+
 ACTIVE_RESTAURANT_EMAILS = {
     "demo.sahelrooftop@amazer.demo",
 }
@@ -232,12 +237,15 @@ def ensure_restaurant_order(db: Session, vendor_id: str, user_id: str, customer_
             delivery_fee=delivery_fee,
             delivery_minutes=max(15, int(round(8 + (distance_km * 4.5) + 20))),
             payment_mode=payment_mode,
+            payment_status="paid",
+            payment_confirmed_at=datetime.now(UTC),
             status=status,
             total_amount=0,
             currency="XOF",
         )
         db.add(row)
         db.flush()
+        row.payment_reference = _build_payment_reference(row.id)
     row.user_id = user_id
     row.customer_phone = customer_phone
     row.distance_km = distance_km
@@ -258,6 +266,15 @@ def ensure_restaurant_order(db: Session, vendor_id: str, user_id: str, customer_
         total += subtotal
         row.items.append(RestaurantOrderItem(menu_item_id=dish.id, quantity=quantity, selected_options=selected_options, unit_price=unit_price, subtotal=subtotal))
     row.total_amount = total + delivery_fee
+    row.payment_status = "paid"
+    row.fee_breakdown = {
+        "items_subtotal": round(total, 2),
+        "delivery_fee": round(delivery_fee, 2),
+        "platform_commission": 0.0,
+        "platform_service_fee": 0.0,
+    }
+    if not row.payment_reference:
+        row.payment_reference = _build_payment_reference(row.id)
     db.flush()
 
 
