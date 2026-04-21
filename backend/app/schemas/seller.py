@@ -248,6 +248,8 @@ class SellerStorefrontResponse(BaseModel):
     room_types: list[HotelRoomTypeSchema]
     deposit_payment_method: Literal["nita", "amana"] | None
     deposit_amount: float | None
+    effective_commission_rate: float
+    effective_service_fee: float
     accepts_table_reservations: bool
     accepts_hotel_bookings: bool
     is_verified: bool

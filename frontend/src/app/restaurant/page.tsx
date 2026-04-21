@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -11,14 +12,16 @@ import { StorefrontShowcaseCard } from "@/components/storefront/StorefrontShowca
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatXOF } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
+import { computeRestaurantOrderSummary } from "@/lib/restaurant-order-pricing";
+import { getRestaurantOrderPayRoute, getRestaurantOrderReceiptRoute } from "@/lib/mobile-routes";
 import { listStorefronts } from "@/services/catalog-service";
 import { getPublicFinanceSettings } from "@/services/finance-service";
-import {
-  createRestaurantOrder,
-  listRestaurantMenu,
-} from "@/services/restaurant-service";
+import { notifyLocalOrderEvent } from "@/services/notification-service";
+import { createRestaurantOrder, getRestaurantReceiptLink, listRestaurantMenu } from "@/services/restaurant-service";
+import { getSellerStorefront } from "@/services/seller-service";
 import { RestaurantMenuItem, RestaurantMenuOption } from "@/types/restaurant";
 
 type SelectedItem = {
@@ -55,15 +58,16 @@ function resolveMenuCategory(item: RestaurantMenuItem): string {
 }
 
 export default function RestaurantPage() {
+  const router = useRouter();
+  const { data: currentUser } = useCurrentUser();
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [distanceKm, setDistanceKm] = useState("3");
   const [storeQuery, setStoreQuery] = useState("");
   const debouncedStoreQuery = useDebouncedValue(storeQuery, 250);
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
-  const [paymentMode, setPaymentMode] = useState<"nita" | "amana" | "cash_on_delivery">("nita");
+  const [paymentMode, setPaymentMode] = useState<"nita" | "amana">("nita");
   const [status, setStatus] = useState("");
 
   const { data: storefronts = [], isPending: isStorefrontsPending } = useQuery({
@@ -94,6 +98,14 @@ export default function RestaurantPage() {
     gcTime: 10 * 60_000,
     refetchOnWindowFocus: false,
   });
+  const { data: selectedStorefront } = useQuery({
+    queryKey: ["restaurant-storefront-pricing", selectedVendorId],
+    queryFn: () => getSellerStorefront(selectedVendorId),
+    enabled: Boolean(selectedVendorId),
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
+  });
   const visibleStorefronts = useMemo(() => {
     const copy = [...storefronts];
     copy.sort((a, b) => Number(b.is_verified) - Number(a.is_verified));
@@ -110,9 +122,27 @@ export default function RestaurantPage() {
 
   const orderMutation = useMutation({
     mutationFn: createRestaurantOrder,
-    onSuccess: (order) => {
-      setStatus(`Commande envoyee au restaurant ${order.vendor_name}. Livraison en cours de preparation.`);
+    onSuccess: async (order) => {
+      setStatus(`Commande creee chez ${order.vendor_name}.`);
       setSelectedItems([]);
+      notifyLocalOrderEvent({
+        title: "Commande restaurant",
+        body:
+          order.payment_status === "paid"
+            ? "Paiement deja confirme avec code transaction."
+            : "Finalise le paiement sur la page securisee.",
+        tag: `restaurant-order-${order.id}`,
+        href:
+          order.payment_status === "paid"
+            ? "/restaurant"
+            : getRestaurantOrderPayRoute(order.id),
+      });
+      if (order.payment_status === "pending") {
+        router.push(getRestaurantOrderPayRoute(order.id));
+      } else {
+        const receipt = await getRestaurantReceiptLink(order.id);
+        router.push(getRestaurantOrderReceiptRoute(order.id, receipt.token));
+      }
     },
     onError: () => setStatus("Echec envoi commande. Verifie les champs et reconnecte-toi."),
   });
@@ -125,9 +155,22 @@ export default function RestaurantPage() {
       }, 0),
     [selectedItems]
   );
-  const orderTotal = useMemo(
-    () => (selectedItems.length ? total + deliveryFee : total),
-    [deliveryFee, selectedItems.length, total]
+  const restaurantPricing = useMemo(
+    () =>
+      computeRestaurantOrderSummary(
+        total,
+        deliveryFee,
+        selectedStorefront?.effective_commission_rate ?? financeSettings?.commission_rate ?? 0.05,
+        selectedStorefront?.effective_service_fee ?? financeSettings?.service_fee ?? 200
+      ),
+    [
+      deliveryFee,
+      financeSettings?.commission_rate,
+      financeSettings?.service_fee,
+      selectedStorefront?.effective_commission_rate,
+      selectedStorefront?.effective_service_fee,
+      total,
+    ]
   );
 
   const addDish = (dish: RestaurantMenuItem) => {
@@ -184,13 +227,20 @@ export default function RestaurantPage() {
 
   const submitOrder = () => {
     if (!selectedItems.length) return;
+    if (!currentUser) {
+      window.location.assign("/login?next=/restaurant");
+      return;
+    }
+    if (!customerName.trim() || !customerPhone.trim() || !deliveryAddress.trim()) {
+      setStatus("Renseigne ton nom, telephone et adresse de livraison.");
+      return;
+    }
     const vendorId = selectedItems[0].vendor_id;
     orderMutation.mutate({
       vendor_id: vendorId,
-      customer_name: customerName,
-      customer_phone: customerPhone,
-      delivery_address: deliveryAddress,
-      distance_km: Number(distanceKm),
+      customer_name: customerName.trim(),
+      customer_phone: customerPhone.trim(),
+      delivery_address: deliveryAddress.trim(),
       payment_mode: paymentMode,
       items: selectedItems.map((item) => ({
         menu_item_id: item.menu_item_id,
@@ -375,19 +425,15 @@ export default function RestaurantPage() {
             placeholder="Adresse livraison"
             className="sm:col-span-2"
           />
-          <Input value={distanceKm} onChange={(event) => setDistanceKm(event.target.value)} type="number" min="0.1" step="0.1" placeholder="Distance estimee (km)" />
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 sm:col-span-2">
             {[
               { value: "nita", label: "Nita" },
               { value: "amana", label: "Amana" },
-              { value: "cash_on_delivery", label: "Paiement livraison" },
             ].map((entry) => (
               <Button
                 key={entry.value}
                 type="button"
-                onClick={() =>
-                  setPaymentMode(entry.value as "nita" | "amana" | "cash_on_delivery")
-                }
+                onClick={() => setPaymentMode(entry.value as "nita" | "amana")}
                 className={
                   paymentMode === entry.value
                     ? "border border-[#FF4D00]/35 bg-[#FF4D00]/10 text-[#FF4D00]"
@@ -401,9 +447,11 @@ export default function RestaurantPage() {
         </div>
 
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-slate-700">
-          <p className="mt-1">Frais de livraison: {formatXOF(deliveryFee)}</p>
-          <p className="mt-1">Total panier repas: {formatXOF(total)}</p>
-          <p className="mt-1 font-medium">Total a payer: {formatXOF(orderTotal)}</p>
+          <p className="mt-1">Sous-total plats: {formatXOF(total)}</p>
+          <p className="mt-1">Frais de livraison: {formatXOF(restaurantPricing.deliveryFee)}</p>
+          <p className="mt-1">Commission plateforme: {formatXOF(restaurantPricing.platformCommission)}</p>
+          <p className="mt-1">Frais de service: {formatXOF(restaurantPricing.platformServiceFee)}</p>
+          <p className="mt-1 font-medium text-slate-900">Total a payer: {formatXOF(restaurantPricing.totalAmount)}</p>
           <p className="mt-1">Articles: {selectedItems.length}</p>
         </div>
 
@@ -434,7 +482,7 @@ export default function RestaurantPage() {
           onClick={submitOrder}
           className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
         >
-          {orderMutation.isPending ? "Envoi en cours..." : "Commander maintenant"}
+          {orderMutation.isPending ? "Envoi en cours..." : "Valider et payer"}
         </Button>
 
         {status ? <p className="mt-3 text-sm text-slate-700">{status}</p> : null}

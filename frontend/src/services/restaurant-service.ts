@@ -1,6 +1,13 @@
 import { api } from "@/lib/api";
 import { filterPublicRestaurantStorefronts } from "@/lib/public-catalog-filter";
 import {
+  PaymentConfirmPayload,
+  PaymentConfirmResult,
+  PaymentIntent,
+  Receipt,
+  ReceiptLink,
+} from "@/types/order";
+import {
   RestaurantMenuItem,
   RestaurantOrder,
   RestaurantOrderRequest,
@@ -25,6 +32,31 @@ export async function listRestaurantMenu(vendorId?: string): Promise<RestaurantM
 
 export async function createRestaurantOrder(payload: RestaurantOrderRequest): Promise<RestaurantOrder> {
   const response = await api.post<RestaurantOrder>("/api/v1/restaurant/orders", payload);
+  return response.data;
+}
+
+export async function getRestaurantPaymentIntent(orderId: string): Promise<PaymentIntent> {
+  const response = await api.get<PaymentIntent>(`/api/v1/restaurant/orders/${orderId}/payment-intent`);
+  return response.data;
+}
+
+export async function confirmRestaurantPayment(
+  orderId: string,
+  payload: PaymentConfirmPayload
+): Promise<PaymentConfirmResult> {
+  const response = await api.post<PaymentConfirmResult>(`/api/v1/restaurant/orders/${orderId}/payment/confirm`, payload);
+  return response.data;
+}
+
+export async function getRestaurantReceiptLink(orderId: string): Promise<ReceiptLink> {
+  const response = await api.get<ReceiptLink>(`/api/v1/restaurant/orders/${orderId}/receipt-link`);
+  return response.data;
+}
+
+export async function getRestaurantSecureReceipt(orderId: string, token?: string): Promise<Receipt> {
+  const response = await api.get<Receipt>(`/api/v1/restaurant/receipt/${orderId}`, {
+    params: token ? { token } : undefined,
+  });
   return response.data;
 }
 

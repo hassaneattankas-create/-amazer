@@ -47,3 +47,15 @@ export function getOrderReceiptRoute(orderId: string, token?: string | null): st
     ? buildQueryRoute("/order/receipt", { id: orderId, token })
     : buildQueryRoute(`/order/receipt/${encodeURIComponent(orderId)}`, { token });
 }
+
+export function getRestaurantOrderPayRoute(orderId: string): string {
+  return isMobileAppBuild()
+    ? buildQueryRoute("/restaurant/order/pay", { id: orderId })
+    : `/restaurant/order/pay/${encodeURIComponent(orderId)}`;
+}
+
+export function getRestaurantOrderReceiptRoute(orderId: string, token?: string | null): string {
+  return isMobileAppBuild()
+    ? buildQueryRoute("/restaurant/order/receipt", { id: orderId, token })
+    : buildQueryRoute(`/restaurant/order/receipt/${encodeURIComponent(orderId)}`, { token });
+}

@@ -5,26 +5,26 @@ import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { ReceiptView } from "@/components/order/ReceiptView";
-import { getSecureReceipt } from "@/services/order-service";
+import { getRestaurantSecureReceipt } from "@/services/restaurant-service";
 
-function OrderReceiptPageContent() {
+function RestaurantOrderReceiptPageContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? undefined;
   const orderId = searchParams.get("id") ?? "";
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["secure-receipt", orderId, token],
-    queryFn: () => getSecureReceipt(orderId, token),
+    queryKey: ["restaurant-secure-receipt", orderId, token],
+    queryFn: () => getRestaurantSecureReceipt(orderId, token),
     enabled: Boolean(orderId),
   });
 
-  return <ReceiptView receipt={data} isPending={isPending} isError={isError} />;
+  return <ReceiptView receipt={data} isPending={isPending} isError={isError} backHref="/restaurant" />;
 }
 
-export default function OrderReceiptPage() {
+export default function RestaurantOrderReceiptPage() {
   return (
     <Suspense fallback={<section className="mx-auto w-full max-w-3xl px-4 pb-14 sm:px-6" />}>
-      <OrderReceiptPageContent />
+      <RestaurantOrderReceiptPageContent />
     </Suspense>
   );
 }

@@ -60,6 +60,10 @@ export type Receipt = {
   payment_status: "pending" | "paid";
   currency: string;
   total_amount: number;
+  items_subtotal: number;
+  delivery_fee: number;
+  platform_commission: number;
+  platform_service_fee: number;
   transaction_code_masked: string | null;
   created_at: string;
   issued_at: string;
@@ -102,6 +106,6 @@ export type PaymentConfirmPayload = {
 export type PaymentConfirmResult = {
   order_id: string;
   payment_status: "pending" | "paid";
-  order_status: Order["status"];
+  order_status: Order["status"] | "payment_pending" | "commande";
   message: string;
 };

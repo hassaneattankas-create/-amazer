@@ -14,6 +14,7 @@ from app.core.receipt_security import (
     decode_receipt_access_token,
     receipt_integrity_hash,
 )
+from app.core.checkout_fees import platform_commission_and_service_fee
 from app.core.rate_limit import enforce_rate_limit
 from app.core.exceptions import UnauthorizedError, ValidationDomainError
 from app.database import get_db
@@ -37,6 +38,7 @@ from app.schemas.order import (
     ReceiptVerifyResponse,
 )
 from app.services.payment_security_service import verify_payment_code
+from app.services.seller_finance_service import get_or_create_global_settings
 from app.services.security_log_service import log_security_event
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -98,11 +100,32 @@ def _build_payment_url(payment_mode: str, payment_reference: str, amount: float)
     return f"https://pay.amazer.ne/amana?ref={payment_reference}&amount={amount_xof}"
 
 
+def _marketplace_fee_snapshot(order: Order) -> dict[str, float]:
+    """Detail des frais pour le reçu (commandes récentes avec fee_breakdown, sinon estimation livraison)."""
+    items_subtotal = sum(float(item.quantity) * float(item.unit_price) for item in order.items)
+    fb = order.fee_breakdown
+    if isinstance(fb, dict) and fb.get("items_subtotal") is not None:
+        return {
+            "items_subtotal": round(float(fb.get("items_subtotal", 0)), 2),
+            "delivery_fee": round(float(fb.get("delivery_fee", 0)), 2),
+            "platform_commission": round(float(fb.get("platform_commission", 0)), 2),
+            "platform_service_fee": round(float(fb.get("platform_service_fee", 0)), 2),
+        }
+    extra = float(order.total_amount) - float(items_subtotal)
+    return {
+        "items_subtotal": round(items_subtotal, 2),
+        "delivery_fee": round(max(0.0, extra), 2),
+        "platform_commission": 0.0,
+        "platform_service_fee": 0.0,
+    }
+
+
 def _build_receipt_payload(
     order: Order,
     customer_name: str,
     product_name_by_id: dict[str, str],
 ) -> dict[str, object]:
+    fees = _marketplace_fee_snapshot(order)
     return {
         "order_id": order.id,
         "customer_name": customer_name,
@@ -111,6 +134,10 @@ def _build_receipt_payload(
         "payment_status": order.payment_status,
         "currency": order.currency,
         "total_amount": round(order.total_amount, 2),
+        "items_subtotal": fees["items_subtotal"],
+        "delivery_fee": fees["delivery_fee"],
+        "platform_commission": fees["platform_commission"],
+        "platform_service_fee": fees["platform_service_fee"],
         "created_at": order.created_at.isoformat(),
         "tracking_code": order.tracking_code,
         "transaction_code_hash": order.transaction_code_hash,
@@ -233,6 +260,7 @@ def _to_receipt_response(
         except Exception:
             decrypted = None
     verify_url = f"{str(request.base_url).rstrip('/')}{settings.api_prefix}/orders/receipt/verify?token={token}"
+    fees = _marketplace_fee_snapshot(order)
     return ReceiptResponse(
         order_id=order.id,
         customer_name=customer_name,
@@ -241,6 +269,10 @@ def _to_receipt_response(
         payment_status=order.payment_status,
         currency=order.currency,
         total_amount=round(order.total_amount, 2),
+        items_subtotal=fees["items_subtotal"],
+        delivery_fee=fees["delivery_fee"],
+        platform_commission=fees["platform_commission"],
+        platform_service_fee=fees["platform_service_fee"],
         transaction_code_masked=_mask_transaction_code(decrypted),
         created_at=order.created_at,
         issued_at=order.created_at,
@@ -338,7 +370,22 @@ def checkout(
         raise ValidationDomainError("Devise invalide pour cette commande")
 
     delivery_fee_per_vendor = _resolve_checkout_delivery_fee(db, payload.delivery_type)
-    total += delivery_fee_per_vendor * len(vendor_ids)
+    delivery_total = delivery_fee_per_vendor * len(vendor_ids)
+    items_subtotal = total
+    settings_row = get_or_create_global_settings(db)
+    commission_fee, service_fee = platform_commission_and_service_fee(
+        settings_row,
+        None,
+        items_subtotal,
+        bool(validated_items),
+    )
+    total = items_subtotal + delivery_total + commission_fee + service_fee
+    fee_breakdown = {
+        "items_subtotal": round(items_subtotal, 2),
+        "delivery_fee": round(delivery_total, 2),
+        "platform_commission": round(commission_fee, 2),
+        "platform_service_fee": round(service_fee, 2),
+    }
 
     order = Order(
         user_id=current_user.id,
@@ -351,6 +398,7 @@ def checkout(
         payment_confirmed_at=payment_confirmed_at,
         currency=order_currency or payload.currency,
         total_amount=total,
+        fee_breakdown=fee_breakdown,
         estimated_minutes=estimated_minutes,
         status=order_status,
     )

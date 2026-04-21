@@ -81,6 +81,10 @@ class ReceiptResponse(BaseModel):
     payment_status: str
     currency: str
     total_amount: float
+    items_subtotal: float = 0.0
+    delivery_fee: float = 0.0
+    platform_commission: float = 0.0
+    platform_service_fee: float = 0.0
     transaction_code_masked: str | None
     created_at: datetime
     issued_at: datetime

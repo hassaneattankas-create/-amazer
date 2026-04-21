@@ -13,7 +13,11 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
-import { createRestaurantOrder, createRestaurantReservation } from "@/services/restaurant-service";
+import { computeRestaurantOrderSummary } from "@/lib/restaurant-order-pricing";
+import { getRestaurantOrderPayRoute, getRestaurantOrderReceiptRoute } from "@/lib/mobile-routes";
+import { getPublicFinanceSettings } from "@/services/finance-service";
+import { notifyLocalOrderEvent } from "@/services/notification-service";
+import { createRestaurantOrder, createRestaurantReservation, getRestaurantReceiptLink } from "@/services/restaurant-service";
 import { getProductDetailById } from "@/services/product-service";
 import { createHotelBooking, getSellerStorefront } from "@/services/seller-service";
 import { useCartStore } from "@/store/cartStore";
@@ -52,8 +56,7 @@ export default function VendorShopPage() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [distanceKm, setDistanceKm] = useState("3");
-  const [paymentMode, setPaymentMode] = useState<"nita" | "amana" | "cash_on_delivery">("nita");
+  const [paymentMode, setPaymentMode] = useState<"nita" | "amana">("nita");
   const [reservationForm, setReservationForm] = useState({
     customer_name: "",
     customer_phone: "",
@@ -78,6 +81,13 @@ export default function VendorShopPage() {
     queryKey: ["seller-storefront", vendorId],
     queryFn: () => getSellerStorefront(vendorId),
     enabled: Boolean(vendorId),
+  });
+  const { data: financeSettings } = useQuery({
+    queryKey: ["public-finance-settings"],
+    queryFn: getPublicFinanceSettings,
+    staleTime: 5 * 60_000,
+    gcTime: 15 * 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const addProductMutation = useMutation({
@@ -110,9 +120,27 @@ export default function VendorShopPage() {
 
   const orderMutation = useMutation({
     mutationFn: createRestaurantOrder,
-    onSuccess: (order) => {
-      setOrderStatus(`Commande envoyee au restaurant ${order.vendor_name}.`);
+    onSuccess: async (order) => {
+      setOrderStatus(`Commande creee chez ${order.vendor_name}.`);
       setSelectedItems([]);
+      notifyLocalOrderEvent({
+        title: "Commande restaurant",
+        body:
+          order.payment_status === "paid"
+            ? "Paiement deja confirme avec code transaction."
+            : "Finalise le paiement sur la page securisee.",
+        tag: `restaurant-order-${order.id}`,
+        href:
+          order.payment_status === "paid"
+            ? "/restaurant"
+            : getRestaurantOrderPayRoute(order.id),
+      });
+      if (order.payment_status === "pending") {
+        router.push(getRestaurantOrderPayRoute(order.id));
+      } else {
+        const receipt = await getRestaurantReceiptLink(order.id);
+        router.push(getRestaurantOrderReceiptRoute(order.id, receipt.token));
+      }
     },
     onError: (error) =>
       setOrderStatus(
@@ -258,6 +286,23 @@ export default function VendorShopPage() {
       }, 0),
     [selectedItems]
   );
+  const restaurantPricing = useMemo(
+    () =>
+      computeRestaurantOrderSummary(
+        total,
+        financeSettings?.default_delivery_fee ?? 1500,
+        data?.effective_commission_rate ?? financeSettings?.commission_rate ?? 0.05,
+        data?.effective_service_fee ?? financeSettings?.service_fee ?? 200
+      ),
+    [
+      data?.effective_commission_rate,
+      data?.effective_service_fee,
+      financeSettings?.commission_rate,
+      financeSettings?.default_delivery_fee,
+      financeSettings?.service_fee,
+      total,
+    ]
+  );
 
   const requireSession = () => {
     if (currentUser) {
@@ -279,17 +324,11 @@ export default function VendorShopPage() {
       setOrderStatus("Renseigne ton nom, ton telephone et l'adresse de livraison.");
       return;
     }
-    const parsedDistance = Number(distanceKm || 0);
-    if (!Number.isFinite(parsedDistance) || parsedDistance < 0.1) {
-      setOrderStatus("Indique une distance de livraison valide.");
-      return;
-    }
     orderMutation.mutate({
       vendor_id: vendorId,
       customer_name: customerName.trim(),
       customer_phone: customerPhone.trim(),
       delivery_address: deliveryAddress.trim(),
-      distance_km: parsedDistance,
       payment_mode: paymentMode,
       items: selectedItems.map((item) => ({
         menu_item_id: item.menu_item_id,
@@ -444,16 +483,18 @@ export default function VendorShopPage() {
             <RestaurantOrderPanel
               selectedItems={selectedItems}
               total={total}
+              deliveryFee={restaurantPricing.deliveryFee}
+              platformCommission={restaurantPricing.platformCommission}
+              platformServiceFee={restaurantPricing.platformServiceFee}
+              grandTotal={restaurantPricing.totalAmount}
               customerName={customerName}
               customerPhone={customerPhone}
               deliveryAddress={deliveryAddress}
-              distanceKm={distanceKm}
               paymentMode={paymentMode}
               isSubmitting={orderMutation.isPending}
               onCustomerNameChange={setCustomerName}
               onCustomerPhoneChange={setCustomerPhone}
               onDeliveryAddressChange={setDeliveryAddress}
-              onDistanceChange={setDistanceKm}
               onPaymentModeChange={setPaymentMode}
               onItemNoteChange={setItemNote}
               onSubmit={submitOrder}
@@ -842,18 +883,20 @@ function RestaurantMenuSection({
 type RestaurantOrderPanelProps = {
   selectedItems: SelectedMenuItem[];
   total: number;
+  deliveryFee: number;
+  platformCommission: number;
+  platformServiceFee: number;
+  grandTotal: number;
   customerName: string;
   customerPhone: string;
   deliveryAddress: string;
-  distanceKm: string;
-  paymentMode: "nita" | "amana" | "cash_on_delivery";
+  paymentMode: "nita" | "amana";
   isSubmitting: boolean;
   statusMessage?: string;
   onCustomerNameChange: (value: string) => void;
   onCustomerPhoneChange: (value: string) => void;
   onDeliveryAddressChange: (value: string) => void;
-  onDistanceChange: (value: string) => void;
-  onPaymentModeChange: (value: "nita" | "amana" | "cash_on_delivery") => void;
+  onPaymentModeChange: (value: "nita" | "amana") => void;
   onItemNoteChange: (menuItemId: string, note: string) => void;
   onSubmit: () => void;
 };
@@ -861,17 +904,19 @@ type RestaurantOrderPanelProps = {
 function RestaurantOrderPanel({
   selectedItems,
   total,
+  deliveryFee,
+  platformCommission,
+  platformServiceFee,
+  grandTotal,
   customerName,
   customerPhone,
   deliveryAddress,
-  distanceKm,
   paymentMode,
   isSubmitting,
   statusMessage,
   onCustomerNameChange,
   onCustomerPhoneChange,
   onDeliveryAddressChange,
-  onDistanceChange,
   onPaymentModeChange,
   onItemNoteChange,
   onSubmit,
@@ -891,24 +936,15 @@ function RestaurantOrderPanel({
           placeholder="Adresse livraison"
           className="sm:col-span-2"
         />
-        <Input
-          value={distanceKm}
-          onChange={(event) => onDistanceChange(event.target.value)}
-          type="number"
-          min="0.1"
-          step="0.1"
-          placeholder="Distance estimee (km)"
-        />
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 sm:col-span-2">
           {[
             { value: "nita", label: "Nita" },
             { value: "amana", label: "Amana" },
-            { value: "cash_on_delivery", label: "Paiement livraison" },
           ].map((entry) => (
             <Button
               key={entry.value}
               type="button"
-              onClick={() => onPaymentModeChange(entry.value as "nita" | "amana" | "cash_on_delivery")}
+              onClick={() => onPaymentModeChange(entry.value as "nita" | "amana")}
               className={
                 paymentMode === entry.value
                   ? "border border-[#FF4D00]/35 bg-[#FF4D00]/10 text-[#FF4D00]"
@@ -922,7 +958,11 @@ function RestaurantOrderPanel({
       </div>
 
       <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-slate-700">
-        <p className="mt-1">Total panier repas: {formatXOF(total)}</p>
+        <p className="mt-1">Sous-total plats: {formatXOF(total)}</p>
+        <p className="mt-1">Frais de livraison: {formatXOF(deliveryFee)}</p>
+        <p className="mt-1">Commission plateforme: {formatXOF(platformCommission)}</p>
+        <p className="mt-1">Frais de service: {formatXOF(platformServiceFee)}</p>
+        <p className="mt-1 font-semibold text-slate-900">Total a payer: {formatXOF(grandTotal)}</p>
         <p className="mt-1">Articles: {selectedItems.length}</p>
       </div>
 
@@ -955,7 +995,7 @@ function RestaurantOrderPanel({
         onClick={onSubmit}
         className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
       >
-        {isSubmitting ? "Envoi en cours..." : "Commander maintenant"}
+        {isSubmitting ? "Envoi en cours..." : "Valider et payer"}
       </Button>
 
       {statusMessage ? <p className="mt-3 text-sm text-slate-700">{statusMessage}</p> : null}

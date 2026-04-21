@@ -63,8 +63,7 @@ class RestaurantOrderCreateRequest(BaseModel):
     customer_name: str = Field(min_length=2, max_length=120)
     customer_phone: str = Field(min_length=6, max_length=40)
     delivery_address: str = Field(min_length=4, max_length=220)
-    distance_km: float = Field(default=3.0, ge=0.1, le=50)
-    payment_mode: str = Field(pattern="^(nita|amana|cash_on_delivery)$")
+    payment_mode: str = Field(pattern="^(nita|amana)$")
     transaction_code: str | None = Field(default=None, max_length=120)
     items: list[RestaurantOrderLineRequest] = Field(min_length=1, max_length=20)
 
@@ -95,6 +94,8 @@ class RestaurantOrderResponse(BaseModel):
     delivery_fee: float
     delivery_minutes: int
     payment_mode: str
+    payment_reference: str | None
+    payment_status: str
     status: str
     total_amount: float
     currency: str

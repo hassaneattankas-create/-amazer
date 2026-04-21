@@ -60,7 +60,10 @@ class RestaurantOrder(Base):
     distance_km: Mapped[float] = mapped_column(Float, nullable=False, default=3)
     delivery_fee: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     delivery_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
-    payment_mode: Mapped[str] = mapped_column(String(30), nullable=False, default="cash_on_delivery")
+    payment_mode: Mapped[str] = mapped_column(String(30), nullable=False, default="nita")
+    payment_reference: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True, unique=True)
+    payment_status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    payment_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     transaction_code: Mapped[str | None] = mapped_column(String(180), nullable=True)
     transaction_code_hash: Mapped[str | None] = mapped_column(
         String(64),
@@ -71,6 +74,7 @@ class RestaurantOrder(Base):
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="commande")
     total_amount: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="XOF")
+    fee_breakdown: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     items: Mapped[list[RestaurantOrderItem]] = relationship(

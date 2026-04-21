@@ -1,21 +1,33 @@
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.config import get_settings
 from app.core.cache import cache_delete_prefixes
-from app.core.deps import get_current_user
+from app.core.checkout_fees import platform_commission_and_service_fee
+from app.core.crypto import decrypt_payment_code, decrypt_phone_value, encrypt_payment_code, payment_code_hash
 from app.core.csrf import enforce_csrf
-from app.core.crypto import decrypt_phone_value, encrypt_payment_code, payment_code_hash
-from app.core.exceptions import NotFoundError, ValidationDomainError
+from app.core.deps import get_current_user, get_current_user_optional
+from app.core.exceptions import NotFoundError, UnauthorizedError, ValidationDomainError
 from app.core.rate_limit import enforce_rate_limit
+from app.core.receipt_security import create_receipt_access_token, decode_receipt_access_token, receipt_integrity_hash
 from app.database import get_db
 from app.models.global_settings import GlobalSettings
 from app.models.restaurant import RestaurantMenuItem, RestaurantOrder, RestaurantOrderItem
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
+from app.schemas.order import (
+    PaymentConfirmRequest,
+    PaymentConfirmResponse,
+    PaymentIntentResponse,
+    ReceiptItemResponse,
+    ReceiptLinkResponse,
+    ReceiptResponse,
+)
 from app.schemas.restaurant import (
     RestaurantMenuAvailabilityUpdateRequest,
     RestaurantMenuCreateRequest,
@@ -36,6 +48,44 @@ from app.services.payment_security_service import verify_payment_code
 from app.services.public_catalog_policy import is_allowed_public_restaurant_name
 
 router = APIRouter(prefix="/restaurant", tags=["restaurant"])
+_settings = get_settings()
+_INTERNAL_DELIVERY_DISTANCE_KM = 3.0
+
+
+def _is_admin(user: User | None) -> bool:
+    if user is None:
+        return False
+    return user.email.lower() == _settings.admin_email.lower()
+
+
+def _mask_transaction_code(raw_code: str | None) -> str | None:
+    if not raw_code:
+        return None
+    if len(raw_code) <= 5:
+        return "*" * len(raw_code)
+    return f"{raw_code[:3]}***{raw_code[-2:]}"
+
+
+def _build_payment_reference(order_id: str) -> str:
+    return f"AMZ-{order_id[:6].upper()}-{order_id[-4:].upper()}"
+
+
+def _build_payment_url(payment_mode: str, payment_reference: str, amount: float) -> str:
+    amount_xof = int(round(amount))
+    if payment_mode == "nita":
+        return f"https://pay.amazer.ne/nita?ref={payment_reference}&amount={amount_xof}"
+    return f"https://pay.amazer.ne/amana?ref={payment_reference}&amount={amount_xof}"
+
+
+def _resolve_platform_wallet_phone(db: Session) -> str | None:
+    row = db.scalar(select(GlobalSettings).order_by(GlobalSettings.id.asc()))
+    if row is None:
+        return None
+    primary = (row.platform_wallet_phone or "").strip()
+    if primary:
+        return primary
+    fallback = (row.support_phone or "").strip()
+    return fallback or None
 
 
 def _invalidate_public_marketplace_cache() -> None:
@@ -76,6 +126,8 @@ def _order_response(order: RestaurantOrder, vendor_name: str, dish_map: dict[str
         delivery_fee=order.delivery_fee,
         delivery_minutes=order.delivery_minutes,
         payment_mode=order.payment_mode,
+        payment_reference=order.payment_reference,
+        payment_status=order.payment_status,
         status=order.status,
         total_amount=order.total_amount,
         currency=order.currency,
@@ -359,6 +411,108 @@ def update_seller_restaurant_menu_availability(
     return _menu_response(menu_item, vendor_name)
 
 
+def _restaurant_fee_snapshot(order: RestaurantOrder) -> dict[str, float]:
+    items_subtotal = sum(float(item.subtotal) for item in order.items)
+    fb = order.fee_breakdown
+    if isinstance(fb, dict) and fb.get("items_subtotal") is not None:
+        return {
+            "items_subtotal": round(float(fb.get("items_subtotal", 0)), 2),
+            "delivery_fee": round(float(fb.get("delivery_fee", 0)), 2),
+            "platform_commission": round(float(fb.get("platform_commission", 0)), 2),
+            "platform_service_fee": round(float(fb.get("platform_service_fee", 0)), 2),
+        }
+    return {
+        "items_subtotal": round(items_subtotal, 2),
+        "delivery_fee": round(float(order.delivery_fee or 0), 2),
+        "platform_commission": 0.0,
+        "platform_service_fee": 0.0,
+    }
+
+
+def _build_restaurant_receipt_payload(
+    order: RestaurantOrder,
+    customer_name: str,
+    dish_map: dict[str, str],
+) -> dict[str, object]:
+    fees = _restaurant_fee_snapshot(order)
+    return {
+        "order_id": order.id,
+        "kind": "restaurant",
+        "customer_name": customer_name,
+        "payment_mode": order.payment_mode,
+        "payment_reference": order.payment_reference,
+        "payment_status": order.payment_status,
+        "currency": order.currency,
+        "total_amount": round(order.total_amount, 2),
+        "items_subtotal": fees["items_subtotal"],
+        "delivery_fee": fees["delivery_fee"],
+        "platform_commission": fees["platform_commission"],
+        "platform_service_fee": fees["platform_service_fee"],
+        "created_at": order.created_at.isoformat(),
+        "transaction_code_hash": order.transaction_code_hash,
+        "items": [
+            {
+                "product_id": item.menu_item_id,
+                "product_name": dish_map.get(item.menu_item_id, "Plat"),
+                "quantity": item.quantity,
+                "unit_price": round(item.unit_price, 2),
+                "subtotal": round(item.subtotal, 2),
+            }
+            for item in sorted(order.items, key=lambda row: row.menu_item_id)
+        ],
+    }
+
+
+def _to_restaurant_receipt_response(
+    request: Request,
+    order: RestaurantOrder,
+    customer_name: str,
+    dish_map: dict[str, str],
+    digest: str,
+    token: str,
+    payment_url: str,
+    platform_wallet_phone: str | None,
+) -> ReceiptResponse:
+    decrypted = None
+    if order.transaction_code:
+        try:
+            decrypted = decrypt_payment_code(order.transaction_code)
+        except Exception:
+            decrypted = None
+    verify_url = f"{str(request.base_url).rstrip('/')}{_settings.api_prefix}/orders/receipt/verify?token={token}"
+    fees = _restaurant_fee_snapshot(order)
+    return ReceiptResponse(
+        order_id=order.id,
+        customer_name=customer_name,
+        payment_mode=order.payment_mode,
+        payment_reference=order.payment_reference,
+        payment_status=order.payment_status,
+        currency=order.currency,
+        total_amount=round(order.total_amount, 2),
+        items_subtotal=fees["items_subtotal"],
+        delivery_fee=fees["delivery_fee"],
+        platform_commission=fees["platform_commission"],
+        platform_service_fee=fees["platform_service_fee"],
+        transaction_code_masked=_mask_transaction_code(decrypted),
+        created_at=order.created_at,
+        issued_at=order.created_at,
+        items=[
+            ReceiptItemResponse(
+                product_id=item.menu_item_id,
+                product_name=dish_map.get(item.menu_item_id, "Plat"),
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                subtotal=item.subtotal,
+            )
+            for item in order.items
+        ],
+        integrity_hash=digest,
+        verify_url=verify_url,
+        payment_url=payment_url,
+        platform_wallet_phone=platform_wallet_phone,
+    )
+
+
 @router.post("/orders", response_model=RestaurantOrderResponse, status_code=status.HTTP_201_CREATED)
 def create_restaurant_order(
     payload: RestaurantOrderCreateRequest,
@@ -391,14 +545,20 @@ def create_restaurant_order(
     settings_row = _get_or_create_settings(db)
     delivery_fee = float(settings_row.default_delivery_fee or 0)
     prep_minutes = max(row.estimated_prep_minutes for row in menu_rows) if menu_rows else 20
-    delivery_minutes = _estimate_delivery_minutes(payload.distance_km, prep_minutes)
+    delivery_minutes = _estimate_delivery_minutes(_INTERNAL_DELIVERY_DISTANCE_KM, prep_minutes)
     encrypted_code: str | None = None
     code_hash: str | None = None
+    payment_confirmed_at: datetime | None = None
+    payment_status = "pending"
+    order_status = "payment_pending"
     if payload.transaction_code:
         if not verify_payment_code(db, payload.transaction_code):
             raise ValidationDomainError("Transaction code already used")
         encrypted_code = encrypt_payment_code(payload.transaction_code)
         code_hash = payment_code_hash(payload.transaction_code)
+        payment_status = "paid"
+        order_status = "commande"
+        payment_confirmed_at = datetime.now(UTC)
 
     order = RestaurantOrder(
         vendor_id=payload.vendor_id,
@@ -406,24 +566,26 @@ def create_restaurant_order(
         customer_name=payload.customer_name,
         customer_phone=payload.customer_phone,
         delivery_address=payload.delivery_address,
-        distance_km=payload.distance_km,
+        distance_km=_INTERNAL_DELIVERY_DISTANCE_KM,
         delivery_fee=delivery_fee,
         delivery_minutes=delivery_minutes,
         payment_mode=payload.payment_mode,
+        payment_status=payment_status,
+        payment_confirmed_at=payment_confirmed_at,
         transaction_code=encrypted_code,
         transaction_code_hash=code_hash,
-        status="commande",
+        status=order_status,
         total_amount=0,
         currency="XOF",
     )
 
-    total_amount = 0.0
+    items_subtotal = 0.0
     for line in payload.items:
         menu_item = menu_map[line.menu_item_id]
         options_total = sum(option.price for option in line.selected_options)
         unit_price = menu_item.base_price + options_total
         subtotal = unit_price * line.quantity
-        total_amount += subtotal
+        items_subtotal += subtotal
         order.items.append(
             RestaurantOrderItem(
                 menu_item_id=line.menu_item_id,
@@ -435,8 +597,25 @@ def create_restaurant_order(
             )
         )
 
-    order.total_amount = total_amount + delivery_fee
+    commission_fee, service_fee = platform_commission_and_service_fee(
+        settings_row,
+        profile,
+        items_subtotal,
+        bool(payload.items),
+    )
+    order_total = items_subtotal + delivery_fee + commission_fee + service_fee
+    order.fee_breakdown = {
+        "items_subtotal": round(items_subtotal, 2),
+        "delivery_fee": round(delivery_fee, 2),
+        "platform_commission": round(commission_fee, 2),
+        "platform_service_fee": round(service_fee, 2),
+    }
+    order.total_amount = order_total
+
     db.add(order)
+    db.flush()
+    if order.payment_reference is None:
+        order.payment_reference = _build_payment_reference(order.id)
     db.commit()
     db.refresh(order)
 
@@ -485,6 +664,8 @@ def update_seller_restaurant_order_status(
     order = db.get(RestaurantOrder, order_id)
     if order is None or order.vendor_id != profile.vendor_id:
         raise NotFoundError("Order not found")
+    if order.payment_status != "paid":
+        raise ValidationDomainError("Paiement non confirme: impossible de mettre a jour le statut.")
 
     order.status = payload.status
     db.commit()
@@ -499,3 +680,156 @@ def update_seller_restaurant_order_status(
     dish_map = {dish.id: dish.name for dish in dishes}
     vendor_name = vendor.name if vendor else "Restaurant"
     return _order_response(order, vendor_name, dish_map)
+
+
+def _resolve_restaurant_order_for_receipt(db: Session, order_id: str) -> RestaurantOrder | None:
+    return db.scalar(
+        select(RestaurantOrder)
+        .where(RestaurantOrder.id == order_id)
+        .options(selectinload(RestaurantOrder.items))
+    )
+
+
+@router.get("/orders/{order_id}/payment-intent", response_model=PaymentIntentResponse)
+def get_restaurant_payment_intent(
+    order_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> PaymentIntentResponse:
+    order = _resolve_restaurant_order_for_receipt(db, order_id)
+    if order is None:
+        raise ValidationDomainError("Order not found")
+    if order.user_id != current_user.id and not _is_admin(current_user):
+        raise UnauthorizedError("Unauthorized order access")
+    reference = order.payment_reference or _build_payment_reference(order.id)
+    if order.payment_reference is None:
+        order.payment_reference = reference
+        db.commit()
+        db.refresh(order)
+    payment_url = _build_payment_url(order.payment_mode, reference, order.total_amount)
+    return PaymentIntentResponse(
+        order_id=order.id,
+        payment_mode=order.payment_mode,
+        payment_reference=reference,
+        amount=round(order.total_amount, 2),
+        currency=order.currency,
+        payment_url=payment_url,
+        qr_payload=payment_url,
+        expires_in_seconds=15 * 60,
+    )
+
+
+@router.post("/orders/{order_id}/payment/confirm", response_model=PaymentConfirmResponse)
+def confirm_restaurant_order_payment(
+    order_id: str,
+    payload: PaymentConfirmRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> PaymentConfirmResponse:
+    enforce_csrf(request)
+    enforce_rate_limit(request, key="payment_confirm_restaurant", limit=12, window_seconds=120)
+    order = db.scalar(select(RestaurantOrder).where(RestaurantOrder.id == order_id).with_for_update())
+    if order is None:
+        raise ValidationDomainError("Order not found")
+    if order.user_id != current_user.id and not _is_admin(current_user):
+        raise UnauthorizedError("Unauthorized order access")
+
+    if order.payment_status == "paid":
+        return PaymentConfirmResponse(
+            order_id=order.id,
+            payment_status="paid",
+            order_status=order.status,
+            message="Paiement deja confirme.",
+        )
+
+    reference = order.payment_reference or _build_payment_reference(order.id)
+    order.payment_reference = reference
+    provider_ref = (payload.provider_reference or payload.code_last4 or "").strip()
+    synthetic_code = f"AUTO-{reference}-{provider_ref or 'OK'}"
+    order.transaction_code = encrypt_payment_code(synthetic_code)
+    order.transaction_code_hash = payment_code_hash(synthetic_code)
+    order.payment_status = "paid"
+    order.payment_confirmed_at = datetime.now(UTC)
+    if order.status == "payment_pending":
+        order.status = "commande"
+
+    db.commit()
+    db.refresh(order)
+    return PaymentConfirmResponse(
+        order_id=order.id,
+        payment_status=order.payment_status,
+        order_status=order.status,
+        message="Paiement confirme avec succes.",
+    )
+
+
+@router.get("/orders/{order_id}/receipt-link", response_model=ReceiptLinkResponse)
+def get_restaurant_receipt_link(
+    order_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> ReceiptLinkResponse:
+    order = _resolve_restaurant_order_for_receipt(db, order_id)
+    if order is None:
+        raise ValidationDomainError("Order not found")
+    if order.user_id != current_user.id and not _is_admin(current_user):
+        raise UnauthorizedError("Unauthorized receipt access")
+    dish_ids = [item.menu_item_id for item in order.items]
+    dishes = db.scalars(select(RestaurantMenuItem).where(RestaurantMenuItem.id.in_(dish_ids))).all()
+    dish_map = {dish.id: dish.name for dish in dishes}
+    customer_name = order.customer_name
+    payload = _build_restaurant_receipt_payload(order, customer_name, dish_map)
+    digest = receipt_integrity_hash(payload)
+    token = create_receipt_access_token(order_id=order.id, digest=digest)
+    receipt_url = f"/order/receipt/{order.id}?token={token}"
+    verify_url = f"/seller/delivery-scan?token={token}"
+    return ReceiptLinkResponse(order_id=order.id, token=token, receipt_url=receipt_url, verify_url=verify_url)
+
+
+@router.get("/receipt/{order_id}", response_model=ReceiptResponse)
+def get_restaurant_secure_receipt(
+    order_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User | None, Depends(get_current_user_optional)],
+    token: Annotated[str | None, Query()] = None,
+) -> ReceiptResponse:
+    order = _resolve_restaurant_order_for_receipt(db, order_id)
+    if order is None:
+        raise ValidationDomainError("Order not found")
+
+    dish_ids = [item.menu_item_id for item in order.items]
+    dishes = db.scalars(select(RestaurantMenuItem).where(RestaurantMenuItem.id.in_(dish_ids))).all()
+    dish_map = {dish.id: dish.name for dish in dishes}
+    customer_name = order.customer_name
+    payload = _build_restaurant_receipt_payload(order, customer_name, dish_map)
+    digest = receipt_integrity_hash(payload)
+
+    if not _is_admin(current_user):
+        if not token:
+            raise UnauthorizedError("Receipt token required")
+        try:
+            claims = decode_receipt_access_token(token)
+        except ValueError as exc:
+            raise UnauthorizedError("Invalid or expired receipt token") from exc
+        if claims.get("sub") != order.id or claims.get("digest") != digest:
+            raise UnauthorizedError("Invalid receipt token")
+    else:
+        token = create_receipt_access_token(order_id=order.id, digest=digest)
+
+    reference = order.payment_reference or _build_payment_reference(order.id)
+    payment_url = _build_payment_url(order.payment_mode, reference, order.total_amount)
+    wallet_phone = _resolve_platform_wallet_phone(db)
+
+    return _to_restaurant_receipt_response(
+        request=request,
+        order=order,
+        customer_name=customer_name,
+        dish_map=dish_map,
+        digest=digest,
+        token=token,
+        payment_url=payment_url,
+        platform_wallet_phone=wallet_phone,
+    )

@@ -469,6 +469,7 @@ def get_storefront(
         .order_by(RestaurantMenuItem.updated_at.desc())
         .limit(120)
     ).all()
+    finance = build_effective_seller_finance_settings(get_or_create_global_settings(db), profile)
 
     return SellerStorefrontResponse(
         vendor_id=vendor.id,
@@ -490,6 +491,8 @@ def get_storefront(
         room_types=list(profile.room_types or []),
         deposit_payment_method=profile.deposit_payment_method,
         deposit_amount=profile.deposit_amount,
+        effective_commission_rate=finance.commission_rate,
+        effective_service_fee=finance.service_fee,
         accepts_table_reservations=bool(profile.accepts_table_reservations),
         accepts_hotel_bookings=bool(profile.accepts_hotel_bookings),
         is_verified=profile.is_verified,
