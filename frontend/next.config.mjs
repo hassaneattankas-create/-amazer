@@ -48,10 +48,8 @@ function buildConnectSrc() {
   }
   if (isProd) {
     // Héritage : domaines historiques (retirer quand tout est migré vers les variables ci-dessus)
-    origins.add("https://amazer.vercel.app");
-    origins.add("https://www.amazer.vercel.app");
-    origins.add("https://amazerniger.vercel.app");
-    origins.add("https://www.amazerniger.vercel.app");
+    origins.add("https://amazer.store");
+    origins.add("https://www.amazer.store");
   } else {
     origins.add("http://localhost:8000");
     origins.add("http://127.0.0.1:8000");

@@ -1,6 +1,6 @@
 const DEFAULT_BACKEND_ORIGIN = "https://amazer-api.onrender.com";
 /** Aligné sur le déploiement web (rewrites /backend-api). Repli si la variable n’a pas été injectée au build. */
-const DEFAULT_MOBILE_SITE_ORIGIN = "https://amazerniger.vercel.app";
+const DEFAULT_MOBILE_SITE_ORIGIN = "https://amazer.store";
 
 /**
  * Si défini (ex. https://mondomaine.ne), l’APK packagée utilise le proxy Next `/backend-api` de ce site.

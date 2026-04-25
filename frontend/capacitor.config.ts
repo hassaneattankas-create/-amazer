@@ -8,7 +8,7 @@ const rawCapServer = process.env.CAPACITOR_SERVER_URL;
 const mobileServerUrl =
   rawCapServer !== undefined && rawCapServer !== null ? rawCapServer.trim() : "";
 const usesRemoteServer = Boolean(mobileServerUrl);
-const allowedNavigationHosts = new Set(["amazerniger.vercel.app", "amazer-api.onrender.com"]);
+const allowedNavigationHosts = new Set(["amazer.store", "www.amazer.store", "amazer-api.onrender.com"]);
 
 if (mobileServerUrl) {
   try {

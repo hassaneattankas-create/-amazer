@@ -4,6 +4,13 @@ import type { NextRequest } from "next/server";
 const PROTECTED_PATHS = ["/seller", "/admin", "/dashboard", "/profile"];
 const PRIMARY_HOSTNAME = "amazer.store";
 const WWW_HOSTNAME = `www.${PRIMARY_HOSTNAME}`;
+const HISTORICAL_HOSTNAMES = new Set([
+  "amazer.vercel.app",
+  "www.amazer.vercel.app",
+  "amazerniger.vercel.app",
+  "www.amazerniger.vercel.app",
+  "amazerniger-amazerniger-hubs-projects.vercel.app",
+]);
 
 /** APK Capacitor (https://localhost) appelle le site Vercel en cross-origin : CORS requis. */
 const CORS_PATH_PREFIXES = ["/backend-api", "/api/admin-proxy", "/api/admin-finance", "/api/image-proxy"];
@@ -49,7 +56,7 @@ export function proxy(request: NextRequest) {
   const hostname = request.nextUrl.hostname.toLowerCase();
   const origin = request.headers.get("origin");
 
-  if (hostname === WWW_HOSTNAME) {
+  if (hostname === WWW_HOSTNAME || HISTORICAL_HOSTNAMES.has(hostname)) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.hostname = PRIMARY_HOSTNAME;
     return NextResponse.redirect(redirectUrl, 308);

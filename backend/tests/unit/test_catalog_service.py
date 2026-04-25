@@ -28,7 +28,7 @@ def _vendor(*, vendor_id: str, activity_type: str, storefront_tier: str = "basic
     )
 
 
-def test_list_vendor_storefronts_hides_empty_shop_without_visible_products() -> None:
+def test_list_vendor_storefronts_keeps_empty_shop_visible_without_products() -> None:
     db = Mock()
     service = CatalogService(db)
     service.catalog = Mock()
@@ -38,7 +38,9 @@ def test_list_vendor_storefronts_hides_empty_shop_without_visible_products() -> 
 
     result = service.list_vendor_storefronts(limit=20, offset=0, activity_type="shop")
 
-    assert result.items == []
+    assert len(result.items) == 1
+    assert result.items[0].id == "shop-empty"
+    assert result.items[0].product_count == 0
 
 
 def test_list_vendor_storefronts_keeps_premium_store_with_services_even_without_products() -> None:

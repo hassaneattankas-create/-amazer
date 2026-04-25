@@ -38,20 +38,23 @@ export const useNotificationStore = create<NotificationState>()(
     (set) => ({
       items: [],
       pushNotification: (notification) =>
-        set((state) => ({
-          items: [
-            {
-              id: `${notification.tag}-${Date.now()}`,
-              title: notification.title,
-              body: notification.body,
-              tag: notification.tag,
-              href: notification.href,
-              createdAt: new Date().toISOString(),
-              unread: true,
-            },
-            ...state.items,
-          ].slice(0, 100),
-        })),
+        set((state) => {
+          const withoutSameTag = state.items.filter((item) => item.tag !== notification.tag);
+          return {
+            items: [
+              {
+                id: `${notification.tag}-${Date.now()}`,
+                title: notification.title,
+                body: notification.body,
+                tag: notification.tag,
+                href: notification.href,
+                createdAt: new Date().toISOString(),
+                unread: true,
+              },
+              ...withoutSameTag,
+            ].slice(0, 100),
+          };
+        }),
       syncNotifications: (notifications) =>
         set((state) => {
           const merged = [...state.items];

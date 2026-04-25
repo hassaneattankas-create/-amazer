@@ -74,12 +74,12 @@ export function FloatingNavbar() {
   const syncNotifications = useNotificationStore((state) => state.syncNotifications);
   const seenRemoteNotificationsRef = useRef<Set<string>>(new Set());
   const remoteNotificationsInitializedRef = useRef(false);
-  const { data: remoteNotifications = [] } = useQuery({
+  const { data: remoteNotifications = [], isFetched: remoteNotificationsFetched } = useQuery({
     queryKey: ["remote-notifications", user?.id],
     queryFn: () => listMyNotifications(60),
     enabled: Boolean(user?.id),
     refetchInterval: 5_000,
-    staleTime: 0,
+    staleTime: 30_000,
   });
 
   const showAdminLink = Boolean(adminMe?.is_admin) || isAdminEmail(user?.email);
@@ -179,7 +179,7 @@ export function FloatingNavbar() {
   }, [clearNotifications, user?.id]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !remoteNotificationsFetched) {
       return;
     }
     syncNotifications(remoteNotifications);
@@ -205,7 +205,14 @@ export function FloatingNavbar() {
         void queryClient.invalidateQueries({ queryKey: ["seller-subscription-payment-requests"] });
       }
     }
-  }, [isAuthenticated, queryClient, remoteNotifications, syncNotifications]);
+  }, [
+    isAuthenticated,
+    queryClient,
+    remoteNotifications,
+    remoteNotificationsFetched,
+    syncNotifications,
+    user?.id,
+  ]);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {

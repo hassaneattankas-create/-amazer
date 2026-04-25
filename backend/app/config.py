@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     admin_birth_date: str = Field(default="07/11/03")
     cors_allowed_origins: str = Field(
         default=(
+            "https://amazer.store,"
+            "https://www.amazer.store,"
             "https://amazer.vercel.app,"
             "https://www.amazer.vercel.app,"
             "https://amazerniger.vercel.app,"
@@ -52,6 +54,8 @@ class Settings(BaseSettings):
     cors_allowed_origin_regex: str = Field(
         default=(
             r"^("
+            r"https://(www\.)?amazer\.store"
+            r"|"
             r"https://.*\.vercel\.app"
             r"|https://(www\.)?amazerapp\.com"
             r"|https://localhost(:\d+)?"

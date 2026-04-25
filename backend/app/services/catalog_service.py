@@ -160,7 +160,8 @@ class CatalogService:
         room_type_count = len(list(getattr(profile, "room_types", []) or []))
 
         if activity_type == "shop":
-            return product_count > 0
+            # Vitrine visible des l ouverture : les boutiques sans stock encore trie en fin de liste cote UI.
+            return True
         if storefront_tier == "premium" or activity_type in {"hotel", "enterprise"}:
             return product_count > 0 or service_count > 0 or room_type_count > 0
         return product_count > 0

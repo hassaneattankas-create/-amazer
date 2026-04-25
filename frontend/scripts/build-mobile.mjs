@@ -60,7 +60,7 @@ const dynamicRouteDirs = [
   "order/success/[id]",
 ];
 const DEFAULT_MOBILE_BACKEND_ORIGIN = "https://amazer-api.onrender.com";
-const DEFAULT_MOBILE_SITE_URL = "https://amazerniger.vercel.app";
+const DEFAULT_MOBILE_SITE_URL = "https://amazer.store";
 
 const requestedMobileBackendOrigin =
   process.env.MOBILE_BACKEND_ORIGIN?.trim() ||

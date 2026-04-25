@@ -7,6 +7,16 @@ const ALLOWED_SHOP_NAMES = new Set(["amazer", "fragrance"]);
 const ALLOWED_RESTAURANT_NAMES = new Set(["le sahel rooftop"]);
 const ALLOWED_HOME_PRODUCT_BRANDS = new Set(["amazer market", "fragrance"]);
 
+/** Demo / staging uniquement : filtre les vitrines par noms fixes. Marcheplace reel : laisser desactive. */
+export function isStrictCatalogWhitelistEnabled(): boolean {
+  const raw = process.env.NEXT_PUBLIC_STRICT_CATALOG_WHITELIST;
+  if (raw == null || raw === "") {
+    return false;
+  }
+  const v = raw.trim().toLowerCase();
+  return v === "true" || v === "1" || v === "yes";
+}
+
 function normalize(value: string | null | undefined): string {
   return (value || "").trim().toLowerCase();
 }
@@ -26,6 +36,9 @@ export function isAllowedPublicRestaurantStore(
 }
 
 export function filterPublicStorefronts(items: VendorStorefront[]): VendorStorefront[] {
+  if (!isStrictCatalogWhitelistEnabled()) {
+    return items;
+  }
   return items.filter((item) => {
     const activityType = normalize(item.activity_type);
     if (activityType === "shop") {
@@ -43,6 +56,9 @@ export function isAllowedPublicProduct(item: Pick<ProductSearchItem, "best_offer
 }
 
 export function filterPublicProductSearchResult(result: ProductSearchResult): ProductSearchResult {
+  if (!isStrictCatalogWhitelistEnabled()) {
+    return result;
+  }
   const items = result.items.filter(isAllowedPublicProduct);
   return {
     items,
@@ -54,6 +70,9 @@ export function filterPublicProductSearchResult(result: ProductSearchResult): Pr
 }
 
 export function filterPublicPromotions(items: PromotionItem[]): PromotionItem[] {
+  if (!isStrictCatalogWhitelistEnabled()) {
+    return items;
+  }
   return items.filter((item) => ALLOWED_SHOP_NAMES.has(normalize(item.vendor.name)));
 }
 
@@ -75,6 +94,9 @@ function filterHomeSection(section: HomeContentSection): HomeContentSection | nu
 }
 
 export function filterPublicHomeContent(content: HomeContent): HomeContent {
+  if (!isStrictCatalogWhitelistEnabled()) {
+    return content;
+  }
   return {
     ...content,
     sections: content.sections
@@ -84,5 +106,8 @@ export function filterPublicHomeContent(content: HomeContent): HomeContent {
 }
 
 export function filterPublicRestaurantStorefronts(items: RestaurantStorefront[]): RestaurantStorefront[] {
+  if (!isStrictCatalogWhitelistEnabled()) {
+    return items;
+  }
   return items.filter((item) => isAllowedPublicRestaurantStore(item));
 }
