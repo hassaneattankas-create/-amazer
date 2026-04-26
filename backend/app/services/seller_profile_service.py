@@ -22,6 +22,25 @@ def _seller_subscription_is_active(profile: SellerProfile) -> bool:
     )
 
 
+def resolve_seller_plan_bucket(
+    activity_type: str | None,
+    storefront_tier: str | None,
+) -> str:
+    normalized_activity = str(activity_type or "").strip().lower()
+    normalized_tier = str(storefront_tier or "").strip().lower()
+    if normalized_tier == "premium" or normalized_activity in {"hotel", "enterprise"}:
+        return "premium"
+    if normalized_activity == "restaurant":
+        return "restaurant"
+    return "shop"
+
+
+def profile_plan_bucket(profile: SellerProfile | None) -> str | None:
+    if profile is None:
+        return None
+    return resolve_seller_plan_bucket(profile.activity_type, profile.storefront_tier)
+
+
 def slugify(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
 
@@ -162,6 +181,7 @@ def create_or_update_seller_profile(
     existing_profile: SellerProfile | None = None,
 ) -> SellerProfile:
     profile = existing_profile
+    previous_plan_bucket = profile_plan_bucket(profile)
     if profile is None:
         vendor = Vendor(
             name=str(payload.get("business_name", "")).strip() or user.full_name,
@@ -196,6 +216,10 @@ def create_or_update_seller_profile(
             db.flush()
 
     apply_seller_profile_payload(profile, payload)
+    next_plan_bucket = profile_plan_bucket(profile)
+    if previous_plan_bucket is not None and next_plan_bucket != previous_plan_bucket:
+        profile.subscription_paid_until = None
+        profile.subscription_last_payment_reference = None
     vendor.name = profile.business_name
     # Mini-site visible uniquement si l'abonnement vendeur est à jour (même logique que /seller/profile).
     vendor.is_active = _seller_subscription_is_active(profile)

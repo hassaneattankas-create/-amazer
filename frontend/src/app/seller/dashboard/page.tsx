@@ -8,6 +8,7 @@ import { Boxes, CalendarClock, Clock3, Hotel, PlusCircle, Settings2, UtensilsCro
 import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
+import { SingleMediaField } from "@/components/seller/MediaFields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatXOF } from "@/lib/currency";
@@ -410,12 +411,11 @@ export default function SellerDashboardPage() {
                 placeholder="Stock"
                 type="number"
               />
-              <Input
+              <SingleMediaField
+                label="Photo du produit"
                 value={productForm.main_image_url}
-                onChange={(event) =>
-                  setProductForm((prev) => ({ ...prev, main_image_url: event.target.value }))
-                }
-                placeholder="Image URL"
+                onChange={(value) => setProductForm((prev) => ({ ...prev, main_image_url: value }))}
+                emptyMessage="Choisis la photo du produit depuis la galerie."
               />
               <Input
                 value={productForm.description}
@@ -469,10 +469,11 @@ export default function SellerDashboardPage() {
                 onChange={(event) => setDishForm((prev) => ({ ...prev, description: event.target.value }))}
                 placeholder="Description"
               />
-              <Input
+              <SingleMediaField
+                label="Photo du plat"
                 value={dishForm.image_url}
-                onChange={(event) => setDishForm((prev) => ({ ...prev, image_url: event.target.value }))}
-                placeholder="URL photo plat"
+                onChange={(value) => setDishForm((prev) => ({ ...prev, image_url: value }))}
+                emptyMessage="Choisis la photo du plat depuis la galerie."
               />
               <Input
                 value={dishForm.tags}

@@ -1,19 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useId, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Building2,
   CheckCircle2,
   Circle,
-  ImageUp,
   PenSquare,
   PlusCircle,
   UtensilsCrossed,
 } from "lucide-react";
 
+import { GalleryMediaField, SingleMediaField } from "@/components/seller/MediaFields";
 import { PremiumSellerPitch } from "@/components/PremiumSellerPitch";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,6 @@ import { resolveImageUrl } from "@/lib/image";
 import { persistAppMode } from "@/lib/session-mode";
 import { listCatalogCategories } from "@/services/catalog-service";
 import { getPublicFinanceSettings } from "@/services/finance-service";
-import { uploadMedia } from "@/services/media-service";
 import { createRestaurantMenuItem, listRestaurantMenu } from "@/services/restaurant-service";
 import {
   createSellerProduct,
@@ -48,6 +47,10 @@ function splitListInput(value: string): string[] {
     .split(/\r?\n|,/)
     .map((entry) => entry.trim())
     .filter(Boolean);
+}
+
+function mergeImageList(values: string[]): string {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).join("\n");
 }
 
 function parseServices(value: string) {
@@ -402,6 +405,7 @@ function SellerPageContent() {
   });
 
   const normalizeImageInput = (raw: string): string | undefined => resolveImageUrl(raw) ?? undefined;
+  const profileGalleryImages = splitListInput(profileForm.gallery_images_text);
   const isShop = profileForm.activity_type === "shop";
   const isRestaurant = profileForm.activity_type === "restaurant";
   const isPremium = profileForm.activity_type === "hotel" || profileForm.activity_type === "enterprise";
@@ -827,30 +831,18 @@ function SellerPageContent() {
               <option value="restaurant">Restaurant (menu)</option>
               <option value="enterprise">Premium entreprise (mini-site complet)</option>
             </select>
-            <div className="space-y-2">
-              <Input
-                placeholder="Logo URL"
-                value={profileForm.logo_url}
-                onChange={(event) => setProfileForm((prev) => ({ ...prev, logo_url: event.target.value }))}
-              />
-              <MediaUploader
-                label="Uploader logo"
-                onUploaded={(url) => setProfileForm((prev) => ({ ...prev, logo_url: url }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Input
-                placeholder="Cover URL"
-                value={profileForm.cover_image_url}
-                onChange={(event) =>
-                  setProfileForm((prev) => ({ ...prev, cover_image_url: event.target.value }))
-                }
-              />
-              <MediaUploader
-                label="Uploader couverture"
-                onUploaded={(url) => setProfileForm((prev) => ({ ...prev, cover_image_url: url }))}
-              />
-            </div>
+            <SingleMediaField
+              label="Logo du commerce"
+              value={profileForm.logo_url}
+              onChange={(value) => setProfileForm((prev) => ({ ...prev, logo_url: value }))}
+              emptyMessage="Ajoute le logo depuis la galerie."
+            />
+            <SingleMediaField
+              label="Couverture du commerce"
+              value={profileForm.cover_image_url}
+              onChange={(value) => setProfileForm((prev) => ({ ...prev, cover_image_url: value }))}
+              emptyMessage="Ajoute la couverture depuis la galerie."
+            />
             <Input
               placeholder="Horaires"
               value={profileForm.opening_hours}
@@ -938,13 +930,15 @@ function SellerPageContent() {
               className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
             />
             {isPremium ? (
-              <textarea
-                placeholder="Galerie photos: une URL par ligne"
-                value={profileForm.gallery_images_text}
-                onChange={(event) =>
-                  setProfileForm((prev) => ({ ...prev, gallery_images_text: event.target.value }))
+              <GalleryMediaField
+                label="Galerie photos"
+                values={profileGalleryImages}
+                onChange={(values) =>
+                  setProfileForm((prev) => ({
+                    ...prev,
+                    gallery_images_text: mergeImageList(values),
+                  }))
                 }
-                className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm"
               />
             ) : null}
             {isPremium ? (
@@ -984,7 +978,12 @@ function SellerPageContent() {
                 opening_hours: profileForm.opening_hours || undefined,
                 whatsapp_contact: profileForm.whatsapp_contact || undefined,
                 contact_email: profileForm.contact_email || undefined,
-                gallery_images: isPremium ? splitListInput(profileForm.gallery_images_text) : [],
+                gallery_images: isPremium
+                  ? splitListInput(profileForm.gallery_images_text).flatMap((value) => {
+                      const normalized = normalizeImageInput(value);
+                      return normalized ? [normalized] : [];
+                    })
+                  : [],
                 service_offerings: isPremium ? parseServices(profileForm.service_offerings_text) : [],
                 room_types: isPremium ? parseRoomTypes(profileForm.room_types_text) : [],
                 deposit_payment_method: isPremium ? profileForm.deposit_payment_method : undefined,
@@ -1060,19 +1059,12 @@ function SellerPageContent() {
                 setProductForm((prev) => ({ ...prev, stock_quantity: event.target.value }))
               }
             />
-            <div className="space-y-2">
-              <Input
-                placeholder="Image URL"
-                value={productForm.main_image_url}
-                onChange={(event) =>
-                  setProductForm((prev) => ({ ...prev, main_image_url: event.target.value }))
-                }
-              />
-              <MediaUploader
-                label="Uploader image produit"
-                onUploaded={(url) => setProductForm((prev) => ({ ...prev, main_image_url: url }))}
-              />
-            </div>
+            <SingleMediaField
+              label="Photo du produit"
+              value={productForm.main_image_url}
+              onChange={(value) => setProductForm((prev) => ({ ...prev, main_image_url: value }))}
+              emptyMessage="Choisis la photo du produit depuis la galerie."
+            />
             <Input
               placeholder="Description"
               value={productForm.description}
@@ -1146,17 +1138,12 @@ function SellerPageContent() {
               value={restaurantForm.description}
               onChange={(event) => setRestaurantForm((prev) => ({ ...prev, description: event.target.value }))}
             />
-            <div className="space-y-2">
-              <Input
-                placeholder="Image URL"
-                value={restaurantForm.image_url}
-                onChange={(event) => setRestaurantForm((prev) => ({ ...prev, image_url: event.target.value }))}
-              />
-              <MediaUploader
-                label="Uploader image plat"
-                onUploaded={(url) => setRestaurantForm((prev) => ({ ...prev, image_url: url }))}
-              />
-            </div>
+            <SingleMediaField
+              label="Photo du plat"
+              value={restaurantForm.image_url}
+              onChange={(value) => setRestaurantForm((prev) => ({ ...prev, image_url: value }))}
+              emptyMessage="Choisis la photo du plat depuis la galerie."
+            />
             <Input
               placeholder="Temps de preparation (minutes)"
               type="number"
@@ -1254,55 +1241,5 @@ export default function SellerPage() {
     >
       <SellerPageContent />
     </Suspense>
-  );
-}
-
-type MediaUploaderProps = {
-  label: string;
-  onUploaded: (url: string) => void;
-};
-
-function MediaUploader({ label, onUploaded }: MediaUploaderProps) {
-  const inputId = useId();
-  const [status, setStatus] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    setStatus("");
-    setIsUploading(true);
-    try {
-      const response = await uploadMedia(file);
-      onUploaded(response.url);
-      setStatus("Upload termine.");
-    } catch (error) {
-      setStatus(getApiErrorMessage(error, "Erreur lors de l'upload."));
-    } finally {
-      setIsUploading(false);
-      event.target.value = "";
-    }
-  };
-
-  return (
-    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-      <label
-        htmlFor={inputId}
-        className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700"
-      >
-        <ImageUp className="h-3.5 w-3.5 text-[#FF4D00]" />
-        {isUploading ? "Upload..." : label}
-      </label>
-      <input
-        id={inputId}
-        type="file"
-        accept="image/*"
-        onChange={handleUpload}
-        className="text-xs text-slate-500"
-      />
-      {status ? <span className="text-slate-500">{status}</span> : null}
-    </div>
   );
 }

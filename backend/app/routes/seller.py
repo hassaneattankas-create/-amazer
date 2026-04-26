@@ -62,6 +62,7 @@ from app.services.seller_finance_service import (
     get_or_create_global_settings,
 )
 from app.services.seller_profile_service import create_or_update_seller_profile
+from app.services.seller_profile_service import resolve_seller_plan_bucket
 
 router = APIRouter(prefix="/seller", tags=["seller"])
 settings = get_settings()
@@ -130,6 +131,18 @@ def _has_active_subscription(profile: SellerProfile) -> bool:
         and profile.subscription_paid_until is not None
         and profile.subscription_paid_until > datetime.now(UTC)
     )
+
+
+def _profile_plan_bucket(profile: SellerProfile) -> str:
+    return resolve_seller_plan_bucket(profile.activity_type, profile.storefront_tier)
+
+
+def _payload_plan_bucket(payload: SellerProfileRequest) -> str:
+    return resolve_seller_plan_bucket(payload.activity_type, payload.storefront_tier)
+
+
+def _can_manage_shop_catalog(profile: SellerProfile) -> bool:
+    return profile.activity_type == "shop" or profile.storefront_tier == "premium"
 
 
 def _sync_product_flags(product: Product) -> tuple[float | None, datetime | None, datetime | None]:
@@ -326,6 +339,21 @@ def upsert_profile(
 ) -> SellerProfileResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is not None and _profile_plan_bucket(profile) != _payload_plan_bucket(payload):
+        pending_payment_exists = (
+            db.scalar(
+                select(SellerSubscriptionPayment.id).where(
+                    SellerSubscriptionPayment.seller_profile_id == profile.id,
+                    SellerSubscriptionPayment.status == "pending",
+                )
+            )
+            is not None
+        )
+        if pending_payment_exists:
+            raise ConflictError(
+                "Une demande de paiement vendeur est deja en attente. "
+                "Terminez-la avant de changer de formule."
+            )
     profile = create_or_update_seller_profile(
         db,
         user=current_user,
@@ -541,6 +569,11 @@ def create_product_listing(
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
         raise NotFoundError("Create a seller profile first")
+    if not _can_manage_shop_catalog(profile):
+        raise ValidationDomainError(
+            "Cette formule vendeur ne permet pas de publier des produits. "
+            "Passez en boutique ou en Premium."
+        )
     if not is_premium_profile(profile):
         cap = max_products_for_basic_tier(db)
         current = count_vendor_catalog_products(db, profile.vendor_id)
@@ -552,7 +585,7 @@ def create_product_listing(
     # Réactive le mini-site: la boutique (list_vendor_storefronts) ne remonte que si Vendor.is_active=True.
     vendor = db.get(Vendor, profile.vendor_id)
     if vendor is not None:
-        vendor.is_active = True
+        vendor.is_active = _has_active_subscription(profile)
 
     product = Product(
         name=payload.name,

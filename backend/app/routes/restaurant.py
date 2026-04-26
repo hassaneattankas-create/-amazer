@@ -10,7 +10,7 @@ from app.core.cache import cache_delete_prefixes
 from app.core.checkout_fees import platform_commission_and_service_fee
 from app.core.crypto import decrypt_payment_code, decrypt_phone_value, encrypt_payment_code, payment_code_hash
 from app.core.csrf import enforce_csrf
-from app.core.deps import get_current_user, get_current_user_optional
+from app.core.deps import get_current_user, get_current_user_optional, get_seller_user
 from app.core.exceptions import NotFoundError, UnauthorizedError, ValidationDomainError
 from app.core.rate_limit import enforce_rate_limit
 from app.core.receipt_security import create_receipt_access_token, decode_receipt_access_token, receipt_integrity_hash
@@ -194,6 +194,10 @@ def _is_public_restaurant_vendor(vendor: Vendor | None, profile: SellerProfile |
     return True
 
 
+def _can_manage_restaurant_catalog(profile: SellerProfile) -> bool:
+    return profile.activity_type == "restaurant" or profile.storefront_tier == "premium"
+
+
 @router.get("/storefronts", response_model=RestaurantStorefrontListResponse)
 def list_restaurant_storefronts(
     db: Annotated[Session, Depends(get_db)],
@@ -327,12 +331,17 @@ def create_restaurant_menu_item(
     payload: RestaurantMenuCreateRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_seller_user)],
 ) -> RestaurantMenuItemResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
         raise NotFoundError("Create a seller profile first")
+    if not _can_manage_restaurant_catalog(profile):
+        raise ValidationDomainError(
+            "Cette formule vendeur ne permet pas de publier un menu restaurant. "
+            "Passez en restaurant ou en Premium."
+        )
     if not is_premium_profile(profile):
         cap = max_products_for_basic_tier(db)
         current = count_vendor_menu_items(db, profile.vendor_id)
@@ -366,7 +375,7 @@ def create_restaurant_menu_item(
 @router.get("/seller/menu", response_model=list[RestaurantMenuItemResponse])
 def list_seller_restaurant_menu(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_seller_user)],
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> list[RestaurantMenuItemResponse]:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
@@ -390,7 +399,7 @@ def update_seller_restaurant_menu_availability(
     payload: RestaurantMenuAvailabilityUpdateRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_seller_user)],
 ) -> RestaurantMenuItemResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
@@ -626,7 +635,7 @@ def create_restaurant_order(
 @router.get("/seller/orders", response_model=list[RestaurantOrderResponse])
 def list_seller_restaurant_orders(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_seller_user)],
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> list[RestaurantOrderResponse]:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
@@ -654,7 +663,7 @@ def update_seller_restaurant_order_status(
     payload: RestaurantOrderStatusUpdateRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_seller_user)],
 ) -> RestaurantOrderResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
