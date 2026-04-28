@@ -54,6 +54,12 @@ export function resolveImageUrl(raw: string | null | undefined): string | null {
     return `https:${value}`;
   }
 
+  // Backward compatibility: some records may already store a proxy URL.
+  // Keep it as-is instead of rewriting it to the backend origin.
+  if (value.startsWith(`${IMAGE_PROXY_ROUTE}?`)) {
+    return value;
+  }
+
   if (value.startsWith("/")) {
     const origin = getApiOrigin();
     if (!origin) {
@@ -77,5 +83,38 @@ export function resolveImageUrl(raw: string | null | undefined): string | null {
     return shouldProxyImageUrl(absoluteUrl) ? toImageProxyUrl(absoluteUrl) : absoluteUrl;
   } catch {
     return null;
+  }
+}
+
+export function normalizeImageInputForApi(raw: string | null | undefined): string | undefined {
+  if (!raw) {
+    return undefined;
+  }
+  const value = raw.trim();
+  if (!value) {
+    return undefined;
+  }
+
+  // Preserve uploaded local media paths such as /media/filename.webp.
+  if (value.startsWith("/")) {
+    return value;
+  }
+
+  if (value.startsWith("//")) {
+    return `https:${value}`;
+  }
+
+  if (/^https?:\/\//i.test(value)) {
+    try {
+      return new URL(value).toString();
+    } catch {
+      return undefined;
+    }
+  }
+
+  try {
+    return new URL(`https://${value}`).toString();
+  } catch {
+    return undefined;
   }
 }

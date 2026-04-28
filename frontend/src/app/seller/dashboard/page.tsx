@@ -12,7 +12,7 @@ import { SingleMediaField } from "@/components/seller/MediaFields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatXOF } from "@/lib/currency";
-import { resolveImageUrl } from "@/lib/image";
+import { normalizeImageInputForApi } from "@/lib/image";
 import { deleteMyAccount } from "@/services/auth-service";
 import { notifyLocalOrderEvent } from "@/services/notification-service";
 import { listCatalogCategories } from "@/services/catalog-service";
@@ -274,7 +274,7 @@ export default function SellerDashboardPage() {
       })
       .filter((entry) => entry.name && Number.isFinite(entry.price));
 
-  const normalizeImageInput = (raw: string): string | undefined => resolveImageUrl(raw) ?? undefined;
+  const normalizeImageInput = (raw: string): string | undefined => normalizeImageInputForApi(raw);
   const dashboardTitle =
     sellerMode === "restaurant"
       ? "Mon Restaurant AMAZER"

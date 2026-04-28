@@ -6,8 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Building2,
-  CheckCircle2,
-  Circle,
   PenSquare,
   PlusCircle,
   UtensilsCrossed,
@@ -21,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
-import { resolveImageUrl } from "@/lib/image";
+import { normalizeImageInputForApi } from "@/lib/image";
 import { persistAppMode } from "@/lib/session-mode";
 import { listCatalogCategories } from "@/services/catalog-service";
 import { getPublicFinanceSettings } from "@/services/finance-service";
@@ -404,7 +402,7 @@ function SellerPageContent() {
     onError: (error) => setStatus(getApiErrorMessage(error, "Paiement vendeur impossible.")),
   });
 
-  const normalizeImageInput = (raw: string): string | undefined => resolveImageUrl(raw) ?? undefined;
+  const normalizeImageInput = (raw: string): string | undefined => normalizeImageInputForApi(raw);
   const profileGalleryImages = splitListInput(profileForm.gallery_images_text);
   const isShop = profileForm.activity_type === "shop";
   const isRestaurant = profileForm.activity_type === "restaurant";
@@ -432,19 +430,6 @@ function SellerPageContent() {
     Boolean(profile?.gallery_images?.length) ||
     Boolean(profile?.service_offerings?.length) ||
     Boolean(profile?.room_types?.length);
-  const nextStep = !hasProfile
-    ? "Complete ton profil vendeur."
-    : isShop
-      ? hasProducts
-        ? "Publie un deuxième produit ou booste ta boutique."
-        : "Publie ton premier produit."
-      : isRestaurant
-        ? hasMenu
-          ? "Active les reservations de table si besoin."
-          : "Publie ton premier plat."
-        : hasPremiumConfig
-          ? "Ajoute une offre ou mets en avant tes services."
-          : "Configure services, galerie et chambres premium.";
   const pricingSnapshot = {
     commissionRate: profile?.effective_commission_rate ?? publicFinance?.commission_rate ?? 0,
     serviceFee: profile?.effective_service_fee ?? publicFinance?.service_fee ?? 0,
@@ -496,25 +481,11 @@ function SellerPageContent() {
         <article className="premium-card border border-amber-200 bg-amber-50 p-6">
           <h2 className="text-lg font-semibold text-amber-900">Activation vendeur requise</h2>
           <p className="mt-1 text-sm text-amber-800">
-            Le compte vendeur est en pause tant que l&apos;abonnement n&apos;est pas regle. Les frais de creation sont
-            desactives: seul l&apos;abonnement vendeur est demande pour activer le compte.
+            L&apos;abonnement vendeur doit etre valide pour activer la boutique.
           </p>
-          <p className="mt-1 text-sm text-amber-800">
-            Important : effectue le paiement avec le meme numero/identifiant que ton compte AMAZER.
-          </p>
-          <div className="mt-4 rounded-2xl border border-amber-300 bg-white/80 p-4 text-sm text-amber-950">
-            <p className="font-semibold">Paiement simple en 4 etapes</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <p>1. Termine ton profil vendeur.</p>
-              <p>2. Choisis Amana ou Nita.</p>
-              <p>3. Fais le versement sur le numero indique.</p>
-              <p>4. Entre ta reference puis attends la notification de validation.</p>
-            </div>
-          </div>
           {!hasProfile ? (
             <p className="mt-2 text-sm text-amber-900">
-              Commence par enregistrer le profil vendeur ci-dessous. Le paiement sera ensuite requis
-              immediatement pour activer le compte.
+              Enregistre d&apos;abord ton profil vendeur.
             </p>
           ) : null}
           <div className="mt-3 grid gap-2 text-sm text-amber-900 sm:grid-cols-3">
@@ -522,10 +493,7 @@ function SellerPageContent() {
             <p>Mensualite: {formatXOF(subscriptionStatus?.monthly_fee ?? 0)}</p>
             <p>A payer maintenant: {formatXOF(selectedSubscriptionAmount)}</p>
           </div>
-          <p className="mt-2 text-xs text-amber-900">
-            Si tu choisis {selectedSubscriptionMonths} mois, le total s&apos;adapte automatiquement selon le nombre de
-            mois selectionnes, sans frais de creation supplementaires.
-          </p>
+          <p className="mt-2 text-xs text-amber-900">{selectedSubscriptionMonths} mois selectionne(s).</p>
           {subscriptionStatus?.has_pending_payment_request ? (
             <p className="mt-3 text-sm font-medium text-amber-900">
               Paiement deja soumis. En attente de validation par l&apos;admin. Une notification t&apos;avertira des la decision.
@@ -556,15 +524,12 @@ function SellerPageContent() {
           {hasProfile ? (
             <div className="mt-4 space-y-4">
               <div className="rounded-2xl border border-amber-300 bg-white p-4 text-sm text-slate-800">
-                <p className="font-semibold text-slate-900">Ou faire le versement ?</p>
+                <p className="font-semibold text-slate-900">Numero de versement</p>
                 <p className="mt-2">
-                  Numero de versement AMAZER :{" "}
+                  AMAZER :{" "}
                   <span className="font-semibold text-[#FF4D00]">
                     {paymentDestination || "Numero non renseigne pour le moment"}
                   </span>
-                </p>
-                <p className="mt-2 text-slate-600">
-                  Choisis le meme operateur que celui utilise pour ton envoi, puis garde ta reference de transaction.
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
@@ -603,7 +568,7 @@ function SellerPageContent() {
                 />
               </div>
               <div className="rounded-2xl border border-amber-300 bg-white p-4 text-sm text-slate-800">
-                <p className="font-semibold text-slate-900">Resume avant envoi</p>
+                <p className="font-semibold text-slate-900">Resume</p>
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
                   <p>Mode choisi : {subscriptionForm.payment_mode === "nita" ? "Nita" : "Amana"}</p>
                   <p>Mois choisis : {selectedSubscriptionMonths}</p>
@@ -611,9 +576,6 @@ function SellerPageContent() {
                   <p>Total attendu : {formatXOF(selectedSubscriptionAmount)}</p>
                 </div>
               </div>
-              <p className="text-xs text-amber-900">
-                La reference est fortement recommandee pour accelerer la validation. Si tu ne la saisis pas, l&apos;admin devra verifier manuellement.
-              </p>
               <Button
                 type="button"
                 disabled={
@@ -635,75 +597,6 @@ function SellerPageContent() {
           ) : null}
         </article>
       ) : null}
-
-      <article className="premium-card border border-slate-200 bg-white p-6">
-        <h2 className="text-lg font-semibold text-slate-900">Assistant d&apos;inscription vendeur</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Experience type Shopify, sans connexion Shopify. Suis ces etapes pour activer ta boutique.
-        </p>
-        {welcomeMessage ? <p className="mt-3 text-sm font-medium text-emerald-700">{welcomeMessage}</p> : null}
-        <div className="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
-          <div className="flex items-start gap-2">
-            {hasProfile ? (
-              <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-            ) : (
-              <Circle className="mt-0.5 h-4 w-4 text-slate-400" />
-            )}
-            <span>{hasProfile ? "1. Profil vendeur de base deja cree." : "1. Enregistre ton profil vendeur."}</span>
-          </div>
-          {sellerPaymentRequired ? (
-            <div className="flex items-start gap-2">
-              {latestSubscriptionPayment?.status === "approved" ? (
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-              ) : (
-                <Circle className="mt-0.5 h-4 w-4 text-slate-400" />
-              )}
-              <span>2. Choisis Amana ou Nita et fais ton versement au numero AMAZER.</span>
-            </div>
-          ) : null}
-          {sellerPaymentRequired ? (
-            <div className="flex items-start gap-2">
-              {subscriptionStatus?.has_pending_payment_request ? (
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-              ) : (
-                <Circle className="mt-0.5 h-4 w-4 text-slate-400" />
-              )}
-              <span>3. Soumets ta reference puis attends la notification d&apos;acceptation ou de refus.</span>
-            </div>
-          ) : null}
-          {showProductSection && !sellerPaymentRequired ? (
-            <div className="flex items-start gap-2">
-              {hasProducts ? (
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-              ) : (
-                <Circle className="mt-0.5 h-4 w-4 text-slate-400" />
-              )}
-              <span>2. Publie au moins un produit.</span>
-            </div>
-          ) : null}
-          {showRestaurantSection && !sellerPaymentRequired ? (
-            <div className="flex items-start gap-2">
-              {hasMenu ? (
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-              ) : (
-                <Circle className="mt-0.5 h-4 w-4 text-slate-400" />
-              )}
-              <span>3. Ajoute un menu restaurant.</span>
-            </div>
-          ) : null}
-          {isPremium ? (
-            <div className="flex items-start gap-2">
-              {hasPremiumConfig ? (
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-              ) : (
-                <Circle className="mt-0.5 h-4 w-4 text-slate-400" />
-              )}
-              <span>4. Configure services, galerie et chambres.</span>
-            </div>
-          ) : null}
-        </div>
-        <p className="mt-4 text-sm font-medium text-[#FF4D00]">Prochaine action: {nextStep}</p>
-      </article>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-slate-900">Tarification appliquee a cette boutique</h2>
@@ -752,6 +645,7 @@ function SellerPageContent() {
           ) : (
             <p className="mt-2 text-sm text-slate-600">Aucun profil actif pour ce compte.</p>
           )}
+          {welcomeMessage ? <p className="mt-3 text-sm font-medium text-emerald-700">{welcomeMessage}</p> : null}
           <p className="mt-3 text-sm text-slate-600">
               Boutique: publier des produits. Restaurant: menu digital, commandes et reservations. Premium: toutes les
               fonctions boutique + restaurant + mini-site complet (galerie, services, chambres, paiement avec acompte).

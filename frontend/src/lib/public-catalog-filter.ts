@@ -9,12 +9,8 @@ const ALLOWED_HOME_PRODUCT_BRANDS = new Set(["amazer market", "fragrance"]);
 
 /** Demo / staging uniquement : filtre les vitrines par noms fixes. Marcheplace reel : laisser desactive. */
 export function isStrictCatalogWhitelistEnabled(): boolean {
-  const raw = process.env.NEXT_PUBLIC_STRICT_CATALOG_WHITELIST;
-  if (raw == null || raw === "") {
-    return false;
-  }
-  const v = raw.trim().toLowerCase();
-  return v === "true" || v === "1" || v === "yes";
+  // Marketplace live: always disable demo whitelist.
+  return false;
 }
 
 function normalize(value: string | null | undefined): string {
