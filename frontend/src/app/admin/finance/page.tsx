@@ -27,6 +27,7 @@ import {
   listAdminSellerSubscriptionPayments,
   getAdminTreasuryHistory,
   getAdminWalletSummary,
+  resetAdminFinanceCounters,
   verifyAdminFinancePin,
 } from "@/services/finance-service";
 
@@ -42,6 +43,8 @@ export default function AdminFinancePage() {
   const queryClient = useQueryClient();
   const seenAdminOrderIdsRef = useRef<Set<string>>(new Set());
   const seenSellerPaymentIdsRef = useRef<Set<string>>(new Set());
+  const adminOrdersInitializedRef = useRef(false);
+  const sellerPaymentsInitializedRef = useRef(false);
   const [settingsStatus, setSettingsStatus] = useState("");
   const [pinStatus, setPinStatus] = useState("");
   const [pin, setPin] = useState("");
@@ -51,6 +54,7 @@ export default function AdminFinancePage() {
   const [bankName, setBankName] = useState<"BOA" | "SONIBANK">("BOA");
   const [transferStatus, setTransferStatus] = useState("");
   const [paymentDecisionNote, setPaymentDecisionNote] = useState("");
+  const [resetStatus, setResetStatus] = useState("");
 
   const {
     data: summary,
@@ -154,6 +158,20 @@ export default function AdminFinancePage() {
         getApiErrorMessage(error, getAdminFinanceDataError(error)),
       ),
   });
+  const resetCountersMutation = useMutation({
+    mutationFn: resetAdminFinanceCounters,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-wallet-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-finance-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-treasury-history"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-ad-click-stats"] });
+      setResetStatus("Compteurs remis a zero. Les nouveaux calculs partent de maintenant.");
+    },
+    onError: (error) => {
+      setResetStatus(getApiErrorMessage(error, "Impossible de reinitialiser les compteurs."));
+    },
+  });
 
   const criticalPageError = useMemo(() => {
     const firstError = summaryError ?? walletError ?? null;
@@ -181,6 +199,13 @@ export default function AdminFinancePage() {
     if (!pinVerified || !adminOrders?.length) {
       return;
     }
+    if (!adminOrdersInitializedRef.current) {
+      for (const order of adminOrders) {
+        known.add(order.id);
+      }
+      adminOrdersInitializedRef.current = true;
+      return;
+    }
     const newOrders = adminOrders.filter((order) => order.status === "commande" && !known.has(order.id));
     for (const order of adminOrders) {
       known.add(order.id);
@@ -203,6 +228,13 @@ export default function AdminFinancePage() {
       return;
     }
     const known = seenSellerPaymentIdsRef.current;
+    if (!sellerPaymentsInitializedRef.current) {
+      for (const row of sellerPayments) {
+        known.add(row.id);
+      }
+      sellerPaymentsInitializedRef.current = true;
+      return;
+    }
     const fresh = sellerPayments.filter((row) => !known.has(row.id));
     for (const row of sellerPayments) {
       known.add(row.id);
@@ -390,6 +422,22 @@ export default function AdminFinancePage() {
           <p className="mt-2 text-3xl font-semibold text-[#FF4D00]">{summary?.active_sellers ?? 0}</p>
         </article>
       </div>
+
+      <article className="premium-card border border-slate-200 bg-white p-6">
+        <h2 className="luxury-title text-lg font-semibold">Reinitialisation des compteurs</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          Remet a zero les compteurs finances et clics pub sans supprimer l&apos;historique des commandes.
+        </p>
+        <Button
+          type="button"
+          disabled={resetCountersMutation.isPending}
+          onClick={() => resetCountersMutation.mutate()}
+          className="mt-4 border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
+        >
+          {resetCountersMutation.isPending ? "Reinitialisation..." : "Remettre les compteurs a zero"}
+        </Button>
+        {resetStatus ? <p className="mt-3 text-sm text-slate-700">{resetStatus}</p> : null}
+      </article>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="luxury-title text-lg font-semibold">Virement Simule (BOA / SONIBANK)</h2>

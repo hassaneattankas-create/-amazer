@@ -72,6 +72,11 @@ export type TransferResult = {
   created_at: string;
 };
 
+export type CountersResetResult = {
+  finance_counters_reset_at: string;
+  ad_click_counters_reset_at: string;
+};
+
 export type AdminOrderTracking = {
   id: string;
   customer_name: string;

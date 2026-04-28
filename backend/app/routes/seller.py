@@ -292,9 +292,12 @@ def _hotel_booking_response(row: HotelBooking) -> HotelBookingResponse:
     )
 
 
-def _seller_shop_order_response(order: Order, vendor_id: str) -> SellerShopOrderResponse:
+def _seller_shop_order_response(
+    order: Order, vendor_id: str, *, product_names: dict[str, str] | None = None
+) -> SellerShopOrderResponse:
     scoped_items = [item for item in order.items if item.vendor_id == vendor_id]
     scoped_total = sum(float(item.unit_price) * int(item.quantity) for item in scoped_items)
+    product_map = product_names or {}
     return SellerShopOrderResponse(
         id=order.id,
         customer_name=order.user.full_name if order.user else "Client AMAZER",
@@ -310,6 +313,7 @@ def _seller_shop_order_response(order: Order, vendor_id: str) -> SellerShopOrder
             SellerShopOrderItemResponse(
                 id=item.id,
                 product_id=item.product_id,
+                product_name=product_map.get(item.product_id, "Article"),
                 quantity=item.quantity,
                 unit_price=item.unit_price,
                 subtotal=float(item.unit_price) * int(item.quantity),
@@ -699,7 +703,15 @@ def list_seller_orders(
         .order_by(Order.created_at.desc())
         .limit(50)
     ).unique().all()
-    return [_seller_shop_order_response(order, profile.vendor_id) for order in rows]
+    product_ids = {item.product_id for order in rows for item in order.items if item.vendor_id == profile.vendor_id}
+    product_names = {
+        row.id: row.name
+        for row in db.scalars(select(Product).where(Product.id.in_(product_ids))).all()
+    } if product_ids else {}
+    return [
+        _seller_shop_order_response(order, profile.vendor_id, product_names=product_names)
+        for order in rows
+    ]
 
 
 @router.patch("/orders/{order_id}/status", response_model=SellerShopOrderResponse)
@@ -726,7 +738,12 @@ def update_seller_order_status(
     order.status = payload.status
     db.commit()
     db.refresh(order)
-    return _seller_shop_order_response(order, profile.vendor_id)
+    product_ids = {item.product_id for item in order.items if item.vendor_id == profile.vendor_id}
+    product_names = {
+        row.id: row.name
+        for row in db.scalars(select(Product).where(Product.id.in_(product_ids))).all()
+    } if product_ids else {}
+    return _seller_shop_order_response(order, profile.vendor_id, product_names=product_names)
 
 
 @router.patch("/inventory/{price_id}", response_model=SellerInventoryItemResponse)

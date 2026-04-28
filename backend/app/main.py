@@ -140,6 +140,8 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS seller_subscription_fee_shop DOUBLE PRECISION DEFAULT 5000",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS seller_subscription_fee_restaurant DOUBLE PRECISION DEFAULT 5000",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS seller_subscription_fee_premium DOUBLE PRECISION DEFAULT 5000",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS finance_counters_reset_at TIMESTAMPTZ",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS ad_click_counters_reset_at TIMESTAMPTZ",
         (
             "UPDATE global_settings SET "
             "seller_subscription_fee_shop = COALESCE(seller_subscription_fee_shop, seller_subscription_fee, 5000), "

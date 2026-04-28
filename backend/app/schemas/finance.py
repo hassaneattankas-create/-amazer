@@ -120,6 +120,13 @@ class TransferResponse(BaseModel):
     created_at: str
 
 
+class CountersResetResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    finance_counters_reset_at: str
+    ad_click_counters_reset_at: str
+
+
 class AdminOrderTrackingResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

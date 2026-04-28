@@ -15,6 +15,7 @@ from app.database import get_db
 from app.models.ad_click import AdClick
 from app.models.category import Category
 from app.models.dynamic_section import DynamicSection, DynamicSectionItem
+from app.models.global_settings import GlobalSettings
 from app.models.product import Price, Product
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
@@ -379,14 +380,22 @@ def ad_click_stats(
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[User, Depends(get_admin_user)],
 ) -> AdClickStatsResponse:
-    total_clicks = db.scalar(select(func.count(AdClick.id))) or 0
+    settings_row = db.scalar(select(GlobalSettings).order_by(GlobalSettings.id.asc()))
+    reset_at = settings_row.ad_click_counters_reset_at if settings_row is not None else None
+    total_clicks_query = select(func.count(AdClick.id))
+    if reset_at is not None:
+        total_clicks_query = total_clicks_query.where(AdClick.created_at >= reset_at)
+    total_clicks = db.scalar(total_clicks_query) or 0
     since = datetime.now(UTC) - timedelta(days=7)
-    clicks_last_7_days = db.scalar(select(func.count(AdClick.id)).where(AdClick.created_at >= since)) or 0
+    effective_since = max(since, reset_at) if reset_at is not None else since
+    clicks_last_7_days = (
+        db.scalar(select(func.count(AdClick.id)).where(AdClick.created_at >= effective_since)) or 0
+    )
+    rows_query = select(AdClick.product_id, func.count(AdClick.id).label("count"))
+    if reset_at is not None:
+        rows_query = rows_query.where(AdClick.created_at >= reset_at)
     rows = db.execute(
-        select(AdClick.product_id, func.count(AdClick.id).label("count"))
-        .group_by(AdClick.product_id)
-        .order_by(desc("count"))
-        .limit(20)
+        rows_query.group_by(AdClick.product_id).order_by(desc("count")).limit(20)
     ).all()
     by_product = [AdClickProductStat(product_id=row[0], clicks=int(row[1])) for row in rows]
     return AdClickStatsResponse(

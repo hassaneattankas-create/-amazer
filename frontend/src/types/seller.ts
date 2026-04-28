@@ -135,6 +135,7 @@ export type SellerInventoryItem = {
 export type SellerShopOrderItem = {
   id: string;
   product_id: string;
+  product_name: string;
   quantity: number;
   unit_price: number;
   subtotal: number;

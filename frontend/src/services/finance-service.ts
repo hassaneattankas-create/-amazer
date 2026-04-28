@@ -17,6 +17,7 @@ import {
   AdminUserStats,
   AdminOrderTracking,
   AuditLogItem,
+  CountersResetResult,
   DistrictFeeItem,
   FinanceSettings,
   FinanceSummary,
@@ -124,6 +125,13 @@ export async function createAdminTransfer(payload: TransferPayload): Promise<Tra
     url: "/admin/finance/transfer",
     method: "POST",
     data: payload,
+  });
+}
+
+export async function resetAdminFinanceCounters(): Promise<CountersResetResult> {
+  return adminProxyRequest<CountersResetResult>({
+    url: "/admin/finance/reset-counters",
+    method: "POST",
   });
 }
 

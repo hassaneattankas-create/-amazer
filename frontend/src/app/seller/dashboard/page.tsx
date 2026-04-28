@@ -44,6 +44,8 @@ export default function SellerDashboardPage() {
   const queryClient = useQueryClient();
   const seenShopOrderIdsRef = useRef<Set<string>>(new Set());
   const seenRestaurantOrderIdsRef = useRef<Set<string>>(new Set());
+  const shopOrdersInitializedRef = useRef(false);
+  const restaurantOrdersInitializedRef = useRef(false);
   const [status, setStatus] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteStatus, setDeleteStatus] = useState("");
@@ -293,6 +295,13 @@ export default function SellerDashboardPage() {
     if (!shopOrders.length) {
       return;
     }
+    if (!shopOrdersInitializedRef.current) {
+      for (const order of shopOrders) {
+        known.add(order.id);
+      }
+      shopOrdersInitializedRef.current = true;
+      return;
+    }
     const newOrders = shopOrders.filter(
       (order) => (order.status === "commande" || order.status === "payment_pending") && !known.has(order.id)
     );
@@ -303,9 +312,10 @@ export default function SellerDashboardPage() {
       return;
     }
     const latest = newOrders[0];
+    const orderedItems = latest.items.map((item) => item.product_name).filter(Boolean).slice(0, 2).join(", ");
     notifyLocalOrderEvent({
       title: "Nouvelle commande boutique",
-      body: `${latest.customer_name} a lance une commande ${latest.tracking_code ? `(${latest.tracking_code})` : ""}`.trim(),
+      body: `${latest.customer_name} a commande ${orderedItems || "un article"}${latest.tracking_code ? ` (${latest.tracking_code})` : ""}`.trim(),
       tag: `seller-shop-order-${latest.id}`,
       href: "/seller/dashboard",
     });
@@ -315,6 +325,13 @@ export default function SellerDashboardPage() {
   useEffect(() => {
     const known = seenRestaurantOrderIdsRef.current;
     if (!restaurantOrders.length) {
+      return;
+    }
+    if (!restaurantOrdersInitializedRef.current) {
+      for (const order of restaurantOrders) {
+        known.add(order.id);
+      }
+      restaurantOrdersInitializedRef.current = true;
       return;
     }
     const newOrders = restaurantOrders.filter(
@@ -327,9 +344,10 @@ export default function SellerDashboardPage() {
       return;
     }
     const latest = newOrders[0];
+    const orderedDishes = latest.items.map((item) => item.dish_name).filter(Boolean).slice(0, 2).join(", ");
     notifyLocalOrderEvent({
       title: "Nouvelle commande restaurant",
-      body: `${latest.customer_name} vient de commander.`,
+      body: `${latest.customer_name} a commande ${orderedDishes || "un plat"}.`,
       tag: `seller-restaurant-order-${latest.id}`,
       href: "/seller/dashboard",
     });
@@ -578,6 +596,9 @@ export default function SellerDashboardPage() {
                   <p className="mt-1 text-xs text-slate-500">
                     Livraison: ~{order.delivery_minutes} min | Paiement: {order.payment_mode}
                   </p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    {order.items.map((item) => `${item.dish_name} x${item.quantity}`).join(" | ")}
+                  </p>
                   <AnimatedPrice
                     value={order.total_amount}
                     className="mt-2 text-base font-semibold text-[#FF4D00]"
@@ -627,6 +648,9 @@ export default function SellerDashboardPage() {
                   <p className="mt-1 text-xs text-slate-500">
                     {order.items.length} article(s) | paiement {order.payment_mode} |{" "}
                     {new Date(order.created_at).toLocaleString("fr-FR")}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    {order.items.map((item) => `${item.product_name} x${item.quantity}`).join(" | ")}
                   </p>
                   <p className="mt-2 text-sm font-semibold text-[#FF4D00]">{formatXOF(order.total_amount)}</p>
                   <div className="mt-3 flex flex-wrap gap-2">

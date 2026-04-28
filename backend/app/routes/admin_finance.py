@@ -41,6 +41,7 @@ from app.schemas.finance import (
     AdminOrderTrackingResponse,
     AuditLogResponse,
     DistrictFeeItem,
+    CountersResetResponse,
     FinanceSettingsResponse,
     FinanceSettingsUpdateRequest,
     FinanceSummaryResponse,
@@ -107,6 +108,14 @@ def _invalidate_public_marketplace_cache() -> None:
 
 def _get_or_create_settings(db: Session) -> GlobalSettings:
     return get_or_create_global_settings(db)
+
+
+def _finance_counters_reset_at(settings: GlobalSettings) -> datetime | None:
+    return settings.finance_counters_reset_at
+
+
+def _ad_click_counters_reset_at(settings: GlobalSettings) -> datetime | None:
+    return settings.ad_click_counters_reset_at
 
 
 def _effective_commission_rate(settings: GlobalSettings, profile: SellerProfile | None = None) -> float:
@@ -461,6 +470,10 @@ def get_finance_summary(
     restaurant_orders = db.scalars(
         select(RestaurantOrder).where(RestaurantOrder.created_at >= start_dt)
     ).all()
+    reset_at = _finance_counters_reset_at(settings)
+    if reset_at is not None:
+        platform_orders = [order for order in platform_orders if order.created_at >= reset_at]
+        restaurant_orders = [order for order in restaurant_orders if order.created_at >= reset_at]
     vendor_ids = {item.vendor_id for order in platform_orders for item in order.items}
     vendor_ids.update(order.vendor_id for order in restaurant_orders)
     profiles_by_vendor = _seller_profile_map(db, vendor_ids)
@@ -518,6 +531,18 @@ def get_wallet_summary(
     restaurant_totals = db.execute(
         select(RestaurantOrder.payment_mode, func.sum(RestaurantOrder.total_amount)).group_by(RestaurantOrder.payment_mode)
     ).all()
+    reset_at = _finance_counters_reset_at(finance)
+    if reset_at is not None:
+        platform_totals = db.execute(
+            select(Order.payment_mode, func.sum(Order.total_amount))
+            .where(Order.created_at >= reset_at)
+            .group_by(Order.payment_mode)
+        ).all()
+        restaurant_totals = db.execute(
+            select(RestaurantOrder.payment_mode, func.sum(RestaurantOrder.total_amount))
+            .where(RestaurantOrder.created_at >= reset_at)
+            .group_by(RestaurantOrder.payment_mode)
+        ).all()
     totals = {"nita": 0.0, "amana": 0.0, "cash_on_delivery": 0.0}
     for mode, amount in platform_totals:
         if amount is None:
@@ -529,8 +554,13 @@ def get_wallet_summary(
         totals[mode] = totals.get(mode, 0.0) + float(amount)
 
     total_all = sum(totals.values())
-    platform_orders = db.scalars(select(Order).options(selectinload(Order.items))).all()
-    restaurant_orders = db.scalars(select(RestaurantOrder)).all()
+    platform_order_query = select(Order).options(selectinload(Order.items))
+    restaurant_order_query = select(RestaurantOrder)
+    if reset_at is not None:
+        platform_order_query = platform_order_query.where(Order.created_at >= reset_at)
+        restaurant_order_query = restaurant_order_query.where(RestaurantOrder.created_at >= reset_at)
+    platform_orders = db.scalars(platform_order_query).all()
+    restaurant_orders = db.scalars(restaurant_order_query).all()
     vendor_ids = {item.vendor_id for order in platform_orders for item in order.items}
     vendor_ids.update(order.vendor_id for order in restaurant_orders)
     profiles_by_vendor = _seller_profile_map(db, vendor_ids)
@@ -572,10 +602,15 @@ def get_treasury_history(
     _require_finance_pin(request)
     _audit_admin_access(db, request, admin_user, "admin_finance_treasury_read")
     history: list[TreasuryTransactionResponse] = []
-    platform_orders = db.scalars(select(Order).order_by(Order.created_at.desc()).limit(limit)).all()
-    restaurant_orders = db.scalars(
-        select(RestaurantOrder).order_by(RestaurantOrder.created_at.desc()).limit(limit)
-    ).all()
+    settings_row = _get_or_create_settings(db)
+    reset_at = _finance_counters_reset_at(settings_row)
+    platform_query = select(Order).order_by(Order.created_at.desc())
+    restaurant_query = select(RestaurantOrder).order_by(RestaurantOrder.created_at.desc())
+    if reset_at is not None:
+        platform_query = platform_query.where(Order.created_at >= reset_at)
+        restaurant_query = restaurant_query.where(RestaurantOrder.created_at >= reset_at)
+    platform_orders = db.scalars(platform_query.limit(limit)).all()
+    restaurant_orders = db.scalars(restaurant_query.limit(limit)).all()
     for order in platform_orders:
         history.append(
             TreasuryTransactionResponse(
@@ -655,6 +690,35 @@ def create_fund_transfer(
     )
 
 
+@router.post("/reset-counters", response_model=CountersResetResponse)
+def reset_finance_counters(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> CountersResetResponse:
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    settings_row = _get_or_create_settings(db)
+    now = datetime.now(UTC)
+    settings_row.finance_counters_reset_at = now
+    settings_row.ad_click_counters_reset_at = now
+    append_audit_log(
+        db,
+        event_type="admin_finance_counters_reset",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="global_settings",
+        entity_id=str(settings_row.id),
+        details={"reset_at": now.isoformat()},
+    )
+    db.commit()
+    return CountersResetResponse(
+        finance_counters_reset_at=now.isoformat(),
+        ad_click_counters_reset_at=now.isoformat(),
+    )
+
+
 @router.get("/public-settings", response_model=FinanceSettingsResponse)
 def get_public_finance_settings(
     db: Annotated[Session, Depends(get_db)],
@@ -722,12 +786,16 @@ def list_admin_orders(
 ) -> list[AdminOrderTrackingResponse]:
     _require_finance_pin(request)
     _audit_admin_access(db, request, admin_user, "admin_orders_read")
-    orders = db.scalars(
+    settings_row = _get_or_create_settings(db)
+    reset_at = _finance_counters_reset_at(settings_row)
+    orders_query = (
         select(Order)
         .options(selectinload(Order.user), selectinload(Order.items))
         .order_by(Order.created_at.desc())
-        .limit(limit)
-    ).all()
+    )
+    if reset_at is not None:
+        orders_query = orders_query.where(Order.created_at >= reset_at)
+    orders = db.scalars(orders_query.limit(limit)).all()
     has_auto_updates = False
     for order in orders:
         if _auto_finalize_order_without_qr(db, order, request, admin_user):

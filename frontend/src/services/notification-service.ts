@@ -13,6 +13,8 @@ const TOKEN_STORAGE_KEY = "amazer_notification_token_registered";
 const ANDROID_ALERT_CHANNEL_ID = "amazer-alerts";
 const NATIVE_ALERT_SOUND = "amazer_alert.wav";
 const FCM_TOKEN_PREFIX = "fcm:";
+const DELIVERED_TAGS_STORAGE_KEY = "amazer_delivered_notification_tags";
+const DELIVERED_TAG_TTL_MS = 1000 * 60 * 60 * 12;
 
 export const AMAZER_NOTIFICATION_EVENT = "amazer:notification-received";
 
@@ -39,6 +41,56 @@ function dispatchNotificationEvent(payload: LocalAlertPayload) {
 
 function safeString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function readDeliveredTags(): Record<string, number> {
+  if (typeof window === "undefined") {
+    return {};
+  }
+  try {
+    const raw = window.localStorage.getItem(DELIVERED_TAGS_STORAGE_KEY);
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw) as Record<string, number>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeDeliveredTags(map: Record<string, number>) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(DELIVERED_TAGS_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // Silencieux
+  }
+}
+
+function shouldSkipDeliveredNotification(tag: string): boolean {
+  const now = Date.now();
+  const delivered = readDeliveredTags();
+  let dirty = false;
+  for (const [key, timestamp] of Object.entries(delivered)) {
+    if (!Number.isFinite(timestamp) || now - timestamp > DELIVERED_TAG_TTL_MS) {
+      delete delivered[key];
+      dirty = true;
+    }
+  }
+  const lastDeliveredAt = delivered[tag];
+  if (dirty) {
+    writeDeliveredTags(delivered);
+  }
+  return Number.isFinite(lastDeliveredAt) && now - lastDeliveredAt < DELIVERED_TAG_TTL_MS;
+}
+
+function markDeliveredNotification(tag: string) {
+  const delivered = readDeliveredTags();
+  delivered[tag] = Date.now();
+  writeDeliveredTags(delivered);
 }
 
 function mapPushNotificationPayload(notification: PushNotificationSchema): LocalAlertPayload {
@@ -214,6 +266,10 @@ export async function notifyLocalOrderEvent(payload: {
   if (typeof window === "undefined") {
     return;
   }
+  if (shouldSkipDeliveredNotification(payload.tag)) {
+    return;
+  }
+  markDeliveredNotification(payload.tag);
   useNotificationStore.getState().pushNotification(payload);
   dispatchNotificationEvent(payload);
 

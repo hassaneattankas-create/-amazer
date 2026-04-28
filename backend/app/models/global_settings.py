@@ -29,6 +29,8 @@ class GlobalSettings(Base):
     support_email: Mapped[str | None] = mapped_column(nullable=True, default=None)
     support_phone: Mapped[str | None] = mapped_column(nullable=True, default=None)
     support_whatsapp: Mapped[str | None] = mapped_column(nullable=True, default=None)
+    finance_counters_reset_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ad_click_counters_reset_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
