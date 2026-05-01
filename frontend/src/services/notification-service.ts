@@ -15,6 +15,7 @@ const NATIVE_ALERT_SOUND = "amazer_alert.wav";
 const FCM_TOKEN_PREFIX = "fcm:";
 const DELIVERED_TAGS_STORAGE_KEY = "amazer_delivered_notification_tags";
 const DELIVERED_TAG_TTL_MS = 1000 * 60 * 60 * 12;
+const ENABLE_NATIVE_PUSH = process.env.NEXT_PUBLIC_ENABLE_NATIVE_PUSH === "true";
 
 export const AMAZER_NOTIFICATION_EVENT = "amazer:notification-received";
 
@@ -212,23 +213,25 @@ export async function requestAndRegisterNotifications() {
   }
 
   if (Capacitor.isNativePlatform()) {
-    attachNativePushListeners();
     await ensureNativeNotificationChannel();
-
-    const current = await PushNotifications.checkPermissions();
-    let receive = current.receive;
-    if (receive === "prompt") {
-      const permission = await PushNotifications.requestPermissions();
-      receive = permission.receive;
-    }
-    if (receive !== "granted") {
+    if (!ENABLE_NATIVE_PUSH) {
       return;
     }
-
     try {
+      attachNativePushListeners();
+      const current = await PushNotifications.checkPermissions();
+      let receive = current.receive;
+      if (receive === "prompt") {
+        const permission = await PushNotifications.requestPermissions();
+        receive = permission.receive;
+      }
+      if (receive !== "granted") {
+        return;
+      }
       await PushNotifications.register();
     } catch {
-      // Ne bloque pas l UX mobile si le registre FCM echoue.
+      // Ne bloque pas l UX mobile si Firebase/FCM n'est pas pret.
+      return;
     }
     return;
   }

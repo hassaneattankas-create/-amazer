@@ -58,6 +58,8 @@ const dynamicRouteDirs = [
   "order/pay/[id]",
   "order/receipt/[id]",
   "order/success/[id]",
+  "restaurant/order/pay/[id]",
+  "restaurant/order/receipt/[id]",
 ];
 const DEFAULT_MOBILE_BACKEND_ORIGIN = "https://amazer-api.onrender.com";
 const DEFAULT_MOBILE_SITE_URL = "https://amazer.store";
