@@ -111,7 +111,10 @@ export function FloatingNavbar() {
     const handleNotification = (event: Event) => {
       const detail = (event as CustomEvent<{ tag?: string }>).detail;
       void queryClient.invalidateQueries({ queryKey: ["remote-notifications", user.id] });
-      if ((detail?.tag || "").startsWith("seller-payment-decision-")) {
+      if (
+        (detail?.tag || "").startsWith("seller-payment-decision-") ||
+        (detail?.tag || "").startsWith("seller_sub_")
+      ) {
         void queryClient.invalidateQueries({ queryKey: ["seller-profile"] });
         void queryClient.invalidateQueries({ queryKey: ["navbar-seller-profile"] });
         void queryClient.invalidateQueries({ queryKey: ["seller-subscription-status"] });
@@ -198,7 +201,10 @@ export function FloatingNavbar() {
         tag: item.tag || `remote-${item.id}`,
         href: item.href,
       });
-      if ((item.tag || "").startsWith("seller-payment-decision-")) {
+      if (
+        (item.tag || "").startsWith("seller-payment-decision-") ||
+        (item.tag || "").startsWith("seller_sub_")
+      ) {
         void queryClient.invalidateQueries({ queryKey: ["seller-profile"] });
         void queryClient.invalidateQueries({ queryKey: ["navbar-seller-profile"] });
         void queryClient.invalidateQueries({ queryKey: ["seller-subscription-status"] });

@@ -422,6 +422,17 @@ function SellerPageContent() {
     showRestaurantSection && !isPremiumTier && restaurantItems.length >= maxBasicListings;
   const hasProfile = Boolean(profile?.id);
   const hasActiveSubscription = Boolean(subscriptionStatus?.subscription_active);
+  const subscriptionPaidUntilMs = subscriptionStatus?.subscription_paid_until
+    ? Date.parse(subscriptionStatus.subscription_paid_until)
+    : NaN;
+  const daysUntilSubscriptionEnd = Number.isFinite(subscriptionPaidUntilMs)
+    ? (subscriptionPaidUntilMs - Date.now()) / 86_400_000
+    : null;
+  const showSubscriptionRenewHeadsUp =
+    hasActiveSubscription &&
+    daysUntilSubscriptionEnd !== null &&
+    daysUntilSubscriptionEnd > 0 &&
+    daysUntilSubscriptionEnd <= 7;
   const sellerOnboardingFlow = hasProfile || hasRequestedSellerType || searchParams.get("welcome") === "1";
   const sellerPaymentRequired = sellerOnboardingFlow && !hasActiveSubscription;
   const hasProducts = inventory.length > 0;
@@ -476,6 +487,26 @@ function SellerPageContent() {
           </Button>
         ) : null}
       </header>
+
+      {showSubscriptionRenewHeadsUp ? (
+        <article
+          className="premium-card border border-sky-200 bg-sky-50 p-6"
+          role="status"
+        >
+          <h2 className="text-lg font-semibold text-sky-950">Renouvellement proche</h2>
+          <p className="mt-1 text-sm text-sky-900">
+            Ton abonnement vendeur se termine dans environ{" "}
+            {daysUntilSubscriptionEnd !== null && daysUntilSubscriptionEnd < 1
+              ? "moins de 24 heures"
+              : `${Math.max(1, Math.ceil(daysUntilSubscriptionEnd ?? 1))} jour(s)`}
+            . Tu peux payer la suite depuis cette page pour eviter une interruption de ta boutique (
+            tes donnees restent conservees.)
+          </p>
+          <p className="mt-2 text-xs text-sky-800">
+            Tu recevras aussi des notifications (cloche et push si active) avant l&apos;echeance.
+          </p>
+        </article>
+      ) : null}
 
       {sellerPaymentRequired ? (
         <article className="premium-card border border-amber-200 bg-amber-50 p-6">

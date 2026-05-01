@@ -2,7 +2,7 @@ import re
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -63,6 +63,7 @@ from app.services.seller_finance_service import (
 )
 from app.services.seller_profile_service import create_or_update_seller_profile
 from app.services.seller_profile_service import resolve_seller_plan_bucket
+from app.services.seller_subscription_reminder_service import run_seller_subscription_reminders_task
 
 router = APIRouter(prefix="/seller", tags=["seller"])
 settings = get_settings()
@@ -325,12 +326,18 @@ def _seller_shop_order_response(
 
 @router.get("/profile", response_model=SellerProfileResponse | None)
 def get_profile(
+    background_tasks: BackgroundTasks,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> SellerProfileResponse | None:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
         return None
+    background_tasks.add_task(
+        run_seller_subscription_reminders_task,
+        current_user.id,
+        profile.id,
+    )
     return _profile_response(profile, db)
 
 
@@ -375,10 +382,17 @@ def upsert_profile(
 
 @router.get("/subscription-status", response_model=SellerSubscriptionStatusResponse)
 def get_subscription_status(
+    background_tasks: BackgroundTasks,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> SellerSubscriptionStatusResponse:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is not None:
+        background_tasks.add_task(
+            run_seller_subscription_reminders_task,
+            current_user.id,
+            profile.id,
+        )
     return _build_subscription_status(profile, db)
 
 
