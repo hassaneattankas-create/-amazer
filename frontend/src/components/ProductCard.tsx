@@ -15,9 +15,11 @@ import { ProductSearchItem } from "@/types/product";
 
 type ProductCardProps = {
   product: ProductSearchItem;
+  /** First screen cards: prefetch image for faster LCP */
+  priority?: boolean;
 };
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, priority = false }: ProductCardProps) {
   const [imageError, setImageError] = useState(false);
   const {
     name,
@@ -61,11 +63,12 @@ export function ProductCard({ product }: ProductCardProps) {
           <Image
             src={resolvedImageUrl}
             alt={name}
-            width={640}
-            height={480}
-            unoptimized
-            loading="lazy"
-            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+            width={560}
+            height={420}
+            priority={priority}
+            loading={priority ? "eager" : "lazy"}
+            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 384px"
+            quality={82}
             className="h-full w-full object-cover"
             onError={() => setImageError(true)}
           />

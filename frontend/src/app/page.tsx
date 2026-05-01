@@ -87,8 +87,8 @@ export default function HomePage() {
   const { data: homeContent } = useQuery({
     queryKey: ["home-content"],
     queryFn: getHomeContent,
-    staleTime: 60_000,
-    gcTime: 10 * 60_000,
+    staleTime: 180_000,
+    gcTime: 15 * 60_000,
     refetchOnWindowFocus: false,
   });
   const { data: contactInfo } = useQuery({
@@ -222,9 +222,9 @@ export default function HomePage() {
               src={resolveImageUrl(homeContent.top_banner_url) || homeContent.top_banner_url}
               alt="Banniere publicitaire AMAZER"
               fill
-              unoptimized
               loading="lazy"
-              sizes="100vw"
+              sizes="(max-width: 768px) 100vw, 896px"
+              quality={82}
               className="object-cover"
             />
           </div>
@@ -319,9 +319,14 @@ export default function HomePage() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  transition={{ type: "spring", stiffness: 230, damping: 18, delay: index * 0.04 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 230,
+                    damping: 18,
+                    delay: Math.min(index * 0.02, 0.35),
+                  }}
                 >
-                  <ProductCard product={product} />
+                  <ProductCard product={product} priority={index < 6} />
                 </motion.div>
               ))}
             </motion.div>

@@ -127,7 +127,9 @@ export default function ProductDetailPage() {
                   alt={data.product.name}
                   width={224}
                   height={224}
-                  unoptimized
+                  sizes="112px"
+                  priority
+                  quality={85}
                   className="h-full w-full object-cover"
                   onError={() => setImageError(true)}
                 />

@@ -41,7 +41,8 @@ export function StorefrontShowcaseCard({
             src={imageUrl}
             alt={store.business_name || store.name}
             fill
-            unoptimized
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 400px"
+            quality={82}
             className="object-cover opacity-90"
           />
         ) : null}
@@ -65,7 +66,8 @@ export function StorefrontShowcaseCard({
                   alt={`${store.business_name || store.name} logo`}
                   width={44}
                   height={44}
-                  unoptimized
+                  sizes="44px"
+                  quality={85}
                   className="h-full w-full rounded-2xl object-cover"
                 />
               ) : (

@@ -58,7 +58,8 @@ class ProductService:
         offset: int,
     ) -> ProductSearchResult:
         target = max(limit + offset, limit)
-        raw_limit = max(target * 5, target)
+        # Cap prefetch: loading 5x rows with full product graphs was very slow on large catalogs.
+        raw_limit = min(max(target * 3, target + 24), 160)
         rows = self.products.search_offers(
             query=query,
             barcode=barcode,
@@ -203,13 +204,14 @@ class ProductService:
             if offer.row.product.category
             else None
         )
+        _sorted_images = sorted(offer.row.product.images, key=lambda image: image.sort_order)
         images = [
             ProductImageResponse(
                 id=image.id,
                 image_url=image.image_url,
                 sort_order=image.sort_order,
             )
-            for image in sorted(offer.row.product.images, key=lambda image: image.sort_order)
+            for image in _sorted_images[:6]
         ]
         ranking = RankingBreakdownResponse(
             price_competitiveness=offer.ranking.price_competitiveness,

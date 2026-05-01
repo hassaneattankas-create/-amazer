@@ -19,6 +19,27 @@ function getBackendOrigin() {
 
 const backendOrigin = getBackendOrigin();
 
+function buildBackendRemotePattern() {
+  try {
+    const url = new URL(backendOrigin);
+    const protocol = url.protocol.replace(":", "") || "https";
+    /** @type {{ protocol: string; hostname: string; port?: string; pathname: string }} */
+    const pattern = {
+      protocol,
+      hostname: url.hostname,
+      pathname: "/**",
+    };
+    if (url.port) {
+      pattern.port = url.port;
+    }
+    return pattern;
+  } catch {
+    return null;
+  }
+}
+
+const backendImageRemotePattern = buildBackendRemotePattern();
+
 function buildConnectSrc() {
   const origins = new Set(["'self'"]);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
@@ -84,11 +105,18 @@ const nextConfig = {
     optimizePackageImports: ["lucide-react", "recharts"],
   },
   images: {
-    unoptimized: true,
+    // Allow Next/Image optimization in production; static export builds still need unoptimized.
+    unoptimized: isStaticExport,
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 7,
     deviceSizes: [360, 414, 640, 768, 1024, 1280],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    remotePatterns: isStaticExport
+      ? []
+      : [
+          ...(backendImageRemotePattern ? [backendImageRemotePattern] : []),
+          { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
+        ],
   },
   async rewrites() {
     if (isStaticExport) {

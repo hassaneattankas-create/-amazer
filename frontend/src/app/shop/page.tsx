@@ -391,7 +391,8 @@ function VendorShopPageContent() {
                   alt={data.business_name}
                   width={600}
                   height={600}
-                  unoptimized
+                  sizes="(max-width: 768px) 50vw, 300px"
+                  quality={82}
                   className="h-40 w-full object-cover"
                 />
               </div>
@@ -634,7 +635,8 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
             src={resolveImageUrl(data.cover_image_url) ?? data.cover_image_url}
             alt={data.business_name}
             fill
-            unoptimized
+            sizes="(max-width: 768px) 100vw, 1200px"
+            quality={82}
             className="object-cover opacity-80"
           />
         ) : null}
@@ -648,7 +650,8 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
                   alt={data.business_name}
                   width={80}
                   height={80}
-                  unoptimized
+                  sizes="80px"
+                  quality={85}
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -736,10 +739,11 @@ function RetailShopContent({
                 <Image
                   src={resolveImageUrl(item.main_image_url) ?? item.main_image_url}
                   alt={item.name}
-                  width={640}
-                  height={480}
-                  unoptimized
+                  width={560}
+                  height={420}
                   loading="lazy"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 384px"
+                  quality={82}
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -824,10 +828,11 @@ function RestaurantMenuSection({
                 <Image
                   src={resolveImageUrl(dish.image_url) ?? dish.image_url}
                   alt={dish.name}
-                  width={640}
-                  height={480}
-                  unoptimized
+                  width={560}
+                  height={420}
                   loading="lazy"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 384px"
+                  quality={82}
                   className="h-full w-full object-cover"
                 />
               ) : (

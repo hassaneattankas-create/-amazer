@@ -27,6 +27,8 @@ export default function CategoryPage() {
   const slug = params.slug;
   const { data, isPending } = useQuery({
     queryKey: ["category-products", slug],
+    staleTime: 120_000,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const strict = await searchProducts({
         categorySlug: slug,
@@ -103,8 +105,8 @@ export default function CategoryPage() {
           ) : null}
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {items.map((product) => (
-              <ProductCard key={product.id} product={product} />
+            {items.map((product, index) => (
+              <ProductCard key={product.id} product={product} priority={index < 6} />
             ))}
           </div>
         </div>

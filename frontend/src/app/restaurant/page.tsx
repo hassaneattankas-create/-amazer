@@ -347,8 +347,11 @@ export default function RestaurantPage() {
                         }
                         alt={dish.name}
                         fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 400px"
+                        quality={82}
+                        loading={index < 6 ? "eager" : "lazy"}
+                        priority={index < 3}
                         className="object-cover"
-                        unoptimized
                       />
                     </div>
                     <div className="space-y-3 p-4">

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models.category import Category
 from app.models.product import Price, Product
@@ -76,10 +76,6 @@ class ProductRepository:
             .options(
                 selectinload(Product.images),
                 selectinload(Product.category),
-                selectinload(Product.prices)
-                .selectinload(Price.vendor)
-                .selectinload(Vendor.seller_profile)
-                .selectinload(SellerProfile.user),
             )
         )
 
@@ -110,6 +106,18 @@ class ProductRepository:
 
         stmt = stmt.order_by(Product.created_at.desc()).offset(raw_offset).limit(raw_limit)
         rows = self.db.execute(stmt).all()
+
+        # One query per search: load vendor + seller_profile for joined prices only (avoid N+1 and
+        # loading every Price row on each Product via selectinload(Product.prices)).
+        price_ids = [row[1].id for row in rows]
+        if price_ids:
+            self.db.scalars(
+                select(Price)
+                .where(Price.id.in_(price_ids))
+                .options(
+                    joinedload(Price.vendor).selectinload(Vendor.seller_profile),
+                )
+            ).unique().all()
 
         return [
             SearchOfferRow(

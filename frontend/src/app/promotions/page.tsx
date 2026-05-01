@@ -47,8 +47,9 @@ export default function PromotionsPage() {
                     src={imageSrc}
                     alt={item.product_name}
                     fill
-                    unoptimized
                     loading="lazy"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 380px"
+                    quality={82}
                     className="object-cover"
                   />
                 </div>
