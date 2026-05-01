@@ -23,7 +23,7 @@ jobs:
       run:
         shell: bash
     env:
-      CAPACITOR_SERVER_URL: https://amazerniger.vercel.app
+      CAPACITOR_SERVER_URL: https://amazer.store
       ANDROID_VERSION_NAME: ${{ github.event.inputs.version_name || format('1.0.{0}', github.run_number) }}
       ANDROID_VERSION_CODE: ${{ github.event.inputs.version_code || github.run_number }}
     steps:
