@@ -28,6 +28,14 @@ export function PremiumSellerPitch({
           <span className="font-semibold">des publications illimitees</span> — ideal pour hotels, agences et marques
           qui veulent tout centraliser. Les formules classiques restent parfaites pour demarrer vite.
         </p>
+        <p className="mt-2 text-sm leading-relaxed text-slate-700">
+          <span className="font-semibold text-slate-900">Acompte</span> : le client peut verser une partie du montant (Nita
+          ou Amana) pour confirmer une reservation ou un service Premium. Vous encaissez ainsi tout de suite une somme qui
+          engage le client et ameliore votre tresorerie ; le solde se regle ensuite selon votre organisation habituelle
+          hors plateforme (check-in, sejour ou livraison). Vous limitez les annulations tardives tout en gardant vos
+          conditions commerciales. Les tarifs AMAZER (commission, abonnement) s&apos;appliquent comme pour vos autres
+          activites sur la plateforme.
+        </p>
         {showEspaceVendeurLink ? (
           <p className="mt-2 text-xs text-slate-600">
             Tu choisis ton mode apres inscription dans{" "}
@@ -76,7 +84,7 @@ export function PremiumSellerPitch({
           <span className="font-semibold text-[#FF4D00]">•</span>
           <span>
             <strong className="text-slate-900">Mini-site riche</strong> : galerie, services, chambres, reservations
-            avec acompte, contact pro.
+            avec acompte (encaissement immediat partiel via mobile money pour securiser la demande), contact pro.
           </span>
         </li>
         <li className="flex gap-2">

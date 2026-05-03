@@ -12,6 +12,43 @@ import { useNotificationStore, type AppNotification } from "@/store/notification
 const TOKEN_STORAGE_KEY = "amazer_notification_token_registered";
 const ANDROID_ALERT_CHANNEL_ID = "amazer-alerts";
 const NATIVE_ALERT_SOUND = "amazer_alert.wav";
+/** Meme tonalite que l app native, servie depuis /public pour le navigateur */
+const WEB_ALERT_SOUND_URL = "/sounds/amazer-alert.wav";
+
+async function playWebNotificationAlertSound(): Promise<void> {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    const audio = new Audio(WEB_ALERT_SOUND_URL);
+    audio.volume = 0.88;
+    await audio.play();
+    return;
+  } catch {
+    // Autoplay ou fichier indisponible : court bip de secours
+  }
+  try {
+    type WinAudio = Window & { webkitAudioContext?: typeof AudioContext };
+    const Ctx = window.AudioContext || (window as WinAudio).webkitAudioContext;
+    if (!Ctx) {
+      return;
+    }
+    const ctx = new Ctx();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.value = 880;
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.22);
+    oscillator.onended = () => void ctx.close();
+  } catch {
+    /* silencieux */
+  }
+}
 const FCM_TOKEN_PREFIX = "fcm:";
 const DELIVERED_TAGS_STORAGE_KEY = "amazer_delivered_notification_tags";
 const DELIVERED_TAG_TTL_MS = 1000 * 60 * 60 * 12;
@@ -275,6 +312,10 @@ export async function notifyLocalOrderEvent(payload: {
   markDeliveredNotification(payload.tag);
   useNotificationStore.getState().pushNotification(payload);
   dispatchNotificationEvent(payload);
+
+  if (!Capacitor.isNativePlatform()) {
+    void playWebNotificationAlertSound();
+  }
 
   if (Capacitor.isNativePlatform()) {
     const ok = await ensureNativeNotificationChannel();

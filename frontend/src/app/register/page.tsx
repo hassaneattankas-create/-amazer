@@ -13,7 +13,7 @@ import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
 import { login, register, verifyAccount, type RegisterResponse } from "@/services/auth-service";
 import type { SellerActivityType, StorefrontTier } from "@/types/seller";
 
-const PASSWORD_POLICY = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/;
+const PASSWORD_MIN_LENGTH = 8;
 
 type SellerRegistrationType = "shop" | "restaurant" | "enterprise";
 
@@ -153,7 +153,7 @@ function RegisterPageContent() {
   const canSubmit =
     fullName.trim().length >= 2 &&
     identifier.trim().length >= 6 &&
-    PASSWORD_POLICY.test(password) &&
+    password.length >= PASSWORD_MIN_LENGTH &&
     acceptedLegal &&
     (!isSellerFlow || (businessName.trim().length >= 2 || fullName.trim().length >= 2));
 
@@ -343,7 +343,11 @@ function RegisterPageContent() {
               onChange={(event) => setPassword(event.target.value)}
             />
             <p className="mt-1 text-xs text-slate-500">
-              Minimum 8 caracteres avec majuscule, minuscule, chiffre et caractere special.
+              Obligatoire : au moins {PASSWORD_MIN_LENGTH} caracteres pour creer ton compte.{" "}
+              <span className="font-medium text-slate-700">
+                Pour ta securite, cree un mot de passe robuste
+              </span>{" "}
+              (majuscule, minuscule, chiffre et caractere special) — fortement recommande.
             </p>
           </div>
 

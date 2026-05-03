@@ -4,7 +4,6 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, m
 
 from app.schemas.seller import SellerProfileRequest
 
-PASSWORD_REGEX = re.compile(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$")
 WHATSAPP_REGEX = re.compile(r"^(?:\+?227)\d{8}$")
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -18,16 +17,6 @@ class RegisterRequest(BaseModel):
     full_name: str = Field(min_length=2, max_length=120)
     password: SecretStr = Field(min_length=8, max_length=72)
     seller_profile: SellerProfileRequest | None = None
-
-    @field_validator("password")
-    @classmethod
-    def validate_password_strength(cls, value: SecretStr) -> SecretStr:
-        raw = value.get_secret_value()
-        if not PASSWORD_REGEX.match(raw):
-            raise ValueError(
-                "Password must contain upper, lower, digit, and special character."
-            )
-        return value
 
     @field_validator("identifier")
     @classmethod
