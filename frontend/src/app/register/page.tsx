@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { Building2, Store, UtensilsCrossed } from "lucide-react";
 
 import { PasswordInput } from "@/components/PasswordInput";
@@ -10,7 +11,10 @@ import { PremiumSellerPitch } from "@/components/PremiumSellerPitch";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
+import { formatXOF } from "@/lib/currency";
 import { login, register, verifyAccount, type RegisterResponse } from "@/services/auth-service";
+import { getPublicFinanceSettings } from "@/services/finance-service";
+import type { FinanceSettings } from "@/types/finance";
 import type { SellerActivityType, StorefrontTier } from "@/types/seller";
 
 const PASSWORD_MIN_LENGTH = 8;
@@ -42,6 +46,16 @@ const SELLER_TYPE_OPTIONS: Array<{
     icon: Building2,
   },
 ];
+
+function sellerSubscriptionFee(settings: FinanceSettings, sellerType: SellerRegistrationType): number {
+  if (sellerType === "restaurant") {
+    return settings.seller_subscription_fee_restaurant;
+  }
+  if (sellerType === "enterprise") {
+    return settings.seller_subscription_fee_premium;
+  }
+  return settings.seller_subscription_fee_shop;
+}
 
 function buildSellerProfilePayload(
   sellerType: SellerRegistrationType,
@@ -80,6 +94,13 @@ function RegisterPageContent() {
     () => searchParams.get("seller") === "1" || next.startsWith("/seller"),
     [next, searchParams]
   );
+
+  const { data: sellerPricing, isPending: sellerPricingPending, isError: sellerPricingError } = useQuery({
+    queryKey: ["public-finance-settings"],
+    queryFn: getPublicFinanceSettings,
+    enabled: isSellerFlow,
+    staleTime: 60_000,
+  });
 
   async function finalizeRedirect() {
     const sellerTarget = `/seller?welcome=1&type=${sellerType}`;
@@ -271,6 +292,21 @@ function RegisterPageContent() {
                   <Icon className="h-5 w-5 text-[#FF4D00]" />
                   <p className="mt-3 font-semibold text-slate-900">{option.title}</p>
                   <p className="mt-1 text-sm text-slate-600">{option.description}</p>
+                  {sellerPricingPending ? (
+                    <p className="mt-2 text-xs text-slate-500">Tarif vendeur&nbsp;: chargement...</p>
+                  ) : sellerPricingError || !sellerPricing ? (
+                    <p className="mt-2 text-xs text-slate-500">
+                      Tarif vendeur&nbsp;: momentanément indisponible
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-sm font-semibold leading-snug text-slate-900">
+                      Abonnement vendeur&nbsp;:{" "}
+                      <span className="text-[#FF4D00]">
+                        {formatXOF(sellerSubscriptionFee(sellerPricing, option.value))}
+                      </span>
+                      <span className="font-normal text-slate-600"> / mois</span>
+                    </p>
+                  )}
                 </button>
               );
             })}

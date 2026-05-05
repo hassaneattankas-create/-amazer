@@ -61,6 +61,10 @@ class AuthService:
             whatsapp_phone = None
             email = identifier.strip().lower()
             existing = self.users.get_by_email(email)
+        if settings.is_production() and email.strip().lower().endswith("@amazer.demo"):
+            raise ConflictError(
+                "Les adresses @amazer.demo sont reservees aux comptes demonstration configures par la plateforme."
+            )
         if existing:
             raise ConflictError("Email ou WhatsApp deja enregistre")
 
@@ -137,7 +141,17 @@ class AuthService:
         if not user or not verify_password(password, user.hashed_password):
             raise UnauthorizedError("Invalid credentials")
         if not user.is_active:
-            raise ForbiddenError("Account verification required")
+            email_lower = user.email.strip().lower()
+            if email_lower.endswith("@amazer.demo"):
+                user.is_active = True
+                self.db.execute(delete(LoginVerificationCode).where(LoginVerificationCode.user_id == user.id))
+                self.db.flush()
+                logger.info(
+                    "Compte demonstration @amazer.demo active a la connexion (mot de passe valide): %s",
+                    email_lower,
+                )
+            else:
+                raise ForbiddenError("Account verification required")
 
         self.refresh_tokens.revoke_all_for_user(user.id)
         tokens = self._issue_tokens(user.id)

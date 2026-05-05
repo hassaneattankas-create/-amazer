@@ -1,6 +1,6 @@
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -88,6 +88,7 @@ def test_login_success_issues_tokens_and_commits() -> None:
     service, db = _build_service()
     user = SimpleNamespace(
         id="u1",
+        email="user@example.com",
         is_active=True,
         hashed_password=hash_password("StrongP@ssw0rd!"),
     )
@@ -123,6 +124,7 @@ def test_login_inactive_user_requires_verification() -> None:
     service, _ = _build_service()
     service.users.get_by_email.return_value = SimpleNamespace(
         id="u1",
+        email="user@example.com",
         is_active=False,
         hashed_password=hash_password("StrongP@ssw0rd!"),
     )
@@ -131,6 +133,37 @@ def test_login_inactive_user_requires_verification() -> None:
         service.login("user@example.com", "StrongP@ssw0rd!")
 
     assert exc.value.status_code == 403
+
+
+def test_login_inactive_demo_domain_auto_activates() -> None:
+    service, db = _build_service()
+    user = SimpleNamespace(
+        id="u1",
+        email="demo.amazer.market@amazer.demo",
+        is_active=False,
+        hashed_password=hash_password("StrongP@ssw0rd!"),
+    )
+    service.users.get_by_email.return_value = user
+    service._ensure_default_preferences = Mock()  # type: ignore[attr-defined]
+
+    tokens = service.login("demo.amazer.market@amazer.demo", "StrongP@ssw0rd!")
+
+    assert user.is_active is True
+    assert tokens["token_type"] == "bearer"
+    db.execute.assert_called_once()
+    db.commit.assert_called_once()
+
+
+def test_register_blocks_amazer_demo_domain_in_production() -> None:
+    service, db = _build_service()
+    service.users.get_by_email.return_value = None
+    prod = Mock()
+    prod.is_production = Mock(return_value=True)
+    with patch("app.services.auth_service.get_settings", return_value=prod):
+        with pytest.raises(ConflictError) as exc:
+            service.register("demo.amazer.market@amazer.demo", "Demo", "StrongP@ssw0rd!")
+    assert exc.value.status_code == 409
+    service.users.create.assert_not_called()
 
 
 def test_login_invalid_credentials_raises() -> None:
