@@ -109,13 +109,19 @@ const nextConfig = {
     unoptimized: isStaticExport,
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 7,
-    deviceSizes: [360, 414, 640, 768, 1024, 1280],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    // Valeurs alignées sur les `width` réels des `<Image />` (ex. 560) et sur `sizes`
+    // (ex. 896px pour bannière `fill`). Sinon Vercel répond 400 INVALID_IMAGE_OPTIMIZE_REQUEST.
+    deviceSizes: [
+      320, 360, 375, 380, 384, 400, 414, 560, 600, 640, 720, 750, 768, 828, 896, 960, 1024, 1080,
+      1200, 1280,
+    ],
+    imageSizes: [16, 32, 44, 48, 64, 80, 96, 128, 224, 256, 384],
     remotePatterns: isStaticExport
       ? []
       : [
           ...(backendImageRemotePattern ? [backendImageRemotePattern] : []),
           { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
+          { protocol: "https", hostname: "placehold.co", pathname: "/**" },
         ],
   },
   async rewrites() {
