@@ -54,6 +54,8 @@ export async function updateSellerInventory(
     is_active?: boolean;
     promo_amount?: number;
     boost_duration_hours?: 24 | 168;
+    boost_payment_reference?: string;
+    boost_payment_mode?: "nita" | "amana";
   },
 ): Promise<SellerInventoryItem> {
   const response = await api.patch<SellerInventoryItem>(

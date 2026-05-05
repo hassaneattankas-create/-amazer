@@ -20,6 +20,7 @@ from app.models.product import Price, Product
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
+from app.services.product_boost_service import product_boost_active_for_display
 from app.schemas.content import (
     AdClickProductStat,
     AdClickRequest,
@@ -70,19 +71,7 @@ def _is_vendor_publicly_visible(vendor: Vendor | None) -> bool:
 
 
 def _is_boost_active(product: Product) -> bool:
-    if not product.is_boosted:
-        return False
-    specs = product.specs or {}
-    boost_until_raw = specs.get("boost_until")
-    if not isinstance(boost_until_raw, str):
-        return True
-    try:
-        parsed = datetime.fromisoformat(boost_until_raw.replace("Z", "+00:00"))
-    except ValueError:
-        return True
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=UTC)
-    return parsed.astimezone(UTC) > datetime.now(UTC)
+    return product_boost_active_for_display(product)
 
 
 def _build_fallback_home_sections(db: Session) -> list[HomeSectionResponse]:

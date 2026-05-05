@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.schemas.restaurant import RestaurantMenuItemResponse
 
@@ -138,6 +138,20 @@ class SellerInventoryUpdateRequest(BaseModel):
     is_active: bool | None = None
     promo_amount: float | None = Field(default=None, gt=0)
     boost_duration_hours: int | None = Field(default=None, ge=24, le=168)
+    boost_payment_reference: str | None = Field(default=None, max_length=200)
+    boost_payment_mode: Literal["nita", "amana"] | None = None
+
+    @model_validator(mode="after")
+    def boost_requires_payment_proof(self) -> SellerInventoryUpdateRequest:
+        if self.boost_duration_hours is not None:
+            ref = (self.boost_payment_reference or "").strip()
+            if len(ref) < 4:
+                raise ValueError(
+                    "Référence de paiement boost obligatoire (relevé Nita/Amana après versement)."
+                )
+            if self.boost_payment_mode is None:
+                raise ValueError("Mode de paiement boost obligatoire: nita ou amana.")
+        return self
 
 
 class SellerShopOrderItemResponse(BaseModel):

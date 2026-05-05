@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, object_session, selectinload
 
 from app.config import get_settings
 from app.core.cache import cache_delete_prefixes
@@ -61,6 +61,7 @@ from app.services.seller_finance_service import (
     build_effective_seller_finance_settings,
     get_or_create_global_settings,
 )
+from app.services.product_boost_service import clear_expired_boost_from_product
 from app.services.seller_profile_service import create_or_update_seller_profile
 from app.services.seller_profile_service import resolve_seller_plan_bucket
 from app.services.seller_subscription_reminder_service import run_seller_subscription_reminders_task
@@ -147,18 +148,22 @@ def _can_manage_shop_catalog(profile: SellerProfile) -> bool:
 
 
 def _sync_product_flags(product: Product) -> tuple[float | None, datetime | None, datetime | None]:
-    specs = product.specs or {}
+    specs = dict(product.specs or {})
     now = datetime.now(UTC)
     promo_price_raw = specs.get("promo_price")
     promo_until = _parse_utc_datetime(specs.get("promo_until"))
-    boost_until = _parse_utc_datetime(specs.get("boost_until"))
 
     promo_price = None
     if isinstance(promo_price_raw, (int, float)) and promo_until and promo_until > now:
         promo_price = float(promo_price_raw)
-    if boost_until is None or boost_until <= now:
-        product.is_boosted = False
-    return promo_price, promo_until, boost_until
+
+    clear_expired_boost_from_product(product, now=now)
+    specs_after = dict(product.specs or {})
+    boost_until_active: datetime | None = None
+    bu = _parse_utc_datetime(specs_after.get("boost_until"))
+    if product.is_boosted and bu is not None and bu > now:
+        boost_until_active = bu
+    return promo_price, promo_until, boost_until_active
 
 
 def _profile_response(profile: SellerProfile, db: Session) -> SellerProfileResponse:
@@ -679,8 +684,12 @@ def list_inventory(
         .order_by(Price.updated_at.desc())
     ).all()
     payload: list[SellerInventoryItemResponse] = []
+    dirty = False
     for row in rows:
         promo_price, promo_until, boost_until = _sync_product_flags(row.product)
+        sess = object_session(row.product)
+        if sess is not None and sess.is_modified(row.product, include_collections=False):
+            dirty = True
         payload.append(
             SellerInventoryItemResponse(
                 price_id=row.id,
@@ -697,6 +706,9 @@ def list_inventory(
                 boost_until=boost_until,
             )
         )
+    if dirty:
+        db.commit()
+        _invalidate_public_marketplace_cache()
     return payload
 
 
@@ -780,6 +792,7 @@ def update_inventory_item(
     previous_amount = price.amount
     previous_stock = price.stock_quantity
     now = datetime.now(UTC)
+    clear_expired_boost_from_product(price.product, now=now)
     specs = dict(price.product.specs or {})
     if payload.amount is not None:
         price.amount = payload.amount
@@ -792,8 +805,20 @@ def update_inventory_item(
         specs["promo_until"] = (now + timedelta(days=7)).isoformat()
         price.amount = payload.promo_amount
     if payload.boost_duration_hours is not None:
+        settings_row = get_or_create_global_settings(db)
+        hours = int(payload.boost_duration_hours)
+        tariff = (
+            float(settings_row.ad_boost_price_24h)
+            if hours <= 24
+            else float(settings_row.ad_boost_price_7d)
+        )
+        boost_ref = (payload.boost_payment_reference or "").strip()
         price.product.is_boosted = True
-        specs["boost_until"] = (now + timedelta(hours=payload.boost_duration_hours)).isoformat()
+        specs["boost_until"] = (now + timedelta(hours=hours)).isoformat()
+        specs["boost_payment_reference"] = boost_ref
+        specs["boost_payment_mode"] = payload.boost_payment_mode
+        specs["boost_requested_at"] = now.isoformat()
+        specs["boost_price_tariff"] = tariff
     price.product.specs = specs
 
     db.add(
@@ -822,6 +847,12 @@ def update_inventory_item(
             "is_active": bool(price.is_active),
             "boosted": bool(price.product.is_boosted),
             "promo_amount": payload.promo_amount,
+            "boost_tariff": float(specs.get("boost_price_tariff", 0) or 0)
+            if payload.boost_duration_hours is not None
+            else None,
+            "boost_payment_reference": (payload.boost_payment_reference or "").strip()
+            if payload.boost_duration_hours is not None
+            else None,
         },
     )
     db.commit()

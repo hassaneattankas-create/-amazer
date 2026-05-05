@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { formatXOF } from "@/lib/currency";
 import { normalizeImageInputForApi } from "@/lib/image";
 import { deleteMyAccount } from "@/services/auth-service";
+import { getPublicFinanceSettings } from "@/services/finance-service";
 import { notifyLocalOrderEvent } from "@/services/notification-service";
 import { listCatalogCategories } from "@/services/catalog-service";
 import {
@@ -86,6 +87,13 @@ export default function SellerDashboardPage() {
     (profile?.activity_type === "hotel" || profile?.activity_type === "enterprise") &&
     Boolean(profile?.accepts_hotel_bookings);
 
+  const { data: financeSettings } = useQuery({
+    queryKey: ["public-finance-settings"],
+    queryFn: getPublicFinanceSettings,
+    enabled: showProductTools,
+    staleTime: 60_000,
+  });
+
   const { data: categories = [] } = useQuery({
     queryKey: ["catalog-categories-dashboard"],
     queryFn: listCatalogCategories,
@@ -134,6 +142,8 @@ export default function SellerDashboardPage() {
       is_active,
       promo_amount,
       boost_duration_hours,
+      boost_payment_reference,
+      boost_payment_mode,
     }: {
       priceId: string;
       amount: number;
@@ -141,6 +151,8 @@ export default function SellerDashboardPage() {
       is_active?: boolean;
       promo_amount?: number;
       boost_duration_hours?: 24 | 168;
+      boost_payment_reference?: string;
+      boost_payment_mode?: "nita" | "amana";
     }) =>
       updateSellerInventory(priceId, {
         amount,
@@ -148,6 +160,8 @@ export default function SellerDashboardPage() {
         is_active,
         promo_amount,
         boost_duration_hours,
+        boost_payment_reference,
+        boost_payment_mode,
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["seller-inventory"] });
@@ -155,6 +169,24 @@ export default function SellerDashboardPage() {
     },
     onError: () => setStatus("Erreur mise a jour stock."),
   });
+
+  function readBoostProof(priceId: string): {
+    boost_payment_reference: string;
+    boost_payment_mode: "nita" | "amana";
+  } | null {
+    const refInput = document.getElementById(`boost-ref-${priceId}`) as HTMLInputElement | null;
+    const modeSelect = document.getElementById(`boost-mode-${priceId}`) as HTMLSelectElement | null;
+    const boost_payment_reference = (refInput?.value ?? "").trim();
+    const modeRaw = modeSelect?.value === "amana" ? "amana" : "nita";
+    if (boost_payment_reference.length < 4) {
+      setStatus("Boost: saisis la reference de paiement (apres versement Nita ou Amana) sur la ligne du produit.");
+      return null;
+    }
+    return {
+      boost_payment_reference,
+      boost_payment_mode: modeRaw,
+    };
+  }
 
   const shopOrderStatusMutation = useMutation({
     mutationFn: ({
@@ -795,6 +827,13 @@ export default function SellerDashboardPage() {
                   ? "Espace premium: gere ton catalogue produits en plus du menu restaurant."
                   : "Espace boutique: gere tes articles, ton stock et tes boosts."}
               </p>
+              {financeSettings ? (
+                <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+                  <strong>Boost sponsorise payant:</strong> {formatXOF(financeSettings.ad_boost_price_24h)} pour 24 h ou{" "}
+                  {formatXOF(financeSettings.ad_boost_price_7d)} pour 7 jours. Versement au numero AMAZER puis saisis la reference
+                  sur chaque ligne (obligatoire pour activer le boost).
+                </p>
+              ) : null}
             </article>
             {inventory.map((item) => (
               <article key={item.price_id} className="premium-card border border-slate-200 bg-white p-4">
@@ -852,33 +891,59 @@ export default function SellerDashboardPage() {
                     >
                       {item.is_active ? "Retirer" : "Re-publier"}
                     </Button>
-                    <Button
-                      className="border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                      onClick={() =>
-                        inventoryMutation.mutate({
-                          priceId: item.price_id,
-                          amount: item.amount,
-                          stock: item.stock_quantity,
-                          boost_duration_hours: 24,
-                        })
-                      }
-                    >
-                      Boost 24h
-                    </Button>
-                    <Button
-                      className="border border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200"
-                      onClick={() =>
-                        inventoryMutation.mutate({
-                          priceId: item.price_id,
-                          amount: item.amount,
-                          stock: item.stock_quantity,
-                          boost_duration_hours: 168,
-                        })
-                      }
-                    >
-                      Boost 7j
-                    </Button>
                   </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-medium text-slate-700">Boost (apres paiement)</span>
+                  <select
+                    id={`boost-mode-${item.price_id}`}
+                    className="h-9 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-900"
+                    defaultValue="nita"
+                  >
+                    <option value="nita">Nita</option>
+                    <option value="amana">Amana</option>
+                  </select>
+                  <Input
+                    id={`boost-ref-${item.price_id}`}
+                    placeholder="Reference de paiement"
+                    className="h-9 w-full max-w-xs text-xs sm:w-56"
+                  />
+                  <Button
+                    className="border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                    onClick={() => {
+                      const proof = readBoostProof(item.price_id);
+                      if (!proof) {
+                        return;
+                      }
+                      inventoryMutation.mutate({
+                        priceId: item.price_id,
+                        amount: item.amount,
+                        stock: item.stock_quantity,
+                        boost_duration_hours: 24,
+                        ...proof,
+                      });
+                    }}
+                  >
+                    Boost 24 h
+                  </Button>
+                  <Button
+                    className="border border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200"
+                    onClick={() => {
+                      const proof = readBoostProof(item.price_id);
+                      if (!proof) {
+                        return;
+                      }
+                      inventoryMutation.mutate({
+                        priceId: item.price_id,
+                        amount: item.amount,
+                        stock: item.stock_quantity,
+                        boost_duration_hours: 168,
+                        ...proof,
+                      });
+                    }}
+                  >
+                    Boost 7 j
+                  </Button>
                 </div>
                 <p className="mt-2 text-xs text-slate-500">
                   {item.is_boosted ? "Boost actif" : "Boost inactif"}

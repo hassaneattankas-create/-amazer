@@ -22,6 +22,7 @@ from app.schemas.product import (
     VendorResponse,
 )
 from app.services.ranking_service import RankingBreakdown, RankingService
+from app.services.product_boost_service import product_boost_active_for_display
 from app.services.public_catalog_policy import (
     is_allowed_public_home_brand,
     is_allowed_public_product_offer,
@@ -348,16 +349,4 @@ class ProductService:
         return True
 
     def _is_product_boosted(self, product: Product) -> bool:
-        if not bool(getattr(product, "is_boosted", False)):
-            return False
-        specs = getattr(product, "specs", {}) or {}
-        boost_until_raw = specs.get("boost_until")
-        if not isinstance(boost_until_raw, str):
-            return True
-        try:
-            parsed = datetime.fromisoformat(boost_until_raw.replace("Z", "+00:00"))
-        except ValueError:
-            return True
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=UTC)
-        return parsed.astimezone(UTC) > datetime.now(UTC)
+        return product_boost_active_for_display(product)

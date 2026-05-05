@@ -6,6 +6,10 @@ from app.schemas.seller import SellerProfileRequest
 
 WHATSAPP_REGEX = re.compile(r"^(?:\+?227)\d{8}$")
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# Au moins une minuscule, une majuscule, un chiffre et un caractère non alphanumerique (longueur min via Field).
+REGISTER_PASSWORD_STRENGTH = re.compile(
+    r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$"
+)
 
 
 class RegisterRequest(BaseModel):
@@ -17,6 +21,16 @@ class RegisterRequest(BaseModel):
     full_name: str = Field(min_length=2, max_length=120)
     password: SecretStr = Field(min_length=8, max_length=72)
     seller_profile: SellerProfileRequest | None = None
+
+    @field_validator("password")
+    @classmethod
+    def validate_register_password_strength(cls, value: SecretStr) -> SecretStr:
+        raw = value.get_secret_value()
+        if not REGISTER_PASSWORD_STRENGTH.fullmatch(raw):
+            raise ValueError(
+                "Le mot de passe doit contenir au moins une minuscule, une majuscule, un chiffre et un caractère spécial."
+            )
+        return value
 
     @field_validator("identifier")
     @classmethod
