@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime
+from datetime import timedelta, UTC, datetime
 from uuid import uuid4
 from typing import Any, Mapping
 
@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.crypto import encrypt_phone_value
+from app.config import get_settings
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
@@ -20,6 +21,30 @@ def _seller_subscription_is_active(profile: SellerProfile) -> bool:
         and profile.subscription_paid_until is not None
         and profile.subscription_paid_until > datetime.now(UTC)
     )
+
+
+def apply_seller_onboarding_and_trial(
+    profile: SellerProfile,
+    *,
+    allow_subscription_trial: bool,
+) -> None:
+    """Frais d'entrée vendeur = 0 côté produit : on marque l'onboarding acquis.
+    Essai gratuit optionnel si aucune échéance ni paiement enregistré (nouveaux comptes ou migration)."""
+    now = datetime.now(UTC)
+    settings = get_settings()
+    trial_days = int(settings.seller_registration_trial_days or 0)
+
+    if profile.onboarding_fee_paid_at is None:
+        profile.onboarding_fee_paid_at = now
+
+    if not allow_subscription_trial or trial_days <= 0:
+        return
+    if profile.subscription_last_payment_reference is not None:
+        return
+    if profile.subscription_paid_until is not None:
+        return
+
+    profile.subscription_paid_until = now + timedelta(days=trial_days)
 
 
 def resolve_seller_plan_bucket(
@@ -217,10 +242,13 @@ def create_or_update_seller_profile(
 
     apply_seller_profile_payload(profile, payload)
     next_plan_bucket = profile_plan_bucket(profile)
-    if previous_plan_bucket is not None and next_plan_bucket != previous_plan_bucket:
+    plan_changed = previous_plan_bucket is not None and next_plan_bucket != previous_plan_bucket
+    if plan_changed:
         profile.subscription_paid_until = None
         profile.subscription_last_payment_reference = None
     vendor.name = profile.business_name
+    # Essai / onboarding : autorisé sauf si l'utilisateur vient de changer de formule (évite de redonner un essai).
+    apply_seller_onboarding_and_trial(profile, allow_subscription_trial=not plan_changed)
     # Mini-site visible uniquement si l'abonnement vendeur est à jour (même logique que /seller/profile).
     vendor.is_active = _seller_subscription_is_active(profile)
     return profile

@@ -13,6 +13,7 @@ from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.services.auth_service import AuthService
+from app.services.seller_profile_service import apply_seller_onboarding_and_trial
 
 http_bearer = HTTPBearer(auto_error=False)
 
@@ -72,20 +73,24 @@ def get_seller_user(
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
         return current_user
+    # Comptes créés avant l'essai gratuit : complète onboarding + période d’essai une fois.
     if profile.onboarding_fee_paid_at is None:
+        apply_seller_onboarding_and_trial(profile, allow_subscription_trial=True)
         vendor = db.get(Vendor, profile.vendor_id)
-        if vendor is not None and vendor.is_active:
-            vendor.is_active = False
-            db.commit()
-        raise ForbiddenError(
-            "Activation vendeur requise: reglez d'abord votre premier abonnement vendeur."
-        )
+        if vendor is not None:
+            vendor.is_active = profile.subscription_paid_until is not None and profile.subscription_paid_until > datetime.now(
+                UTC
+            )
+        db.commit()
+        db.refresh(profile)
+
     if profile.subscription_paid_until is None or profile.subscription_paid_until <= datetime.now(UTC):
         vendor = db.get(Vendor, profile.vendor_id)
         if vendor is not None and vendor.is_active:
             vendor.is_active = False
             db.commit()
         raise ForbiddenError(
-            "Abonnement vendeur expire: reglez votre mensualite pour reactiver le compte vendeur."
+            "Abonnement vendeur requis ou expire: activez un essai depuis votre profil vendeur "
+            "ou reglez votre cotisation pour continuer a publier."
         )
     return current_user
