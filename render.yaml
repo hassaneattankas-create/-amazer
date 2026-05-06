@@ -16,8 +16,14 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
+    disk:
+      name: amazer-media
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: APP_ENV
         value: production
       - key: PYTHON_VERSION
         value: "3.12"
+      - key: MEDIA_UPLOAD_DIR
+        value: /var/data/uploads

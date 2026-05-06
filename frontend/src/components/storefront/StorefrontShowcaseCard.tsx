@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { BedDouble, ShieldCheck, Store, UtensilsCrossed } from "lucide-react";
+import { useState } from "react";
 
 import { formatXOF } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
@@ -23,6 +24,8 @@ export function StorefrontShowcaseCard({
   store: VendorStorefront;
   ctaLabel?: string;
 }) {
+  const [coverImageError, setCoverImageError] = useState(false);
+  const [logoImageError, setLogoImageError] = useState(false);
   const activityKey =
     store.activity_type === "restaurant" ||
     store.activity_type === "hotel" ||
@@ -32,11 +35,14 @@ export function StorefrontShowcaseCard({
   const meta = activityMeta[activityKey];
   const ActivityIcon = meta.icon;
   const imageUrl = resolveImageUrl(store.cover_image_url) || store.cover_image_url;
+  const logoUrl = resolveImageUrl(store.logo_url) || store.logo_url;
+  const fallbackCoverUrl =
+    activityKey === "restaurant" ? "/images/placeholders/restaurant.svg" : "/images/placeholders/default.svg";
 
   return (
     <article className="premium-card hover-lift-glow overflow-hidden border border-white/20 bg-white/70 shadow-[0_24px_60px_rgba(255,77,0,0.24)]">
       <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-slate-950 via-slate-800 to-[#1f2937]">
-        {imageUrl ? (
+        {imageUrl && !coverImageError ? (
           <Image
             src={imageUrl}
             alt={store.business_name || store.name}
@@ -44,8 +50,17 @@ export function StorefrontShowcaseCard({
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 400px"
             quality={82}
             className="object-cover opacity-90"
+            onError={() => setCoverImageError(true)}
           />
-        ) : null}
+        ) : (
+          <Image
+            src={fallbackCoverUrl}
+            alt=""
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 400px"
+            className="object-cover opacity-75"
+          />
+        )}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/25 to-transparent" />
         <div className="absolute left-4 top-4 flex items-center gap-2">
           <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur">
@@ -60,15 +75,16 @@ export function StorefrontShowcaseCard({
         <div className="absolute bottom-4 left-4 right-4">
           <div className="flex items-center gap-2 text-white">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur">
-              {store.logo_url ? (
+              {logoUrl && !logoImageError ? (
                 <Image
-                  src={resolveImageUrl(store.logo_url) || store.logo_url}
+                  src={logoUrl}
                   alt={`${store.business_name || store.name} logo`}
                   width={44}
                   height={44}
                   sizes="44px"
                   quality={85}
                   className="h-full w-full rounded-2xl object-cover"
+                  onError={() => setLogoImageError(true)}
                 />
               ) : (
                 <ActivityIcon className="h-5 w-5" />

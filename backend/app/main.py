@@ -1,6 +1,7 @@
 from collections.abc import Awaitable, Callable
 import logging
 from pathlib import Path
+import shutil
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -47,6 +48,13 @@ logger = logging.getLogger(__name__)
 if settings.media_storage_provider.lower() == "local":
     media_dir = Path(settings.media_upload_dir).resolve()
     media_dir.mkdir(parents=True, exist_ok=True)
+    bundled_media_dir = Path(__file__).resolve().parents[1] / "uploads"
+    if bundled_media_dir.exists() and bundled_media_dir.resolve() != media_dir:
+        for source in bundled_media_dir.iterdir():
+            if source.is_file():
+                destination = media_dir / source.name
+                if not destination.exists():
+                    shutil.copy2(source, destination)
     app.mount(settings.media_base_url, StaticFiles(directory=str(media_dir)), name="media")
 
 app.add_middleware(
