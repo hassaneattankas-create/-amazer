@@ -50,6 +50,7 @@ export default function PromotionsPage() {
                     loading="lazy"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 380px"
                     quality={82}
+                    unoptimized
                     className="object-cover"
                   />
                 </div>

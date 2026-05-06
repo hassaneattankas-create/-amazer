@@ -130,6 +130,7 @@ export default function ProductDetailPage() {
                   sizes="112px"
                   priority
                   quality={85}
+                  unoptimized
                   className="h-full w-full object-cover"
                   onError={() => setImageError(true)}
                 />

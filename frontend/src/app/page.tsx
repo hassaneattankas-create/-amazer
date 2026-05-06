@@ -225,6 +225,7 @@ export default function HomePage() {
               loading="lazy"
               sizes="(max-width: 768px) 100vw, 896px"
               quality={82}
+              unoptimized
               className="object-cover"
             />
           </div>

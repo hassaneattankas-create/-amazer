@@ -49,6 +49,7 @@ export function StorefrontShowcaseCard({
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 400px"
             quality={82}
+            unoptimized
             className="object-cover opacity-90"
             onError={() => setCoverImageError(true)}
           />
@@ -83,6 +84,7 @@ export function StorefrontShowcaseCard({
                   height={44}
                   sizes="44px"
                   quality={85}
+                  unoptimized
                   className="h-full w-full rounded-2xl object-cover"
                   onError={() => setLogoImageError(true)}
                 />

@@ -351,6 +351,7 @@ export default function RestaurantPage() {
                         quality={82}
                         loading={index < 6 ? "eager" : "lazy"}
                         priority={index < 3}
+                        unoptimized
                         className="object-cover"
                       />
                     </div>
