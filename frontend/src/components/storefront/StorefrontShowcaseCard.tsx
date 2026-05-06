@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { BedDouble, ShieldCheck, Store, UtensilsCrossed } from "lucide-react";
 
 import { formatXOF } from "@/lib/currency";
@@ -31,7 +32,12 @@ export function StorefrontShowcaseCard({
       : "shop";
   const meta = activityMeta[activityKey];
   const ActivityIcon = meta.icon;
-  const imageUrl = resolveImageUrl(store.cover_image_url) || store.cover_image_url;
+  const resolvedCoverUrl = resolveImageUrl(store.cover_image_url);
+  const resolvedLogoUrl = resolveImageUrl(store.logo_url);
+  const [coverFailed, setCoverFailed] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
+  const imageUrl = coverFailed ? null : resolvedCoverUrl;
+  const logoUrl = logoFailed ? null : resolvedLogoUrl;
 
   return (
     <article className="premium-card hover-lift-glow overflow-hidden border border-white/20 bg-white/70 shadow-[0_24px_60px_rgba(255,77,0,0.24)]">
@@ -44,6 +50,7 @@ export function StorefrontShowcaseCard({
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 400px"
             quality={82}
             className="object-cover opacity-90"
+            onError={() => setCoverFailed(true)}
           />
         ) : null}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/25 to-transparent" />
@@ -60,15 +67,16 @@ export function StorefrontShowcaseCard({
         <div className="absolute bottom-4 left-4 right-4">
           <div className="flex items-center gap-2 text-white">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur">
-              {store.logo_url ? (
+              {logoUrl ? (
                 <Image
-                  src={resolveImageUrl(store.logo_url) || store.logo_url}
+                  src={logoUrl}
                   alt={`${store.business_name || store.name} logo`}
                   width={44}
                   height={44}
                   sizes="44px"
                   quality={85}
                   className="h-full w-full rounded-2xl object-cover"
+                  onError={() => setLogoFailed(true)}
                 />
               ) : (
                 <ActivityIcon className="h-5 w-5" />

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
@@ -387,7 +387,7 @@ export default function VendorShopPage() {
             {data.gallery_images.map((imageUrl, index) => (
               <div key={`gallery-${index}-${imageUrl}`} className="overflow-hidden rounded-2xl bg-slate-100">
                 <Image
-                  src={resolveImageUrl(imageUrl) ?? imageUrl}
+                  src={resolveImageUrl(imageUrl) ?? "/images/placeholders/default.svg"}
                   alt={data.business_name}
                   width={600}
                   height={600}
@@ -526,7 +526,7 @@ export default function VendorShopPage() {
                   <option value="">Choisir une chambre</option>
                   {data.room_types.map((room) => (
                     <option key={room.id || room.name} value={room.id || room.name}>
-                      {room.name} • {formatXOF(room.night_price)}/nuit
+                      {room.name} - {formatXOF(room.night_price)}/nuit
                     </option>
                   ))}
                 </select>
@@ -624,7 +624,7 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
       <div className="relative h-52 w-full bg-gradient-to-br from-slate-900 via-slate-800 to-[#0f172a]">
         {data.cover_image_url ? (
           <Image
-            src={resolveImageUrl(data.cover_image_url) ?? data.cover_image_url}
+            src={resolveImageUrl(data.cover_image_url) ?? "/images/placeholders/default.svg"}
             alt={data.business_name}
             fill
             sizes="(max-width: 768px) 100vw, 1200px"
@@ -638,7 +638,7 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
             <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl border border-white/25 bg-white/10 backdrop-blur">
               {data.logo_url ? (
                 <Image
-                  src={resolveImageUrl(data.logo_url) ?? data.logo_url}
+                  src={resolveImageUrl(data.logo_url) ?? "/images/placeholders/default.svg"}
                   alt={data.business_name}
                   width={80}
                   height={80}
@@ -656,7 +656,7 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
                 {data.is_verified ? <ShieldCheck className="h-5 w-5 text-emerald-300" /> : null}
               </div>
               <p className="mt-2 text-sm text-white/80">
-                {activityLabels[data.activity_type]} {data.storefront_tier === "premium" ? "Premium" : "Basic"} •{" "}
+                {activityLabels[data.activity_type]} {data.storefront_tier === "premium" ? "Premium" : "Basic"} -{" "}
                 {data.city ?? "Niamey"}
               </p>
             </div>
@@ -729,7 +729,7 @@ function RetailShopContent({
             <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100">
               {item.main_image_url ? (
                 <Image
-                  src={resolveImageUrl(item.main_image_url) ?? item.main_image_url}
+                  src={resolveImageUrl(item.main_image_url) ?? "/images/placeholders/default.svg"}
                   alt={item.name}
                   width={560}
                   height={420}
@@ -818,7 +818,7 @@ function RestaurantMenuSection({
             <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100">
               {dish.image_url ? (
                 <Image
-                  src={resolveImageUrl(dish.image_url) ?? dish.image_url}
+                  src={resolveImageUrl(dish.image_url) ?? "/images/placeholders/default.svg"}
                   alt={dish.name}
                   width={560}
                   height={420}
@@ -843,7 +843,7 @@ function RestaurantMenuSection({
                 ) : null}
               </div>
               {dish.description ? <p className="line-clamp-3 text-sm text-slate-600">{dish.description}</p> : null}
-              {dish.tags?.length ? <p className="text-xs text-slate-500">{dish.tags.join(" â€¢ ")}</p> : null}
+              {dish.tags?.length ? <p className="text-xs text-slate-500">{dish.tags.join(" - ")}</p> : null}
               <p className="text-base font-semibold text-[#FF4D00]">{formatXOF(dish.base_price)}</p>
               {dish.options.length ? (
                 <div className="rounded-xl border border-orange-100 bg-white/70 p-2">
@@ -1064,3 +1064,4 @@ function Pill({ children }: { children: React.ReactNode }) {
     </span>
   );
 }
+

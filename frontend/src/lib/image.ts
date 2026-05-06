@@ -41,6 +41,17 @@ function toImageProxyUrl(value: string): string {
   return `${IMAGE_PROXY_ROUTE}?url=${encodeURIComponent(value)}`;
 }
 
+function isLikelyRelativeMediaPath(value: string): boolean {
+  if (!value || value.startsWith("/") || value.startsWith("//")) {
+    return false;
+  }
+  if (/^[a-z][a-z0-9+.-]*:/i.test(value)) {
+    return false;
+  }
+  // Ex: media/abc.webp, uploads/img.png
+  return value.includes("/");
+}
+
 export function resolveImageUrl(raw: string | null | undefined): string | null {
   if (!raw) {
     return null;
@@ -66,6 +77,16 @@ export function resolveImageUrl(raw: string | null | undefined): string | null {
       return null;
     }
     const absoluteUrl = `${origin}${value}`;
+    return shouldProxyImageUrl(absoluteUrl) ? toImageProxyUrl(absoluteUrl) : absoluteUrl;
+  }
+
+  if (isLikelyRelativeMediaPath(value)) {
+    const origin = getApiOrigin();
+    if (!origin) {
+      return null;
+    }
+    const normalizedPath = value.startsWith("/") ? value : `/${value}`;
+    const absoluteUrl = `${origin}${normalizedPath}`;
     return shouldProxyImageUrl(absoluteUrl) ? toImageProxyUrl(absoluteUrl) : absoluteUrl;
   }
 
@@ -98,6 +119,11 @@ export function normalizeImageInputForApi(raw: string | null | undefined): strin
   // Preserve uploaded local media paths such as /media/filename.webp.
   if (value.startsWith("/")) {
     return value;
+  }
+
+  // Backward compatibility: keep relative local paths consistent with backend format.
+  if (isLikelyRelativeMediaPath(value)) {
+    return `/${value}`;
   }
 
   if (value.startsWith("//")) {
