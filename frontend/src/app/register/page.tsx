@@ -236,7 +236,7 @@ function RegisterPageContent() {
         </h1>
         <p className="mt-2 text-sm text-slate-600">
           {isSellerFlow
-            ? "Choisis ton type de boutique, cree ton compte, complete ton profil puis suis les instructions de paiement vendeur de facon simple et claire."
+            ? "Choisis ton type de boutique et cree ton compte vendeur."
             : "Renseignez des informations exactes. La connexion est ouverte des que le compte est cree."}
           {!isSellerFlow ? (
             <>
@@ -250,7 +250,9 @@ function RegisterPageContent() {
           ) : null}
         </p>
 
-        <PremiumSellerPitch variant="compact" className="mt-5" showEspaceVendeurLink={!isSellerFlow} />
+        {!isSellerFlow ? (
+          <PremiumSellerPitch variant="compact" className="mt-5" showEspaceVendeurLink />
+        ) : null}
 
         {isSellerFlow ? (
           <div className="mt-6 grid gap-3 md:grid-cols-3">
@@ -276,18 +278,6 @@ function RegisterPageContent() {
             })}
           </div>
         ) : null}
-        {isSellerFlow ? (
-          <div className="mt-5 rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm text-slate-700">
-            <p className="font-semibold text-slate-900">Parcours vendeur simplifie</p>
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
-              <p>1. Creer ton compte vendeur.</p>
-              <p>2. Completer ton profil boutique ou restaurant.</p>
-              <p>3. Choisir Amana ou Nita pour le versement.</p>
-              <p>4. Envoyer le paiement au numero affiche puis attendre la notification de validation.</p>
-            </div>
-          </div>
-        ) : null}
-
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           {isSellerFlow ? (
             <div>

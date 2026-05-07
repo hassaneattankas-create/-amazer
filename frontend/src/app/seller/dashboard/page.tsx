@@ -133,6 +133,7 @@ export default function SellerDashboardPage() {
       stock,
       is_active,
       promo_amount,
+      description,
       boost_duration_hours,
     }: {
       priceId: string;
@@ -140,6 +141,7 @@ export default function SellerDashboardPage() {
       stock: number;
       is_active?: boolean;
       promo_amount?: number;
+      description?: string;
       boost_duration_hours?: 24 | 168;
     }) =>
       updateSellerInventory(priceId, {
@@ -147,10 +149,14 @@ export default function SellerDashboardPage() {
         stock_quantity: stock,
         is_active,
         promo_amount,
+        description,
         boost_duration_hours,
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["seller-inventory"] });
+      void queryClient.invalidateQueries({ queryKey: ["products-search"] });
+      void queryClient.invalidateQueries({ queryKey: ["home-storefronts"] });
+      void queryClient.invalidateQueries({ queryKey: ["catalog-storefronts-boutiques"] });
       setStatus("Stock mis a jour.");
     },
     onError: () => setStatus("Erreur mise a jour stock."),
@@ -798,16 +804,22 @@ export default function SellerDashboardPage() {
             </article>
             {inventory.map((item) => (
               <article key={item.price_id} className="premium-card border border-slate-200 bg-white p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+                  <div className="min-w-0">
                     <p className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
                       <Boxes className="h-4 w-4 text-[#FF4D00]" />
                       {item.product_name}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">{item.brand}</p>
                     <AnimatedPrice value={item.amount} className="mt-2 text-lg font-semibold text-[#FF4D00]" />
+                    <textarea
+                      defaultValue={item.description ?? ""}
+                      placeholder="Description du produit"
+                      className="mt-3 min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                      id={`description-${item.price_id}`}
+                    />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                     <Input type="number" min={0} defaultValue={item.amount} className="w-28" id={`amount-${item.price_id}`} />
                     <Input type="number" min={0} defaultValue={item.stock_quantity} className="w-24" id={`stock-${item.price_id}`} />
                     <Input
@@ -824,11 +836,15 @@ export default function SellerDashboardPage() {
                         const amountInput = document.getElementById(`amount-${item.price_id}`) as HTMLInputElement | null;
                         const stockInput = document.getElementById(`stock-${item.price_id}`) as HTMLInputElement | null;
                         const promoInput = document.getElementById(`promo-${item.price_id}`) as HTMLInputElement | null;
+                        const descriptionInput = document.getElementById(
+                          `description-${item.price_id}`
+                        ) as HTMLTextAreaElement | null;
                         const promoValue = Number(promoInput?.value ?? 0);
                         inventoryMutation.mutate({
                           priceId: item.price_id,
                           amount: Number(amountInput?.value ?? item.amount),
                           stock: Number(stockInput?.value ?? item.stock_quantity),
+                          description: descriptionInput?.value ?? item.description ?? "",
                           ...(promoValue > 0 ? { promo_amount: promoValue } : {}),
                         });
                       }}
@@ -846,6 +862,7 @@ export default function SellerDashboardPage() {
                           priceId: item.price_id,
                           amount: item.amount,
                           stock: item.stock_quantity,
+                          description: item.description ?? "",
                           is_active: !item.is_active,
                         })
                       }
@@ -859,6 +876,7 @@ export default function SellerDashboardPage() {
                           priceId: item.price_id,
                           amount: item.amount,
                           stock: item.stock_quantity,
+                          description: item.description ?? "",
                           boost_duration_hours: 24,
                         })
                       }
@@ -872,6 +890,7 @@ export default function SellerDashboardPage() {
                           priceId: item.price_id,
                           amount: item.amount,
                           stock: item.stock_quantity,
+                          description: item.description ?? "",
                           boost_duration_hours: 168,
                         })
                       }

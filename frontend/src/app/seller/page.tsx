@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 
 import { GalleryMediaField, SingleMediaField } from "@/components/seller/MediaFields";
-import { PremiumSellerPitch } from "@/components/PremiumSellerPitch";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +33,7 @@ import {
   upsertSellerProfile,
 } from "@/services/seller-service";
 import { useAuthStore } from "@/store/auth-store";
-import type { StorefrontTier } from "@/types/seller";
+import type { SellerProfile, StorefrontTier } from "@/types/seller";
 
 const SELLER_PROFILE_DRAFT_KEY = "amazer_seller_profile_draft";
 const SELLER_PRODUCT_DRAFT_KEY = "amazer_seller_product_draft";
@@ -149,6 +148,19 @@ function resolveGlobalSubscriptionFeeByType(
   return finance.seller_subscription_fee_shop ?? 0;
 }
 
+function resolveSellerPlanBucket(
+  activityType: string | null | undefined,
+  storefrontTier: string | null | undefined,
+): "shop" | "restaurant" | "premium" {
+  if (storefrontTier === "premium" || activityType === "hotel" || activityType === "enterprise") {
+    return "premium";
+  }
+  if (activityType === "restaurant") {
+    return "restaurant";
+  }
+  return "shop";
+}
+
 function SellerPageContent() {
   const router = useRouter();
   const pathname = usePathname();
@@ -161,7 +173,9 @@ function SellerPageContent() {
   const setAppMode = useAuthStore((state) => state.setAppMode);
   const [status, setStatus] = useState("");
   const [profileHydratedFromServer, setProfileHydratedFromServer] = useState(false);
-  const [showProfileEditor, setShowProfileEditor] = useState(searchParams.get("welcome") !== "1");
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [showAdvancedProfileFields, setShowAdvancedProfileFields] = useState(false);
+  const [nowMs, setNowMs] = useState<number | null>(null);
   const [subscriptionForm, setSubscriptionForm] = useState<{
     payment_mode: "nita" | "amana";
     transaction_reference: string;
@@ -301,7 +315,6 @@ function SellerPageContent() {
     if (!profile || profileHydratedFromServer) {
       return;
     }
-    // This effect hydrates the local seller profile draft once from the server response.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setProfileForm((prev) => ({
       ...prev,
@@ -352,16 +365,40 @@ function SellerPageContent() {
     setProfileHydratedFromServer(true);
   }, [profile, profileHydratedFromServer]);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setNowMs(Date.now()), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
   const profileMutation = useMutation({
     mutationFn: upsertSellerProfile,
-    onSuccess: () => {
+    onSuccess: (updatedProfile) => {
+      const previousProfile = queryClient.getQueryData<SellerProfile | null>(["seller-profile"]);
+      const planChanged =
+        previousProfile &&
+        resolveSellerPlanBucket(previousProfile.activity_type, previousProfile.storefront_tier) !==
+          resolveSellerPlanBucket(updatedProfile.activity_type, updatedProfile.storefront_tier);
+      if (planChanged) {
+        queryClient.setQueryData(["seller-subscription-status"], (current: typeof subscriptionStatus) =>
+          current
+            ? {
+                ...current,
+                subscription_active: false,
+                subscription_paid_until: null,
+              }
+            : current,
+        );
+      }
       queryClient.invalidateQueries({ queryKey: ["seller-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["seller-subscription-status"] });
+      queryClient.invalidateQueries({ queryKey: ["seller-subscription-payment-requests"] });
       // Met à jour la home + les listes de boutiques (elles sont basées sur /catalog/storefronts).
       queryClient.invalidateQueries({ queryKey: ["home-storefronts"] });
       queryClient.invalidateQueries({ queryKey: ["catalog-storefronts-boutiques"] });
       setStatus("Profil vendeur enregistre.");
     },
-    onError: () => setStatus("Erreur lors de l'enregistrement du profil."),
+    onError: (error) =>
+      setStatus(getApiErrorMessage(error, "Erreur lors de l'enregistrement du profil.")),
   });
 
   const productMutation = useMutation({
@@ -425,8 +462,8 @@ function SellerPageContent() {
   const subscriptionPaidUntilMs = subscriptionStatus?.subscription_paid_until
     ? Date.parse(subscriptionStatus.subscription_paid_until)
     : NaN;
-  const daysUntilSubscriptionEnd = Number.isFinite(subscriptionPaidUntilMs)
-    ? (subscriptionPaidUntilMs - Date.now()) / 86_400_000
+  const daysUntilSubscriptionEnd = Number.isFinite(subscriptionPaidUntilMs) && nowMs !== null
+    ? (subscriptionPaidUntilMs - nowMs) / 86_400_000
     : null;
   const showSubscriptionRenewHeadsUp =
     hasActiveSubscription &&
@@ -435,12 +472,6 @@ function SellerPageContent() {
     daysUntilSubscriptionEnd <= 7;
   const sellerOnboardingFlow = hasProfile || hasRequestedSellerType || searchParams.get("welcome") === "1";
   const sellerPaymentRequired = sellerOnboardingFlow && !hasActiveSubscription;
-  const hasProducts = inventory.length > 0;
-  const hasMenu = restaurantItems.length > 0;
-  const hasPremiumConfig =
-    Boolean(profile?.gallery_images?.length) ||
-    Boolean(profile?.service_offerings?.length) ||
-    Boolean(profile?.room_types?.length);
   const pricingSnapshot = {
     commissionRate: profile?.effective_commission_rate ?? publicFinance?.commission_rate ?? 0,
     serviceFee: profile?.effective_service_fee ?? publicFinance?.service_fee ?? 0,
@@ -456,7 +487,6 @@ function SellerPageContent() {
     searchParams.get("welcome") === "1"
       ? "Compte vendeur cree. Les informations de base sont enregistrees. Active maintenant l'abonnement mensuel pour publier."
       : "";
-  const compactProfileSetup = searchParams.get("welcome") === "1" && Boolean(profile?.id);
   const latestSubscriptionPayment = subscriptionPaymentRequests[0] ?? null;
   const paymentDestination =
     publicFinance?.platform_wallet_phone ||
@@ -678,13 +708,11 @@ function SellerPageContent() {
           )}
           {welcomeMessage ? <p className="mt-3 text-sm font-medium text-emerald-700">{welcomeMessage}</p> : null}
           <p className="mt-3 text-sm text-slate-600">
-              Boutique: publier des produits. Restaurant: menu digital, commandes et reservations. Premium: toutes les
-              fonctions boutique + restaurant + mini-site complet (galerie, services, chambres, paiement avec acompte).
+            Garde ici les informations utiles de ta boutique. Les options avancees restent disponibles si besoin.
           </p>
-          <PremiumSellerPitch variant="compact" showEspaceVendeurLink={false} className="mt-5" />
-          {compactProfileSetup ? (
+          {profile ? (
             <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-              <p className="font-semibold">Infos deja reprises depuis l inscription</p>
+              <p className="font-semibold">Profil vendeur</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.12em] text-emerald-700/80">Commerce</p>
@@ -715,7 +743,7 @@ function SellerPageContent() {
               </button>
             </div>
           ) : null}
-          {!compactProfileSetup || showProfileEditor ? (
+          {!profile || showProfileEditor ? (
             <>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <Input
@@ -756,6 +784,23 @@ function SellerPageContent() {
               <option value="restaurant">Restaurant (menu)</option>
               <option value="enterprise">Premium entreprise (mini-site complet)</option>
             </select>
+            <textarea
+              placeholder="Description courte"
+              value={profileForm.description}
+              onChange={(event) =>
+                setProfileForm((prev) => ({ ...prev, description: event.target.value }))
+              }
+              className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
+            />
+            <button
+              type="button"
+              className="w-fit rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:col-span-2"
+              onClick={() => setShowAdvancedProfileFields((value) => !value)}
+            >
+              {showAdvancedProfileFields ? "Masquer les options avancees" : "Afficher les options avancees"}
+            </button>
+            {showAdvancedProfileFields ? (
+              <>
             <SingleMediaField
               label="Logo du commerce"
               value={profileForm.logo_url}
@@ -846,14 +891,6 @@ function SellerPageContent() {
                 ) : null}
               </div>
             ) : null}
-            <textarea
-              placeholder="Description boutique"
-              value={profileForm.description}
-              onChange={(event) =>
-                setProfileForm((prev) => ({ ...prev, description: event.target.value }))
-              }
-              className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
-            />
             {isPremium ? (
               <GalleryMediaField
                 label="Galerie photos"
@@ -885,6 +922,8 @@ function SellerPageContent() {
                 }
                 className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
               />
+            ) : null}
+              </>
             ) : null}
           </div>
             <Button

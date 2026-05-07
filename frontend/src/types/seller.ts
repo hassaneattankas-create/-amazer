@@ -122,6 +122,8 @@ export type SellerInventoryItem = {
   product_id: string;
   product_name: string;
   brand: string;
+  description: string | null;
+  main_image_url: string | null;
   amount: number;
   currency: string;
   stock_quantity: number;

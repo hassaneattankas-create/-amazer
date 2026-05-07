@@ -161,6 +161,26 @@ def _sync_product_flags(product: Product) -> tuple[float | None, datetime | None
     return promo_price, promo_until, boost_until
 
 
+def _inventory_item_response(price: Price) -> SellerInventoryItemResponse:
+    promo_price, promo_until, boost_until = _sync_product_flags(price.product)
+    return SellerInventoryItemResponse(
+        price_id=price.id,
+        product_id=price.product_id,
+        product_name=price.product.name,
+        brand=price.product.brand,
+        description=price.product.description,
+        main_image_url=_resolve_product_main_image(price.product),
+        amount=price.amount,
+        currency=price.currency,
+        stock_quantity=price.stock_quantity,
+        is_active=price.is_active,
+        is_boosted=price.product.is_boosted,
+        promo_price=promo_price,
+        promo_until=promo_until,
+        boost_until=boost_until,
+    )
+
+
 def _profile_response(profile: SellerProfile, db: Session) -> SellerProfileResponse:
     finance = build_effective_seller_finance_settings(get_or_create_global_settings(db), profile)
     return SellerProfileResponse(
@@ -680,23 +700,7 @@ def list_inventory(
     ).all()
     payload: list[SellerInventoryItemResponse] = []
     for row in rows:
-        promo_price, promo_until, boost_until = _sync_product_flags(row.product)
-        payload.append(
-            SellerInventoryItemResponse(
-                price_id=row.id,
-                product_id=row.product_id,
-                product_name=row.product.name,
-                brand=row.product.brand,
-                amount=row.amount,
-                currency=row.currency,
-                stock_quantity=row.stock_quantity,
-                is_active=row.is_active,
-                is_boosted=row.product.is_boosted,
-                promo_price=promo_price,
-                promo_until=promo_until,
-                boost_until=boost_until,
-            )
-        )
+        payload.append(_inventory_item_response(row))
     return payload
 
 
@@ -785,6 +789,10 @@ def update_inventory_item(
         price.amount = payload.amount
     if payload.stock_quantity is not None:
         price.stock_quantity = payload.stock_quantity
+    if payload.description is not None:
+        price.product.description = payload.description.strip() or None
+    if payload.main_image_url is not None:
+        price.product.main_image_url = payload.main_image_url.strip() or None
     if payload.is_active is not None:
         price.is_active = payload.is_active
     if payload.promo_amount is not None:
@@ -796,16 +804,18 @@ def update_inventory_item(
         specs["boost_until"] = (now + timedelta(hours=payload.boost_duration_hours)).isoformat()
     price.product.specs = specs
 
-    db.add(
-        PriceHistory(
-            price_id=price.id,
-            previous_amount=previous_amount,
-            new_amount=price.amount,
-            previous_stock_quantity=previous_stock,
-            new_stock_quantity=price.stock_quantity,
-            reason="seller_inventory_update",
+    price_or_stock_changed = previous_amount != price.amount or previous_stock != price.stock_quantity
+    if price_or_stock_changed:
+        db.add(
+            PriceHistory(
+                price_id=price.id,
+                previous_amount=previous_amount,
+                new_amount=price.amount,
+                previous_stock_quantity=previous_stock,
+                new_stock_quantity=price.stock_quantity,
+                reason="seller_inventory_update",
+            )
         )
-    )
     append_audit_log(
         db,
         event_type="seller_price_updated",
@@ -828,21 +838,7 @@ def update_inventory_item(
     db.refresh(price)
     _invalidate_public_marketplace_cache()
 
-    promo_price, promo_until, boost_until = _sync_product_flags(price.product)
-    return SellerInventoryItemResponse(
-        price_id=price.id,
-        product_id=price.product_id,
-        product_name=price.product.name,
-        brand=price.product.brand,
-        amount=price.amount,
-        currency=price.currency,
-        stock_quantity=price.stock_quantity,
-        is_active=price.is_active,
-        is_boosted=price.product.is_boosted,
-        promo_price=promo_price,
-        promo_until=promo_until,
-        boost_until=boost_until,
-    )
+    return _inventory_item_response(price)
 
 
 @router.post(
