@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { Building2, Store, UtensilsCrossed } from "lucide-react";
 
 import { PasswordInput } from "@/components/PasswordInput";
@@ -10,7 +11,10 @@ import { PremiumSellerPitch } from "@/components/PremiumSellerPitch";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
+import { formatXOF } from "@/lib/currency";
 import { login, register, verifyAccount, type RegisterResponse } from "@/services/auth-service";
+import { getPublicFinanceSettings } from "@/services/finance-service";
+import type { FinanceSettings } from "@/types/finance";
 import type { SellerActivityType, StorefrontTier } from "@/types/seller";
 
 const PASSWORD_MIN_LENGTH = 8;
@@ -58,6 +62,22 @@ function buildSellerProfilePayload(
   };
 }
 
+function getSellerRegistrationFee(
+  sellerType: SellerRegistrationType,
+  pricing: FinanceSettings | undefined,
+): number | null {
+  if (!pricing) {
+    return null;
+  }
+  if (sellerType === "restaurant") {
+    return pricing.seller_subscription_fee_restaurant;
+  }
+  if (sellerType === "enterprise") {
+    return pricing.seller_subscription_fee_premium;
+  }
+  return pricing.seller_subscription_fee_shop;
+}
+
 function RegisterPageContent() {
   const searchParams = useSearchParams();
   const [fullName, setFullName] = useState("");
@@ -80,6 +100,11 @@ function RegisterPageContent() {
     () => searchParams.get("seller") === "1" || next.startsWith("/seller"),
     [next, searchParams]
   );
+  const { data: sellerPricing } = useQuery({
+    queryKey: ["public-finance-settings"],
+    queryFn: getPublicFinanceSettings,
+    enabled: isSellerFlow,
+  });
 
   async function finalizeRedirect() {
     const sellerTarget = `/seller?welcome=1&type=${sellerType}`;
@@ -273,6 +298,11 @@ function RegisterPageContent() {
                   <Icon className="h-5 w-5 text-[#FF4D00]" />
                   <p className="mt-3 font-semibold text-slate-900">{option.title}</p>
                   <p className="mt-1 text-sm text-slate-600">{option.description}</p>
+                  <p className="mt-3 text-sm font-semibold text-slate-950">
+                    {getSellerRegistrationFee(option.value, sellerPricing) === null
+                      ? "Tarif en cours..."
+                      : `${formatXOF(getSellerRegistrationFee(option.value, sellerPricing) ?? 0)} / mois`}
+                  </p>
                 </button>
               );
             })}

@@ -785,6 +785,8 @@ def update_inventory_item(
     previous_stock = price.stock_quantity
     now = datetime.now(UTC)
     specs = dict(price.product.specs or {})
+    if payload.product_name is not None:
+        price.product.name = payload.product_name.strip()
     if payload.amount is not None:
         price.amount = payload.amount
     if payload.stock_quantity is not None:
@@ -832,6 +834,7 @@ def update_inventory_item(
             "is_active": bool(price.is_active),
             "boosted": bool(price.product.is_boosted),
             "promo_amount": payload.promo_amount,
+            "product_name": price.product.name,
         },
     )
     db.commit()

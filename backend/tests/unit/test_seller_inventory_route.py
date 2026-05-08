@@ -42,7 +42,7 @@ def _db(profile: SimpleNamespace, price: SimpleNamespace) -> Mock:
     return db
 
 
-def test_update_inventory_updates_price_stock_and_description(monkeypatch) -> None:
+def test_update_inventory_updates_name_price_stock_and_description(monkeypatch) -> None:
     monkeypatch.setattr(seller_route, "enforce_csrf", lambda _request: None)
     monkeypatch.setattr(seller_route, "append_audit_log", lambda *args, **kwargs: None)
     monkeypatch.setattr(seller_route, "_invalidate_public_marketplace_cache", lambda: None)
@@ -52,7 +52,12 @@ def test_update_inventory_updates_price_stock_and_description(monkeypatch) -> No
 
     response = seller_route.update_inventory_item(
         "price-1",
-        SellerInventoryUpdateRequest(amount=1200, stock_quantity=5, description="Nouvelle description"),
+        SellerInventoryUpdateRequest(
+            product_name="Nouveau produit",
+            amount=1200,
+            stock_quantity=5,
+            description="Nouvelle description",
+        ),
         _request(),
         db,
         SimpleNamespace(id="user-1"),
@@ -60,7 +65,9 @@ def test_update_inventory_updates_price_stock_and_description(monkeypatch) -> No
 
     assert response.amount == 1200
     assert response.stock_quantity == 5
+    assert response.product_name == "Nouveau produit"
     assert response.description == "Nouvelle description"
+    assert price.product.name == "Nouveau produit"
     assert price.product.description == "Nouvelle description"
     assert db.add.call_count == 1
     db.commit.assert_called_once()

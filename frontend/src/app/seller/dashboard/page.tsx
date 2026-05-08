@@ -133,6 +133,7 @@ export default function SellerDashboardPage() {
       stock,
       is_active,
       promo_amount,
+      product_name,
       description,
       boost_duration_hours,
     }: {
@@ -141,10 +142,12 @@ export default function SellerDashboardPage() {
       stock: number;
       is_active?: boolean;
       promo_amount?: number;
+      product_name?: string;
       description?: string;
       boost_duration_hours?: 24 | 168;
     }) =>
       updateSellerInventory(priceId, {
+        product_name,
         amount,
         stock_quantity: stock,
         is_active,
@@ -808,10 +811,16 @@ export default function SellerDashboardPage() {
                   <div className="min-w-0">
                     <p className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
                       <Boxes className="h-4 w-4 text-[#FF4D00]" />
-                      {item.product_name}
+                      Produit publie
                     </p>
                     <p className="mt-1 text-xs text-slate-500">{item.brand}</p>
                     <AnimatedPrice value={item.amount} className="mt-2 text-lg font-semibold text-[#FF4D00]" />
+                    <Input
+                      defaultValue={item.product_name}
+                      placeholder="Nom du produit"
+                      className="mt-3"
+                      id={`name-${item.price_id}`}
+                    />
                     <textarea
                       defaultValue={item.description ?? ""}
                       placeholder="Description du produit"
@@ -836,6 +845,7 @@ export default function SellerDashboardPage() {
                         const amountInput = document.getElementById(`amount-${item.price_id}`) as HTMLInputElement | null;
                         const stockInput = document.getElementById(`stock-${item.price_id}`) as HTMLInputElement | null;
                         const promoInput = document.getElementById(`promo-${item.price_id}`) as HTMLInputElement | null;
+                        const nameInput = document.getElementById(`name-${item.price_id}`) as HTMLInputElement | null;
                         const descriptionInput = document.getElementById(
                           `description-${item.price_id}`
                         ) as HTMLTextAreaElement | null;
@@ -844,6 +854,7 @@ export default function SellerDashboardPage() {
                           priceId: item.price_id,
                           amount: Number(amountInput?.value ?? item.amount),
                           stock: Number(stockInput?.value ?? item.stock_quantity),
+                          product_name: nameInput?.value ?? item.product_name,
                           description: descriptionInput?.value ?? item.description ?? "",
                           ...(promoValue > 0 ? { promo_amount: promoValue } : {}),
                         });
@@ -862,6 +873,7 @@ export default function SellerDashboardPage() {
                           priceId: item.price_id,
                           amount: item.amount,
                           stock: item.stock_quantity,
+                          product_name: item.product_name,
                           description: item.description ?? "",
                           is_active: !item.is_active,
                         })
@@ -876,6 +888,7 @@ export default function SellerDashboardPage() {
                           priceId: item.price_id,
                           amount: item.amount,
                           stock: item.stock_quantity,
+                          product_name: item.product_name,
                           description: item.description ?? "",
                           boost_duration_hours: 24,
                         })
@@ -890,6 +903,7 @@ export default function SellerDashboardPage() {
                           priceId: item.price_id,
                           amount: item.amount,
                           stock: item.stock_quantity,
+                          product_name: item.product_name,
                           description: item.description ?? "",
                           boost_duration_hours: 168,
                         })

@@ -49,6 +49,7 @@ export async function listSellerInventory(): Promise<SellerInventoryItem[]> {
 export async function updateSellerInventory(
   priceId: string,
   payload: {
+    product_name?: string;
     amount?: number;
     stock_quantity?: number;
     description?: string;

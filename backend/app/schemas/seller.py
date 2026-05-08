@@ -135,6 +135,7 @@ class SellerInventoryItemResponse(BaseModel):
 class SellerInventoryUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    product_name: str | None = Field(default=None, min_length=2, max_length=180)
     amount: float | None = Field(default=None, gt=0)
     stock_quantity: int | None = Field(default=None, ge=0)
     description: str | None = Field(default=None, max_length=2000)
