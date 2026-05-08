@@ -451,8 +451,12 @@ function SellerPageContent() {
     queryFn: getPublicFinanceSettings,
   });
   const maxBasicListings = publicFinance?.max_products_basic_tier ?? 10;
-  const isPremiumTier =
-    (profile?.storefront_tier || profileForm.storefront_tier || "").toLowerCase() === "premium";
+  const savedPlanBucket = profile
+    ? resolveSellerPlanBucket(profile.activity_type, profile.storefront_tier)
+    : null;
+  const selectedPlanBucket = resolveSellerPlanBucket(profileForm.activity_type, profileForm.storefront_tier);
+  const hasUnsavedPlanChange = Boolean(savedPlanBucket && savedPlanBucket !== selectedPlanBucket);
+  const isPremiumTier = selectedPlanBucket === "premium";
   const shopListingLimitReached =
     showProductSection && !isPremiumTier && inventory.length >= maxBasicListings;
   const menuListingLimitReached =
@@ -472,16 +476,23 @@ function SellerPageContent() {
     daysUntilSubscriptionEnd <= 7;
   const sellerOnboardingFlow = hasProfile || hasRequestedSellerType || searchParams.get("welcome") === "1";
   const sellerPaymentRequired = sellerOnboardingFlow && !hasActiveSubscription;
+  const selectedSellerSubscriptionFee =
+    profile?.seller_subscription_fee_override ??
+    resolveGlobalSubscriptionFeeByType(
+      publicFinance,
+      profileForm.activity_type as "shop" | "restaurant" | "enterprise" | "hotel",
+    );
+  const currentSavedMonthlyFee =
+    subscriptionStatus?.monthly_fee ??
+    profile?.effective_seller_subscription_fee ??
+    selectedSellerSubscriptionFee;
+  const visibleMonthlyFee = hasUnsavedPlanChange
+    ? selectedSellerSubscriptionFee
+    : currentSavedMonthlyFee;
   const pricingSnapshot = {
     commissionRate: profile?.effective_commission_rate ?? publicFinance?.commission_rate ?? 0,
     serviceFee: profile?.effective_service_fee ?? publicFinance?.service_fee ?? 0,
-    sellerSubscriptionFee:
-      profile?.effective_seller_subscription_fee ??
-      resolveGlobalSubscriptionFeeByType(
-        publicFinance,
-        (profile?.activity_type as "shop" | "restaurant" | "enterprise" | "hotel" | undefined) ??
-          profileForm.activity_type
-      ),
+    sellerSubscriptionFee: selectedSellerSubscriptionFee,
   };
   const welcomeMessage =
     searchParams.get("welcome") === "1"
@@ -494,7 +505,7 @@ function SellerPageContent() {
     publicFinance?.support_whatsapp ||
     "";
   const selectedSubscriptionMonths = Math.max(1, Math.min(12, Number(subscriptionForm.months || 1)));
-  const selectedSubscriptionAmount = (subscriptionStatus?.monthly_fee ?? 0) * selectedSubscriptionMonths;
+  const selectedSubscriptionAmount = visibleMonthlyFee * selectedSubscriptionMonths;
   const latestPaymentStatusLabel =
     latestSubscriptionPayment?.status === "approved"
       ? "Accepte"
@@ -551,10 +562,16 @@ function SellerPageContent() {
           ) : null}
           <div className="mt-3 grid gap-2 text-sm text-amber-900 sm:grid-cols-3">
             <p>Frais creation: desactives</p>
-            <p>Mensualite: {formatXOF(subscriptionStatus?.monthly_fee ?? 0)}</p>
+            <p>Mensualite: {formatXOF(visibleMonthlyFee)}</p>
             <p>A payer maintenant: {formatXOF(selectedSubscriptionAmount)}</p>
           </div>
           <p className="mt-2 text-xs text-amber-900">{selectedSubscriptionMonths} mois selectionne(s).</p>
+          {hasUnsavedPlanChange ? (
+            <p className="mt-3 text-sm font-medium text-amber-900">
+              Tu as choisi une nouvelle formule. Enregistre d&apos;abord le profil pour appliquer cette mensualite,
+              puis lance la demande de paiement.
+            </p>
+          ) : null}
           {subscriptionStatus?.has_pending_payment_request ? (
             <p className="mt-3 text-sm font-medium text-amber-900">
               Paiement deja soumis. En attente de validation par l&apos;admin. Une notification t&apos;avertira des la decision.
@@ -641,6 +658,7 @@ function SellerPageContent() {
                 type="button"
                 disabled={
                   subscriptionMutation.isPending ||
+                  hasUnsavedPlanChange ||
                   Boolean(subscriptionStatus?.has_pending_payment_request)
                 }
                 className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
