@@ -25,24 +25,32 @@ const SELLER_TYPE_OPTIONS: Array<{
   value: SellerRegistrationType;
   title: string;
   description: string;
+  businessLabel: string;
+  businessPlaceholder: string;
   icon: typeof Store;
 }> = [
   {
     value: "shop",
     title: "Boutique",
     description: "Catalogue produits et stock vendeur.",
+    businessLabel: "Nom de la boutique",
+    businessPlaceholder: "Ex: Boutique Amazer",
     icon: Store,
   },
   {
     value: "restaurant",
     title: "Restaurant",
     description: "Menu, commandes et reservations.",
+    businessLabel: "Nom du restaurant",
+    businessPlaceholder: "Ex: Restaurant Amazer",
     icon: UtensilsCrossed,
   },
   {
     value: "enterprise",
     title: "Premium",
     description: "Mini-site complet avec services et options avancees.",
+    businessLabel: "Nom du profil Premium",
+    businessPlaceholder: "Ex: Hotel Amazer, Salon Amazer, Entreprise Amazer",
     icon: Building2,
   },
 ];
@@ -105,6 +113,8 @@ function RegisterPageContent() {
     queryFn: getPublicFinanceSettings,
     enabled: isSellerFlow,
   });
+  const selectedSellerTypeOption =
+    SELLER_TYPE_OPTIONS.find((option) => option.value === sellerType) ?? SELLER_TYPE_OPTIONS[0];
 
   async function finalizeRedirect() {
     const sellerTarget = `/seller?welcome=1&type=${sellerType}`;
@@ -312,7 +322,7 @@ function RegisterPageContent() {
           {isSellerFlow ? (
             <div>
               <label className="text-sm font-medium text-slate-800" htmlFor="business-name">
-                Nom de la boutique
+                {selectedSellerTypeOption.businessLabel}
                 <span className="ml-1 text-xs font-normal text-slate-500">(optionnel)</span>
               </label>
               <input
@@ -320,8 +330,12 @@ function RegisterPageContent() {
                 value={businessName}
                 onChange={(event) => setBusinessName(event.target.value)}
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                placeholder="Ex: Boutique Amazer, Restaurant Amazer... sinon ton nom sera utilise"
+                placeholder={`${selectedSellerTypeOption.businessPlaceholder}... sinon ton nom sera utilise`}
               />
+              <p className="mt-1 text-xs text-slate-500">
+                Ce nom sera utilise pour creer le profil {selectedSellerTypeOption.title.toLowerCase()} et
+                calculer la mensualite correspondante.
+              </p>
             </div>
           ) : null}
 

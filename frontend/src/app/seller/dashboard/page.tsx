@@ -28,6 +28,7 @@ import {
 import {
   createSellerProduct,
   getSellerProfile,
+  getSellerSubscriptionStatus,
   listSellerHotelBookings,
   listSellerInventory,
   listSellerOrders,
@@ -72,7 +73,12 @@ export default function SellerDashboardPage() {
     queryKey: ["seller-profile-dashboard"],
     queryFn: getSellerProfile,
   });
+  const { data: subscriptionStatus, isPending: isSubscriptionPending } = useQuery({
+    queryKey: ["seller-subscription-status"],
+    queryFn: getSellerSubscriptionStatus,
+  });
 
+  const hasActiveSubscription = Boolean(subscriptionStatus?.subscription_active);
   const sellerMode =
     profile?.activity_type === "hotel" || profile?.activity_type === "enterprise"
       ? "enterprise"
@@ -89,40 +95,40 @@ export default function SellerDashboardPage() {
   const { data: categories = [] } = useQuery({
     queryKey: ["catalog-categories-dashboard"],
     queryFn: listCatalogCategories,
-    enabled: showProductTools,
+    enabled: showProductTools && hasActiveSubscription,
   });
   const { data: inventory = [], isPending: isInventoryPending } = useQuery({
     queryKey: ["seller-inventory"],
     queryFn: listSellerInventory,
-    enabled: showProductTools,
+    enabled: showProductTools && hasActiveSubscription,
   });
   const { data: shopOrders = [] } = useQuery({
     queryKey: ["seller-shop-orders"],
     queryFn: listSellerOrders,
-    enabled: showProductTools,
+    enabled: showProductTools && hasActiveSubscription,
     refetchInterval: 5000,
   });
   const { data: sellerMenu = [] } = useQuery({
     queryKey: ["seller-restaurant-menu-dashboard"],
     queryFn: listSellerRestaurantMenu,
-    enabled: showRestaurantTools,
+    enabled: showRestaurantTools && hasActiveSubscription,
   });
   const { data: restaurantOrders = [] } = useQuery({
     queryKey: ["seller-restaurant-orders"],
     queryFn: listSellerRestaurantOrders,
-    enabled: showRestaurantTools,
+    enabled: showRestaurantTools && hasActiveSubscription,
     refetchInterval: 5000,
   });
   const { data: restaurantReservations = [] } = useQuery({
     queryKey: ["seller-restaurant-reservations"],
     queryFn: listSellerRestaurantReservations,
-    enabled: showRestaurantReservationTools,
+    enabled: showRestaurantReservationTools && hasActiveSubscription,
     refetchInterval: 10000,
   });
   const { data: hotelBookings = [] } = useQuery({
     queryKey: ["seller-hotel-bookings"],
     queryFn: listSellerHotelBookings,
-    enabled: showHotelBookingTools,
+    enabled: showHotelBookingTools && hasActiveSubscription,
     refetchInterval: 10000,
   });
 
@@ -362,6 +368,29 @@ export default function SellerDashboardPage() {
     });
     setStatus(`Nouvelle commande restaurant detectee pour ${latest.customer_name}.`);
   }, [restaurantOrders]);
+
+  if (!isProfilePending && !isSubscriptionPending && (!profile || !hasActiveSubscription)) {
+    return (
+      <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
+        <article className="premium-card border border-amber-200 bg-amber-50 p-6">
+          <h1 className="luxury-title text-2xl font-semibold text-amber-950">
+            Activation vendeur requise
+          </h1>
+          <p className="mt-2 text-sm text-amber-900">
+            Le dashboard reste bloque jusqu&apos;a la validation admin du paiement vendeur.
+          </p>
+          {subscriptionStatus?.has_pending_payment_request ? (
+            <p className="mt-2 text-sm font-medium text-amber-950">
+              Paiement deja soumis: attends la confirmation admin avant de publier ou gerer la boutique.
+            </p>
+          ) : null}
+          <Button asChild className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]">
+            <Link href="/seller">Retour a l&apos;activation vendeur</Link>
+          </Button>
+        </article>
+      </section>
+    );
+  }
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">

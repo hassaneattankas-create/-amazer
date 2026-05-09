@@ -233,9 +233,7 @@ def _build_subscription_status(profile: SellerProfile | None, db: Session) -> Se
         onboarding_fee = 0.0
         onboarding_fee_paid = profile.onboarding_fee_paid_at is not None
         subscription_paid_until = profile.subscription_paid_until
-        subscription_active = (
-            subscription_paid_until is not None and subscription_paid_until > datetime.now(UTC)
-        )
+        subscription_active = _has_active_subscription(profile)
     amount_due_now = 0.0
     if profile is not None:
         amount_due_now += monthly_fee

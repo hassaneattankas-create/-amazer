@@ -37,6 +37,32 @@ def test_build_subscription_status_does_not_add_creation_fee(monkeypatch) -> Non
     assert status.monthly_fee == 5000
     assert status.onboarding_fee == 0
     assert status.amount_due_now == 5000
+    assert status.subscription_active is False
+
+
+def test_build_subscription_status_requires_first_payment_validation(monkeypatch) -> None:
+    db = Mock()
+    db.scalar.return_value = None
+    profile = SimpleNamespace(
+        id="profile-1",
+        onboarding_fee_paid_at=None,
+        subscription_paid_until=datetime.now(UTC) + timedelta(days=30),
+    )
+
+    monkeypatch.setattr(
+        seller_route,
+        "get_or_create_global_settings",
+        lambda _db: SimpleNamespace(),
+    )
+    monkeypatch.setattr(
+        seller_route,
+        "build_effective_seller_finance_settings",
+        lambda _settings, _profile: SimpleNamespace(seller_subscription_fee=5000),
+    )
+
+    status = seller_route._build_subscription_status(profile, db)
+
+    assert status.subscription_active is False
 
 
 def test_resolve_seller_plan_bucket_distinguishes_formulas() -> None:

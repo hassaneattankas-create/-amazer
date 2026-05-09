@@ -20,7 +20,7 @@ import {
   notifyLocalOrderEvent,
   requestAndRegisterNotifications,
 } from "@/services/notification-service";
-import { getSellerProfile } from "@/services/seller-service";
+import { getSellerProfile, getSellerSubscriptionStatus } from "@/services/seller-service";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cartStore";
 import { useNotificationStore } from "@/store/notification-store";
@@ -71,6 +71,12 @@ export function FloatingNavbar() {
     enabled: Boolean(user?.id),
     staleTime: 60_000,
   });
+  const { data: sellerSubscriptionStatus } = useQuery({
+    queryKey: ["seller-subscription-status"],
+    queryFn: getSellerSubscriptionStatus,
+    enabled: Boolean(sellerProfile?.id),
+    staleTime: 30_000,
+  });
   const syncNotifications = useNotificationStore((state) => state.syncNotifications);
   const seenRemoteNotificationsRef = useRef<Set<string>>(new Set());
   const remoteNotificationsInitializedRef = useRef(false);
@@ -84,12 +90,15 @@ export function FloatingNavbar() {
 
   const showAdminLink = Boolean(adminMe?.is_admin) || isAdminEmail(user?.email);
   const showSellerLink = Boolean(sellerProfile?.id);
+  const sellerNavigationItems = sellerSubscriptionStatus?.subscription_active
+    ? sellerNavItems
+    : [{ href: "/seller", label: "Activer vendeur" }];
   const isAuthenticated = Boolean(user?.id);
   const groupedNavItems = [
     ...clientNavItems,
     ...(isAuthenticated ? [{ href: "/dashboard", label: "Dashboard" }] : []),
     ...(isAuthenticated ? [{ href: "/notifications", label: "Notifications" }] : []),
-    ...(showSellerLink ? sellerNavItems : []),
+    ...(showSellerLink ? sellerNavigationItems : []),
     ...(showAdminLink ? [{ href: "/admin", label: "Espace Admin" }] : []),
   ].filter((item, index, array) => array.findIndex((entry) => entry.href === item.href) === index);
 
