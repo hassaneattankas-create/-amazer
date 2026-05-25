@@ -42,7 +42,13 @@ from app.routes.notifications import router as notifications_router
 from app.services.security_log_service import log_security_event
 
 settings = get_settings()
-app = FastAPI(title=settings.app_name, version=settings.app_version)
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.app_version,
+    docs_url=None if settings.is_production() else "/docs",
+    openapi_url=None if settings.is_production() else "/openapi.json",
+    redoc_url=None if settings.is_production() else "/redoc",
+)
 logger = logging.getLogger(__name__)
 
 if settings.media_storage_provider.lower() == "local":
@@ -161,6 +167,9 @@ def _bootstrap_database_if_needed() -> None:
             ")"
         ),
         "CREATE INDEX IF NOT EXISTS ix_media_files_filename ON media_files (filename)",
+        "CREATE INDEX IF NOT EXISTS ix_order_items_product_id ON order_items (product_id)",
+        "CREATE INDEX IF NOT EXISTS ix_order_items_vendor_id ON order_items (vendor_id)",
+        "CREATE INDEX IF NOT EXISTS ix_refresh_tokens_user_id ON refresh_tokens (user_id)",
         (
             "UPDATE global_settings SET "
             "seller_subscription_fee_shop = COALESCE(seller_subscription_fee_shop, seller_subscription_fee, 5000), "
@@ -316,7 +325,6 @@ async def security_access_logger(
             f"{settings.api_prefix}/auth/verify-account",
             # App mobile (Capacitor) : en-tête Bearer sans cookie csrf — évite les rejets si un proxy envoie des cookies partiels.
             f"{settings.api_prefix}/auth/logout",
-            f"{settings.api_prefix}/auth/delete-account",
             f"{settings.api_prefix}/notifications/register-token",
         }
         if request.url.path not in csrf_exempt_paths:

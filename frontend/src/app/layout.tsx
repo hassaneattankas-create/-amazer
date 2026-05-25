@@ -4,6 +4,7 @@ import { AppFooter } from "@/components/layout/AppFooter";
 import { AndroidBackButtonHandler } from "@/components/providers/AndroidBackButtonHandler";
 import { FloatingNavbar } from "@/components/layout/FloatingNavbar";
 import { AuthPreferenceBootstrap } from "@/components/providers/AuthPreferenceBootstrap";
+import { MobileAuthBootstrap } from "@/components/providers/MobileAuthBootstrap";
 import { PwaRegistrar } from "@/components/providers/PwaRegistrar";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import "./globals.css";
@@ -77,6 +78,7 @@ export default function RootLayout({
       >
         <QueryProvider>
           <PwaRegistrar />
+          <MobileAuthBootstrap />
           <AndroidBackButtonHandler />
           <AuthPreferenceBootstrap />
           <FloatingNavbar />

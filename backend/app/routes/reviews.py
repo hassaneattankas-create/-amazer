@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Request, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.csrf import enforce_csrf
 from app.core.deps import get_current_user
@@ -22,7 +22,10 @@ def list_reviews(
     db: Annotated[Session, Depends(get_db)],
 ) -> list[ReviewResponse]:
     reviews = db.scalars(
-        select(Review).where(Review.product_id == product_id).order_by(Review.created_at.desc())
+        select(Review)
+        .where(Review.product_id == product_id)
+        .order_by(Review.created_at.desc())
+        .options(selectinload(Review.user))
     ).all()
     return [
         ReviewResponse(

@@ -42,6 +42,46 @@ type TokenPair = {
   refresh_token: string;
 };
 
+const MOBILE_ACCESS_TOKEN_KEY = "amazer_mobile_access_token";
+const MOBILE_REFRESH_TOKEN_KEY = "amazer_mobile_refresh_token";
+
+async function setMobileToken(key: string, value: string): Promise<void> {
+  if (typeof window === "undefined" || !isMobileAppBuild()) {
+    return;
+  }
+  try {
+    const { Preferences } = await import("@capacitor/preferences");
+    await Preferences.set({ key, value });
+  } catch {
+    // Silent fallback: web storage is still used.
+  }
+}
+
+async function getMobileToken(key: string): Promise<string | null> {
+  if (typeof window === "undefined" || !isMobileAppBuild()) {
+    return null;
+  }
+  try {
+    const { Preferences } = await import("@capacitor/preferences");
+    const result = await Preferences.get({ key });
+    return result.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function removeMobileToken(key: string): Promise<void> {
+  if (typeof window === "undefined" || !isMobileAppBuild()) {
+    return;
+  }
+  try {
+    const { Preferences } = await import("@capacitor/preferences");
+    await Preferences.remove({ key });
+  } catch {
+    // Silent fallback: web storage is still used.
+  }
+}
+
 function readStoredToken(key: string): string | null {
   if (typeof window === "undefined") {
     return null;
@@ -88,6 +128,8 @@ export function persistAuthTokens(tokens: TokenPair): void {
   }
   writeStoredToken(ACCESS_TOKEN_KEY, tokens.access_token);
   writeStoredToken(REFRESH_TOKEN_KEY, tokens.refresh_token);
+  void setMobileToken(MOBILE_ACCESS_TOKEN_KEY, tokens.access_token);
+  void setMobileToken(MOBILE_REFRESH_TOKEN_KEY, tokens.refresh_token);
   document.cookie = buildSessionIndicatorCookie();
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
@@ -98,10 +140,37 @@ export function clearAuthTokens(): void {
   }
   removeStoredToken(ACCESS_TOKEN_KEY);
   removeStoredToken(REFRESH_TOKEN_KEY);
+  void removeMobileToken(MOBILE_ACCESS_TOKEN_KEY);
+  void removeMobileToken(MOBILE_REFRESH_TOKEN_KEY);
   window.localStorage.removeItem(ADMIN_FINANCE_VERIFIED_KEY);
   window.sessionStorage.removeItem(ADMIN_FINANCE_VERIFIED_KEY);
   document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+}
+
+export async function hydrateMobileAuthTokens(): Promise<void> {
+  if (typeof window === "undefined" || !isMobileAppBuild()) {
+    return;
+  }
+  const accessStored = readStoredToken(ACCESS_TOKEN_KEY);
+  const refreshStored = readStoredToken(REFRESH_TOKEN_KEY);
+  if (accessStored && refreshStored) {
+    return;
+  }
+  const [mobileAccess, mobileRefresh] = await Promise.all([
+    getMobileToken(MOBILE_ACCESS_TOKEN_KEY),
+    getMobileToken(MOBILE_REFRESH_TOKEN_KEY),
+  ]);
+  if (mobileAccess) {
+    writeStoredToken(ACCESS_TOKEN_KEY, mobileAccess);
+  }
+  if (mobileRefresh) {
+    writeStoredToken(REFRESH_TOKEN_KEY, mobileRefresh);
+  }
+  if (mobileAccess || mobileRefresh) {
+    syncPersistedAuthSession();
+    window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+  }
 }
 
 function getAccessToken(): string | null {
