@@ -680,7 +680,7 @@ def list_inventory(
     rows = db.scalars(
         select(Price)
         .where(Price.vendor_id == profile.vendor_id)
-        .options(selectinload(Price.product))
+        .options(selectinload(Price.product).selectinload(Product.images))
         .order_by(Price.updated_at.desc())
     ).all()
     payload: list[SellerInventoryItemResponse] = []
@@ -696,6 +696,8 @@ def list_inventory(
                 product_id=row.product_id,
                 product_name=row.product.name,
                 brand=row.product.brand,
+                description=row.product.description,
+                main_image_url=_resolve_product_main_image(row.product),
                 amount=row.amount,
                 currency=row.currency,
                 stock_quantity=row.stock_quantity,
@@ -794,6 +796,12 @@ def update_inventory_item(
     now = datetime.now(UTC)
     clear_expired_boost_from_product(price.product, now=now)
     specs = dict(price.product.specs or {})
+    if payload.product_name is not None:
+        price.product.name = payload.product_name.strip()
+    if payload.description is not None:
+        price.product.description = payload.description.strip() or None
+    if payload.main_image_url is not None:
+        price.product.main_image_url = payload.main_image_url.strip() or None
     if payload.amount is not None:
         price.amount = payload.amount
     if payload.stock_quantity is not None:
@@ -865,6 +873,8 @@ def update_inventory_item(
         product_id=price.product_id,
         product_name=price.product.name,
         brand=price.product.brand,
+        description=price.product.description,
+        main_image_url=_resolve_product_main_image(price.product),
         amount=price.amount,
         currency=price.currency,
         stock_quantity=price.stock_quantity,

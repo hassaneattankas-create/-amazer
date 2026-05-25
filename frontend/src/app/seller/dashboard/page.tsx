@@ -50,6 +50,8 @@ export default function SellerDashboardPage() {
   const [status, setStatus] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteStatus, setDeleteStatus] = useState("");
+  const [editingImagePriceId, setEditingImagePriceId] = useState<string | null>(null);
+  const [editImageUrl, setEditImageUrl] = useState("");
   const [productForm, setProductForm] = useState({
     name: "",
     brand: "",
@@ -144,6 +146,7 @@ export default function SellerDashboardPage() {
       boost_duration_hours,
       boost_payment_reference,
       boost_payment_mode,
+      main_image_url,
     }: {
       priceId: string;
       amount: number;
@@ -153,6 +156,7 @@ export default function SellerDashboardPage() {
       boost_duration_hours?: 24 | 168;
       boost_payment_reference?: string;
       boost_payment_mode?: "nita" | "amana";
+      main_image_url?: string;
     }) =>
       updateSellerInventory(priceId, {
         amount,
@@ -162,6 +166,7 @@ export default function SellerDashboardPage() {
         boost_duration_hours,
         boost_payment_reference,
         boost_payment_mode,
+        main_image_url,
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["seller-inventory"] });
@@ -950,6 +955,66 @@ export default function SellerDashboardPage() {
                   {item.boost_until ? ` jusqu au ${formatDateTime(item.boost_until)}` : ""}
                   {item.promo_price ? ` | Promo: ${item.promo_price.toFixed(0)} XOF` : ""}
                 </p>
+                <div className="mt-3 border-t border-slate-100 pt-3">
+                  <div className="flex items-center gap-3">
+                    {item.main_image_url ? (
+                      <img
+                        src={item.main_image_url}
+                        alt={item.product_name}
+                        className="h-14 w-14 rounded-md object-cover border border-slate-200"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    ) : (
+                      <div className="flex h-14 w-14 items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50 text-xs text-slate-400">
+                        Sans photo
+                      </div>
+                    )}
+                    {editingImagePriceId === item.price_id ? (
+                      <div className="flex flex-1 flex-col gap-2">
+                        <SingleMediaField
+                          label=""
+                          value={editImageUrl}
+                          onChange={setEditImageUrl}
+                          emptyMessage="Choisis ou uploade une photo"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            className="bg-[#FF4D00] text-white hover:bg-[#e74700] text-xs px-3 h-8"
+                            onClick={() => {
+                              const normalized = normalizeImageInputForApi(editImageUrl);
+                              inventoryMutation.mutate({
+                                priceId: item.price_id,
+                                amount: item.amount,
+                                stock: item.stock_quantity,
+                                main_image_url: normalized ?? "",
+                              });
+                              setEditingImagePriceId(null);
+                              setEditImageUrl("");
+                            }}
+                          >
+                            Sauver photo
+                          </Button>
+                          <Button
+                            className="border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-xs px-3 h-8"
+                            onClick={() => { setEditingImagePriceId(null); setEditImageUrl(""); }}
+                          >
+                            Annuler
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button
+                        className="border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-xs px-3 h-8"
+                        onClick={() => {
+                          setEditingImagePriceId(item.price_id);
+                          setEditImageUrl(item.main_image_url ?? "");
+                        }}
+                      >
+                        {item.main_image_url ? "Changer photo" : "Ajouter photo"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </article>
             ))}
             {!inventory.length ? (
