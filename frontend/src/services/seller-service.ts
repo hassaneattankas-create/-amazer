@@ -49,8 +49,11 @@ export async function listSellerInventory(): Promise<SellerInventoryItem[]> {
 export async function updateSellerInventory(
   priceId: string,
   payload: {
+    product_name?: string;
     amount?: number;
     stock_quantity?: number;
+    description?: string;
+    main_image_url?: string;
     is_active?: boolean;
     promo_amount?: number;
     boost_duration_hours?: 24 | 168;

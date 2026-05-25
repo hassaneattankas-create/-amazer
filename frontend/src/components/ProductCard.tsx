@@ -9,7 +9,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { getProductRoute } from "@/lib/mobile-routes";
 import { AnimatedPrice } from "@/components/AnimatedPrice";
-import { resolveProductImageUrl } from "@/lib/product-image";
+import { productFallbackImage, resolveProductImageUrl } from "@/lib/product-image";
 import { trackAdClick } from "@/services/content-service";
 import { ProductSearchItem } from "@/types/product";
 
@@ -41,6 +41,8 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
       }),
     [fallbackImage, main_image_url, product.category?.slug]
   );
+  const fallbackImageUrl = productFallbackImage(product.category?.slug);
+  const displayImageUrl = imageError ? fallbackImageUrl : resolvedImageUrl;
 
   const onOpenDetail = () => {
     if (is_boosted || is_sponsored) {
@@ -59,9 +61,9 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
       }`}
     >
       <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100">
-        {resolvedImageUrl && !imageError ? (
+        {displayImageUrl ? (
           <Image
-            src={resolvedImageUrl}
+            src={displayImageUrl}
             alt={name}
             width={560}
             height={420}
@@ -69,6 +71,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             loading={priority ? "eager" : "lazy"}
             sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 384px"
             quality={82}
+            unoptimized
             className="h-full w-full object-cover"
             onError={() => setImageError(true)}
           />

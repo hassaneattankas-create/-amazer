@@ -1,0 +1,12 @@
+.env*
+.next/
+.vercel/
+android/
+node_modules/
+out/
+*.log
+*.err.log
+*.out.log
+*3000*.err.log
+*3000*.out.log
+tsconfig.tsbuildinfo

@@ -1,15 +1,21 @@
 .git/
 .vercel/
+.android-sdk/
+.vscode/
 backend/
 docs/
+jdk-*/
 output/
 render.yaml
+temp_ad_review/
+tools/
 
+frontend/.env*
 frontend/.vercel/
+frontend/android/
 frontend/node_modules/
 frontend/.next/
 frontend/.next_backup_before_prod_build/
-frontend/android/
 frontend/out/
 frontend/*.log
 frontend/*.err.log

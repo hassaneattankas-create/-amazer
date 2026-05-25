@@ -1,0 +1,16 @@
+.env
+pyproject.toml
+*.db
+*.log
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+uploads/
+backend*.out.log
+backend*.err.log
+clean-*.out.log
+clean-*.err.log
+local-*.out.log
+local-*.err.log
+live-*.out.log
+live-*.err.log

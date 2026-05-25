@@ -50,11 +50,13 @@ Variables minimales a garder:
 - `PAYMENT_ENCRYPTION_KEY=...`
 - `CORS_ALLOWED_ORIGINS=https://amazerniger.vercel.app,https://amazerniger-hub-amazer.vercel.app,https://amazerapp.com,https://www.amazerapp.com,...`
 - `ALLOWED_HOSTS=amazer-api.onrender.com`
+- `MEDIA_UPLOAD_DIR=/var/data/uploads` si le service Render utilise le disque persistant du `render.yaml`
 
 Important:
 
 - `JWT_SECRET_KEY` doit etre long et fort
 - `ALLOWED_HOSTS` ne doit pas rester a `*` en production
+- les images uploadees doivent etre stockees sur un disque persistant Render ou sur S3; le filesystem Render hors disque est ephemere
 - si tu ajoutes un domaine custom, il faudra aussi l'ajouter dans `CORS_ALLOWED_ORIGINS`
 
 ## Procedure de verification apres deploiement

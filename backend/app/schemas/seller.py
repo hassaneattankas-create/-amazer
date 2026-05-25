@@ -120,6 +120,8 @@ class SellerInventoryItemResponse(BaseModel):
     product_id: str
     product_name: str
     brand: str
+    description: str | None = None
+    main_image_url: str | None = None
     amount: float
     currency: str
     stock_quantity: int
@@ -133,8 +135,11 @@ class SellerInventoryItemResponse(BaseModel):
 class SellerInventoryUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    product_name: str | None = Field(default=None, min_length=2, max_length=180)
     amount: float | None = Field(default=None, gt=0)
     stock_quantity: int | None = Field(default=None, ge=0)
+    description: str | None = Field(default=None, max_length=2000)
+    main_image_url: str | None = Field(default=None, max_length=1024)
     is_active: bool | None = None
     promo_amount: float | None = Field(default=None, gt=0)
     boost_duration_hours: int | None = Field(default=None, ge=24, le=168)
