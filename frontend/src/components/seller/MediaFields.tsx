@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useId, useState } from "react";
-import { ImageUp } from "lucide-react";
+import { ImageOff, ImageUp } from "lucide-react";
 
 import { getApiErrorMessage } from "@/lib/api-error";
 import { resolveImageUrl } from "@/lib/image";
@@ -91,6 +91,7 @@ export function SingleMediaField({
   onChange,
   emptyMessage = "Aucune image selectionnee.",
 }: SingleMediaFieldProps) {
+  const [imgError, setImgError] = useState(false);
   const previewUrl = resolveImageUrl(value) ?? value;
 
   return (
@@ -101,13 +102,13 @@ export function SingleMediaField({
           <button
             type="button"
             className="text-xs font-medium text-slate-500 hover:text-slate-800"
-            onClick={() => onChange("")}
+            onClick={() => { onChange(""); setImgError(false); }}
           >
             Retirer
           </button>
         ) : null}
       </div>
-      {previewUrl ? (
+      {previewUrl && !imgError ? (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
           <Image
             src={previewUrl}
@@ -116,12 +117,58 @@ export function SingleMediaField({
             height={540}
             unoptimized
             className="h-36 w-full object-cover"
+            onError={() => setImgError(true)}
           />
+        </div>
+      ) : previewUrl && imgError ? (
+        <div className="flex h-36 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-100 text-xs text-slate-400">
+          <ImageOff className="h-5 w-5" />
+          Image non disponible — reuploader depuis la galerie
         </div>
       ) : (
         <p className="text-xs text-slate-500">{emptyMessage}</p>
       )}
-      <UploadTrigger label={label} onUploaded={(urls) => onChange(urls[0] ?? "")} />
+      <UploadTrigger label={label} onUploaded={(urls) => { onChange(urls[0] ?? ""); setImgError(false); }} />
+    </div>
+  );
+}
+
+type GalleryItemProps = {
+  previewUrl: string;
+  label: string;
+  index: number;
+  onRemove: () => void;
+};
+
+function GalleryItem({ previewUrl, label, index, onRemove }: GalleryItemProps) {
+  const [imgError, setImgError] = useState(false);
+  return (
+    <div className="space-y-2">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        {imgError ? (
+          <div className="flex h-28 items-center justify-center gap-1 bg-slate-100 text-xs text-slate-400">
+            <ImageOff className="h-4 w-4" />
+            Indisponible
+          </div>
+        ) : (
+          <Image
+            src={previewUrl}
+            alt={`${label} ${index + 1}`}
+            width={720}
+            height={720}
+            unoptimized
+            className="h-28 w-full object-cover"
+            onError={() => setImgError(true)}
+          />
+        )}
+      </div>
+      <button
+        type="button"
+        className="text-xs font-medium text-slate-500 hover:text-slate-800"
+        onClick={onRemove}
+      >
+        Retirer
+      </button>
     </div>
   );
 }
@@ -165,25 +212,13 @@ export function GalleryMediaField({
           {normalizedValues.map((value, index) => {
             const previewUrl = resolveImageUrl(value) ?? value;
             return (
-              <div key={`${value}-${index}`} className="space-y-2">
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                  <Image
-                    src={previewUrl}
-                    alt={`${label} ${index + 1}`}
-                    width={720}
-                    height={720}
-                    unoptimized
-                    className="h-28 w-full object-cover"
-                  />
-                </div>
-                <button
-                  type="button"
-                  className="text-xs font-medium text-slate-500 hover:text-slate-800"
-                  onClick={() => onChange(normalizedValues.filter((entry) => entry !== value))}
-                >
-                  Retirer
-                </button>
-              </div>
+              <GalleryItem
+                key={`${value}-${index}`}
+                previewUrl={previewUrl}
+                label={label}
+                index={index}
+                onRemove={() => onChange(normalizedValues.filter((entry) => entry !== value))}
+              />
             );
           })}
         </div>

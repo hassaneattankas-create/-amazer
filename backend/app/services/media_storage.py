@@ -56,6 +56,56 @@ class LocalMediaStorage(MediaStorage):
         )
 
 
+class DatabaseMediaStorage(MediaStorage):
+    """Stocke les images directement dans PostgreSQL (Neon).
+    Les fichiers survivent aux redémarrages Render sans disque persistant ni S3."""
+
+    # Limite conservative pour préserver le quota Neon free (512 MB total)
+    MAX_BYTES = 512 * 1024  # 512 KB par image
+
+    async def save_upload(self, file: UploadFile, extension: str) -> StoredMedia:
+        from app.database import SessionLocal
+        from app.models.media_file import MediaFile
+
+        filename = f"{uuid4().hex}{extension}"
+        data = b""
+        while True:
+            chunk = await file.read(256 * 1024)
+            if not chunk:
+                break
+            data += chunk
+            if len(data) > self.MAX_BYTES:
+                raise ValidationDomainError("Image trop grande (max 512 KB)")
+
+        if not data:
+            raise ValidationDomainError("Fichier vide")
+
+        content_type = file.content_type or "application/octet-stream"
+        db = SessionLocal()
+        try:
+            record = MediaFile(
+                filename=filename,
+                content_type=content_type,
+                data=data,
+                size_bytes=len(data),
+            )
+            db.add(record)
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+
+        url = f"/api/v1/media/file/{filename}"
+        return StoredMedia(
+            filename=filename,
+            url=url,
+            content_type=content_type,
+            size_bytes=len(data),
+        )
+
+
 class S3MediaStorage(MediaStorage):
     def __init__(
         self,
@@ -113,6 +163,8 @@ def get_media_storage() -> MediaStorage:
         directory = Path(settings.media_upload_dir).resolve()
         directory.mkdir(parents=True, exist_ok=True)
         return LocalMediaStorage(directory)
+    if provider == "database":
+        return DatabaseMediaStorage()
     if provider == "s3":
         if not settings.s3_bucket_name or not settings.s3_access_key_id or not settings.s3_secret_access_key:
             raise ValidationDomainError("S3 storage is not configured")

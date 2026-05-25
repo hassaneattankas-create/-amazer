@@ -143,6 +143,17 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS finance_counters_reset_at TIMESTAMPTZ",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS ad_click_counters_reset_at TIMESTAMPTZ",
         (
+            "CREATE TABLE IF NOT EXISTS media_files ("
+            "id VARCHAR(36) PRIMARY KEY, "
+            "filename VARCHAR(260) NOT NULL UNIQUE, "
+            "content_type VARCHAR(120) NOT NULL, "
+            "data BYTEA NOT NULL, "
+            "size_bytes INTEGER NOT NULL, "
+            "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+            ")"
+        ),
+        "CREATE INDEX IF NOT EXISTS ix_media_files_filename ON media_files (filename)",
+        (
             "UPDATE global_settings SET "
             "seller_subscription_fee_shop = COALESCE(seller_subscription_fee_shop, seller_subscription_fee, 5000), "
             "seller_subscription_fee_restaurant = COALESCE(seller_subscription_fee_restaurant, seller_subscription_fee, 5000), "
@@ -233,6 +244,12 @@ def on_startup() -> None:
 def health_check() -> dict[str, str]:
     """Point de controle pour hebergeurs (Render, etc.) sans dependance base."""
     return {"status": "ok"}
+
+
+@app.get("/ping")
+def ping() -> dict[str, str]:
+    """Endpoint leger pour garder le service eveille (cron Vercel, UptimeRobot, etc.)."""
+    return {"pong": "ok"}
 
 
 @app.exception_handler(DomainError)

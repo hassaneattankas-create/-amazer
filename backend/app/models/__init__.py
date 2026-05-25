@@ -1,4 +1,5 @@
 from app.models.cart import Cart, CartItem
+from app.models.media_file import MediaFile
 from app.models.app_notification import AppNotification
 from app.models.category import Category
 from app.models.price_history import PriceHistory
@@ -62,4 +63,5 @@ __all__ = [
     "Cart",
     "CartItem",
     "AppNotification",
+    "MediaFile",
 ]

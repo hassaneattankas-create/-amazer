@@ -1,6 +1,6 @@
 # Blueprint Render — API FastAPI (dossier backend/)
-# Apres connexion du depot GitHub : chaque push sur `main` declenche un deploiement (autoDeployTrigger: commit).
-# Secrets (DATABASE_URL, JWT, CORS, etc.) : a renseigner dans le dashboard Render ou via sync: false.
+# Apres connexion du depot GitHub : chaque push sur `main` declenche un deploiement.
+# Secrets (DATABASE_URL, JWT, CORS, etc.) : a renseigner dans le dashboard Render.
 # https://render.com/docs/blueprint-spec
 
 version: "1"
@@ -14,10 +14,17 @@ services:
     autoDeployTrigger: commit
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
     healthCheckPath: /health
     envVars:
       - key: APP_ENV
         value: production
       - key: PYTHON_VERSION
         value: "3.12"
+      # --- STOCKAGE IMAGES (configurer sur Render dashboard) ---
+      # MEDIA_STORAGE_PROVIDER = s3
+      # S3_BUCKET_NAME         = amazer-media
+      # S3_ENDPOINT_URL        = https://s3.us-west-004.backblazeb2.com
+      # S3_ACCESS_KEY_ID       = <keyID Backblaze>
+      # S3_SECRET_ACCESS_KEY   = <applicationKey Backblaze>
+      # MEDIA_PUBLIC_BASE_URL  = https://f004.backblazeb2.com/file/amazer-media
