@@ -17,6 +17,25 @@ const activityMeta = {
   enterprise: { label: "Premium", icon: Store },
 } as const;
 
+const COVER_GRADIENTS = [
+  "from-emerald-900 via-teal-800 to-slate-900",
+  "from-violet-900 via-purple-800 to-slate-900",
+  "from-orange-900 via-amber-800 to-slate-900",
+  "from-blue-900 via-indigo-800 to-slate-900",
+  "from-rose-900 via-pink-800 to-slate-900",
+  "from-cyan-900 via-sky-800 to-slate-900",
+];
+
+function getCoverGradient(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return COVER_GRADIENTS[Math.abs(hash) % COVER_GRADIENTS.length];
+}
+
+function getInitials(name: string): string {
+  return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+}
+
 export function StorefrontShowcaseCard({
   store,
   ctaLabel = "Ouvrir",
@@ -41,7 +60,7 @@ export function StorefrontShowcaseCard({
 
   return (
     <article className="premium-card hover-lift-glow overflow-hidden border border-white/20 bg-white/70 shadow-[0_24px_60px_rgba(255,77,0,0.24)]">
-      <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-slate-950 via-slate-800 to-[#1f2937]">
+      <div className={`relative h-48 w-full overflow-hidden bg-gradient-to-br ${getCoverGradient(store.business_name || store.name)}`}>
         {imageUrl ? (
           <Image
             src={imageUrl}
@@ -52,7 +71,13 @@ export function StorefrontShowcaseCard({
             className="object-cover opacity-90"
             onError={() => setCoverFailed(true)}
           />
-        ) : null}
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-6xl font-bold text-white/20 select-none">
+              {getInitials(store.business_name || store.name)}
+            </span>
+          </div>
+        )}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/25 to-transparent" />
         <div className="absolute left-4 top-4 flex items-center gap-2">
           <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur">

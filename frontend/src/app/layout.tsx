@@ -4,6 +4,7 @@ import { AppFooter } from "@/components/layout/AppFooter";
 import { AndroidBackButtonHandler } from "@/components/providers/AndroidBackButtonHandler";
 import { FloatingNavbar } from "@/components/layout/FloatingNavbar";
 import { AuthPreferenceBootstrap } from "@/components/providers/AuthPreferenceBootstrap";
+import { BackendKeepAlive } from "@/components/providers/BackendKeepAlive";
 import { MobileAuthBootstrap } from "@/components/providers/MobileAuthBootstrap";
 import { PwaRegistrar } from "@/components/providers/PwaRegistrar";
 import { QueryProvider } from "@/components/providers/QueryProvider";
@@ -77,6 +78,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-white text-slate-900 antialiased`}
       >
         <QueryProvider>
+          <BackendKeepAlive />
           <PwaRegistrar />
           <MobileAuthBootstrap />
           <AndroidBackButtonHandler />
