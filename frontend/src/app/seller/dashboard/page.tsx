@@ -12,7 +12,7 @@ import { SingleMediaField } from "@/components/seller/MediaFields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatXOF } from "@/lib/currency";
-import { normalizeImageInputForApi } from "@/lib/image";
+import { normalizeImageInputForApi, resolveImageUrl } from "@/lib/image";
 import { deleteMyAccount } from "@/services/auth-service";
 import { getPublicFinanceSettings } from "@/services/finance-service";
 import { notifyLocalOrderEvent } from "@/services/notification-service";
@@ -959,7 +959,7 @@ export default function SellerDashboardPage() {
                   <div className="flex items-center gap-3">
                     {item.main_image_url ? (
                       <img
-                        src={item.main_image_url}
+                        src={resolveImageUrl(item.main_image_url) ?? ""}
                         alt={item.product_name}
                         className="h-14 w-14 rounded-md object-cover border border-slate-200"
                         onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
