@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
-export const dynamic =
-  process.env.NEXT_STATIC_EXPORT === "true" ? "force-static" : "force-dynamic";
+export const dynamic = "force-dynamic";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_ORIGIN || "https://amazer-api.onrender.com";
 
