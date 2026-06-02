@@ -56,7 +56,7 @@ export default function DashboardPage() {
       setDeleteStatus(
         getApiErrorMessage(
           error,
-          "Suppression impossible. Verifie ton mot de passe ou reconnecte-toi.",
+          "Suppression impossible. Vérifie ton mot de passe ou reconnecte-toi.",
         ),
       );
     },
@@ -152,11 +152,11 @@ export default function DashboardPage() {
           </div>
           <div>
             <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Email</p>
-            <p className="mt-1 font-medium text-slate-900">{user?.email || "Non renseigne"}</p>
+            <p className="mt-1 font-medium text-slate-900">{user?.email || "Non renseigné"}</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-[0.12em] text-slate-400">WhatsApp</p>
-            <p className="mt-1 font-medium text-slate-900">{user?.whatsapp_phone || "Non renseigne"}</p>
+            <p className="mt-1 font-medium text-slate-900">{user?.whatsapp_phone || "Non renseigné"}</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Devise</p>
@@ -171,7 +171,7 @@ export default function DashboardPage() {
                     month: "long",
                     year: "numeric",
                   })
-                : "Non renseigne"}
+                : "Non renseigné"}
             </p>
           </div>
         </div>

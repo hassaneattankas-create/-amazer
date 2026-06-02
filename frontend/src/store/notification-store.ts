@@ -64,6 +64,12 @@ export const useNotificationStore = create<NotificationState>()(
               merged[sameId] = { ...merged[sameId], ...notification };
               continue;
             }
+            // Remplace la copie locale (id généré) par la version serveur (UUID) si même tag
+            const sameTag = merged.findIndex((item) => item.tag === notification.tag);
+            if (sameTag >= 0) {
+              merged[sameTag] = notification;
+              continue;
+            }
             merged.push(notification);
           }
           merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

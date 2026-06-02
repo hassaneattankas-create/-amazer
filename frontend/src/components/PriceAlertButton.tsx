@@ -36,11 +36,11 @@ export function PriceAlertButton({ productId, currentPrice }: PriceAlertButtonPr
     try {
       await createPriceAlert({ product_id: productId, target_price: parsed });
       setStatus("success");
-      setMessage("Alerte creee avec succes.");
+      setMessage("Alerte créée avec succès.");
     } catch (error) {
       const responseMessage =
         (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-        "Impossible de creer l'alerte.";
+        "Impossible de créer l'alerte.";
       setStatus("error");
       setMessage(responseMessage);
     } finally {
@@ -87,7 +87,7 @@ export function PriceAlertButton({ productId, currentPrice }: PriceAlertButtonPr
 
       {isOpen ? (
         <div className="premium-card absolute left-0 right-0 top-full z-[120] mt-2 w-[min(22rem,calc(100vw-2rem))] border border-slate-200 bg-white p-3 sm:left-auto sm:right-0">
-          <p className="text-xs text-slate-500">Prix cible souhaite</p>
+          <p className="text-xs text-slate-500">Prix cible souhaité</p>
           <Input
             type="number"
             min="0"
@@ -103,7 +103,7 @@ export function PriceAlertButton({ productId, currentPrice }: PriceAlertButtonPr
             onClick={submitAlert}
             className="primary-glow-btn mt-3 w-full bg-[#FF4D00] text-white hover:bg-[#e74700]"
           >
-            {isSubmitting ? "Creation..." : "Creer l'alerte"}
+            {isSubmitting ? "Création..." : "Créer l'alerte"}
           </Button>
           {isSubmitting ? <div className="mt-2 h-2 w-full animate-pulse rounded bg-orange-100" /> : null}
           {status !== "idle" ? (

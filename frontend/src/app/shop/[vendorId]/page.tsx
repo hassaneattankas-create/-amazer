@@ -144,7 +144,7 @@ export default function VendorShopPage() {
     },
     onError: (error) =>
       setOrderStatus(
-        getApiErrorMessage(error, "Echec envoi commande. Verifie les champs et reconnecte-toi.")
+        getApiErrorMessage(error, "Échec envoi commande. Vérifie les champs et reconnecte-toi.")
       ),
   });
 

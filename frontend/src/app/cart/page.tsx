@@ -136,7 +136,7 @@ export default function CartPage() {
       }
       return;
     } catch {
-      setShareMessage("Echec creation commande. Verifie ta connexion.");
+      setShareMessage("Échec création commande. Vérifie ta connexion.");
     } finally {
       setIsSubmittingOrder(false);
       window.setTimeout(() => setShareMessage(""), 2400);

@@ -289,7 +289,7 @@ export function ReceiptView({
         <h2 className="text-base font-semibold text-emerald-800">Conseils de Securite AMAZER</h2>
         <ul className="mt-3 space-y-2 text-sm text-emerald-900">
           <li>Ne communique jamais ton code secret Nita ou Amana par message ou appel.</li>
-          <li>Verifie que le montant, les frais et la reference correspondent avant de valider.</li>
+          <li>Vérifie que le montant, les frais et la référence correspondent avant de valider.</li>
           <li>Conserve ce recu comme preuve; le vendeur peut verifier la commande dans son espace.</li>
           <li>AMAZER ne te demandera jamais ton code secret par SMS ou appel.</li>
         </ul>

@@ -173,7 +173,7 @@ export default function AdminSectionsPage() {
                     onClick={() => updateMutation.mutate({ sectionId: section.id, isActive: !section.is_active })}
                     className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                   >
-                    {section.is_active ? "Desactiver" : "Activer"}
+                    {section.is_active ? "Désactiver" : "Activer"}
                   </Button>
                 </div>
               </div>

@@ -106,7 +106,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           {vendor.name}
           {vendor.is_verified ? (
             <span className="rounded-full border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
-              Verifie
+              Vérifié
             </span>
           ) : null}
         </p>

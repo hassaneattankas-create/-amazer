@@ -155,7 +155,7 @@ export default function AdminCatalogPage() {
                 variant="outline"
                 onClick={() => updateMutation.mutate({ id: item.id, active: !item.is_active })}
               >
-                {item.is_active ? "Desactiver" : "Activer"}
+                {item.is_active ? "Désactiver" : "Activer"}
               </Button>
             </div>
           ))}

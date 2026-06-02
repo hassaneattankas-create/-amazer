@@ -736,7 +736,7 @@ function SellerPageContent() {
                   })
                 }
               >
-                {subscriptionMutation.isPending ? "Envoi..." : "J'ai paye, verifier maintenant"}
+                {subscriptionMutation.isPending ? "Envoi..." : "J'ai payé, vérifier maintenant"}
               </Button>
             </div>
           ) : null}
@@ -800,7 +800,7 @@ function SellerPageContent() {
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.12em] text-emerald-700/80">Commerce</p>
-                  <p className="mt-1 font-medium">{profileForm.business_name || "Non renseigne"}</p>
+                  <p className="mt-1 font-medium">{profileForm.business_name || "Non renseigné"}</p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-[0.12em] text-emerald-700/80">Type</p>

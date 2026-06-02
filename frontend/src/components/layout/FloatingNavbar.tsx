@@ -84,8 +84,8 @@ export function FloatingNavbar() {
     queryKey: ["remote-notifications", user?.id],
     queryFn: () => listMyNotifications(60),
     enabled: Boolean(user?.id),
-    refetchInterval: 5_000,
-    staleTime: 30_000,
+    refetchInterval: 15_000,
+    staleTime: 10_000,
   });
 
   const showAdminLink = Boolean(adminMe?.is_admin) || isAdminEmail(user?.email);
@@ -383,7 +383,7 @@ export function FloatingNavbar() {
               disabled={isLoggingOut}
               className="hidden items-center gap-2 rounded-md border border-white/20 bg-white/70 px-3 py-2 text-sm text-slate-700 backdrop-blur-xl hover:bg-white disabled:cursor-not-allowed disabled:opacity-70 sm:inline-flex"
             >
-              {isLoggingOut ? "Deconnexion..." : "Deconnexion"}
+              {isLoggingOut ? "Déconnexion..." : "Déconnexion"}
             </button>
           )}
           <Link
@@ -437,7 +437,7 @@ export function FloatingNavbar() {
             disabled={isLoggingOut}
             className="whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00] disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isLoggingOut ? "Deconnexion..." : "Deconnexion"}
+            {isLoggingOut ? "Déconnexion..." : "Déconnexion"}
           </button>
         )}
         {showSellerLink ? null : (

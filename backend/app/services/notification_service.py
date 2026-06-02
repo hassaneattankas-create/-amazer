@@ -125,16 +125,8 @@ class NotificationService:
     )
     if push_result.invalid_tokens:
       self.delete_tokens(user_id=user_id, device_tokens=list(push_result.invalid_tokens))
-    details = {
-      "user_id": user_id,
-      "device_tokens": [row.device_token for row in tokens],
-      "title": payload.title,
-      "body": payload.body,
-      "data": payload.data or {},
-      "push_attempted": push_result.attempted,
-      "push_delivered": push_result.delivered,
-      "push_invalid_tokens": list(push_result.invalid_tokens),
-      "push_skipped": push_result.skipped,
-      "push_reason": push_result.reason,
-    }
-    print(f"[notification] {details}")
+    print(
+      f"[notification] user={user_id} title={payload.title!r} "
+      f"attempted={push_result.attempted} delivered={push_result.delivered} "
+      f"invalid={len(push_result.invalid_tokens)} skipped={push_result.skipped}"
+    )

@@ -77,7 +77,7 @@ export function BarcodeScannerDrawer({ onDetected }: BarcodeScannerDrawerProps) 
         );
         setStatus("Scanne un code-barres");
       } catch {
-        setStatus("Camera indisponible. Verifie les permissions.");
+        setStatus("Caméra indisponible. Vérifie les permissions.");
         await disposeScanner();
       } finally {
         setIsStarting(false);

@@ -303,7 +303,7 @@ export default function SellerDashboardPage() {
       setDeleteStatus("Compte supprime avec succes. Redirection...");
       window.location.assign("/login");
     },
-    onError: () => setDeleteStatus("Suppression impossible. Verifie le mot de passe."),
+    onError: () => setDeleteStatus("Suppression impossible. Vérifie le mot de passe."),
   });
 
   function onDeleteAccount(event: FormEvent<HTMLFormElement>) {

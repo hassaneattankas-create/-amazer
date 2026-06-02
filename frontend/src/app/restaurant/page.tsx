@@ -144,7 +144,7 @@ export default function RestaurantPage() {
         router.push(getRestaurantOrderReceiptRoute(order.id, receipt.token));
       }
     },
-    onError: () => setStatus("Echec envoi commande. Verifie les champs et reconnecte-toi."),
+    onError: () => setStatus("Échec envoi commande. Vérifie les champs et reconnecte-toi."),
   });
 
   const total = useMemo(

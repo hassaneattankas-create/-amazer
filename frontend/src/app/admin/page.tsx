@@ -30,7 +30,7 @@ export default function AdminHomePage() {
     {
       href: "/admin/receipt-scan",
       title: "Validation Recu",
-      description: "Verifier les QR recus et bloquer les doubles usages.",
+      description: "Vérifier les QR reçus et bloquer les doubles usages.",
     },
   ];
 

@@ -318,7 +318,7 @@ export default function AdminTarifsPage() {
               onClick={() => pinMutation.mutate(buildAdminFinanceVerifyPayload(pin, birthDate))}
               disabled={!pin || !birthDate}
             >
-              Verifier
+              Vérifier
             </Button>
           </div>
           {status ? <p className="mt-2 text-sm text-slate-700">{status}</p> : null}
@@ -604,7 +604,7 @@ export default function AdminTarifsPage() {
             variant="outline"
             onClick={() => launchModeMutation.mutate(!effective.launch_mode_zero_commission)}
           >
-            {effective.launch_mode_zero_commission ? "Desactiver 0% Commission" : "Activer 0% Commission"}
+            {effective.launch_mode_zero_commission ? "Désactiver 0% Commission" : "Activer 0% Commission"}
           </Button>
         </div>
       </article>
@@ -642,15 +642,15 @@ export default function AdminTarifsPage() {
                   <p className="text-sm font-medium text-slate-900">
                     {seller.business_name}
                     <span className="ml-2 text-xs font-normal text-slate-500">
-                      {seller.is_verified ? "Verifie" : "Non verifie"} &middot;{" "}
-                      {seller.is_active ? "Actif" : "Desactive"}
+                      {seller.is_verified ? "Vérifié" : "Non vérifié"} &middot;{" "}
+                      {seller.is_active ? "Actif" : "Désactivé"}
                     </span>
                   </p>
                   <p className="mt-0.5 text-xs text-slate-500">
                     {seller.city}
                     {seller.phone ? ` · ${seller.phone}` : ""}
                     {seller.created_at
-                      ? ` · Cree le ${new Date(seller.created_at).toLocaleDateString("fr-FR", {
+                      ? ` · Créé le ${new Date(seller.created_at).toLocaleDateString("fr-FR", {
                           day: "numeric",
                           month: "short",
                           year: "numeric",
@@ -673,7 +673,7 @@ export default function AdminTarifsPage() {
                       })
                     }
                   >
-                    {seller.is_verified ? "Retirer badge" : "Verifier"}
+                    {seller.is_verified ? "Retirer badge" : "Vérifier"}
                   </Button>
                   <Button
                     size="sm"
