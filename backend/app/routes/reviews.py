@@ -26,6 +26,7 @@ def list_reviews(
         .where(Review.product_id == product_id)
         .order_by(Review.created_at.desc())
         .options(selectinload(Review.user))
+        .limit(100)
     ).all()
     return [
         ReviewResponse(

@@ -123,7 +123,7 @@ export default function RestaurantPage() {
   const orderMutation = useMutation({
     mutationFn: createRestaurantOrder,
     onSuccess: async (order) => {
-      setStatus(`Commande creee chez ${order.vendor_name}.`);
+      setStatus(`Commande créée chez ${order.vendor_name}.`);
       setSelectedItems([]);
       notifyLocalOrderEvent({
         title: "Commande restaurant",
@@ -176,7 +176,7 @@ export default function RestaurantPage() {
   const addDish = (dish: RestaurantMenuItem) => {
     setSelectedItems((prev) => {
       if (!selectedVendorId) {
-        setStatus("Selectionne d'abord un restaurant.");
+        setStatus("Sélectionne d'abord un restaurant.");
         return prev;
       }
       if (prev.length && prev[0].vendor_id !== dish.vendor_id) {
@@ -303,7 +303,7 @@ export default function RestaurantPage() {
                         : "w-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }
                   >
-                    {selectedVendorId === store.id ? "Selectionne" : "Selectionner pour commander"}
+                    {selectedVendorId === store.id ? "Sélectionné" : "Sélectionner pour commander"}
                   </Button>
                 </div>
               ))}
@@ -317,7 +317,7 @@ export default function RestaurantPage() {
 
       {!selectedVendorId ? (
         <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
-          Selectionne un restaurant ci-dessus pour afficher son menu.
+          Sélectionne un restaurant ci-dessus pour afficher son menu.
         </article>
       ) : isPending ? (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">

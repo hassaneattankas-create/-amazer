@@ -490,13 +490,13 @@ function SellerPageContent() {
     ? selectedSellerSubscriptionFee
     : currentSavedMonthlyFee;
   const pricingSnapshot = {
-    commissionRate: profile?.effective_commission_rate ?? publicFinance?.commission_rate ?? 0,
-    serviceFee: profile?.effective_service_fee ?? publicFinance?.service_fee ?? 0,
+    commissionRate: profile?.effective_commission_rate ?? publicFinance?.commission_rate ?? null,
+    serviceFee: profile?.effective_service_fee ?? publicFinance?.service_fee ?? null,
     sellerSubscriptionFee: selectedSellerSubscriptionFee,
   };
   const welcomeMessage =
     searchParams.get("welcome") === "1"
-      ? "Compte vendeur cree. Les informations de base sont enregistrees. Active maintenant l'abonnement mensuel pour publier."
+      ? "Compte vendeur créé. Les informations de base sont enregistrées. Active maintenant l'abonnement mensuel pour publier."
       : "";
   const latestSubscriptionPayment = subscriptionPaymentRequests[0] ?? null;
   const paymentDestination =
@@ -752,13 +752,15 @@ function SellerPageContent() {
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Commission</p>
             <p className="mt-2 text-xl font-semibold text-slate-900">
-              {(pricingSnapshot.commissionRate * 100).toFixed(2)}%
+              {pricingSnapshot.commissionRate !== null
+                ? `${(pricingSnapshot.commissionRate * 100).toFixed(2)}%`
+                : "—"}
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Frais plateforme</p>
             <p className="mt-2 text-xl font-semibold text-slate-900">
-              {formatXOF(pricingSnapshot.serviceFee)}
+              {pricingSnapshot.serviceFee !== null ? formatXOF(pricingSnapshot.serviceFee) : "—"}
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">

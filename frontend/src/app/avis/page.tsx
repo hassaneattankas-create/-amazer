@@ -81,7 +81,7 @@ export default function AvisPage() {
               rating: form.rating,
             })
           }
-          disabled={!form.full_name || form.message.length < 8 || mutation.isPending}
+          disabled={!form.full_name.trim() || form.message.trim().length < 8 || mutation.isPending}
         >
           Envoyer
         </Button>

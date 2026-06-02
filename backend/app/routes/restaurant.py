@@ -208,6 +208,7 @@ def list_restaurant_storefronts(
         select(RestaurantMenuItem)
         .where(RestaurantMenuItem.is_available.is_(True))
         .order_by(RestaurantMenuItem.created_at.desc())
+        .limit(1000)
     ).all()
     if not menu_rows:
         return RestaurantStorefrontListResponse(items=[])
