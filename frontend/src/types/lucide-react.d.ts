@@ -1,15 +1,16 @@
-import { FC, SVGProps, RefAttributes } from "react";
-
-export interface LucideProps extends Partial<SVGProps<SVGSVGElement>> {
-  size?: string | number;
-  strokeWidth?: string | number;
-  absoluteStrokeWidth?: boolean;
-}
-
-export type LucideIcon = FC<LucideProps & RefAttributes<SVGSVGElement>>;
-
 declare module "lucide-react" {
+  import { FC, SVGProps, RefAttributes } from "react";
+
+  interface LucideProps extends Partial<SVGProps<SVGSVGElement>> {
+    size?: string | number;
+    strokeWidth?: string | number;
+    absoluteStrokeWidth?: boolean;
+  }
+
+  type LucideIcon = FC<LucideProps & RefAttributes<SVGSVGElement>>;
+
   export type { LucideProps, LucideIcon };
+
   export const ArrowLeft: LucideIcon;
   export const BarChart3: LucideIcon;
   export const BedDouble: LucideIcon;
