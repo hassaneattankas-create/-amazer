@@ -1,0 +1,25 @@
+name: Keep Backend Alive
+
+on:
+  schedule:
+    # Toutes les 5 minutes, 24h/24, 7j/7
+    - cron: "*/5 * * * *"
+  workflow_dispatch: # Permet de lancer manuellement si besoin
+
+jobs:
+  ping:
+    name: Ping Render backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping /ping
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 20 \
+            "https://amazer-api.onrender.com/ping")
+          echo "Status HTTP: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Backend ne repond pas (status $STATUS) — cold start probablement en cours."
+            exit 0
+          fi
+          echo "Backend actif."
