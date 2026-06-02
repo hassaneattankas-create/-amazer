@@ -48,7 +48,9 @@ def get_current_user_optional(
         return None
     try:
         return auth_service.get_current_user(token)
-    except Exception:
+    except DomainError:
+        return None
+    except ValueError:
         return None
 
 

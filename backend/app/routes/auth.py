@@ -173,7 +173,7 @@ def login(
             event_type="login_failed",
             ip_address=request.client.host if request.client else None,
             path=str(request.url.path),
-            details={"identifier": payload.identifier},
+            details={"identifier": (payload.identifier or "")[:3] + "***"},
         )
         auth_service.db.commit()
         raise

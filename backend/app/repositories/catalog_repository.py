@@ -37,14 +37,15 @@ class CatalogRepository:
             .limit(limit)
         )
         if query:
-            term = f"%{query.strip()}%"
+            safe = query.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            term = f"%{safe}%"
             stmt = stmt.where(
                 or_(
-                    Vendor.name.ilike(term),
-                    Vendor.slug.ilike(term),
-                    SellerProfile.business_name.ilike(term),
-                    SellerProfile.city.ilike(term),
-                    SellerProfile.activity_type.ilike(term),
+                    Vendor.name.ilike(term, escape="\\"),
+                    Vendor.slug.ilike(term, escape="\\"),
+                    SellerProfile.business_name.ilike(term, escape="\\"),
+                    SellerProfile.city.ilike(term, escape="\\"),
+                    SellerProfile.activity_type.ilike(term, escape="\\"),
                 )
             )
         return list(self.db.scalars(stmt))
@@ -69,15 +70,16 @@ class CatalogRepository:
             .limit(limit)
         )
         if query:
-            term = f"%{query.strip()}%"
+            safe = query.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            term = f"%{safe}%"
             stmt = stmt.where(
                 or_(
-                    Vendor.name.ilike(term),
-                    Vendor.slug.ilike(term),
-                    SellerProfile.business_name.ilike(term),
-                    SellerProfile.city.ilike(term),
-                    SellerProfile.activity_type.ilike(term),
-                    SellerProfile.description.ilike(term),
+                    Vendor.name.ilike(term, escape="\\"),
+                    Vendor.slug.ilike(term, escape="\\"),
+                    SellerProfile.business_name.ilike(term, escape="\\"),
+                    SellerProfile.city.ilike(term, escape="\\"),
+                    SellerProfile.activity_type.ilike(term, escape="\\"),
+                    SellerProfile.description.ilike(term, escape="\\"),
                 )
             )
         if activity_type:

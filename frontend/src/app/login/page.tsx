@@ -25,7 +25,8 @@ function LoginPageContent() {
   const [isLoading, setIsLoading] = useState(false);
   const setAppMode = useAuthStore((state) => state.setAppMode);
 
-  const next = searchParams.get("next") || "/";
+  const rawNext = searchParams.get("next") || "/";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
   const sellerRegisterHref = "/register?next=/seller&seller=1";
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {

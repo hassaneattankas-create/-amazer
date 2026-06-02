@@ -336,6 +336,7 @@ def checkout(
                 Price.vendor_id == item.vendor_id,
                 Price.is_active.is_(True),
             )
+            .with_for_update()
             .options(selectinload(Price.product), selectinload(Price.vendor))
         )
         if price is None or price.product is None or price.vendor is None:

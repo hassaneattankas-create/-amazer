@@ -82,7 +82,8 @@ class ProductRepository:
         if in_stock_only:
             stmt = stmt.where(Price.stock_quantity > 0)
         if brand:
-            stmt = stmt.where(Product.brand.ilike(f"%{brand}%"))
+            safe_brand = brand.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            stmt = stmt.where(Product.brand.ilike(f"%{safe_brand}%", escape="\\"))
         if category_id:
             stmt = stmt.where(Product.category_id == category_id)
         if category_slug:
@@ -92,11 +93,12 @@ class ProductRepository:
         if max_price is not None:
             stmt = stmt.where(Price.amount <= max_price)
         if query:
+            safe_query = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
             stmt = stmt.where(
                 or_(
                     text_rank_expr > 0,
-                    Product.name.ilike(f"%{query}%"),
-                    Product.brand.ilike(f"%{query}%"),
+                    Product.name.ilike(f"%{safe_query}%", escape="\\"),
+                    Product.brand.ilike(f"%{safe_query}%", escape="\\"),
                 )
             )
         if barcode:
