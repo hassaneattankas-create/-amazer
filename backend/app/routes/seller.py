@@ -119,12 +119,41 @@ def _parse_utc_datetime(value: object) -> datetime | None:
     return parsed.astimezone(UTC)
 
 
+def _normalize_product_image_url(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        return None
+    if normalized.startswith("/media/"):
+        filename = normalized.rsplit("/", 1)[-1]
+        return f"/api/v1/media/file/{filename}" if filename else None
+    return normalized
+
+
 def _resolve_product_main_image(product: Product) -> str | None:
-    if product.main_image_url:
-        return product.main_image_url
+    main_image_url = _normalize_product_image_url(product.main_image_url)
+    if main_image_url:
+        return main_image_url
     if not product.images:
         return None
-    return sorted(product.images, key=lambda image: image.sort_order)[0].image_url
+    for image in sorted(product.images, key=lambda image: image.sort_order):
+        image_url = _normalize_product_image_url(image.image_url)
+        if image_url:
+            return image_url
+    return None
+
+
+def _is_seller_deleted_listing(price: Price) -> bool:
+    specs = price.product.specs or {}
+    return bool(specs.get("seller_deleted"))
+
+
+def _mark_seller_deleted_listing(price: Price) -> None:
+    specs = dict(price.product.specs or {})
+    specs["seller_deleted"] = True
+    specs["seller_deleted_at"] = datetime.now(UTC).isoformat()
+    price.product.specs = specs
 
 
 def _has_active_subscription(profile: SellerProfile) -> bool:
@@ -686,6 +715,8 @@ def list_inventory(
     payload: list[SellerInventoryItemResponse] = []
     dirty = False
     for row in rows:
+        if _is_seller_deleted_listing(row):
+            continue
         promo_price, promo_until, boost_until = _sync_product_flags(row.product)
         sess = object_session(row.product)
         if sess is not None and sess.is_modified(row.product, include_collections=False):
@@ -801,7 +832,7 @@ def update_inventory_item(
     if payload.description is not None:
         price.product.description = payload.description.strip() or None
     if payload.main_image_url is not None:
-        price.product.main_image_url = payload.main_image_url.strip() or None
+        price.product.main_image_url = _normalize_product_image_url(payload.main_image_url)
     if payload.amount is not None:
         price.amount = payload.amount
     if payload.stock_quantity is not None:
@@ -884,6 +915,56 @@ def update_inventory_item(
         promo_until=promo_until,
         boost_until=boost_until,
     )
+
+
+@router.delete("/inventory/{price_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_inventory_item(
+    price_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> None:
+    enforce_csrf(request)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        raise NotFoundError("Seller profile not found")
+
+    price = db.get(Price, price_id)
+    if price is None or price.vendor_id != profile.vendor_id:
+        raise NotFoundError("Inventory item not found")
+
+    previous_amount = price.amount
+    previous_stock = price.stock_quantity
+    price.is_active = False
+    price.stock_quantity = 0
+    _mark_seller_deleted_listing(price)
+
+    db.add(
+        PriceHistory(
+            price_id=price.id,
+            previous_amount=previous_amount,
+            new_amount=price.amount,
+            previous_stock_quantity=previous_stock,
+            new_stock_quantity=price.stock_quantity,
+            reason="seller_inventory_deleted",
+        )
+    )
+    append_audit_log(
+        db,
+        event_type="seller_price_deleted",
+        actor=current_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="price",
+        entity_id=price.id,
+        details={
+            "product_id": price.product_id,
+            "previous_amount": float(previous_amount),
+            "previous_stock": int(previous_stock),
+        },
+    )
+    db.commit()
+    _invalidate_public_marketplace_cache()
 
 
 @router.post(

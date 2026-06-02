@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Boxes, CalendarClock, Clock3, Hotel, PlusCircle, Settings2, UtensilsCrossed } from "lucide-react";
+import { Boxes, CalendarClock, Clock3, Hotel, PlusCircle, Settings2, Trash2, UtensilsCrossed } from "lucide-react";
 
 import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { PasswordInput } from "@/components/PasswordInput";
@@ -28,6 +28,7 @@ import {
 } from "@/services/restaurant-service";
 import {
   createSellerProduct,
+  deleteSellerInventoryItem,
   getSellerProfile,
   listSellerHotelBookings,
   listSellerInventory,
@@ -173,6 +174,15 @@ export default function SellerDashboardPage() {
       setStatus("Stock mis a jour.");
     },
     onError: () => setStatus("Erreur mise a jour stock."),
+  });
+
+  const deleteInventoryMutation = useMutation({
+    mutationFn: deleteSellerInventoryItem,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["seller-inventory"] });
+      setStatus("Produit supprime du catalogue.");
+    },
+    onError: () => setStatus("Erreur lors de la suppression du produit."),
   });
 
   function readBoostProof(priceId: string): {
@@ -895,6 +905,21 @@ export default function SellerDashboardPage() {
                       }
                     >
                       {item.is_active ? "Retirer" : "Re-publier"}
+                    </Button>
+                    <Button
+                      className="border border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+                      disabled={deleteInventoryMutation.isPending}
+                      onClick={() => {
+                        const confirmed = window.confirm(
+                          `Supprimer "${item.product_name}" du catalogue vendeur ? Cette action le retire de la boutique publique.`,
+                        );
+                        if (confirmed) {
+                          deleteInventoryMutation.mutate(item.price_id);
+                        }
+                      }}
+                    >
+                      <Trash2 className="mr-1 h-4 w-4" />
+                      Supprimer
                     </Button>
                   </div>
                 </div>

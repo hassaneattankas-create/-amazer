@@ -71,6 +71,19 @@ export function resolveImageUrl(raw: string | null | undefined): string | null {
     return value;
   }
 
+  if (value.startsWith("/media/")) {
+    const filename = value.split("/").filter(Boolean).pop();
+    if (!filename) {
+      return null;
+    }
+    const origin = getApiOrigin();
+    if (!origin) {
+      return null;
+    }
+    const absoluteUrl = `${origin}/api/v1/media/file/${encodeURIComponent(filename)}`;
+    return shouldProxyImageUrl(absoluteUrl) ? toImageProxyUrl(absoluteUrl) : absoluteUrl;
+  }
+
   if (value.startsWith("/")) {
     const origin = getApiOrigin();
     if (!origin) {
@@ -117,6 +130,11 @@ export function normalizeImageInputForApi(raw: string | null | undefined): strin
   }
 
   // Preserve uploaded local media paths such as /media/filename.webp.
+  if (value.startsWith("/media/")) {
+    const filename = value.split("/").filter(Boolean).pop();
+    return filename ? `/api/v1/media/file/${filename}` : undefined;
+  }
+
   if (value.startsWith("/")) {
     return value;
   }

@@ -23,7 +23,14 @@ def max_products_for_basic_tier(db: Session) -> int:
 
 
 def count_vendor_catalog_products(db: Session, vendor_id: str) -> int:
-    return db.scalar(select(func.count()).select_from(Price).where(Price.vendor_id == vendor_id)) or 0
+    return (
+        db.scalar(
+            select(func.count())
+            .select_from(Price)
+            .where(Price.vendor_id == vendor_id, Price.is_active.is_(True))
+        )
+        or 0
+    )
 
 
 def count_vendor_menu_items(db: Session, vendor_id: str) -> int:

@@ -68,6 +68,10 @@ export async function updateSellerInventory(
   return response.data;
 }
 
+export async function deleteSellerInventoryItem(priceId: string): Promise<void> {
+  await api.delete(`/api/v1/seller/inventory/${priceId}`);
+}
+
 export async function listSellerOrders(): Promise<SellerShopOrder[]> {
   const response = await api.get<SellerShopOrder[]>("/api/v1/seller/orders");
   return response.data;
