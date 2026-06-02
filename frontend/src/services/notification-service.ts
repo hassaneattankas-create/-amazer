@@ -15,8 +15,23 @@ const NATIVE_ALERT_SOUND = "amazer_alert.wav";
 /** Meme tonalite que l app native, servie depuis /public pour le navigateur */
 const WEB_ALERT_SOUND_URL = "/sounds/amazer-alert.wav";
 
+const NOTIFICATION_SOUND_KEY = "amazer_notification_sound_enabled";
+
+export function isNotificationSoundEnabled(): boolean {
+  if (typeof window === "undefined") return true;
+  return window.localStorage.getItem(NOTIFICATION_SOUND_KEY) !== "false";
+}
+
+export function setNotificationSoundEnabled(enabled: boolean): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(NOTIFICATION_SOUND_KEY, String(enabled));
+}
+
 async function playWebNotificationAlertSound(): Promise<void> {
   if (typeof window === "undefined") {
+    return;
+  }
+  if (!isNotificationSoundEnabled()) {
     return;
   }
   try {
@@ -382,9 +397,9 @@ function mapServerNotification(row: ServerNotification): AppNotification {
   };
 }
 
-export async function listMyNotifications(limit = 100): Promise<AppNotification[]> {
+export async function listMyNotifications(limit = 100, offset = 0): Promise<AppNotification[]> {
   const response = await api.get<ServerNotification[]>("/api/v1/notifications", {
-    params: { limit },
+    params: { limit, offset },
   });
   return response.data.map(mapServerNotification);
 }

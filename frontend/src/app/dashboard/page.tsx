@@ -17,6 +17,10 @@ import { deleteMyAccount } from "@/services/auth-service";
 import { listMyOrders } from "@/services/order-service";
 import { useCartStore } from "@/store/cartStore";
 import { MobileBuildStamp } from "@/components/MobileBuildStamp";
+import {
+  isNotificationSoundEnabled,
+  setNotificationSoundEnabled,
+} from "@/services/notification-service";
 
 function AnimatedCounter({ value }: { value: number }) {
   return (
@@ -36,6 +40,7 @@ export default function DashboardPage() {
   const { data: user } = useCurrentUser();
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteStatus, setDeleteStatus] = useState("");
+  const [soundEnabled, setSoundEnabled] = useState(() => isNotificationSoundEnabled());
   const { data: alerts, isPending } = useQuery({
     queryKey: ["alerts-active"],
     queryFn: listActiveAlerts,
@@ -161,6 +166,27 @@ export default function DashboardPage() {
           <div>
             <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Devise</p>
             <p className="mt-1 font-medium text-slate-900">Franc CFA (XOF)</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Son notifications</p>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !soundEnabled;
+                setSoundEnabled(next);
+                setNotificationSoundEnabled(next);
+              }}
+              className={`mt-1 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium transition ${
+                soundEnabled
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              <span
+                className={`inline-block h-2 w-2 rounded-full ${soundEnabled ? "bg-emerald-500" : "bg-slate-400"}`}
+              />
+              {soundEnabled ? "Activé" : "Désactivé"}
+            </button>
           </div>
           <div>
             <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Membre depuis</p>

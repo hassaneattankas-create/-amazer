@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   clearAllNotifications,
+  listMyNotifications,
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/services/notification-service";
@@ -22,7 +23,10 @@ export default function NotificationsPage() {
   const markAllAsRead = useNotificationStore((state) => state.markAllAsRead);
   const markAsRead = useNotificationStore((state) => state.markAsRead);
   const clearAll = useNotificationStore((state) => state.clearAll);
+  const appendNotifications = useNotificationStore((state) => state.appendNotifications);
   const [actionError, setActionError] = useState("");
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   const markOneMutation = useMutation({
     mutationFn: markNotificationRead,
@@ -71,10 +75,26 @@ export default function NotificationsPage() {
   async function handleClearAll() {
     setActionError("");
     clearAll();
+    setHasMore(true);
     try {
       await clearAllMutation.mutateAsync();
     } catch {
       setActionError("Impossible de vider les notifications sur le serveur.");
+    }
+  }
+
+  async function handleLoadMore() {
+    setLoadingMore(true);
+    setActionError("");
+    try {
+      const older = await listMyNotifications(50, items.length);
+      if (older.length < 50) setHasMore(false);
+      if (older.length > 0) appendNotifications(older);
+      else setHasMore(false);
+    } catch {
+      setActionError("Impossible de charger les notifications suivantes.");
+    } finally {
+      setLoadingMore(false);
     }
   }
 
@@ -141,6 +161,19 @@ export default function NotificationsPage() {
           })}
           {!items.length ? (
             <p className="text-sm text-slate-500">Aucune notification pour le moment.</p>
+          ) : null}
+          {items.length > 0 && hasMore ? (
+            <div className="pt-2 text-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="text-sm"
+              >
+                {loadingMore ? "Chargement..." : "Charger plus"}
+              </Button>
+            </div>
           ) : null}
         </div>
       </article>

@@ -74,12 +74,15 @@ class NotificationService:
     self.db.flush()
     return row
 
-  def list_notifications_for_user(self, user_id: str, *, limit: int = 100) -> list[AppNotification]:
+  def list_notifications_for_user(
+    self, user_id: str, *, limit: int = 100, offset: int = 0
+  ) -> list[AppNotification]:
     rows = self.db.scalars(
       select(AppNotification)
       .where(AppNotification.user_id == user_id)
       .order_by(AppNotification.created_at.desc())
-      .limit(max(1, min(limit, 500)))
+      .limit(max(1, min(limit, 200)))
+      .offset(max(0, offset))
     ).all()
     return list(rows)
 

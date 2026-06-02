@@ -17,6 +17,7 @@ type NotificationState = {
   items: AppNotification[];
   pushNotification: (notification: Omit<AppNotification, "id" | "createdAt" | "unread">) => void;
   syncNotifications: (notifications: AppNotification[]) => void;
+  appendNotifications: (notifications: AppNotification[]) => void;
   markAllAsRead: () => void;
   markAsRead: (id: string) => void;
   clearAll: () => void;
@@ -74,6 +75,17 @@ export const useNotificationStore = create<NotificationState>()(
           }
           merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           return { items: merged.slice(0, 100) };
+        }),
+      appendNotifications: (notifications) =>
+        set((state) => {
+          const merged = [...state.items];
+          for (const notification of notifications) {
+            if (merged.some((item) => item.id === notification.id)) continue;
+            if (merged.some((item) => item.tag === notification.tag)) continue;
+            merged.push(notification);
+          }
+          merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          return { items: merged };
         }),
       markAllAsRead: () =>
         set((state) => ({

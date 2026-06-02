@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { AppFooter } from "@/components/layout/AppFooter";
 import { AndroidBackButtonHandler } from "@/components/providers/AndroidBackButtonHandler";
+import { FaviconBadge } from "@/components/FaviconBadge";
 import { FloatingNavbar } from "@/components/layout/FloatingNavbar";
 import { AuthPreferenceBootstrap } from "@/components/providers/AuthPreferenceBootstrap";
 import { BackendKeepAlive } from "@/components/providers/BackendKeepAlive";
@@ -78,6 +79,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-white text-slate-900 antialiased`}
       >
         <QueryProvider>
+          <FaviconBadge />
           <BackendKeepAlive />
           <PwaRegistrar />
           <MobileAuthBootstrap />

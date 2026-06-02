@@ -82,9 +82,10 @@ def list_notifications(
     db: Annotated[Session, Depends(get_db)],
     user: Annotated[User, Depends(get_current_user)],
     limit: int = 100,
+    offset: int = 0,
 ) -> list[AppNotificationResponse]:
     service = NotificationService(db)
-    rows = service.list_notifications_for_user(user.id, limit=limit)
+    rows = service.list_notifications_for_user(user.id, limit=limit, offset=max(0, offset))
     return [_to_notification_response(row) for row in rows]
 
 

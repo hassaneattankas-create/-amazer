@@ -265,7 +265,43 @@ def health_check() -> dict[str, str]:
 
 @app.get("/ping")
 def ping() -> dict[str, str]:
-    """Endpoint leger pour garder le service eveille (cron Vercel, UptimeRobot, etc.)."""
+    """Endpoint leger + desactivation lazy des abonnements vendeur expires."""
+    from datetime import UTC, datetime
+    from sqlalchemy import update
+    from app.models.seller_profile import SellerProfile
+    from app.models.price import Price
+
+    try:
+        now = datetime.now(UTC)
+        db = SessionLocal()
+        try:
+            expired_vendor_ids = list(
+                db.scalars(
+                    select(SellerProfile.vendor_id).where(
+                        SellerProfile.subscription_paid_until.is_not(None),
+                        SellerProfile.subscription_paid_until < now,
+                    )
+                ).all()
+            )
+            if expired_vendor_ids:
+                db.execute(
+                    update(Vendor)
+                    .where(Vendor.id.in_(expired_vendor_ids), Vendor.is_active.is_(True))
+                    .values(is_active=False)
+                )
+                db.execute(
+                    update(Price)
+                    .where(Price.vendor_id.in_(expired_vendor_ids), Price.is_active.is_(True))
+                    .values(is_active=False)
+                )
+                db.commit()
+        except Exception:
+            db.rollback()
+        finally:
+            db.close()
+    except Exception:
+        pass
+
     return {"pong": "ok"}
 
 
