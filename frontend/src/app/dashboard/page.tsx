@@ -162,6 +162,18 @@ export default function DashboardPage() {
             <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Devise</p>
             <p className="mt-1 font-medium text-slate-900">Franc CFA (XOF)</p>
           </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Membre depuis</p>
+            <p className="mt-1 font-medium text-slate-900">
+              {user?.created_at
+                ? new Date(user.created_at).toLocaleDateString("fr-FR", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })
+                : "Non renseigne"}
+            </p>
+          </div>
         </div>
       </article>
 

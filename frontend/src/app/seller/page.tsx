@@ -540,12 +540,78 @@ function SellerPageContent() {
             {daysUntilSubscriptionEnd !== null && daysUntilSubscriptionEnd < 1
               ? "moins de 24 heures"
               : `${Math.max(1, Math.ceil(daysUntilSubscriptionEnd ?? 1))} jour(s)`}
-            . Tu peux payer la suite depuis cette page pour eviter une interruption de ta boutique (
-            tes donnees restent conservees.)
+            . Renouvelle maintenant pour eviter toute interruption (tes donnees restent conservees).
           </p>
-          <p className="mt-2 text-xs text-sky-800">
-            Tu recevras aussi des notifications (cloche et push si active) avant l&apos;echeance.
-          </p>
+          {subscriptionStatus?.has_pending_payment_request ? (
+            <p className="mt-3 text-sm font-medium text-sky-900">
+              Paiement de renouvellement deja soumis — en attente de validation admin. Tu recevras une notification.
+            </p>
+          ) : (
+            <div className="mt-4 space-y-3">
+              <div className="rounded-2xl border border-sky-300 bg-white p-4 text-sm text-slate-800">
+                <p className="font-semibold text-slate-900">Numero de versement AMAZER</p>
+                <p className="mt-2">
+                  <span className="font-semibold text-[#FF4D00]">
+                    {paymentDestination || "Numero non renseigne pour le moment"}
+                  </span>
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <select
+                  className="h-11 w-full rounded-md border border-sky-300 bg-white px-3 text-sm text-slate-900"
+                  value={subscriptionForm.payment_mode}
+                  onChange={(event) =>
+                    setSubscriptionForm((prev) => ({
+                      ...prev,
+                      payment_mode: event.target.value as "nita" | "amana",
+                    }))
+                  }
+                >
+                  <option value="nita">Versement via Nita</option>
+                  <option value="amana">Versement via Amana</option>
+                </select>
+                <Input
+                  type="number"
+                  min={1}
+                  max={12}
+                  placeholder="Nombre de mois"
+                  value={subscriptionForm.months}
+                  onChange={(event) =>
+                    setSubscriptionForm((prev) => ({ ...prev, months: event.target.value || "1" }))
+                  }
+                />
+                <Input
+                  placeholder="Reference de transaction"
+                  value={subscriptionForm.transaction_reference}
+                  onChange={(event) =>
+                    setSubscriptionForm((prev) => ({
+                      ...prev,
+                      transaction_reference: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <p className="text-sm text-sky-800">
+                Total : {formatXOF(visibleMonthlyFee * selectedSubscriptionMonths)} pour{" "}
+                {selectedSubscriptionMonths} mois.
+              </p>
+              <Button
+                type="button"
+                disabled={subscriptionMutation.isPending}
+                className="bg-sky-700 text-white hover:bg-sky-600"
+                onClick={() =>
+                  subscriptionMutation.mutate({
+                    payment_mode: subscriptionForm.payment_mode,
+                    transaction_reference:
+                      subscriptionForm.transaction_reference.trim() || undefined,
+                    months: selectedSubscriptionMonths,
+                  })
+                }
+              >
+                {subscriptionMutation.isPending ? "Envoi..." : "Soumettre le renouvellement"}
+              </Button>
+            </div>
+          )}
         </article>
       ) : null}
 

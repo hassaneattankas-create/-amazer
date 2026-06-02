@@ -639,12 +639,27 @@ export default function AdminTarifsPage() {
             <div key={seller.profile_id} className="rounded-lg border border-slate-200 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm text-slate-800">
-                    {seller.business_name} - {seller.city} - {seller.is_verified ? "Verifie" : "Non verifie"} - {seller.is_active ? "Actif" : "Desactive"}
+                  <p className="text-sm font-medium text-slate-900">
+                    {seller.business_name}
+                    <span className="ml-2 text-xs font-normal text-slate-500">
+                      {seller.is_verified ? "Verifie" : "Non verifie"} &middot;{" "}
+                      {seller.is_active ? "Actif" : "Desactive"}
+                    </span>
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Effectif: commission {(seller.effective_commission_rate * 100).toFixed(2)}% | frais{" "}
-                    {seller.effective_service_fee} XOF | abonnement {seller.effective_seller_subscription_fee} XOF
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {seller.city}
+                    {seller.phone ? ` · ${seller.phone}` : ""}
+                    {seller.created_at
+                      ? ` · Cree le ${new Date(seller.created_at).toLocaleDateString("fr-FR", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}`
+                      : ""}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Commission {(seller.effective_commission_rate * 100).toFixed(2)}% | Frais{" "}
+                    {seller.effective_service_fee} XOF | Abonnement {seller.effective_seller_subscription_fee} XOF
                   </p>
                 </div>
                 <div className="flex gap-2">

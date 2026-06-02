@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { BarChart3, CreditCard, FolderTree, QrCode, SlidersHorizontal, Users } from "lucide-react";
+import { BarChart3, CreditCard, FolderTree, Layers, QrCode, SlidersHorizontal, Users } from "lucide-react";
 
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { useAdminMe } from "@/hooks/use-admin-me";
@@ -12,10 +12,11 @@ import { isAdminEmail } from "@/lib/admin";
 
 const adminNavItems = [
   { href: "/admin", label: "Vue Generale", icon: BarChart3 },
-  { href: "/admin/tarifs", label: "Tarifs", icon: SlidersHorizontal },
+  { href: "/admin/tarifs", label: "Tarifs & Vendeurs", icon: SlidersHorizontal },
   { href: "/admin/finance", label: "Finance", icon: CreditCard },
   { href: "/admin/users", label: "Utilisateurs", icon: Users },
   { href: "/admin/catalog", label: "Catalogues", icon: FolderTree },
+  { href: "/admin/sections", label: "Sections", icon: Layers },
   { href: "/admin/receipt-scan", label: "Scan Recu", icon: QrCode },
 ];
 

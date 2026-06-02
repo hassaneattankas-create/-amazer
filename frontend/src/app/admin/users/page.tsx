@@ -294,8 +294,9 @@ export default function AdminUsersPage() {
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-3 py-2 text-left font-medium text-slate-600">Nom</th>
-                <th className="px-3 py-2 text-left font-medium text-slate-600">Email</th>
+                <th className="px-3 py-2 text-left font-medium text-slate-600">Email / WhatsApp</th>
                 <th className="px-3 py-2 text-left font-medium text-slate-600">Type</th>
+                <th className="px-3 py-2 text-left font-medium text-slate-600">Inscription</th>
                 <th className="px-3 py-2 text-left font-medium text-slate-600">Etat</th>
                 <th className="px-3 py-2 text-left font-medium text-slate-600">Actions</th>
               </tr>
@@ -304,9 +305,23 @@ export default function AdminUsersPage() {
               {rows.map((user) => (
                 <tr key={user.id}>
                   <td className="px-3 py-2 text-slate-900">{user.full_name}</td>
-                  <td className="px-3 py-2 text-slate-700">{user.email}</td>
+                  <td className="px-3 py-2 text-slate-700">
+                    <p>{user.email}</p>
+                    {user.whatsapp_phone ? (
+                      <p className="text-xs text-slate-500">{user.whatsapp_phone}</p>
+                    ) : null}
+                  </td>
                   <td className="px-3 py-2 text-slate-700">
                     {user.is_admin ? "Admin" : user.is_seller ? "Vendeur" : "Client"}
+                  </td>
+                  <td className="px-3 py-2 text-xs text-slate-500">
+                    {user.created_at
+                      ? new Date(user.created_at).toLocaleDateString("fr-FR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })
+                      : "-"}
                   </td>
                   <td className="px-3 py-2">
                     <span
