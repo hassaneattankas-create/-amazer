@@ -225,6 +225,17 @@ export async function updateAdminSellerPricing(
   });
 }
 
+export async function updateAdminSellerType(
+  profileId: string,
+  payload: { activity_type: string; storefront_tier: string },
+): Promise<AdminSeller> {
+  return adminProxyRequest<AdminSeller>({
+    url: `/admin/finance/sellers/${profileId}/type`,
+    method: "PUT",
+    data: payload,
+  });
+}
+
 export async function getAdminUserStats(): Promise<AdminUserStats> {
   return adminProxyRequest<AdminUserStats>({
     url: "/admin/finance/users/stats",

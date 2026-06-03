@@ -24,6 +24,7 @@ import {
   toggleLaunchMode,
   updateAdminFinanceSettings,
   updateAdminSellerPricing,
+  updateAdminSellerType,
   verifyAdminFinancePin,
   verifyAdminSeller,
 } from "@/services/finance-service";
@@ -198,6 +199,17 @@ export default function AdminTarifsPage() {
     },
     onError: () => setStatus("Verification vendeur impossible."),
   });
+  const sellerTypeMutation = useMutation({
+    mutationFn: ({ profileId, activityType, storefrontTier }: { profileId: string; activityType: string; storefrontTier: string }) =>
+      updateAdminSellerType(profileId, { activity_type: activityType, storefront_tier: storefrontTier }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
+      setStatus("Type de boutique mis a jour.");
+    },
+    onError: () => setStatus("Impossible de changer le type de boutique."),
+  });
+
   const sellerPricingMutation = useMutation({
     mutationFn: ({
       profileId,
@@ -661,8 +673,12 @@ export default function AdminTarifsPage() {
                     Commission {(seller.effective_commission_rate * 100).toFixed(2)}% | Frais{" "}
                     {seller.effective_service_fee} XOF | Abonnement {seller.effective_seller_subscription_fee} XOF
                   </p>
+                  <p className="mt-0.5 text-xs font-medium text-slate-600">
+                    Type: <span className="text-[#FF4D00]">{seller.activity_type}</span> | Tier:{" "}
+                    <span className="text-[#FF4D00]">{seller.storefront_tier}</span>
+                  </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     size="sm"
                     variant="outline"
@@ -675,6 +691,35 @@ export default function AdminTarifsPage() {
                   >
                     {seller.is_verified ? "Retirer badge" : "Vérifier"}
                   </Button>
+                  {seller.storefront_tier !== "premium" ? (
+                    <Button
+                      size="sm"
+                      className="border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                      onClick={() =>
+                        sellerTypeMutation.mutate({
+                          profileId: seller.profile_id,
+                          activityType: "enterprise",
+                          storefrontTier: "premium",
+                        })
+                      }
+                    >
+                      Passer Premium
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="border border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                      onClick={() =>
+                        sellerTypeMutation.mutate({
+                          profileId: seller.profile_id,
+                          activityType: "shop",
+                          storefrontTier: "basic",
+                        })
+                      }
+                    >
+                      Rétrograder Basic
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     className="border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"

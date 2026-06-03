@@ -112,6 +112,8 @@ export type AdminSeller = {
   phone: string | null;
   is_verified: boolean;
   is_active: boolean;
+  activity_type: string;
+  storefront_tier: string;
   commission_rate_override: number | null;
   service_fee_override: number | null;
   seller_subscription_fee_override: number | null;

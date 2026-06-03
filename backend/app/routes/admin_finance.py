@@ -35,6 +35,7 @@ from app.schemas.finance import (
     AdminSellerSubscriptionPaymentDecisionRequest,
     AdminSellerSubscriptionPaymentRequestResponse,
     AdminSellerPricingUpdateRequest,
+    AdminSellerTypeUpdateRequest,
     AdminUserResponse,
     AdminUserStatsResponse,
     AdminOrderStatusUpdateRequest,
@@ -170,6 +171,8 @@ def _build_admin_seller_response(
         phone=decrypt_phone_value(profile.phone),
         is_verified=profile.is_verified,
         is_active=bool(vendor.is_active) if vendor else False,
+        activity_type=profile.activity_type or "shop",
+        storefront_tier=profile.storefront_tier or "basic",
         commission_rate_override=profile.commission_rate_override,
         service_fee_override=profile.service_fee_override,
         seller_subscription_fee_override=profile.seller_subscription_fee_override,
@@ -1228,6 +1231,38 @@ def update_seller_pricing(
     )
     db.commit()
     db.refresh(profile)
+    vendor = db.get(Vendor, profile.vendor_id)
+    return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
+
+
+@router.put("/sellers/{profile_id}/type", response_model=AdminSellerResponse)
+def update_seller_type(
+    profile_id: str,
+    payload: AdminSellerTypeUpdateRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminSellerResponse:
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    profile = db.get(SellerProfile, profile_id)
+    if profile is None:
+        raise ValidationDomainError("Profil vendeur introuvable")
+    profile.activity_type = payload.activity_type
+    profile.storefront_tier = payload.storefront_tier
+    append_audit_log(
+        db,
+        event_type="admin_seller_type_updated",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="seller_profile",
+        entity_id=profile.id,
+        details=payload.model_dump(),
+    )
+    db.commit()
+    db.refresh(profile)
+    _invalidate_public_marketplace_cache()
     vendor = db.get(Vendor, profile.vendor_id)
     return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
 

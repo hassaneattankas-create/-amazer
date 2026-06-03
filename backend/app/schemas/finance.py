@@ -176,6 +176,8 @@ class AdminSellerResponse(BaseModel):
     phone: str | None
     is_verified: bool
     is_active: bool
+    activity_type: str = "shop"
+    storefront_tier: str = "basic"
     commission_rate_override: float | None = None
     service_fee_override: float | None = None
     seller_subscription_fee_override: float | None = None
@@ -191,6 +193,13 @@ class AdminSellerPricingUpdateRequest(BaseModel):
     commission_rate_override: float | None = Field(default=None, ge=0)
     service_fee_override: float | None = Field(default=None, ge=0)
     seller_subscription_fee_override: float | None = Field(default=None, ge=0)
+
+
+class AdminSellerTypeUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    activity_type: str = Field(..., pattern=r"^(shop|restaurant|enterprise)$")
+    storefront_tier: str = Field(..., pattern=r"^(basic|premium)$")
 
 
 class AdminUserStatsResponse(BaseModel):
