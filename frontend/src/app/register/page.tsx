@@ -7,7 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Building2, Store, UtensilsCrossed } from "lucide-react";
 
 import { PasswordInput } from "@/components/PasswordInput";
-import { PremiumSellerPitch } from "@/components/PremiumSellerPitch";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
@@ -295,19 +294,9 @@ function RegisterPageContent() {
         <h1 className="luxury-title text-3xl font-semibold">
           {isSellerFlow ? "Compte vendeur" : "Creer un compte"}
         </h1>
-        {!isSellerFlow ? (
-          <p className="mt-1 text-sm text-slate-500">
-            Vendeur ?{" "}
-            <Link href="/vendre" className="font-medium text-[#FF4D00] hover:underline">
-              Creer un compte vendeur
-            </Link>
-          </p>
-        ) : null}
-
-        <PremiumSellerPitch variant="compact" className="mt-4" showEspaceVendeurLink={false} />
 
         {isSellerFlow ? (
-          <div className="mt-6 grid gap-3 md:grid-cols-3">
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
             {SELLER_TYPE_OPTIONS.map((option) => {
               const Icon = option.icon;
               const isActive = sellerType === option.value;
@@ -324,31 +313,16 @@ function RegisterPageContent() {
                 >
                   <Icon className="h-5 w-5 text-[#FF4D00]" />
                   <p className="mt-3 font-semibold text-slate-900">{option.title}</p>
-                  <p className="mt-1 text-sm text-slate-600">{option.description}</p>
-                  {sellerPricingPending ? (
-                    <p className="mt-2 text-xs text-slate-500">Tarif vendeur&nbsp;: chargement...</p>
-                  ) : sellerPricingError || !sellerPricing ? (
-                    <p className="mt-2 text-xs text-slate-500">
-                      Tarif vendeur&nbsp;: momentanément indisponible
+                  {sellerPricing ? (
+                    <p className="mt-1 text-sm font-semibold text-[#FF4D00]">
+                      {formatXOF(sellerSubscriptionFee(sellerPricing, option.value))}
+                      <span className="font-normal text-slate-500"> / mois</span>
                     </p>
-                  ) : (
-                    <p className="mt-2 text-sm font-semibold leading-snug text-slate-900">
-                      Abonnement vendeur&nbsp;:{" "}
-                      <span className="text-[#FF4D00]">
-                        {formatXOF(sellerSubscriptionFee(sellerPricing, option.value))}
-                      </span>
-                      <span className="font-normal text-slate-600"> / mois</span>
-                    </p>
-                  )}
+                  ) : null}
                 </button>
               );
             })}
           </div>
-        ) : null}
-        {isSellerFlow ? (
-          <p className="mt-3 text-xs text-slate-500">
-            Remplis le formulaire, envoie le virement et soumets. L&apos;admin valide — tu recois une notification.
-          </p>
         ) : null}
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
@@ -356,14 +330,12 @@ function RegisterPageContent() {
             <div>
               <label className="text-sm font-medium text-slate-800" htmlFor="business-name">
                 Nom de la boutique
-                <span className="ml-1 text-xs font-normal text-slate-500">(optionnel)</span>
               </label>
               <input
                 id="business-name"
                 value={businessName}
                 onChange={(event) => setBusinessName(event.target.value)}
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                placeholder="Ex: Boutique Amazer, Restaurant Amazer... sinon ton nom sera utilise"
               />
             </div>
           ) : null}
@@ -383,7 +355,7 @@ function RegisterPageContent() {
 
           <div>
             <label className="text-sm font-medium text-slate-800" htmlFor="identifier">
-              E-mail ou WhatsApp (+227)
+              E-mail ou WhatsApp
             </label>
             <input
               id="identifier"
@@ -392,7 +364,7 @@ function RegisterPageContent() {
               value={identifier}
               onChange={(event) => setIdentifier(event.target.value)}
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="email@domaine.com ou +22790000000"
+              placeholder="+22790000000 ou email@domaine.com"
             />
           </div>
 
@@ -405,90 +377,53 @@ function RegisterPageContent() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-            <p className="mt-1 text-xs text-slate-500">
-              Minimum {PASSWORD_MIN_LENGTH} caracteres.
-            </p>
           </div>
 
           {isSellerFlow ? (
-            <div className="space-y-3 rounded-2xl border border-[#FF4D00]/25 bg-orange-50 p-4">
-              <p className="text-sm font-semibold text-slate-900">Paiement de l&apos;abonnement vendeur</p>
-              {sellerPricing ? (
-                <p className="text-xs text-slate-600">
-                  Montant total :{" "}
-                  <span className="font-semibold text-[#FF4D00]">
-                    {formatXOF(sellerSubscriptionFee(sellerPricing, sellerType) * subscriptionMonths)}
-                  </span>{" "}
-                  pour {subscriptionMonths} mois.
-                </p>
-              ) : null}
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-700">Mode de paiement</label>
-                  <select
-                    value={paymentMode}
-                    onChange={(e) => updatePaymentMode(e.target.value as "nita" | "amana")}
-                    className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
-                  >
-                    <option value="nita">Versement via Nita</option>
-                    <option value="amana">Versement via Amana</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-700">Nombre de mois</label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={12}
-                    value={subscriptionMonths}
-                    onChange={(e) => updateSubscriptionMonths(Number(e.target.value))}
-                    className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-700">
-                    Reference de transaction
-                    <span className="ml-1 font-semibold text-[#FF4D00]"> *</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ex: TXN123456 (reference Nita ou Amana)"
-                    value={transactionRef}
-                    onChange={(e) => updateTransactionRef(e.target.value)}
-                    className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
-                  />
-                </div>
-              </div>
-              <p className="text-sm font-medium text-slate-800">
-                1. Verse le montant ci-dessus via {paymentMode === "nita" ? "Nita" : "Amana"} au numero AMAZER.
-                <br />
-                2. Copie la reference de transaction recue et colle-la ci-dessus.
-                <br />
-                3. Clique sur &quot;Creer mon compte&quot; — l&apos;admin validera et tu recevras une notification.
-              </p>
-              <p className="text-xs text-slate-500">
-                Si tu n&apos;as pas encore effectue le versement, cree quand meme ton compte : tu pourras soumettre la reference depuis ton tableau de bord vendeur.
-              </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <select
+                value={paymentMode}
+                onChange={(e) => updatePaymentMode(e.target.value as "nita" | "amana")}
+                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
+              >
+                <option value="nita">Nita</option>
+                <option value="amana">Amana</option>
+              </select>
+              <input
+                type="number"
+                min={1}
+                max={12}
+                value={subscriptionMonths}
+                onChange={(e) => updateSubscriptionMonths(Number(e.target.value))}
+                className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+                placeholder="Mois"
+              />
+              <input
+                type="text"
+                placeholder="Reference transaction"
+                value={transactionRef}
+                onChange={(e) => updateTransactionRef(e.target.value)}
+                className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+              />
             </div>
           ) : null}
 
-          <label className="flex items-start gap-2 text-xs text-slate-600">
+          <label className="flex items-center gap-2 text-xs text-slate-600">
             <input
               type="checkbox"
               checked={acceptedLegal}
               onChange={(event) => setAcceptedLegal(event.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-slate-300"
+              className="h-4 w-4 rounded border-slate-300"
             />
             <span>
-              J accepte la{" "}
+              J&apos;accepte la{" "}
               <Link href="/legal/privacy" className="font-medium text-[#FF4D00] hover:underline">
                 politique de confidentialite
               </Link>{" "}
               et les{" "}
               <Link href="/legal/terms" className="font-medium text-[#FF4D00] hover:underline">
-                conditions d utilisation
+                conditions d&apos;utilisation
               </Link>
-              .
             </span>
           </label>
 
@@ -497,7 +432,7 @@ function RegisterPageContent() {
             disabled={isLoading || !canSubmit}
             className="primary-glow-btn w-full text-white"
           >
-            {isLoading ? "Traitement..." : isSellerFlow ? "Creer mon compte et soumettre le paiement" : "Creer mon compte"}
+            {isLoading ? "Traitement..." : "Creer mon compte"}
           </Button>
         </form>
 
