@@ -16,6 +16,7 @@ import {
   deleteAdminSeller,
   downloadAuditCsv,
   getAdminFinanceSettings,
+  grantAdminSellerSubscription,
   listAdminDistrictFees,
   listAdminAuditHistory,
   listAdminSellers,
@@ -199,6 +200,17 @@ export default function AdminTarifsPage() {
     },
     onError: () => setStatus("Verification vendeur impossible."),
   });
+  const grantSubscriptionMutation = useMutation({
+    mutationFn: ({ profileId, months }: { profileId: string; months: number }) =>
+      grantAdminSellerSubscription(profileId, months),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
+      setStatus("Abonnement accorde. La boutique est maintenant visible.");
+    },
+    onError: () => setStatus("Impossible d'accorder l'abonnement."),
+  });
+
   const sellerTypeMutation = useMutation({
     mutationFn: ({ profileId, activityType, storefrontTier }: { profileId: string; activityType: string; storefrontTier: string }) =>
       updateAdminSellerType(profileId, { activity_type: activityType, storefront_tier: storefrontTier }),
@@ -676,6 +688,16 @@ export default function AdminTarifsPage() {
                   <p className="mt-0.5 text-xs font-medium text-slate-600">
                     Type: <span className="text-[#FF4D00]">{seller.activity_type}</span> | Tier:{" "}
                     <span className="text-[#FF4D00]">{seller.storefront_tier}</span>
+                    {" | "}
+                    {seller.subscription_paid_until ? (
+                      <span className={new Date(seller.subscription_paid_until) > new Date() ? "text-green-600" : "text-rose-600"}>
+                        Abonnement{" "}
+                        {new Date(seller.subscription_paid_until) > new Date() ? "actif jusqu'au " : "expiré le "}
+                        {new Date(seller.subscription_paid_until).toLocaleDateString("fr-FR")}
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-rose-600">Aucun abonnement actif</span>
+                    )}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -690,6 +712,18 @@ export default function AdminTarifsPage() {
                     }
                   >
                     {seller.is_verified ? "Retirer badge" : "Vérifier"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="border border-green-300 bg-green-50 text-green-800 hover:bg-green-100"
+                    onClick={() =>
+                      grantSubscriptionMutation.mutate({
+                        profileId: seller.profile_id,
+                        months: 12,
+                      })
+                    }
+                  >
+                    Activer 12 mois
                   </Button>
                   {seller.storefront_tier !== "premium" ? (
                     <Button

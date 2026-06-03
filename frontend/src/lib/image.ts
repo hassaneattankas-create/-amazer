@@ -40,6 +40,15 @@ function shouldProxyImageUrl(value: string): boolean {
     if (NO_PROXY_HOSTS.has(url.hostname)) {
       return false;
     }
+    // Le backend est dans remotePatterns — Next.js l'optimise directement
+    try {
+      const backendOrigin = getApiOrigin();
+      if (backendOrigin && url.origin === new URL(backendOrigin).origin) {
+        return false;
+      }
+    } catch {
+      // ignore si backend origin invalide
+    }
     if (typeof window !== "undefined" && url.origin === window.location.origin) {
       return false;
     }

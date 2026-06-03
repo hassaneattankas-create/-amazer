@@ -173,6 +173,7 @@ def _build_admin_seller_response(
         is_active=bool(vendor.is_active) if vendor else False,
         activity_type=profile.activity_type or "shop",
         storefront_tier=profile.storefront_tier or "basic",
+        subscription_paid_until=profile.subscription_paid_until.isoformat() if profile.subscription_paid_until else None,
         commission_rate_override=profile.commission_rate_override,
         service_fee_override=profile.service_fee_override,
         seller_subscription_fee_override=profile.seller_subscription_fee_override,
@@ -1147,6 +1148,12 @@ def restore_seller(
     profile = db.get(SellerProfile, profile_id)
     if profile is None:
         raise ValidationDomainError("Seller profile not found")
+    now = datetime.now(UTC)
+    # S'assurer que l'abonnement est valide pour que _has_active_subscription() retourne True
+    if profile.onboarding_fee_paid_at is None:
+        profile.onboarding_fee_paid_at = now
+    if profile.subscription_paid_until is None or profile.subscription_paid_until <= now:
+        profile.subscription_paid_until = now + timedelta(days=30)
     vendor = db.get(Vendor, profile.vendor_id)
     if vendor is not None:
         vendor.is_active = True
@@ -1163,6 +1170,50 @@ def restore_seller(
         entity_type="seller_profile",
         entity_id=profile.id,
         details={"vendor_id": profile.vendor_id, "user_id": profile.user_id},
+    )
+    db.commit()
+    db.refresh(profile)
+    _invalidate_public_marketplace_cache()
+    vendor = db.get(Vendor, profile.vendor_id)
+    return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
+
+
+@router.post("/sellers/{profile_id}/grant-subscription", response_model=AdminSellerResponse)
+def grant_seller_subscription(
+    profile_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+    months: Annotated[int, Query(ge=1, le=24)] = 1,
+) -> AdminSellerResponse:
+    """Active manuellement l'abonnement d'un vendeur sans paiement."""
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    profile = db.get(SellerProfile, profile_id)
+    if profile is None:
+        raise ValidationDomainError("Profil vendeur introuvable")
+    now = datetime.now(UTC)
+    if profile.onboarding_fee_paid_at is None:
+        profile.onboarding_fee_paid_at = now
+    start_from = profile.subscription_paid_until if profile.subscription_paid_until and profile.subscription_paid_until > now else now
+    profile.subscription_paid_until = start_from + timedelta(days=30 * months)
+    profile.subscription_last_payment_reference = f"ADMIN::GRANT::{admin_user.id}"[:180]
+    vendor = db.get(Vendor, profile.vendor_id)
+    if vendor is not None:
+        vendor.is_active = True
+        db.execute(update(Price).where(Price.vendor_id == vendor.id).values(is_active=True))
+    user = db.get(User, profile.user_id)
+    if user is not None:
+        user.is_active = True
+    append_audit_log(
+        db,
+        event_type="admin_seller_subscription_granted",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="seller_profile",
+        entity_id=profile.id,
+        details={"months": months, "subscription_paid_until": profile.subscription_paid_until.isoformat()},
     )
     db.commit()
     db.refresh(profile)

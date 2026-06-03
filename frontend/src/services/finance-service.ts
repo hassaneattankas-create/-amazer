@@ -236,6 +236,14 @@ export async function updateAdminSellerType(
   });
 }
 
+export async function grantAdminSellerSubscription(profileId: string, months = 1): Promise<AdminSeller> {
+  return adminProxyRequest<AdminSeller>({
+    url: `/admin/finance/sellers/${profileId}/grant-subscription`,
+    method: "POST",
+    params: { months },
+  });
+}
+
 export async function getAdminUserStats(): Promise<AdminUserStats> {
   return adminProxyRequest<AdminUserStats>({
     url: "/admin/finance/users/stats",
