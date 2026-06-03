@@ -2,8 +2,8 @@ name: Keep Backend Alive
 
 on:
   schedule:
-    # Toutes les 5 minutes, 24h/24, 7j/7
-    - cron: "*/5 * * * *"
+    # Toutes les 14 minutes, 24h/24, 7j/7 (< 15 min = Render reste eveille)
+    - cron: "*/14 * * * *"
   workflow_dispatch: # Permet de lancer manuellement si besoin
 
 jobs:
