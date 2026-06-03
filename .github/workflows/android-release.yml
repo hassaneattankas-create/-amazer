@@ -9,12 +9,6 @@ on:
       version_code:
         description: Version code Android entier et unique
         required: false
-  push:
-    branches:
-      - main
-    paths:
-      - "frontend/**"
-      - ".github/workflows/android-release.yml"
 
 jobs:
   build-aab:
