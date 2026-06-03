@@ -74,11 +74,40 @@ npm run mobile:android:apk:release
 
 **Nom** : AMAZER
 
-**Description courte**  
+**Description courte** (max ~80 caractères sur Play ; à ajuster au compteur)  
 Marketplace pour boutiques, restaurants et vendeurs premium.
 
-**Description complète** (extrait — à adapter si besoin)  
-AMAZER permet aux clients de découvrir des produits, commander et suivre leurs achats. Les vendeurs gèrent boutique ou restaurant, publications et commandes depuis un seul espace. Fonctions : recherche, catégories, commandes, reçu, espace vendeur, administration selon les droits ; la caméra peut servir au scan pour certaines vérifications.
+**Description complète** (copier-coller Play Console puis raccourcir si besoin, limite ~4000 caractères)
+
+AMAZER est la marketplace tout-en-un pour acheter en ligne au Niger : boutiques, restaurants et vitrines premium au même endroit. Créez un compte en quelques minutes, explorez les offres et payez en toute sécurité.
+
+**Pour les clients**
+
+- Parcourir les **boutiques** et ajouter les produits au panier avec des suggestions pour optimiser votre commande.
+- **Comparer les prix** et trouver rapidement ce dont vous avez besoin grâce à la **recherche** et aux **catégories**.
+- **Commander au restaurant** : plats et boissons, livraison selon les options disponibles, suivi des commandes.
+- **Réserver** une table dans un restaurant ou, pour les partenaires premium, des services ou des chambres lorsque configurés par le vendeur.
+- Consulter vos **commandes** et vos **reçus** ; AMAZER intègre un **système de reçu avec QR** pour limiter les contrefaçons sur les parcours concernés.
+
+**Pour les vendeurs**
+
+- Trois types de commerce : **boutique**, **restaurant**, **premium** (boutique + restaurant + options avancées).
+- **Espace vendeur** et **tableau de bord** : catalogue, prix, stock, promotions temporaires, **boost visibilité** (ex. 24 h ou 7 jours), réactivation des articles.
+- Gestion des **commandes restaurant** et des flux de réservation selon votre profil.
+- Personnalisez votre **vitrine** : logo, couverture, coordonnées, horaires et contact WhatsApp.
+
+**À propos**
+
+- Application pensée pour le contexte du **Niger** avec une expérience web et mobile cohérente (également disponible depuis le navigateur).
+- Pour le **support** : utilisez `amazer.niger@gmail.com`. Politique de confidentialité et informations sur la **suppression de compte** sont accessibles depuis les URLs indiquées en § 5 ci-dessus.
+
+**Attention** : Certaines fonctionnalités (paiement réel sur place, disponibilités, livrabilité restaurant) dépendent de chaque vendeur et de la configuration au moment de la commande.
+
+---
+
+**Bloc alternatif très court** (si vous préférez une version plus compacte sous la description courte officielle Play)
+
+Découvrez produits et restaurants locaux : panier intelligent, réservations où proposées, recours avec QR selon usage. Boutiques : catalogue, promo, boosts. Une seule app pour acheteurs et vendeurs.
 
 ## 7. Vérifications avant soumission
 

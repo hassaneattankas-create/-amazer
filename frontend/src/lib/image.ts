@@ -9,6 +9,15 @@ function getApiOrigin(): string {
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0"]);
 
+// CDN déjà listés dans next.config.mjs remotePatterns — Next.js les optimise directement, pas besoin du proxy
+const NO_PROXY_HOSTS = new Set([
+  "images.unsplash.com",
+  "unsplash.com",
+  "placehold.co",
+  "images.pexels.com",
+  "cdn.pixabay.com",
+]);
+
 function toHttpsIfPossible(url: URL): string {
   if (url.protocol === "http:" && !LOCAL_HOSTS.has(url.hostname)) {
     url.protocol = "https:";
@@ -26,6 +35,9 @@ function shouldProxyImageUrl(value: string): boolean {
       return false;
     }
     if (LOCAL_HOSTS.has(url.hostname)) {
+      return false;
+    }
+    if (NO_PROXY_HOSTS.has(url.hostname)) {
       return false;
     }
     if (typeof window !== "undefined" && url.origin === window.location.origin) {

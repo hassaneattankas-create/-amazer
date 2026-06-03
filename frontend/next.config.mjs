@@ -122,6 +122,8 @@ const nextConfig = {
           ...(backendImageRemotePattern ? [backendImageRemotePattern] : []),
           { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
           { protocol: "https", hostname: "placehold.co", pathname: "/**" },
+          { protocol: "https", hostname: "images.pexels.com", pathname: "/**" },
+          { protocol: "https", hostname: "cdn.pixabay.com", pathname: "/**" },
         ],
   },
   async rewrites() {
