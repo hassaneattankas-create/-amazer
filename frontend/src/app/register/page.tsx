@@ -215,7 +215,8 @@ function RegisterPageContent() {
     identifier.trim().length >= 6 &&
     password.length >= PASSWORD_MIN_LENGTH &&
     acceptedLegal &&
-    (!isSellerFlow || (businessName.trim().length >= 2 || fullName.trim().length >= 2));
+    (!isSellerFlow || (businessName.trim().length >= 2 || fullName.trim().length >= 2)) &&
+    (!isSellerFlow || transactionRef.trim().length >= 4);
 
   const canVerify = verifyCode.trim().length >= 4 && identifier.trim().length >= 6;
 
@@ -380,31 +381,37 @@ function RegisterPageContent() {
           </div>
 
           {isSellerFlow ? (
-            <div className="grid gap-3 sm:grid-cols-3">
-              <select
-                value={paymentMode}
-                onChange={(e) => updatePaymentMode(e.target.value as "nita" | "amana")}
-                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
-              >
-                <option value="nita">Nita</option>
-                <option value="amana">Amana</option>
-              </select>
-              <input
-                type="number"
-                min={1}
-                max={12}
-                value={subscriptionMonths}
-                onChange={(e) => updateSubscriptionMonths(Number(e.target.value))}
-                className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
-                placeholder="Mois"
-              />
-              <input
-                type="text"
-                placeholder="Reference transaction"
-                value={transactionRef}
-                onChange={(e) => updateTransactionRef(e.target.value)}
-                className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
-              />
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-800">
+                Paiement abonnement{sellerPricing ? ` — ${formatXOF(sellerSubscriptionFee(sellerPricing, sellerType))} / mois` : ""}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <select
+                  value={paymentMode}
+                  onChange={(e) => updatePaymentMode(e.target.value as "nita" | "amana")}
+                  className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
+                >
+                  <option value="nita">Nita</option>
+                  <option value="amana">Amana</option>
+                </select>
+                <input
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={subscriptionMonths}
+                  onChange={(e) => updateSubscriptionMonths(Number(e.target.value))}
+                  className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+                  placeholder="Mois"
+                />
+                <input
+                  type="text"
+                  required
+                  placeholder="Reference transaction *"
+                  value={transactionRef}
+                  onChange={(e) => updateTransactionRef(e.target.value)}
+                  className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+                />
+              </div>
             </div>
           ) : null}
 
