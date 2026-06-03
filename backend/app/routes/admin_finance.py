@@ -5,7 +5,7 @@ import json
 import re
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.orm import Session, selectinload
