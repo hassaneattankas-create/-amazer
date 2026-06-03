@@ -128,14 +128,19 @@ function RegisterPageContent() {
 
   async function finalizeRedirect() {
     if (isSellerFlow) {
-      try {
-        await paySellerSubscription({
-          payment_mode: paymentRef.current.payment_mode,
-          months: paymentRef.current.months,
-          transaction_reference: paymentRef.current.transaction_reference.trim() || undefined,
-        });
-      } catch {
-        // La demande peut etre resoumise depuis le tableau de bord vendeur si elle echoue.
+      const ref = paymentRef.current.transaction_reference.trim();
+      // Soumettre uniquement si une vraie référence de transaction est saisie.
+      // Sans référence, le vendeur soumettra depuis son tableau de bord après avoir effectué le versement.
+      if (ref) {
+        try {
+          await paySellerSubscription({
+            payment_mode: paymentRef.current.payment_mode,
+            months: paymentRef.current.months,
+            transaction_reference: ref,
+          });
+        } catch {
+          // La demande peut etre resoumise depuis le tableau de bord vendeur.
+        }
       }
     }
     const sellerTarget = `/seller?welcome=1&type=${sellerType}`;
@@ -443,20 +448,26 @@ function RegisterPageContent() {
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-700">
                     Reference de transaction
-                    <span className="ml-1 font-normal text-slate-400">(optionnelle)</span>
+                    <span className="ml-1 font-semibold text-[#FF4D00]"> *</span>
                   </label>
                   <input
                     type="text"
-                    placeholder="Ex: TXN123456"
+                    placeholder="Ex: TXN123456 (reference Nita ou Amana)"
                     value={transactionRef}
                     onChange={(e) => updateTransactionRef(e.target.value)}
                     className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
                   />
                 </div>
               </div>
+              <p className="text-sm font-medium text-slate-800">
+                1. Verse le montant ci-dessus via {paymentMode === "nita" ? "Nita" : "Amana"} au numero AMAZER.
+                <br />
+                2. Copie la reference de transaction recue et colle-la ci-dessus.
+                <br />
+                3. Clique sur &quot;Creer mon compte&quot; — l&apos;admin validera et tu recevras une notification.
+              </p>
               <p className="text-xs text-slate-500">
-                Envoie le montant ci-dessus via {paymentMode === "nita" ? "Nita" : "Amana"} au numero AMAZER,
-                saisis la reference et soumets. L&apos;admin validera et tu recevras une notification.
+                Si tu n&apos;as pas encore effectue le versement, cree quand meme ton compte : tu pourras soumettre la reference depuis ton tableau de bord vendeur.
               </p>
             </div>
           ) : null}

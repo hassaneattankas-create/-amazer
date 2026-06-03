@@ -81,8 +81,8 @@ class Settings(BaseSettings):
     whatsapp_api_version: str = Field(default="v22.0")
     whatsapp_access_token: str | None = Field(default=None)
     whatsapp_phone_number_id: str | None = Field(default=None)
-    # Premiers jours d'accès catalogue vendeur sans paiement enregistré (0 = pas d’essai auto).
-    seller_registration_trial_days: int = Field(default=14, ge=0, le=365)
+    # Premiers jours d’accès catalogue vendeur sans paiement enregistré (0 = pas d’essai auto).
+    seller_registration_trial_days: int = Field(default=0, ge=0, le=365)
     media_upload_dir: str = Field(default="uploads")
     media_base_url: str = Field(default="/media")
     media_max_bytes: int = Field(default=5_000_000, ge=1_000_000, le=20_000_000)
