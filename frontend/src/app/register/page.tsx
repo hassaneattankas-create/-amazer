@@ -215,8 +215,7 @@ function RegisterPageContent() {
     identifier.trim().length >= 6 &&
     password.length >= PASSWORD_MIN_LENGTH &&
     acceptedLegal &&
-    (!isSellerFlow || (businessName.trim().length >= 2 || fullName.trim().length >= 2)) &&
-    (!isSellerFlow || transactionRef.trim().length >= 4);
+    (!isSellerFlow || (businessName.trim().length >= 2 || fullName.trim().length >= 2));
 
   const canVerify = verifyCode.trim().length >= 4 && identifier.trim().length >= 6;
 
@@ -382,8 +381,10 @@ function RegisterPageContent() {
 
           {isSellerFlow ? (
             <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-800">
-                Paiement abonnement{sellerPricing ? ` — ${formatXOF(sellerSubscriptionFee(sellerPricing, sellerType))} / mois` : ""}
+              <p className="text-sm text-slate-600">
+                Effectuez votre depot{sellerPricing ? ` de ${formatXOF(sellerSubscriptionFee(sellerPricing, sellerType))}` : ""} sur le{" "}
+                <span className="font-semibold text-slate-900">+227 96 95 31 63</span>{" "}
+                (Nita ou Amana), puis saisissez la reference ci-dessous.
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
                 <select
@@ -405,8 +406,7 @@ function RegisterPageContent() {
                 />
                 <input
                   type="text"
-                  required
-                  placeholder="Reference transaction *"
+                  placeholder="Reference transaction"
                   value={transactionRef}
                   onChange={(e) => updateTransactionRef(e.target.value)}
                   className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
