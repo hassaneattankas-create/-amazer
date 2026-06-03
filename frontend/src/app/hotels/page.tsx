@@ -16,7 +16,6 @@ export default function HotelsPage() {
     queryFn: () =>
       listStorefronts({
         query,
-        activityType: "shop",
         storefrontTier: "premium",
       }),
   });
