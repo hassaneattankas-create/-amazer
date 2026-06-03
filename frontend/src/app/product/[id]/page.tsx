@@ -9,7 +9,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Package, Store, TrendingUp } from "lucide-react";
 
 import { AnimatedPrice } from "@/components/AnimatedPrice";
-import { PriceAlertButton } from "@/components/PriceAlertButton";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { ReviewSystem } from "@/components/ReviewSystem";
@@ -162,7 +161,6 @@ export default function ProductDetailPage() {
           <p className="mt-2 text-sm text-slate-500">{data.offers[0].vendor.name}</p>
           <p className="mt-1 text-xs text-slate-500">Stock: {data.offers[0].stock_quantity}</p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <PriceAlertButton productId={data.product.id} currentPrice={data.offers[0].amount} />
             <Button
               type="button"
               onClick={addToSmartCart}

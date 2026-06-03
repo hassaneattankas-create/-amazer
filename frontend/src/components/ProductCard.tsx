@@ -26,12 +26,9 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
     brand,
     description,
     main_image_url,
-    is_sponsored,
-    is_boosted,
     best_offer: { amount, stock_quantity, vendor },
   } = product;
 
-  const adBadge = is_boosted ? "Sponsorise" : is_sponsored ? "Sponsoris\u00e9" : null;
   const fallbackImage = product.images?.length ? product.images[0].image_url : null;
   const resolvedImageUrl = useMemo(
     () =>
@@ -45,7 +42,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   const displayImageUrl = imageError ? fallbackImageUrl : resolvedImageUrl;
 
   const onOpenDetail = () => {
-    if (is_boosted || is_sponsored) {
+    if (product.is_sponsored) {
       void trackAdClick(product.id);
     }
   };
@@ -54,11 +51,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
     <motion.article
       whileHover={{ y: -8, scale: 1.015 }}
       transition={{ type: "spring", stiffness: 260, damping: 18 }}
-      className={`premium-card hover-lift-glow overflow-hidden border bg-white/70 ${
-        is_boosted
-          ? "border-amber-300/70 shadow-[0_20px_50px_rgba(255,77,0,0.24)]"
-          : "border-white/20"
-      }`}
+      className="premium-card hover-lift-glow overflow-hidden border border-white/20 bg-white/70"
     >
       <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100">
         {displayImageUrl ? (
@@ -85,11 +78,6 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
       <div className="space-y-3 p-4">
         <div>
           <p className="text-xs uppercase tracking-wide text-slate-500">{brand}</p>
-          {adBadge ? (
-            <p className="mt-1 inline-flex rounded-full border border-amber-300 bg-gradient-to-r from-amber-100 to-orange-100 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-amber-700">
-              {adBadge}
-            </p>
-          ) : null}
           <h3 className="mt-1 line-clamp-2 text-base font-semibold text-slate-900">{name}</h3>
           {description ? <p className="mt-2 line-clamp-2 text-sm text-slate-600">{description}</p> : null}
         </div>

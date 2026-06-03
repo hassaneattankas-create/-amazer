@@ -1303,6 +1303,8 @@ def decide_seller_subscription_payment(
         vendor = db.get(Vendor, profile.vendor_id)
         if vendor is not None:
             vendor.is_active = True
+            # Activer aussi tous les prix du vendeur pour qu ils apparaissent dans le catalogue.
+            db.execute(update(Price).where(Price.vendor_id == vendor.id).values(is_active=True))
     seller_user = db.get(User, row.seller_user_id)
 
     append_audit_log(
@@ -1349,4 +1351,6 @@ def decide_seller_subscription_payment(
         )
     db.commit()
     db.refresh(row)
+    if payload.decision == "approved":
+        _invalidate_public_marketplace_cache()
     return _build_admin_subscription_payment_response(row, profile, seller_user)

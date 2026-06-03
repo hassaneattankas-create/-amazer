@@ -37,6 +37,7 @@ from app.schemas.order import (
     ReceiptVerifyRequest,
     ReceiptVerifyResponse,
 )
+from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.payment_security_service import verify_payment_code
 from app.services.seller_finance_service import get_or_create_global_settings
 from app.services.security_log_service import log_security_event
@@ -44,6 +45,43 @@ from app.services.security_log_service import log_security_event
 router = APIRouter(prefix="/orders", tags=["orders"])
 settings = get_settings()
 AUTO_RECEIPT_TIMEOUT_HOURS = 24
+
+
+def _notify_new_order(db: Session, *, order: Order, customer: User) -> None:
+    notif = NotificationService(db)
+    tracking = order.tracking_code or order.id[:8].upper()
+    amount = int(round(float(order.total_amount)))
+
+    # Notification admin
+    admin_user = db.scalar(select(User).where(User.email == settings.admin_email.strip().lower()))
+    if admin_user is not None:
+        notif.send_to_user(
+            user_id=admin_user.id,
+            payload=NotificationPayload(
+                title="Nouvelle commande",
+                body=f"#{tracking} — {amount} XOF via {order.payment_mode.upper()} de {customer.full_name or customer.email}.",
+                data={"tag": f"admin-order-{order.id}", "href": "/admin", "kind": "new_order"},
+            ),
+        )
+
+    # Notification vendeurs
+    vendor_ids = {item.vendor_id for item in order.items}
+    seller_profiles = db.scalars(
+        select(SellerProfile).where(SellerProfile.vendor_id.in_(vendor_ids))
+    ).all()
+    for profile in seller_profiles:
+        notif.send_to_user(
+            user_id=profile.user_id,
+            payload=NotificationPayload(
+                title="Nouvelle commande pour ta boutique",
+                body=f"Commande #{tracking} — {amount} XOF. Prepare la livraison.",
+                data={"tag": f"seller-order-{order.id}-{profile.vendor_id[:6]}", "href": "/seller/dashboard", "kind": "new_order"},
+            ),
+        )
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
 
 
 def _to_order_response(order: Order) -> OrderResponse:
@@ -421,6 +459,10 @@ def checkout(
         order.payment_reference = _build_payment_reference(order.id)
     db.commit()
     db.refresh(order)
+
+    # Notifier l'admin et les vendeurs concernes.
+    _notify_new_order(db, order=order, customer=current_user)
+
     return _to_order_response(order)
 
 

@@ -1,0 +1,35 @@
+name: Auto-commit des modifications
+
+on:
+  schedule:
+    # Tous les jours a 3h du matin (UTC) — heure creuse Niger
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  auto-commit:
+    name: Commit et push des modifications locales
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configurer git
+        run: |
+          git config user.name "AMAZER Bot"
+          git config user.email "bot@amazer.store"
+
+      - name: Commit si des changements existent
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Aucun changement a commiter."
+          else
+            git commit -m "chore(auto): mise a jour automatique $(date +'%Y-%m-%d')"
+            git push
+            echo "Commit et push effectues."
+          fi

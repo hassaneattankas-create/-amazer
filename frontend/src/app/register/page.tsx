@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, Suspense, useMemo, useState } from "react";
+import { FormEvent, Suspense, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Building2, Store, UtensilsCrossed } from "lucide-react";
@@ -14,6 +14,7 @@ import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import { login, register, verifyAccount, type RegisterResponse } from "@/services/auth-service";
 import { getPublicFinanceSettings } from "@/services/finance-service";
+import { paySellerSubscription } from "@/services/seller-service";
 import type { FinanceSettings } from "@/types/finance";
 import type { SellerActivityType, StorefrontTier } from "@/types/seller";
 
@@ -88,12 +89,35 @@ function RegisterPageContent() {
     preview: string | null;
   } | null>(null);
   const [verifyCode, setVerifyCode] = useState("");
+  const [paymentMode, setPaymentMode] = useState<"nita" | "amana">("nita");
+  const [subscriptionMonths, setSubscriptionMonths] = useState(1);
+  const [transactionRef, setTransactionRef] = useState("");
+
+  const paymentRef = useRef<{
+    payment_mode: "nita" | "amana";
+    months: number;
+    transaction_reference: string;
+  }>({ payment_mode: "nita", months: 1, transaction_reference: "" });
 
   const next = searchParams.get("next") || "/";
   const isSellerFlow = useMemo(
     () => searchParams.get("seller") === "1" || next.startsWith("/seller"),
     [next, searchParams]
   );
+
+  function updatePaymentMode(mode: "nita" | "amana") {
+    setPaymentMode(mode);
+    paymentRef.current.payment_mode = mode;
+  }
+  function updateSubscriptionMonths(months: number) {
+    const clamped = Math.max(1, Math.min(12, months));
+    setSubscriptionMonths(clamped);
+    paymentRef.current.months = clamped;
+  }
+  function updateTransactionRef(ref: string) {
+    setTransactionRef(ref);
+    paymentRef.current.transaction_reference = ref;
+  }
 
   const { data: sellerPricing, isPending: sellerPricingPending, isError: sellerPricingError } = useQuery({
     queryKey: ["public-finance-settings"],
@@ -103,6 +127,17 @@ function RegisterPageContent() {
   });
 
   async function finalizeRedirect() {
+    if (isSellerFlow) {
+      try {
+        await paySellerSubscription({
+          payment_mode: paymentRef.current.payment_mode,
+          months: paymentRef.current.months,
+          transaction_reference: paymentRef.current.transaction_reference.trim() || undefined,
+        });
+      } catch {
+        // La demande peut etre resoumise depuis le tableau de bord vendeur si elle echoue.
+      }
+    }
     const sellerTarget = `/seller?welcome=1&type=${sellerType}`;
     const target = isSellerFlow ? sellerTarget : next.startsWith("/") ? next : "/";
     window.location.assign(target);
@@ -253,25 +288,18 @@ function RegisterPageContent() {
     <section className="mx-auto max-w-3xl px-4 py-10">
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="luxury-title text-3xl font-semibold">
-          {isSellerFlow ? "Creer un compte vendeur" : "Creer un compte"}
+          {isSellerFlow ? "Compte vendeur" : "Creer un compte"}
         </h1>
-        <p className="mt-2 text-sm text-slate-600">
-          {isSellerFlow
-            ? "Choisis ton type de boutique, cree ton compte, complete ton profil puis suis les instructions de paiement vendeur de facon simple et claire."
-            : "Renseignez des informations exactes. La connexion est ouverte des que le compte est cree."}
-          {!isSellerFlow ? (
-            <>
-              {" "}
-              Pour les vendeurs, passez par la rubrique{" "}
-              <Link href="/vendre" className="font-medium text-[#FF4D00] hover:underline">
-                Devenir vendeur
-              </Link>
-              .
-            </>
-          ) : null}
-        </p>
+        {!isSellerFlow ? (
+          <p className="mt-1 text-sm text-slate-500">
+            Vendeur ?{" "}
+            <Link href="/vendre" className="font-medium text-[#FF4D00] hover:underline">
+              Creer un compte vendeur
+            </Link>
+          </p>
+        ) : null}
 
-        <PremiumSellerPitch variant="compact" className="mt-5" showEspaceVendeurLink={!isSellerFlow} />
+        <PremiumSellerPitch variant="compact" className="mt-4" showEspaceVendeurLink={false} />
 
         {isSellerFlow ? (
           <div className="mt-6 grid gap-3 md:grid-cols-3">
@@ -313,15 +341,9 @@ function RegisterPageContent() {
           </div>
         ) : null}
         {isSellerFlow ? (
-          <div className="mt-5 rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm text-slate-700">
-            <p className="font-semibold text-slate-900">Parcours vendeur simplifie</p>
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
-              <p>1. Creer ton compte vendeur.</p>
-              <p>2. Completer ton profil boutique ou restaurant.</p>
-              <p>3. Choisir Amana ou Nita pour le versement.</p>
-              <p>4. Envoyer le paiement au numero affiche puis attendre la notification de validation.</p>
-            </div>
-          </div>
+          <p className="mt-3 text-xs text-slate-500">
+            Remplis le formulaire, envoie le virement et soumets. L&apos;admin valide — tu recois une notification.
+          </p>
         ) : null}
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
@@ -379,13 +401,65 @@ function RegisterPageContent() {
               onChange={(event) => setPassword(event.target.value)}
             />
             <p className="mt-1 text-xs text-slate-500">
-              Obligatoire : au moins {PASSWORD_MIN_LENGTH} caracteres pour creer ton compte.{" "}
-              <span className="font-medium text-slate-700">
-                Pour ta securite, cree un mot de passe robuste
-              </span>{" "}
-              (majuscule, minuscule, chiffre et caractere special) — fortement recommande.
+              Minimum {PASSWORD_MIN_LENGTH} caracteres.
             </p>
           </div>
+
+          {isSellerFlow ? (
+            <div className="space-y-3 rounded-2xl border border-[#FF4D00]/25 bg-orange-50 p-4">
+              <p className="text-sm font-semibold text-slate-900">Paiement de l&apos;abonnement vendeur</p>
+              {sellerPricing ? (
+                <p className="text-xs text-slate-600">
+                  Montant total :{" "}
+                  <span className="font-semibold text-[#FF4D00]">
+                    {formatXOF(sellerSubscriptionFee(sellerPricing, sellerType) * subscriptionMonths)}
+                  </span>{" "}
+                  pour {subscriptionMonths} mois.
+                </p>
+              ) : null}
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-700">Mode de paiement</label>
+                  <select
+                    value={paymentMode}
+                    onChange={(e) => updatePaymentMode(e.target.value as "nita" | "amana")}
+                    className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
+                  >
+                    <option value="nita">Versement via Nita</option>
+                    <option value="amana">Versement via Amana</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-700">Nombre de mois</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={subscriptionMonths}
+                    onChange={(e) => updateSubscriptionMonths(Number(e.target.value))}
+                    className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-700">
+                    Reference de transaction
+                    <span className="ml-1 font-normal text-slate-400">(optionnelle)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: TXN123456"
+                    value={transactionRef}
+                    onChange={(e) => updateTransactionRef(e.target.value)}
+                    className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">
+                Envoie le montant ci-dessus via {paymentMode === "nita" ? "Nita" : "Amana"} au numero AMAZER,
+                saisis la reference et soumets. L&apos;admin validera et tu recevras une notification.
+              </p>
+            </div>
+          ) : null}
 
           <label className="flex items-start gap-2 text-xs text-slate-600">
             <input
@@ -412,7 +486,7 @@ function RegisterPageContent() {
             disabled={isLoading || !canSubmit}
             className="primary-glow-btn w-full text-white"
           >
-            {isLoading ? "Traitement..." : isSellerFlow ? "Creer mon compte vendeur" : "Creer mon compte"}
+            {isLoading ? "Traitement..." : isSellerFlow ? "Creer mon compte et soumettre le paiement" : "Creer mon compte"}
           </Button>
         </form>
 
