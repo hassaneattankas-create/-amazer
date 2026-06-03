@@ -210,12 +210,16 @@ function RegisterPageContent() {
     }
   }
 
+  const monthlyFee = sellerPricing ? sellerSubscriptionFee(sellerPricing, sellerType) : null;
+  const totalAmount = monthlyFee !== null ? monthlyFee * subscriptionMonths : null;
+
   const canSubmit =
     fullName.trim().length >= 2 &&
     identifier.trim().length >= 6 &&
     password.length >= PASSWORD_MIN_LENGTH &&
     acceptedLegal &&
-    (!isSellerFlow || (businessName.trim().length >= 2 || fullName.trim().length >= 2));
+    (!isSellerFlow || (businessName.trim().length >= 2 || fullName.trim().length >= 2)) &&
+    (!isSellerFlow || transactionRef.trim().length >= 4);
 
   const canVerify = verifyCode.trim().length >= 4 && identifier.trim().length >= 6;
 
@@ -380,11 +384,13 @@ function RegisterPageContent() {
           </div>
 
           {isSellerFlow ? (
-            <div className="space-y-2">
-              <p className="text-sm text-slate-600">
-                Effectuez votre depot{sellerPricing ? ` de ${formatXOF(sellerSubscriptionFee(sellerPricing, sellerType))}` : ""} sur le{" "}
-                <span className="font-semibold text-slate-900">+227 96 95 31 63</span>{" "}
-                (Nita ou Amana), puis saisissez la reference ci-dessous.
+            <div className="space-y-3 rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
+              <p className="text-sm font-medium text-slate-800">
+                {totalAmount !== null
+                  ? `Deposez ${formatXOF(totalAmount)} (${subscriptionMonths} mois × ${formatXOF(monthlyFee!)}) sur le +227 96 95 31 63`
+                  : "Deposez le montant de votre abonnement sur le +227 96 95 31 63"}{" "}
+                via Nita ou Amana, puis saisissez la reference de transaction.
+                Votre boutique sera activee apres confirmation du paiement.
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
                 <select
@@ -401,15 +407,16 @@ function RegisterPageContent() {
                   max={12}
                   value={subscriptionMonths}
                   onChange={(e) => updateSubscriptionMonths(Number(e.target.value))}
-                  className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+                  className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
                   placeholder="Mois"
                 />
                 <input
                   type="text"
-                  placeholder="Reference transaction"
+                  required
+                  placeholder="Reference transaction *"
                   value={transactionRef}
                   onChange={(e) => updateTransactionRef(e.target.value)}
-                  className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+                  className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
                 />
               </div>
             </div>
