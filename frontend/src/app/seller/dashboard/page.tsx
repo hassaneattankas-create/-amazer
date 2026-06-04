@@ -315,10 +315,10 @@ export default function SellerDashboardPage() {
         : "Ma Boutique AMAZER";
   const dashboardDescription =
     sellerMode === "restaurant"
-      ? 'Dashboard restaurant: gere tes plats, reservations et commandes.'
+      ? "Gere tes plats, boissons, reservations et commandes restaurant."
       : sellerMode === "enterprise"
-        ? "Dashboard premium: produits, menu, reservations restaurant, reservations hotel et outils avances."
-        : "Dashboard boutique: gere tes produits, ton stock et tes boosts.";
+        ? "Espace premium: produits, menu restaurant, reservations et outils avances."
+        : "Gere tes produits, ton stock, ton menu restaurant et tes commandes.";
 
   useEffect(() => {
     const known = seenShopOrderIdsRef.current;
@@ -818,20 +818,13 @@ export default function SellerDashboardPage() {
             <article className="premium-card border border-slate-200 bg-white p-6">
               <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
                 <Boxes className="h-5 w-5 text-[#FF4D00]" />
-                {sellerMode === "enterprise" ? "Catalogue produits" : "Articles boutique"}
+Catalogue produits
               </h2>
               <p className="mt-2 text-sm text-slate-600">
                 {sellerMode === "enterprise"
-                  ? "Espace premium: gere ton catalogue produits en plus du menu restaurant."
-                  : "Espace boutique: gere tes articles, ton stock et tes boosts."}
+                  ? "Gere ton catalogue produits et ton menu restaurant."
+                  : "Gere tes articles, ton stock et tes promotions."}
               </p>
-              {financeSettings ? (
-                <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
-                  <strong>Boost sponsorise payant:</strong> {formatXOF(financeSettings.ad_boost_price_24h)} pour 24 h ou{" "}
-                  {formatXOF(financeSettings.ad_boost_price_7d)} pour 7 jours. Versement au numero AMAZER puis saisis la reference
-                  sur chaque ligne (obligatoire pour activer le boost).
-                </p>
-              ) : null}
             </article>
             {inventory.map((item) => (
               <article key={item.price_id} className="premium-card border border-slate-200 bg-white p-4">
