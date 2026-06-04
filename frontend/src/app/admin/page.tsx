@@ -25,7 +25,7 @@ export default function AdminHomePage() {
     {
       href: "/admin/sections",
       title: "Sections Dynamiques",
-      description: "Organiser les blocs home, sponsorises, meilleures ventes, etc.",
+      description: "Organiser les blocs home: Meilleures Ventes, Nouveautes, Tendances.",
     },
     {
       href: "/admin/receipt-scan",

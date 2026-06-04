@@ -412,25 +412,33 @@ export default function AdminTarifsPage() {
         </article>
       ) : null}
       <header className="premium-card border border-slate-200 bg-white p-6">
-        <h1 className="luxury-title text-3xl font-semibold">Controle Financier Dynamique</h1>
-        <p className="mt-2 text-sm text-slate-600">Commission, frais, livraison, abonnements et controle vendeurs.</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Link
-            href="/admin/catalog"
-            className="inline-flex rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
-          >
-            Rubriques & Categories
-          </Link>
-          <Link
-            href="/admin/sections"
-            className="inline-flex rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
-          >
-            Sections Dynamiques
-          </Link>
+        <h1 className="luxury-title text-3xl font-semibold">Controle Admin</h1>
+        <p className="mt-2 text-sm text-slate-600">Commission, frais, abonnements, vendeurs et inscriptions.</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <a href="#tarifs" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Tarifs & Frais</a>
+          <a href="#inscriptions" className="rounded-md border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs text-[#FF4D00] font-medium hover:bg-orange-100">
+            Inscriptions en attente {pendingSellers?.length ? `(${pendingSellers.length})` : ""}
+          </a>
+          <a href="#vendeurs" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">
+            Vendeurs {sellers?.length ? `(${sellers.length})` : ""}
+          </a>
+          <a href="#quartiers" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Frais quartiers</a>
+          <a href="#audit" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Historique</a>
+          <Link href="/admin/catalog" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Categories</Link>
+          <Link href="/admin/sections" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Sections</Link>
         </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="mt-3"
+          onClick={() => setPinVerified(false)}
+        >
+          Verrouiller
+        </Button>
       </header>
 
-      <article className="premium-card border border-slate-200 bg-white p-6">
+      <article id="tarifs" className="premium-card border border-slate-200 bg-white p-6">
         <div className="space-y-5">
           <div className="grid gap-4 lg:grid-cols-2">
             <AdminNumberField
@@ -609,7 +617,7 @@ export default function AdminTarifsPage() {
         </div>
       </article>
 
-      <article className="premium-card border border-slate-200 bg-white p-6">
+      <article id="quartiers" className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-slate-900">Frais de livraison par quartier</h2>
         <p className="mt-2 text-sm text-slate-600">Format: `Quartier:Montant` sur une ligne par quartier.</p>
         <textarea
@@ -633,7 +641,7 @@ export default function AdminTarifsPage() {
       </article>
 
       {(pendingSellers ?? []).length > 0 && (
-        <article className="premium-card border border-orange-200 bg-orange-50 p-6">
+        <article id="inscriptions" className="premium-card border border-orange-200 bg-orange-50 p-6">
           <h2 className="text-lg font-semibold text-slate-900">
             Inscriptions en attente{" "}
             <span className="ml-1 rounded-full bg-[#FF4D00] px-2 py-0.5 text-xs text-white">
@@ -692,7 +700,7 @@ export default function AdminTarifsPage() {
         </article>
       )}
 
-      <article className="premium-card border border-slate-200 bg-white p-6">
+      <article id="vendeurs" className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-slate-900">Vendeurs</h2>
         <div className="mt-3 space-y-2">
           {(sellers ?? []).slice(0, 120).map((seller) => (
@@ -909,7 +917,7 @@ export default function AdminTarifsPage() {
         </div>
       </article>
 
-      <article className="premium-card border border-slate-200 bg-white p-6">
+      <article id="audit" className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-slate-900">Historique des modifications</h2>
         <div className="mt-2">
           <button

@@ -15,7 +15,6 @@ import {
   getAdminFinanceVerifyError,
 } from "@/lib/admin-finance-verification";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { getAdminAdClickStats } from "@/services/content-service";
 import { formatXOF } from "@/lib/currency";
 import { notifyLocalOrderEvent } from "@/services/notification-service";
 import {
@@ -46,7 +45,6 @@ export default function AdminFinancePage() {
   const seenSellerPaymentIdsRef = useRef<Set<string>>(new Set());
   const adminOrdersInitializedRef = useRef(false);
   const sellerPaymentsInitializedRef = useRef(false);
-  const [settingsStatus, setSettingsStatus] = useState("");
   const [pinStatus, setPinStatus] = useState("");
   const [pin, setPin] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -85,11 +83,6 @@ export default function AdminFinancePage() {
   } = useQuery({
     queryKey: ["admin-treasury-history"],
     queryFn: getAdminTreasuryHistory,
-    enabled: pinVerified,
-  });
-  const { data: adClicks, error: adClicksError } = useQuery({
-    queryKey: ["admin-ad-click-stats"],
-    queryFn: getAdminAdClickStats,
     enabled: pinVerified,
   });
   const { data: adminOrders, isError: isOrdersError, error: ordersError } = useQuery({
@@ -182,7 +175,6 @@ export default function AdminFinancePage() {
     () =>
       [
         historyError ? `Historique: ${getAdminFinanceDataError(historyError)}` : null,
-        adClicksError ? `Publicite: ${getAdminFinanceDataError(adClicksError)}` : null,
         ordersError ? `Commandes: ${getAdminFinanceDataError(ordersError)}` : null,
         sellerPaymentsError ? `Paiements vendeurs: ${getAdminFinanceDataError(sellerPaymentsError)}` : null,
       ].filter(Boolean) as string[],
@@ -340,30 +332,19 @@ export default function AdminFinancePage() {
         </article>
       ) : null}
       <header className="premium-card border border-slate-200 bg-white p-6">
-        <h1 className="luxury-title text-3xl font-semibold">Admin Finance</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Wallet prive: Nita/Amana, commission automatique, historique chiffre et virement simule.
-        </p>
-        <p className="mt-1 text-sm text-slate-500">
-          Note: les prix des produits sont definis par les vendeurs. Ici vous gerez uniquement les pourcentages et frais AMAZER.
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="luxury-title text-3xl font-semibold">Admin Finance</h1>
+            <p className="mt-2 text-sm text-slate-600">
+              Wallet, virements, paiements vendeurs et historique transactions.
+            </p>
+          </div>
+          <Button type="button" size="sm" variant="outline" onClick={() => setPinVerified(false)}>
+            Verrouiller
+          </Button>
+        </div>
       </header>
 
-      <article className="premium-card border border-slate-200 bg-white p-6">
-        <h2 className="luxury-title text-lg font-semibold">Parametrage financier</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          Pour eviter les doublons, tous les parametres (commission, abonnements, livraison, support)
-          sont maintenant centralises dans une seule categorie: <strong>Admin Tarifs</strong>.
-        </p>
-        <Button
-          type="button"
-          className="mt-4 border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-          onClick={() => window.location.assign("/admin/tarifs")}
-        >
-          Ouvrir Admin Tarifs
-        </Button>
-        {settingsStatus ? <p className="mt-2 text-sm text-slate-700">{settingsStatus}</p> : null}
-      </article>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <article className="premium-card border border-slate-200 bg-white p-5">
@@ -380,16 +361,6 @@ export default function AdminFinancePage() {
         </article>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <article className="premium-card border border-slate-200 bg-white p-5">
-          <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Clics publicitaires</p>
-          <p className="mt-2 text-3xl font-semibold text-[#FF4D00]">{adClicks?.total_clicks ?? 0}</p>
-        </article>
-        <article className="premium-card border border-slate-200 bg-white p-5">
-          <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Clics publicitaires (7 jours)</p>
-          <p className="mt-2 text-3xl font-semibold text-[#FF4D00]">{adClicks?.clicks_last_7_days ?? 0}</p>
-        </article>
-      </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <article className="premium-card border border-slate-200 bg-white p-5">
