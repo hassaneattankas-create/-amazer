@@ -145,10 +145,10 @@ export default function AdminFinancePage() {
       queryClient.invalidateQueries({ queryKey: ["admin-seller-subscription-payments"] });
       queryClient.invalidateQueries({ queryKey: ["admin-finance-summary"] });
       setPaymentDecisionNote("");
-      setSettingsStatus("Decision paiement vendeur enregistree.");
+      setTransferStatus("Decision paiement vendeur enregistree.");
     },
     onError: (error) =>
-      setSettingsStatus(
+      setTransferStatus(
         getApiErrorMessage(error, getAdminFinanceDataError(error)),
       ),
   });
