@@ -23,10 +23,15 @@ from app.schemas.auth import (
     VerifyAccountRequest,
     VerifyAccountResponse,
 )
+from app.schemas.finance import SellerPreRegisterRequest, SellerPreRegisterResponse
 from app.schemas.user import UserResponse
 from app.services.auth_service import AuthService
+from app.models.seller_pending_registration import SellerPendingRegistration
+from app.core.security import hash_password
 from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.security_log_service import log_security_event
+from app.database import get_db
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
@@ -270,6 +275,36 @@ def get_preferences(
         auth_service.db.commit()
         auth_service.db.refresh(row)
     return UserPreferencesResponse(preferred_currency=row.preferred_currency)
+
+
+@router.post("/pre-register-seller", response_model=SellerPreRegisterResponse, status_code=status.HTTP_201_CREATED)
+def pre_register_seller(
+    payload: SellerPreRegisterRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+) -> SellerPreRegisterResponse:
+    """Soumet une demande d inscription vendeur sans creer de compte. Le compte est cree apres confirmation du paiement par l admin."""
+    enforce_rate_limit(request, key="pre_register_seller", limit=5, window_seconds=300)
+    reg = SellerPendingRegistration(
+        full_name=payload.full_name.strip(),
+        identifier=payload.identifier.strip(),
+        hashed_password=hash_password(payload.password),
+        business_name=payload.business_name.strip() if payload.business_name else None,
+        activity_type=payload.activity_type,
+        storefront_tier=payload.storefront_tier,
+        payment_mode=payload.payment_mode,
+        months=payload.months,
+        transaction_reference=payload.transaction_reference.strip() if payload.transaction_reference else None,
+        status="pending",
+    )
+    db.add(reg)
+    db.commit()
+    db.refresh(reg)
+    return SellerPreRegisterResponse(
+        id=reg.id,
+        status="pending",
+        message="Votre demande a ete envoyee. Votre compte et votre boutique seront crees apres verification de votre paiement.",
+    )
 
 
 @router.put("/preferences", response_model=UserPreferencesResponse)

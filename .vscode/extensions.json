@@ -1,0 +1,17 @@
+{
+  "recommendations": [
+    "saoudrizwan.claude-dev",
+    "continue.continue",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "ms-python.python",
+    "ms-python.black-formatter",
+    "ms-python.isort",
+    "charliermarsh.ruff",
+    "ms-azuretools.vscode-docker",
+    "github.vscode-pull-request-github",
+    "prisma.prisma",
+    "eamodio.gitlens"
+  ]
+}

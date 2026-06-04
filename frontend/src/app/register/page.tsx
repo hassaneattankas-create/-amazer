@@ -11,9 +11,8 @@ import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
-import { login, register, verifyAccount, type RegisterResponse } from "@/services/auth-service";
+import { login, preRegisterSeller, register, verifyAccount, type RegisterResponse } from "@/services/auth-service";
 import { getPublicFinanceSettings } from "@/services/finance-service";
-import { paySellerSubscription } from "@/services/seller-service";
 import type { FinanceSettings } from "@/types/finance";
 import type { SellerActivityType, StorefrontTier } from "@/types/seller";
 
@@ -91,6 +90,7 @@ function RegisterPageContent() {
   const [paymentMode, setPaymentMode] = useState<"nita" | "amana">("nita");
   const [subscriptionMonths, setSubscriptionMonths] = useState(1);
   const [transactionRef, setTransactionRef] = useState("");
+  const [preRegSubmitted, setPreRegSubmitted] = useState(false);
 
   const paymentRef = useRef<{
     payment_mode: "nita" | "amana";
@@ -125,40 +125,31 @@ function RegisterPageContent() {
     staleTime: 60_000,
   });
 
-  async function finalizeRedirect() {
-    if (isSellerFlow) {
-      const ref = paymentRef.current.transaction_reference.trim();
-      // Soumettre uniquement si une vraie référence de transaction est saisie.
-      // Sans référence, le vendeur soumettra depuis son tableau de bord après avoir effectué le versement.
-      if (ref) {
-        try {
-          await paySellerSubscription({
-            payment_mode: paymentRef.current.payment_mode,
-            months: paymentRef.current.months,
-            transaction_reference: ref,
-          });
-        } catch {
-          // La demande peut etre resoumise depuis le tableau de bord vendeur.
-        }
-      }
-    }
-    const sellerTarget = `/seller?welcome=1&type=${sellerType}`;
-    const target = isSellerFlow ? sellerTarget : next.startsWith("/") ? next : "/";
-    window.location.assign(target);
-  }
-
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus("");
     setIsLoading(true);
     try {
+      if (isSellerFlow) {
+        // Flux vendeur : pre-inscription, pas de compte cree avant confirmation admin
+        await preRegisterSeller({
+          full_name: fullName.trim(),
+          identifier: identifier.trim(),
+          password,
+          business_name: businessName.trim() || fullName.trim(),
+          activity_type: sellerType,
+          storefront_tier: sellerType === "enterprise" ? "premium" : "basic",
+          payment_mode: paymentMode,
+          months: subscriptionMonths,
+          transaction_reference: transactionRef.trim() || undefined,
+        });
+        setPreRegSubmitted(true);
+        return;
+      }
       const reg: RegisterResponse = await register({
         identifier: identifier.trim(),
         full_name: fullName.trim(),
         password,
-        seller_profile: isSellerFlow
-          ? buildSellerProfilePayload(sellerType, fullName, businessName)
-          : undefined,
       });
       if (reg.verification_channel && reg.verification_channel !== "none") {
         setPendingVerification({
@@ -169,22 +160,16 @@ function RegisterPageContent() {
         return;
       }
       try {
-        await login({
-          identifier: identifier.trim(),
-          password,
-        });
+        await login({ identifier: identifier.trim(), password });
       } catch (loginError) {
         if (getHttpResponseStatus(loginError) === 403) {
-          setPendingVerification({
-            channel: "retry",
-            masked: identifier.trim(),
-            preview: null,
-          });
+          setPendingVerification({ channel: "retry", masked: identifier.trim(), preview: null });
           return;
         }
         throw loginError;
       }
-      await finalizeRedirect();
+      const target = next.startsWith("/") ? next : "/";
+      window.location.assign(target);
     } catch (error) {
       setStatus(getApiErrorMessage(error, "Inscription impossible. Verifiez les informations saisies."));
     } finally {
@@ -221,6 +206,28 @@ function RegisterPageContent() {
     (!isSellerFlow || (businessName.trim().length >= 2 || fullName.trim().length >= 2));
 
   const canVerify = verifyCode.trim().length >= 4 && identifier.trim().length >= 6;
+
+  if (preRegSubmitted) {
+    return (
+      <section className="mx-auto max-w-3xl px-4 py-10">
+        <article className="premium-card border border-slate-200 bg-white p-6 text-center space-y-4">
+          <div className="text-4xl">✅</div>
+          <h1 className="luxury-title text-2xl font-semibold text-slate-900">Demande envoyee !</h1>
+          <p className="text-sm text-slate-600">
+            Votre demande a ete recue. Nous allons verifier votre paiement sur le{" "}
+            <span className="font-semibold text-slate-900">+227 96 95 31 63</span>.
+            Votre compte et votre boutique seront crees des que le paiement sera confirme.
+          </p>
+          <p className="text-sm text-slate-500">
+            Vous serez contacte sur <span className="font-medium text-slate-700">{identifier}</span> pour activer votre acces.
+          </p>
+          <Link href="/" className="inline-block mt-2 text-sm font-medium text-[#FF4D00] hover:underline">
+            Retour a l accueil
+          </Link>
+        </article>
+      </section>
+    );
+  }
 
   if (pendingVerification) {
     return (
@@ -389,8 +396,9 @@ function RegisterPageContent() {
                   ? `Deposez ${formatXOF(totalAmount)} (${subscriptionMonths} mois × ${formatXOF(monthlyFee!)})`
                   : "Deposez le montant de votre abonnement"}{" "}
                 sur le <span className="text-[#FF4D00]">+227 96 95 31 63</span> via Nita ou Amana,
-                puis confirmez votre paiement en saisissant la reference ci-dessous.
-                Votre boutique sera activee une fois le paiement verifie.
+                puis saisissez la reference de transaction ci-dessous.
+                Les informations fournies serviront a verifier votre paiement.
+                Votre compte et votre boutique seront crees uniquement apres confirmation du paiement.
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
                 <select

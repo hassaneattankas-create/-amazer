@@ -152,6 +152,21 @@ export type AdminUser = {
   created_at: string;
 };
 
+export type AdminPendingSeller = {
+  id: string;
+  full_name: string;
+  identifier: string;
+  business_name: string | null;
+  activity_type: string;
+  storefront_tier: string;
+  payment_mode: string | null;
+  months: number;
+  transaction_reference: string | null;
+  status: "pending" | "approved" | "rejected";
+  admin_note: string | null;
+  submitted_at: string;
+};
+
 export type AdminSellerSubscriptionPaymentRequest = {
   id: string;
   seller_profile_id: string;

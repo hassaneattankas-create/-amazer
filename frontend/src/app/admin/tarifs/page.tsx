@@ -13,12 +13,14 @@ import {
 } from "@/lib/admin-finance-verification";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import {
+  decideAdminPendingSeller,
   deleteAdminSeller,
   downloadAuditCsv,
   getAdminFinanceSettings,
   grantAdminSellerSubscription,
   listAdminDistrictFees,
   listAdminAuditHistory,
+  listAdminPendingSellers,
   listAdminSellers,
   replaceAdminDistrictFees,
   restoreAdminSeller,
@@ -29,7 +31,7 @@ import {
   verifyAdminFinancePin,
   verifyAdminSeller,
 } from "@/services/finance-service";
-import { FinanceSettings } from "@/types/finance";
+import { AdminPendingSeller, FinanceSettings } from "@/types/finance";
 
 function parseNonNegativeNumber(value: string, fallback: number) {
   const normalized = value.replace(",", ".").trim();
@@ -209,6 +211,25 @@ export default function AdminTarifsPage() {
       setStatus("Abonnement accorde. La boutique est maintenant visible.");
     },
     onError: () => setStatus("Impossible d'accorder l'abonnement."),
+  });
+
+  const { data: pendingSellers } = useQuery({
+    queryKey: ["admin-pending-sellers"],
+    queryFn: () => listAdminPendingSellers("pending"),
+    enabled: pinVerified,
+    refetchInterval: 30000,
+  });
+
+  const pendingSellerDecisionMutation = useMutation({
+    mutationFn: ({ regId, decision, adminNote }: { regId: string; decision: "approved" | "rejected"; adminNote?: string }) =>
+      decideAdminPendingSeller(regId, { decision, admin_note: adminNote }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-pending-sellers"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
+      setStatus(result.decision === "approved" ? "Compte vendeur cree et boutique activee." : "Demande rejetee.");
+    },
+    onError: () => setStatus("Impossible de traiter la demande."),
   });
 
   const sellerTypeMutation = useMutation({
@@ -655,6 +676,66 @@ export default function AdminTarifsPage() {
           </p>
         </div>
       </article>
+
+      {(pendingSellers ?? []).length > 0 && (
+        <article className="premium-card border border-orange-200 bg-orange-50 p-6">
+          <h2 className="text-lg font-semibold text-slate-900">
+            Inscriptions en attente{" "}
+            <span className="ml-1 rounded-full bg-[#FF4D00] px-2 py-0.5 text-xs text-white">
+              {pendingSellers!.length}
+            </span>
+          </h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Verifiez le paiement sur votre Nita (+227 96 95 31 63) avant de confirmer.
+          </p>
+          <div className="mt-3 space-y-3">
+            {pendingSellers!.map((reg: AdminPendingSeller) => (
+              <div key={reg.id} className="rounded-lg border border-orange-200 bg-white p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{reg.business_name || reg.full_name}</p>
+                    <p className="mt-0.5 text-xs text-slate-600">
+                      {reg.full_name} &middot; {reg.identifier}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Type : {reg.activity_type} &middot; {reg.months} mois &middot; {reg.payment_mode?.toUpperCase()}
+                    </p>
+                    {reg.transaction_reference ? (
+                      <p className="mt-0.5 text-xs font-medium text-slate-700">
+                        Ref : {reg.transaction_reference}
+                      </p>
+                    ) : (
+                      <p className="mt-0.5 text-xs text-amber-600">Aucune reference fournie</p>
+                    )}
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      {new Date(reg.submitted_at).toLocaleString("fr-FR")}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="bg-green-600 text-white hover:bg-green-700"
+                      disabled={pendingSellerDecisionMutation.isPending}
+                      onClick={() => pendingSellerDecisionMutation.mutate({ regId: reg.id, decision: "approved" })}
+                    >
+                      Confirmer paiement
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-red-300 text-red-600 hover:bg-red-50"
+                      disabled={pendingSellerDecisionMutation.isPending}
+                      onClick={() => pendingSellerDecisionMutation.mutate({ regId: reg.id, decision: "rejected" })}
+                    >
+                      Rejeter
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+      )}
 
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-slate-900">Vendeurs</h2>

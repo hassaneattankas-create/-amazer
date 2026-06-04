@@ -171,6 +171,26 @@ def _bootstrap_database_if_needed() -> None:
         "CREATE INDEX IF NOT EXISTS ix_order_items_vendor_id ON order_items (vendor_id)",
         "CREATE INDEX IF NOT EXISTS ix_refresh_tokens_user_id ON refresh_tokens (user_id)",
         (
+            "CREATE TABLE IF NOT EXISTS seller_pending_registrations ("
+            "id VARCHAR(36) PRIMARY KEY, "
+            "full_name VARCHAR(255) NOT NULL, "
+            "identifier VARCHAR(320) NOT NULL, "
+            "hashed_password VARCHAR(255) NOT NULL, "
+            "business_name VARCHAR(255), "
+            "activity_type VARCHAR(32) DEFAULT 'shop', "
+            "storefront_tier VARCHAR(32) DEFAULT 'basic', "
+            "payment_mode VARCHAR(20), "
+            "months INTEGER DEFAULT 1, "
+            "transaction_reference VARCHAR(180), "
+            "submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), "
+            "status VARCHAR(20) DEFAULT 'pending', "
+            "admin_note TEXT, "
+            "reviewed_at TIMESTAMPTZ, "
+            "reviewed_by_user_id VARCHAR(36)"
+            ")"
+        ),
+        "CREATE INDEX IF NOT EXISTS ix_seller_pending_reg_status ON seller_pending_registrations (status)",
+        (
             "UPDATE global_settings SET "
             "seller_subscription_fee_shop = COALESCE(seller_subscription_fee_shop, seller_subscription_fee, 5000), "
             "seller_subscription_fee_restaurant = COALESCE(seller_subscription_fee_restaurant, seller_subscription_fee, 5000), "

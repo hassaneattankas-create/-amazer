@@ -253,3 +253,49 @@ class AdminSellerSubscriptionPaymentDecisionRequest(BaseModel):
 
     decision: str = Field(pattern="^(approved|rejected)$")
     admin_note: str | None = Field(default=None, max_length=500)
+
+
+class SellerPreRegisterRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    full_name: str = Field(..., min_length=2, max_length=255)
+    identifier: str = Field(..., min_length=6, max_length=320)
+    password: str = Field(..., min_length=8, max_length=128)
+    business_name: str | None = Field(default=None, max_length=255)
+    activity_type: str = Field(default="shop", pattern=r"^(shop|restaurant|enterprise)$")
+    storefront_tier: str = Field(default="basic", pattern=r"^(basic|premium)$")
+    payment_mode: str = Field(default="nita", pattern=r"^(nita|amana)$")
+    months: int = Field(default=1, ge=1, le=12)
+    transaction_reference: str | None = Field(default=None, max_length=180)
+
+
+class SellerPreRegisterResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    status: str
+    message: str
+
+
+class AdminPendingSellerResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    full_name: str
+    identifier: str
+    business_name: str | None
+    activity_type: str
+    storefront_tier: str
+    payment_mode: str | None
+    months: int
+    transaction_reference: str | None
+    status: str
+    admin_note: str | None = None
+    submitted_at: str
+
+
+class AdminPendingSellerDecisionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    decision: str = Field(pattern="^(approved|rejected)$")
+    admin_note: str | None = Field(default=None, max_length=500)

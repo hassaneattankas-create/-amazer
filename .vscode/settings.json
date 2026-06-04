@@ -1,0 +1,27 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "eslint.workingDirectories": [
+    {
+      "directory": "frontend",
+      "changeProcessCWD": true
+    }
+  ],
+  "tailwindCSS.experimental.classRegex": [
+    ["className=\\\"([^\\\"]*)\\\"", 1]
+  ],
+  "python.defaultInterpreterPath": "c:/Python314/python.exe"
+}

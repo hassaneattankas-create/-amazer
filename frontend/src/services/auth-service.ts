@@ -144,3 +144,26 @@ export async function updateUserPreferences(payload: UserPreferencesResponse) {
   const response = await api.put<UserPreferencesResponse>("/api/v1/auth/preferences", payload);
   return response.data;
 }
+
+export type SellerPreRegisterPayload = {
+  full_name: string;
+  identifier: string;
+  password: string;
+  business_name?: string;
+  activity_type: string;
+  storefront_tier: string;
+  payment_mode: string;
+  months: number;
+  transaction_reference?: string;
+};
+
+export type SellerPreRegisterResponse = {
+  id: string;
+  status: string;
+  message: string;
+};
+
+export async function preRegisterSeller(payload: SellerPreRegisterPayload): Promise<SellerPreRegisterResponse> {
+  const response = await api.post<SellerPreRegisterResponse>("/api/v1/auth/pre-register-seller", payload);
+  return response.data;
+}

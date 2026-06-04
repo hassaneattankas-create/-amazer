@@ -27,10 +27,15 @@ from app.models.product import Price
 from app.models.receipt_scan import ReceiptScan
 from app.models.restaurant import RestaurantOrder
 from app.models.seller_profile import SellerProfile
+from app.models.seller_pending_registration import SellerPendingRegistration
 from app.models.seller_subscription_payment import SellerSubscriptionPayment
 from app.models.user import User
+from app.models.user_preferences import UserPreferences
 from app.models.vendor import Vendor
+from app.core.security import hash_password
 from app.schemas.finance import (
+    AdminPendingSellerDecisionRequest,
+    AdminPendingSellerResponse,
     AdminSellerResponse,
     AdminSellerSubscriptionPaymentDecisionRequest,
     AdminSellerSubscriptionPaymentRequestResponse,
@@ -1440,3 +1445,172 @@ def decide_seller_subscription_payment(
     if payload.decision == "approved":
         _invalidate_public_marketplace_cache()
     return _build_admin_subscription_payment_response(row, profile, seller_user)
+
+
+# ---------------------------------------------------------------------------
+# Inscriptions vendeur en attente (pre-registrations)
+# ---------------------------------------------------------------------------
+
+@router.get("/seller-pre-registrations", response_model=list[AdminPendingSellerResponse])
+def list_seller_pre_registrations(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+    status_filter: str = "pending",
+) -> list[AdminPendingSellerResponse]:
+    _require_finance_pin(request)
+    rows = db.scalars(
+        select(SellerPendingRegistration)
+        .where(SellerPendingRegistration.status == status_filter)
+        .order_by(SellerPendingRegistration.submitted_at.desc())
+        .limit(200)
+    ).all()
+    return [
+        AdminPendingSellerResponse(
+            id=r.id,
+            full_name=r.full_name,
+            identifier=r.identifier,
+            business_name=r.business_name,
+            activity_type=r.activity_type,
+            storefront_tier=r.storefront_tier,
+            payment_mode=r.payment_mode,
+            months=r.months,
+            transaction_reference=r.transaction_reference,
+            status=r.status,
+            admin_note=r.admin_note,
+            submitted_at=r.submitted_at.isoformat(),
+        )
+        for r in rows
+    ]
+
+
+@router.post("/seller-pre-registrations/{reg_id}/decide", response_model=AdminPendingSellerResponse)
+def decide_seller_pre_registration(
+    reg_id: str,
+    payload: AdminPendingSellerDecisionRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminPendingSellerResponse:
+    """Approuver (cree le compte + boutique) ou rejeter une inscription vendeur en attente."""
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    reg = db.get(SellerPendingRegistration, reg_id)
+    if reg is None:
+        raise ValidationDomainError("Inscription introuvable")
+    if reg.status != "pending":
+        raise ValidationDomainError("Cette inscription a deja ete traitee")
+
+    now = datetime.now(UTC)
+    reg.status = payload.decision
+    reg.admin_note = payload.admin_note
+    reg.reviewed_at = now
+    reg.reviewed_by_user_id = admin_user.id
+
+    if payload.decision == "approved":
+        # Creer l utilisateur
+        import uuid as _uuid
+        from app.models.vendor import Vendor as _Vendor
+        identifier = reg.identifier.strip().lower()
+        user = User(
+            id=str(_uuid.uuid4()),
+            email=identifier if "@" in identifier else None,
+            whatsapp_phone=identifier if "@" not in identifier else None,
+            full_name=reg.full_name.strip(),
+            hashed_password=reg.hashed_password,
+            is_active=True,
+        )
+        db.add(user)
+        db.flush()
+        db.add(UserPreferences(user_id=user.id, preferred_currency="XOF"))
+
+        # Creer le vendeur
+        vendor = _Vendor(
+            id=str(_uuid.uuid4()),
+            name=reg.business_name or reg.full_name,
+            city="Niamey",
+            is_active=True,
+            owner_id=user.id,
+        )
+        db.add(vendor)
+        db.flush()
+
+        # Creer le profil vendeur avec abonnement actif
+        from app.models.seller_profile import SellerProfile as _SP
+        subscription_end = now + timedelta(days=30 * reg.months)
+        profile = _SP(
+            id=str(_uuid.uuid4()),
+            user_id=user.id,
+            vendor_id=vendor.id,
+            business_name=reg.business_name or reg.full_name,
+            activity_type=reg.activity_type,
+            storefront_tier=reg.storefront_tier,
+            city="Niamey",
+            onboarding_fee_paid_at=now,
+            subscription_paid_until=subscription_end,
+            subscription_last_payment_reference=reg.transaction_reference or f"ADMIN::PRE-REG::{reg.id}"[:180],
+        )
+        db.add(profile)
+        db.flush()
+
+        # Creer l enregistrement de paiement approuve
+        from app.models.seller_subscription_payment import SellerSubscriptionPayment as _SSP
+        settings_obj = _get_or_create_settings(db)
+        monthly_fee = (
+            settings_obj.seller_subscription_fee_premium if reg.storefront_tier == "premium"
+            else settings_obj.seller_subscription_fee_restaurant if reg.activity_type == "restaurant"
+            else settings_obj.seller_subscription_fee_shop
+        )
+        payment = _SSP(
+            id=str(_uuid.uuid4()),
+            seller_profile_id=profile.id,
+            seller_user_id=user.id,
+            payment_mode=reg.payment_mode or "nita",
+            transaction_reference=reg.transaction_reference or f"PRE-REG::{reg.id}"[:180],
+            months=reg.months,
+            amount_claimed=monthly_fee * reg.months,
+            status="approved",
+            reviewed_by_user_id=admin_user.id,
+            reviewed_at=now,
+        )
+        db.add(payment)
+
+        append_audit_log(
+            db,
+            event_type="admin_pre_registration_approved",
+            actor=admin_user,
+            ip_address=request.client.host if request.client else None,
+            path=str(request.url.path),
+            entity_type="seller_pending_registration",
+            entity_id=reg.id,
+            details={"full_name": reg.full_name, "identifier": reg.identifier, "months": reg.months},
+        )
+        _invalidate_public_marketplace_cache()
+    else:
+        append_audit_log(
+            db,
+            event_type="admin_pre_registration_rejected",
+            actor=admin_user,
+            ip_address=request.client.host if request.client else None,
+            path=str(request.url.path),
+            entity_type="seller_pending_registration",
+            entity_id=reg.id,
+            details={"full_name": reg.full_name, "identifier": reg.identifier},
+        )
+
+    db.commit()
+    db.refresh(reg)
+    return AdminPendingSellerResponse(
+        id=reg.id,
+        full_name=reg.full_name,
+        identifier=reg.identifier,
+        business_name=reg.business_name,
+        activity_type=reg.activity_type,
+        storefront_tier=reg.storefront_tier,
+        payment_mode=reg.payment_mode,
+        months=reg.months,
+        transaction_reference=reg.transaction_reference,
+        status=reg.status,
+        admin_note=reg.admin_note,
+        submitted_at=reg.submitted_at.isoformat(),
+    )

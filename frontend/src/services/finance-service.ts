@@ -10,6 +10,7 @@ import {
 } from "@/lib/api";
 import { isMobileAppBuild } from "@/lib/mobile-app";
 import {
+  AdminPendingSeller,
   AdminSeller,
   AdminSellerPricingPayload,
   AdminSellerSubscriptionPaymentRequest,
@@ -290,6 +291,25 @@ export async function decideAdminSellerSubscriptionPayment(
 ): Promise<AdminSellerSubscriptionPaymentRequest> {
   return adminProxyRequest<AdminSellerSubscriptionPaymentRequest>({
     url: `/admin/finance/seller-subscription-payments/${paymentId}/decision`,
+    method: "POST",
+    data: payload,
+  });
+}
+
+export async function listAdminPendingSellers(status = "pending"): Promise<AdminPendingSeller[]> {
+  return adminProxyRequest<AdminPendingSeller[]>({
+    url: "/admin/finance/seller-pre-registrations",
+    method: "GET",
+    params: { status_filter: status },
+  });
+}
+
+export async function decideAdminPendingSeller(
+  regId: string,
+  payload: { decision: "approved" | "rejected"; admin_note?: string }
+): Promise<AdminPendingSeller> {
+  return adminProxyRequest<AdminPendingSeller>({
+    url: `/admin/finance/seller-pre-registrations/${regId}/decide`,
     method: "POST",
     data: payload,
   });

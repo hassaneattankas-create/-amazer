@@ -11,6 +11,7 @@ from app.models.restaurant import RestaurantMenuItem, RestaurantOrder, Restauran
 from app.models.seller_profile import SellerProfile
 from app.models.seller_subscription_payment import SellerSubscriptionPayment
 from app.models.seller_lead import SellerLead
+from app.models.seller_pending_registration import SellerPendingRegistration
 from app.models.finance import FinanceDistrictFee, FinanceSettings, FinanceTransfer
 from app.models.security_event import SecurityEvent
 from app.models.receipt_scan import ReceiptScan
@@ -49,6 +50,7 @@ __all__ = [
     "RestaurantOrder",
     "RestaurantOrderItem",
     "SellerLead",
+    "SellerPendingRegistration",
     "FinanceSettings",
     "FinanceTransfer",
     "FinanceDistrictFee",
