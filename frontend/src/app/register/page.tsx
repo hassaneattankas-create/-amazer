@@ -218,7 +218,8 @@ function RegisterPageContent() {
     identifier.trim().length >= 6 &&
     password.length >= PASSWORD_MIN_LENGTH &&
     acceptedLegal &&
-    (!isSellerFlow || (businessName.trim().length >= 2 || fullName.trim().length >= 2));
+    (!isSellerFlow || (businessName.trim().length >= 2 || fullName.trim().length >= 2)) &&
+    (!isSellerFlow || transactionRef.trim().length >= 4);
 
   const canVerify = verifyCode.trim().length >= 4 && identifier.trim().length >= 6;
 
@@ -386,10 +387,11 @@ function RegisterPageContent() {
             <div className="space-y-3 rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
               <p className="text-sm font-medium text-slate-800">
                 {totalAmount !== null
-                  ? `Deposez ${formatXOF(totalAmount)} (${subscriptionMonths} mois × ${formatXOF(monthlyFee!)}) sur le +227 96 95 31 63`
-                  : "Deposez le montant de votre abonnement sur le +227 96 95 31 63"}{" "}
-                via Nita ou Amana, puis saisissez la reference de transaction.
-                Votre boutique sera activee apres confirmation du paiement.
+                  ? `Deposez ${formatXOF(totalAmount)} (${subscriptionMonths} mois × ${formatXOF(monthlyFee!)})`
+                  : "Deposez le montant de votre abonnement"}{" "}
+                sur le <span className="text-[#FF4D00]">+227 96 95 31 63</span> via Nita ou Amana,
+                puis confirmez votre paiement en saisissant la reference ci-dessous.
+                Votre boutique sera activee une fois le paiement verifie.
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
                 <select
@@ -411,7 +413,7 @@ function RegisterPageContent() {
                 />
                 <input
                   type="text"
-                  placeholder="Reference transaction (facultatif)"
+                  placeholder="Reference transaction (obligatoire)"
                   value={transactionRef}
                   onChange={(e) => updateTransactionRef(e.target.value)}
                   className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
