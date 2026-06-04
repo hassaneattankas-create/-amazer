@@ -2,28 +2,23 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Search, SearchX, SlidersHorizontal } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Drawer } from "vaul";
 import { useQuery } from "@tanstack/react-query";
 
 import { BarcodeScannerDrawer } from "@/components/BarcodeScannerDrawer";
-import { HeroSection } from "@/components/HeroSection";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useClientMounted } from "@/hooks/use-client-mounted";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { formatMoney } from "@/lib/currency";
-import { resolveImageUrl } from "@/lib/image";
 import { getProductRoute } from "@/lib/mobile-routes";
-import { getHomeContent, trackAdClick } from "@/services/content-service";
+import { getHomeContent } from "@/services/content-service";
 import { getPublicContactInfo } from "@/services/finance-service";
 import { useProductSearch } from "@/hooks/use-product-search";
 import { useAuthStore } from "@/store/auth-store";
-import { HomeContentProduct } from "@/types/content";
 import { ProductSearchItem } from "@/types/product";
 
 const DEBOUNCE_MS = 250;
@@ -39,51 +34,16 @@ const SHELF_TABS = [
 
 type ShelfSlug = (typeof SHELF_TABS)[number]["slug"];
 
-function shuffleItems<T>(items: T[]): T[] {
-  const copy = [...items];
-  for (let index = copy.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
-  }
-  return copy;
-}
-
-function withBoostRotation<T extends { is_boosted: boolean }>(items: T[]): T[] {
-  const boosted = items.filter((entry) => entry.is_boosted);
-  const regular = items.filter((entry) => !entry.is_boosted);
-  if (!boosted.length) {
-    return items;
-  }
-  if (boosted.length <= 3) {
-    return [...boosted, ...regular];
-  }
-  const rotated = shuffleItems(boosted);
-  return [...rotated.slice(0, 3), ...regular, ...rotated.slice(3)];
-}
-
-/** Same ordering rules as withBoostRotation but deterministic (by id) — avoids SSR/client HTML mismatch. */
-function stableBoostOrder<T extends { is_boosted: boolean; id: string }>(items: T[]): T[] {
-  const boosted = items.filter((entry) => entry.is_boosted).sort((a, b) => a.id.localeCompare(b.id));
-  const regular = items.filter((entry) => !entry.is_boosted).sort((a, b) => a.id.localeCompare(b.id));
-  if (!boosted.length) {
-    return regular;
-  }
-  if (boosted.length <= 3) {
-    return [...boosted, ...regular];
-  }
-  return [...boosted.slice(0, 3), ...regular, ...boosted.slice(3)];
-}
-
 export default function HomePage() {
   const [query, setQuery] = useState("");
   const [barcode, setBarcode] = useState("");
   const [activeShelf, setActiveShelf] = useState<ShelfSlug>("all");
-  const mounted = useClientMounted();
   const preferredCurrency = useAuthStore((state) => state.preferredCurrency);
   const debouncedQuery = useDebouncedValue(query, DEBOUNCE_MS);
   const debouncedBarcode = useDebouncedValue(barcode, DEBOUNCE_MS);
 
   const hasActiveFilter = debouncedQuery.trim().length >= 2 || debouncedBarcode.trim().length >= 3;
+
   const { data: homeContent } = useQuery({
     queryKey: ["home-content"],
     queryFn: getHomeContent,
@@ -104,38 +64,10 @@ export default function HomePage() {
   });
 
   const products = useMemo(() => data?.items ?? [], [data?.items]);
-  const shelfFiltered = useMemo(() => {
-    if (activeShelf === "all") {
-      return products;
-    }
+  const displayResults = useMemo(() => {
+    if (activeShelf === "all") return products;
     return products.filter((entry) => entry.category?.slug === activeShelf);
   }, [activeShelf, products]);
-  const boostedResults = useMemo(
-    () => (mounted ? withBoostRotation(shelfFiltered) : stableBoostOrder(shelfFiltered)),
-    [mounted, shelfFiltered],
-  );
-  const displayResults = useMemo(
-    () => (hasActiveFilter ? boostedResults : shelfFiltered),
-    [boostedResults, hasActiveFilter, shelfFiltered]
-  );
-
-  const featuredOffers = useMemo(() => {
-    const cards: Array<{ id: string; name: string; brand: string; amount: number; slug: string }> = [];
-    const pushUnique = (item: HomeContentProduct, slug: string) => {
-      if (cards.some((entry) => entry.id === item.id)) {
-        return;
-      }
-      cards.push({ id: item.id, name: item.name, brand: item.brand, amount: item.amount, slug });
-    };
-    for (const section of homeContent?.sections ?? []) {
-      for (const item of section.products) {
-        if (item.is_boosted) {
-          pushUnique(item, section.slug);
-        }
-      }
-    }
-    return shuffleItems(cards).slice(0, 12);
-  }, [homeContent?.sections]);
 
   const showSkeletons = isPending || (isFetching && displayResults.length === 0);
   const isEmptyState = hasActiveFilter && !isPending && !isError && displayResults.length === 0;
@@ -164,8 +96,6 @@ export default function HomePage() {
 
   return (
     <section className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-6">
-      <HeroSection />
-
       <article className="premium-card mt-4 border border-slate-200 bg-white p-3">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           {SHELF_TABS.map((tab) => (
@@ -186,52 +116,6 @@ export default function HomePage() {
         </div>
       </article>
 
-      {featuredOffers.length ? (
-        <article className="premium-card mt-4 overflow-hidden border border-slate-200 bg-white p-4">
-          <h2 className="luxury-title text-lg font-semibold text-slate-900">Featured Carousel</h2>
-          <p className="mt-1 text-xs text-slate-500">Offres vendeurs en Multi-Boost</p>
-          <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
-            {featuredOffers.map((item) => (
-              <Link
-                key={item.id}
-                href={getProductRoute(item.id)}
-                onClick={() => void trackAdClick(item.id, item.slug)}
-                className="min-w-56 rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-50 to-white p-3 shadow-[0_0_18px_rgba(245,158,11,0.28)]"
-              >
-                <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                  Sponsorise
-                </span>
-                <p className="mt-2 line-clamp-2 text-sm font-semibold text-slate-900">{item.name}</p>
-                <p className="text-xs text-slate-500">{item.brand}</p>
-                <p className="mt-2 text-base font-semibold text-[#FF4D00]">
-                  {formatMoney(item.amount, preferredCurrency)}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </article>
-      ) : null}
-
-      {homeContent?.top_banner_url && !hasActiveFilter ? (
-        <Link
-          href="/search"
-          className="premium-card mt-5 block overflow-hidden border border-[#FF4D00]/40 bg-white shadow-[0_0_20px_rgba(255,77,0,0.22)]"
-        >
-          <div className="relative h-36 w-full sm:h-48">
-            <Image
-              src={resolveImageUrl(homeContent.top_banner_url) || homeContent.top_banner_url}
-              alt="Banniere publicitaire AMAZER"
-              fill
-              loading="lazy"
-              sizes="(max-width: 768px) 100vw, 896px"
-              quality={82}
-              unoptimized
-              className="object-cover"
-            />
-          </div>
-        </Link>
-      ) : null}
-
       <div id="search" className="premium-card mt-5 border border-slate-200 bg-white p-5">
         <div className="group relative">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#FF4D00]" />
@@ -239,9 +123,7 @@ export default function HomePage() {
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
-              if (barcode) {
-                setBarcode("");
-              }
+              if (barcode) setBarcode("");
             }}
             placeholder="Rechercher un produit, une marque, une categorie..."
             className="h-14 rounded-xl border-slate-200 bg-white pl-12 pr-28 text-slate-900 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#FF4D00]/55 group-hover:shadow-[0_0_24px_rgba(255,77,0,0.25)]"
@@ -251,11 +133,7 @@ export default function HomePage() {
         <div className="mt-3 flex justify-end">
           <Drawer.Root>
             <Drawer.Trigger asChild>
-              <Button
-                type="button"
-                size="sm"
-                className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-              >
+              <Button type="button" size="sm" className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50">
                 <SlidersHorizontal className="h-4 w-4 text-[#FF4D00]" />
                 Reglages scanner
               </Button>
@@ -278,9 +156,7 @@ export default function HomePage() {
 
       <div className="mt-8">
         {!hasActiveFilter ? (
-          <h2 className="luxury-title text-xl font-semibold text-slate-900">
-            Tous les produits publies
-          </h2>
+          <h2 className="luxury-title text-xl font-semibold text-slate-900">Tous les produits publies</h2>
         ) : null}
         <p className="text-sm text-slate-600">
           {statusLabel}
@@ -320,12 +196,7 @@ export default function HomePage() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 230,
-                    damping: 18,
-                    delay: Math.min(index * 0.02, 0.35),
-                  }}
+                  transition={{ type: "spring", stiffness: 230, damping: 18, delay: Math.min(index * 0.02, 0.35) }}
                 >
                   <ProductCard product={product} priority={index < 6} />
                 </motion.div>
@@ -344,15 +215,10 @@ export default function HomePage() {
             >
               <SearchX className="mx-auto h-10 w-10 text-[#FF4D00]" />
               <h2 className="mt-4 text-xl font-semibold text-slate-900">Aucun resultat</h2>
-              <p className="mt-2 text-sm text-slate-500">
-                Aucun produit ne correspond a cette recherche.
-              </p>
+              <p className="mt-2 text-sm text-slate-500">Aucun produit ne correspond a cette recherche.</p>
               <Button
                 type="button"
-                onClick={() => {
-                  setQuery("");
-                  setBarcode("");
-                }}
+                onClick={() => { setQuery(""); setBarcode(""); }}
                 className="primary-glow-btn mt-6 bg-[#FF4D00] text-white hover:bg-[#e74700]"
               >
                 Reinitialiser la recherche
@@ -365,56 +231,39 @@ export default function HomePage() {
       {!hasActiveFilter && homeContent?.sections?.length ? (
         <div className="mt-10 space-y-7">
           {homeContent.sections.map((section) => {
-            const sectionProducts = mounted
-              ? withBoostRotation(section.products)
-              : stableBoostOrder(section.products);
-            if (!sectionProducts.length) {
-              return null;
-            }
+            if (!section.products.length) return null;
             return (
               <section key={section.id} className="space-y-3">
                 <h2 className="luxury-title text-2xl font-semibold text-slate-900">{section.title}</h2>
-
-                {sectionProducts.length ? (
-                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-                    {sectionProducts.map((item) => (
-                      <article
-                        key={item.id}
-                        className={`premium-card overflow-hidden border bg-white p-4 ${
-                          item.is_boosted
-                            ? "border-amber-400/60 shadow-[0_0_24px_rgba(245,158,11,0.35)]"
-                            : "border-slate-200"
-                        }`}
-                      >
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                  {section.products.map((item) => {
+                    const specs = (item as { specs?: Record<string, unknown> }).specs ?? {};
+                    const promoPrice = typeof specs.promo_price === "number" ? specs.promo_price : null;
+                    const originalPrice = typeof specs.original_price === "number" ? specs.original_price : null;
+                    return (
+                      <article key={item.id} className="premium-card overflow-hidden border border-slate-200 bg-white p-4">
                         <p className="text-xs uppercase tracking-wide text-slate-500">{item.brand}</p>
-                        {(item.is_boosted || item.is_sponsored) && (
-                          <span className="mt-1 inline-flex rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                            Sponsorise
+                        {promoPrice !== null ? (
+                          <span className="mt-1 inline-flex rounded-full border border-orange-300 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-[#FF4D00]">
+                            Promo
                           </span>
-                        )}
+                        ) : null}
                         <h3 className="mt-2 line-clamp-2 text-base font-semibold text-slate-900">{item.name}</h3>
-                        <p className="mt-2 text-lg font-semibold text-[#FF4D00]">
-                          {formatMoney(item.amount, preferredCurrency)}
-                        </p>
-                        <Button
-                          asChild
-                          className="primary-glow-btn mt-3 w-full bg-[#FF4D00] text-white hover:bg-[#e74700]"
-                        >
-                          <Link
-                            href={getProductRoute(item.id)}
-                            onClick={() => {
-                              if (item.is_boosted || item.is_sponsored) {
-                                void trackAdClick(item.id, section.slug);
-                              }
-                            }}
-                          >
-                            Voir le detail
-                          </Link>
+                        <div className="mt-2 flex items-baseline gap-2">
+                          {originalPrice !== null && promoPrice !== null ? (
+                            <span className="text-sm text-slate-400 line-through">{Math.round(originalPrice)} XOF</span>
+                          ) : null}
+                          <p className="text-lg font-semibold text-[#FF4D00]">
+                            {formatMoney(item.amount, preferredCurrency)}
+                          </p>
+                        </div>
+                        <Button asChild className="primary-glow-btn mt-3 w-full bg-[#FF4D00] text-white hover:bg-[#e74700]">
+                          <Link href={getProductRoute(item.id)}>Voir le detail</Link>
                         </Button>
                       </article>
-                    ))}
-                  </div>
-                ) : null}
+                    );
+                  })}
+                </div>
               </section>
             );
           })}

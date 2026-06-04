@@ -27,7 +27,12 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
     description,
     main_image_url,
     best_offer: { amount, stock_quantity, vendor },
+    specs,
   } = product;
+
+  const promoPrice = typeof specs?.promo_price === "number" ? specs.promo_price as number : null;
+  const originalPrice = typeof specs?.original_price === "number" ? specs.original_price as number : null;
+  const isOnPromo = promoPrice !== null;
 
   const fallbackImage = product.images?.length ? product.images[0].image_url : null;
   const resolvedImageUrl = useMemo(
@@ -78,12 +83,22 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
       <div className="space-y-3 p-4">
         <div>
           <p className="text-xs uppercase tracking-wide text-slate-500">{brand}</p>
+          {isOnPromo ? (
+            <span className="mt-1 inline-flex rounded-full border border-orange-300 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-[#FF4D00]">
+              Promo
+            </span>
+          ) : null}
           <h3 className="mt-1 line-clamp-2 text-base font-semibold text-slate-900">{name}</h3>
           {description ? <p className="mt-2 line-clamp-2 text-sm text-slate-600">{description}</p> : null}
         </div>
 
         <div className="flex items-center justify-between text-sm">
-          <AnimatedPrice value={amount} className="font-semibold text-[#FF4D00]" />
+          <div className="flex items-baseline gap-2">
+            {isOnPromo && originalPrice !== null ? (
+              <span className="text-xs text-slate-400 line-through">{Math.round(originalPrice)} XOF</span>
+            ) : null}
+            <AnimatedPrice value={amount} className="font-semibold text-[#FF4D00]" />
+          </div>
           <p className={stock_quantity > 0 ? "text-emerald-600" : "text-rose-500"}>
             {stock_quantity > 0 ? `Stock: ${stock_quantity}` : "Rupture"}
           </p>

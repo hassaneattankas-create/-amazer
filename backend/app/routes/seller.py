@@ -840,6 +840,9 @@ def update_inventory_item(
     if payload.is_active is not None:
         price.is_active = payload.is_active
     if payload.promo_amount is not None:
+        current = float(price.amount)
+        if current > float(payload.promo_amount):
+            specs["original_price"] = current
         specs["promo_price"] = payload.promo_amount
         specs["promo_until"] = (now + timedelta(days=7)).isoformat()
         price.amount = payload.promo_amount

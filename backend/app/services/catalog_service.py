@@ -255,7 +255,7 @@ class CatalogService:
                         is_active=vendor.is_active,
                         is_verified=bool(getattr(getattr(vendor, "seller_profile", None), "is_verified", False)),
                     ),
-                    original_amount=float(max(price.amount, promo_amount)),
+                    original_amount=float(getattr(product, "specs", {}).get("original_price") or max(price.amount, promo_amount)),
                     promo_amount=float(promo_amount),
                     currency=price.currency,
                     promo_until=self._promo_until(product),
