@@ -9,7 +9,7 @@ import { Building2, Store, UtensilsCrossed } from "lucide-react";
 import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import { login, preRegisterSeller, register, verifyAccount, type RegisterResponse } from "@/services/auth-service";
 import { getPublicFinanceSettings } from "@/services/finance-service";
