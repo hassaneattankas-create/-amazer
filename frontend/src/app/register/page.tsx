@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, Suspense, useMemo, useRef, useState } from "react";
+import { FormEvent, Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Building2, Store, UtensilsCrossed } from "lucide-react";
@@ -9,7 +9,7 @@ import { Building2, Store, UtensilsCrossed } from "lucide-react";
 import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
-import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import { login, preRegisterSeller, register, verifyAccount, type RegisterResponse } from "@/services/auth-service";
 import { getPublicFinanceSettings } from "@/services/finance-service";
@@ -92,30 +92,14 @@ function RegisterPageContent() {
   const [transactionRef, setTransactionRef] = useState("");
   const [preRegSubmitted, setPreRegSubmitted] = useState(false);
 
-  const paymentRef = useRef<{
-    payment_mode: "nita" | "amana";
-    months: number;
-    transaction_reference: string;
-  }>({ payment_mode: "nita", months: 1, transaction_reference: "" });
-
   const next = searchParams.get("next") || "/";
   const isSellerFlow = useMemo(
     () => searchParams.get("seller") === "1" || next.startsWith("/seller"),
     [next, searchParams]
   );
 
-  function updatePaymentMode(mode: "nita" | "amana") {
-    setPaymentMode(mode);
-    paymentRef.current.payment_mode = mode;
-  }
   function updateSubscriptionMonths(months: number) {
-    const clamped = Math.max(1, Math.min(12, months));
-    setSubscriptionMonths(clamped);
-    paymentRef.current.months = clamped;
-  }
-  function updateTransactionRef(ref: string) {
-    setTransactionRef(ref);
-    paymentRef.current.transaction_reference = ref;
+    setSubscriptionMonths(Math.max(1, Math.min(12, months)));
   }
 
   const { data: sellerPricing, isPending: sellerPricingPending, isError: sellerPricingError } = useQuery({
@@ -183,11 +167,8 @@ function RegisterPageContent() {
     setIsLoading(true);
     try {
       await verifyAccount({ identifier: identifier.trim(), code: verifyCode });
-      await login({
-        identifier: identifier.trim(),
-        password,
-      });
-      await finalizeRedirect();
+      await login({ identifier: identifier.trim(), password });
+      window.location.assign(next.startsWith("/") ? next : "/");
     } catch (error) {
       setStatus(getApiErrorMessage(error, "Verification impossible. Verifiez le code."));
     } finally {
@@ -403,7 +384,7 @@ function RegisterPageContent() {
               <div className="grid gap-3 sm:grid-cols-3">
                 <select
                   value={paymentMode}
-                  onChange={(e) => updatePaymentMode(e.target.value as "nita" | "amana")}
+                  onChange={(e) => setPaymentMode(e.target.value as "nita" | "amana")}
                   className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
                 >
                   <option value="nita">Nita</option>
@@ -422,7 +403,7 @@ function RegisterPageContent() {
                   type="text"
                   placeholder="Reference transaction"
                   value={transactionRef}
-                  onChange={(e) => updateTransactionRef(e.target.value)}
+                  onChange={(e) => setTransactionRef(e.target.value)}
                   className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
                 />
               </div>
