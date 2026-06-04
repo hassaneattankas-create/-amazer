@@ -352,7 +352,7 @@ export default function AdminFinancePage() {
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="luxury-title text-lg font-semibold">Parametrage financier</h2>
         <p className="mt-2 text-sm text-slate-600">
-          Pour eviter les doublons, tous les parametres (commission, abonnements, livraison, boosts, support)
+          Pour eviter les doublons, tous les parametres (commission, abonnements, livraison, support)
           sont maintenant centralises dans une seule categorie: <strong>Admin Tarifs</strong>.
         </p>
         <Button

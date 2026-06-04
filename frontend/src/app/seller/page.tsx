@@ -1056,7 +1056,7 @@ function SellerPageContent() {
         </article>
       )}
 
-      {showProductSection && !sellerPaymentRequired && false ? (
+      {false && showProductSection && !sellerPaymentRequired ? (
         <article className="premium-card border border-slate-200 bg-white p-6">
           <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
             <PlusCircle className="h-5 w-5 text-[#FF4D00]" />
@@ -1156,7 +1156,7 @@ function SellerPageContent() {
         </article>
       ) : null}
 
-      {showRestaurantSection && !sellerPaymentRequired && false ? (
+      {false && showRestaurantSection && !sellerPaymentRequired ? (
         <article className="premium-card border border-slate-200 bg-white p-6">
           <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
             <UtensilsCrossed className="h-5 w-5 text-[#FF4D00]" />

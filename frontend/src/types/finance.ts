@@ -7,10 +7,6 @@ export type FinanceSettings = {
   seller_subscription_fee_shop: number;
   seller_subscription_fee_restaurant: number;
   seller_subscription_fee_premium: number;
-  ad_boost_price: number;
-  ad_boost_duration_days: number;
-  ad_boost_price_24h: number;
-  ad_boost_price_7d: number;
   launch_mode_zero_commission: boolean;
   max_products_basic_tier: number;
   platform_wallet_phone: string | null;

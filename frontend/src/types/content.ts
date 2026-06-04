@@ -3,8 +3,6 @@ export type HomeContentProduct = {
   name: string;
   brand: string;
   main_image_url: string | null;
-  is_sponsored: boolean;
-  is_boosted: boolean;
   amount: number;
   currency: string;
 };

@@ -101,7 +101,7 @@ export default function AdminSectionsPage() {
       <header className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="luxury-title text-3xl font-semibold">Sections Dynamiques</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Creez des rubriques comme Meilleures Ventes, Nouveautes, Sponsorises.
+          Creez des rubriques comme Meilleures Ventes, Nouveautes, Tendances.
         </p>
       </header>
 

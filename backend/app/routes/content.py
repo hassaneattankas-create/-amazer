@@ -20,7 +20,6 @@ from app.models.product import Price, Product
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
-from app.services.product_boost_service import product_boost_active_for_display
 from app.schemas.content import (
     AdClickProductStat,
     AdClickRequest,
@@ -70,10 +69,6 @@ def _is_vendor_publicly_visible(vendor: Vendor | None) -> bool:
     return True
 
 
-def _is_boost_active(product: Product) -> bool:
-    return product_boost_active_for_display(product)
-
-
 def _build_fallback_home_sections(db: Session) -> list[HomeSectionResponse]:
     product_candidates = db.scalars(
         select(Product)
@@ -83,7 +78,7 @@ def _build_fallback_home_sections(db: Session) -> list[HomeSectionResponse]:
             .selectinload(Vendor.seller_profile)
             .selectinload(SellerProfile.user)
         )
-        .order_by(Product.is_boosted.desc(), Product.is_sponsored.desc(), Product.updated_at.desc())
+        .order_by(Product.updated_at.desc())
         .limit(60)
     ).all()
 
@@ -101,8 +96,8 @@ def _build_fallback_home_sections(db: Session) -> list[HomeSectionResponse]:
                 name=product.name,
                 brand=product.brand,
                 main_image_url=product.main_image_url,
-                is_sponsored=product.is_sponsored,
-                is_boosted=_is_boost_active(product),
+                is_sponsored=False,
+                is_boosted=False,
                 amount=amount,
                 currency=currency,
             )
@@ -433,11 +428,7 @@ def get_home_content(
         .limit(40)
     ).all()
     top_banner = next(
-        (
-            entry.ad_banner_url
-            for entry in banner_candidates
-            if _is_boost_active(entry) and _best_offer_price(entry) is not None
-        ),
+        (entry.ad_banner_url for entry in banner_candidates if _best_offer_price(entry) is not None),
         None,
     )
 
@@ -458,8 +449,8 @@ def get_home_content(
                         name=item.product.name,
                         brand=item.product.brand,
                         main_image_url=item.product.main_image_url,
-                        is_sponsored=item.product.is_sponsored,
-                        is_boosted=_is_boost_active(item.product),
+                        is_sponsored=False,
+                        is_boosted=False,
                         amount=amount,
                         currency=currency,
                     )

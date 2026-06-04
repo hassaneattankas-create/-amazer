@@ -413,7 +413,7 @@ export default function AdminTarifsPage() {
       ) : null}
       <header className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="luxury-title text-3xl font-semibold">Controle Financier Dynamique</h1>
-        <p className="mt-2 text-sm text-slate-600">Commission, frais, livraison, boosts et controle vendeurs.</p>
+        <p className="mt-2 text-sm text-slate-600">Commission, frais, livraison, abonnements et controle vendeurs.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Link
             href="/admin/catalog"
