@@ -306,7 +306,19 @@ export default function SellerDashboardPage() {
       })
       .filter((entry) => entry.name && Number.isFinite(entry.price));
 
+  const [showDeleteZone, setShowDeleteZone] = useState(false);
+
   const normalizeImageInput = (raw: string): string | undefined => normalizeImageInputForApi(raw);
+
+  function nextOrderStep(current: string): { label: string; next: "commande" | "preparation" | "livraison" | "recu" } | null {
+    const map: Record<string, { label: string; next: "commande" | "preparation" | "livraison" | "recu" }> = {
+      "commande": { label: "Confirmer reception paiement", next: "preparation" },
+      "preparation": { label: "Expedier / En livraison", next: "livraison" },
+      "livraison": { label: "Marquer livre", next: "recu" },
+    };
+    return map[current] ?? null;
+  }
+
   const dashboardTitle =
     sellerMode === "restaurant"
       ? "Mon Restaurant AMAZER"
@@ -386,29 +398,22 @@ export default function SellerDashboardPage() {
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
-      <header className="premium-card border border-slate-200 bg-white p-6">
-        <h1 className="luxury-title text-3xl font-semibold">{dashboardTitle}</h1>
-        <p className="mt-2 text-sm text-slate-600">{dashboardDescription}</p>
-        {profile?.business_name ? (
-          <p className="mt-2 text-sm font-medium text-slate-900">Espace actif: {profile.business_name}</p>
-        ) : null}
-      </header>
-
-      <article className="premium-card border border-slate-200 bg-white p-6">
-        <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-          <Settings2 className="h-5 w-5 text-[#FF4D00]" />
-          Configuration vendeur
-        </h2>
-        <p className="mt-2 text-sm text-slate-600">
-          Pour modifier les informations de ta boutique (logo, cover, description, horaires, galerie, chambres) utilise la page de configuration.
-          La publication de produits et du menu restaurant se fait uniquement ici dans le dashboard.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <Button asChild variant="outline">
-            <Link href="/seller">Modifier le profil boutique</Link>
+      <header className="premium-card border border-slate-200 bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="luxury-title text-2xl font-semibold">{dashboardTitle}</h1>
+            {profile?.business_name ? (
+              <p className="mt-1 text-sm text-slate-500">{profile.business_name}</p>
+            ) : null}
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/seller">
+              <Settings2 className="mr-1.5 h-4 w-4" />
+              Modifier le profil
+            </Link>
           </Button>
         </div>
-      </article>
+      </header>
 
       <div className="space-y-6">
         {showProductTools ? (
@@ -614,43 +619,31 @@ export default function SellerDashboardPage() {
               Commandes restaurant en temps reel
             </h2>
             <div className="mt-4 space-y-3">
-              {restaurantOrders.map((order) => (
-                <div key={order.id} className="rounded-2xl border border-slate-200 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900">
-                      {order.customer_name} - {order.customer_phone}
-                    </p>
-                    <p className="text-xs text-slate-500">{order.status}</p>
+              {restaurantOrders.map((order) => {
+                const next = nextOrderStep(order.status);
+                return (
+                  <div key={order.id} className="rounded-xl border border-slate-200 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{order.customer_name} — {order.customer_phone}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">{order.items.map((it) => `${it.dish_name} x${it.quantity}`).join(", ")}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">{order.delivery_address} | {order.payment_mode?.toUpperCase()}</p>
+                        <AnimatedPrice value={order.total_amount} className="mt-1 text-sm font-semibold text-[#FF4D00]" />
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600">
+                          {order.status === "commande" ? "Nouvelle" : order.status === "preparation" ? "En preparation" : order.status === "livraison" ? "En livraison" : "Livree"}
+                        </span>
+                        {next ? (
+                          <Button size="sm" className="primary-glow-btn bg-[#FF4D00] text-white" onClick={() => orderStatusMutation.mutate({ orderId: order.id, status: next.next })}>
+                            {next.label}
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">{order.delivery_address}</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Livraison: ~{order.delivery_minutes} min | Paiement: {order.payment_mode}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-600">
-                    {order.items.map((item) => `${item.dish_name} x${item.quantity}`).join(" | ")}
-                  </p>
-                  <AnimatedPrice
-                    value={order.total_amount}
-                    className="mt-2 text-base font-semibold text-[#FF4D00]"
-                  />
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {(["commande", "preparation", "livraison", "recu"] as const).map((step) => (
-                      <Button
-                        key={`${order.id}-${step}`}
-                        type="button"
-                        onClick={() => orderStatusMutation.mutate({ orderId: order.id, status: step })}
-                        className={
-                          order.status === step
-                            ? "border border-[#FF4D00]/35 bg-[#FF4D00]/10 text-[#FF4D00]"
-                            : "border border-slate-200 bg-white text-slate-700"
-                        }
-                      >
-                        {step}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {!restaurantOrders.length ? (
                 <p className="text-sm text-slate-500">Aucune commande restaurant en cours.</p>
               ) : null}
@@ -665,42 +658,37 @@ export default function SellerDashboardPage() {
               Commandes boutique en temps reel
             </h2>
             <div className="mt-4 space-y-3">
-              {shopOrders.map((order) => (
-                <div key={order.id} className="rounded-2xl border border-slate-200 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900">
-                      {order.customer_name} {order.tracking_code ? `- ${order.tracking_code}` : ""}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {order.status} | {order.delivery_type}
-                    </p>
+              {shopOrders.map((order) => {
+                const next = nextOrderStep(order.status);
+                return (
+                  <div key={order.id} className="rounded-xl border border-slate-200 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {order.customer_name} {order.tracking_code ? `#${order.tracking_code}` : ""}
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {order.items.map((it) => `${it.product_name} x${it.quantity}`).join(", ")}
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {order.payment_mode?.toUpperCase()} | {new Date(order.created_at).toLocaleDateString("fr-FR")}
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-[#FF4D00]">{formatXOF(order.total_amount)}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600">
+                          {order.status === "commande" ? "Nouvelle" : order.status === "payment_pending" ? "Paiement en attente" : order.status === "preparation" ? "En preparation" : order.status === "livraison" ? "En livraison" : "Livree"}
+                        </span>
+                        {next ? (
+                          <Button size="sm" className="primary-glow-btn bg-[#FF4D00] text-white" onClick={() => shopOrderStatusMutation.mutate({ orderId: order.id, status: next.next })}>
+                            {next.label}
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {order.items.length} article(s) | paiement {order.payment_mode} |{" "}
-                    {new Date(order.created_at).toLocaleString("fr-FR")}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-600">
-                    {order.items.map((item) => `${item.product_name} x${item.quantity}`).join(" | ")}
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-[#FF4D00]">{formatXOF(order.total_amount)}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {(["commande", "preparation", "livraison", "recu"] as const).map((step) => (
-                      <Button
-                        key={`${order.id}-${step}`}
-                        type="button"
-                        onClick={() => shopOrderStatusMutation.mutate({ orderId: order.id, status: step })}
-                        className={
-                          order.status === step
-                            ? "border border-[#FF4D00]/35 bg-[#FF4D00]/10 text-[#FF4D00]"
-                            : "border border-slate-200 bg-white text-slate-700"
-                        }
-                      >
-                        {step}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {!shopOrders.length ? (
                 <p className="text-sm text-slate-500">Aucune commande boutique en cours.</p>
               ) : null}
@@ -730,25 +718,18 @@ export default function SellerDashboardPage() {
                     <p className="mt-1 text-xs text-slate-500">Note: {reservation.note}</p>
                   ) : null}
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {(["pending", "confirmed", "declined"] as const).map((step) => (
-                      <Button
-                        key={`${reservation.id}-${step}`}
-                        type="button"
-                        onClick={() =>
-                          reservationStatusMutation.mutate({
-                            reservationId: reservation.id,
-                            status: step,
-                          })
-                        }
-                        className={
-                          reservation.status === step
-                            ? "border border-[#FF4D00]/35 bg-[#FF4D00]/10 text-[#FF4D00]"
-                            : "border border-slate-200 bg-white text-slate-700"
-                        }
-                      >
-                        {step}
+                    {reservation.status !== "confirmed" ? (
+                      <Button size="sm" className="border border-emerald-300 bg-emerald-50 text-emerald-700"
+                        onClick={() => reservationStatusMutation.mutate({ reservationId: reservation.id, status: "confirmed" })}>
+                        Confirmer
                       </Button>
-                    ))}
+                    ) : null}
+                    {reservation.status !== "declined" ? (
+                      <Button size="sm" className="border border-rose-300 bg-rose-50 text-rose-700"
+                        onClick={() => reservationStatusMutation.mutate({ reservationId: reservation.id, status: "declined" })}>
+                        Refuser
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -782,25 +763,18 @@ export default function SellerDashboardPage() {
                     {booking.guest_count} personne(s) | acompte {formatXOF(booking.deposit_amount)}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {(["pending", "confirmed", "cancelled"] as const).map((step) => (
-                      <Button
-                        key={`${booking.id}-${step}`}
-                        type="button"
-                        onClick={() =>
-                          hotelBookingStatusMutation.mutate({
-                            bookingId: booking.id,
-                            status: step,
-                          })
-                        }
-                        className={
-                          booking.status === step
-                            ? "border border-[#FF4D00]/35 bg-[#FF4D00]/10 text-[#FF4D00]"
-                            : "border border-slate-200 bg-white text-slate-700"
-                        }
-                      >
-                        {step}
+                    {booking.status !== "confirmed" ? (
+                      <Button size="sm" className="border border-emerald-300 bg-emerald-50 text-emerald-700"
+                        onClick={() => hotelBookingStatusMutation.mutate({ bookingId: booking.id, status: "confirmed" })}>
+                        Confirmer
                       </Button>
-                    ))}
+                    ) : null}
+                    {booking.status !== "cancelled" ? (
+                      <Button size="sm" className="border border-rose-300 bg-rose-50 text-rose-700"
+                        onClick={() => hotelBookingStatusMutation.mutate({ bookingId: booking.id, status: "cancelled" })}>
+                        Annuler
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -828,179 +802,111 @@ Catalogue produits
             </article>
             {inventory.map((item) => (
               <article key={item.price_id} className="premium-card border border-slate-200 bg-white p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
-                      <Boxes className="h-4 w-4 text-[#FF4D00]" />
-                      {item.product_name}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">{item.brand}</p>
-                    <AnimatedPrice value={item.amount} className="mt-2 text-lg font-semibold text-[#FF4D00]" />
+                {/* Ligne principale : image + infos + champs + actions */}
+                <div className="flex flex-wrap gap-3 items-start">
+                  {/* Image */}
+                  <div className="shrink-0">
+                    {item.main_image_url ? (
+                      <img
+                        src={resolveImageUrl(item.main_image_url) ?? ""}
+                        alt={item.product_name}
+                        className="h-16 w-16 rounded-lg object-cover border border-slate-200"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setEditingImagePriceId(item.price_id); setEditImageUrl(""); }}
+                        className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-[10px] text-slate-400 hover:border-[#FF4D00]/50"
+                      >
+                        + Photo
+                      </button>
+                    )}
+                    {item.main_image_url ? (
+                      <button
+                        type="button"
+                        onClick={() => { setEditingImagePriceId(item.price_id); setEditImageUrl(item.main_image_url ?? ""); }}
+                        className="mt-1 w-full text-center text-[10px] text-slate-400 hover:text-[#FF4D00]"
+                      >
+                        Changer
+                      </button>
+                    ) : null}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Input type="number" min={0} defaultValue={item.amount} className="w-28" id={`amount-${item.price_id}`} />
-                    <Input type="number" min={0} defaultValue={item.stock_quantity} className="w-24" id={`stock-${item.price_id}`} />
-                    <Input
-                      type="number"
-                      min={0}
-                      defaultValue={item.promo_price ?? ""}
-                      placeholder="Promo"
-                      className="w-24"
-                      id={`promo-${item.price_id}`}
-                    />
+
+                  {/* Champs éditables */}
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Input id={`name-${item.price_id}`} defaultValue={item.product_name} placeholder="Nom" className="h-9 text-sm" />
+                      <Input id={`brand-${item.price_id}`} defaultValue={item.brand} placeholder="Marque" className="h-9 text-sm" />
+                      <Input id={`desc-${item.price_id}`} defaultValue={item.description ?? ""} placeholder="Description" className="h-9 text-sm sm:col-span-2" />
+                    </div>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <Input type="number" min={0} defaultValue={item.amount} placeholder="Prix XOF" className="h-9 w-28 text-sm" id={`amount-${item.price_id}`} />
+                      <Input type="number" min={0} defaultValue={item.stock_quantity} placeholder="Stock" className="h-9 w-20 text-sm" id={`stock-${item.price_id}`} />
+                      <Input type="number" min={0} defaultValue={item.promo_price ?? ""} placeholder="Promo" className="h-9 w-24 text-sm" id={`promo-${item.price_id}`} />
+                      {item.promo_price ? <span className="text-xs text-[#FF4D00]">Promo: {item.promo_price.toFixed(0)} XOF</span> : null}
+                    </div>
+                  </div>
+
+                  {/* Boutons actions */}
+                  <div className="flex flex-col gap-2 shrink-0">
                     <Button
+                      size="sm"
                       className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
+                      disabled={inventoryMutation.isPending}
                       onClick={() => {
-                        const amountInput = document.getElementById(`amount-${item.price_id}`) as HTMLInputElement | null;
-                        const stockInput = document.getElementById(`stock-${item.price_id}`) as HTMLInputElement | null;
-                        const promoInput = document.getElementById(`promo-${item.price_id}`) as HTMLInputElement | null;
-                        const promoValue = Number(promoInput?.value ?? 0);
+                        const get = (id: string) => (document.getElementById(id) as HTMLInputElement | null)?.value ?? "";
+                        const promoVal = Number(get(`promo-${item.price_id}`));
                         inventoryMutation.mutate({
                           priceId: item.price_id,
-                          amount: Number(amountInput?.value ?? item.amount),
-                          stock: Number(stockInput?.value ?? item.stock_quantity),
-                          ...(promoValue > 0 ? { promo_amount: promoValue } : {}),
+                          amount: Number(get(`amount-${item.price_id}`)) || item.amount,
+                          stock: Number(get(`stock-${item.price_id}`)) ?? item.stock_quantity,
+                          product_name: get(`name-${item.price_id}`).trim() || undefined,
+                          brand: get(`brand-${item.price_id}`).trim() || undefined,
+                          description: get(`desc-${item.price_id}`).trim() || undefined,
+                          ...(promoVal > 0 ? { promo_amount: promoVal } : {}),
                         });
                       }}
                     >
                       Sauver
                     </Button>
                     <Button
-                      className={
-                        item.is_active
-                          ? "border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
-                          : "border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                      }
-                      onClick={() =>
-                        inventoryMutation.mutate({
-                          priceId: item.price_id,
-                          amount: item.amount,
-                          stock: item.stock_quantity,
-                          is_active: !item.is_active,
-                        })
-                      }
+                      size="sm"
+                      className={item.is_active ? "border border-rose-300 bg-rose-50 text-rose-700" : "border border-emerald-300 bg-emerald-50 text-emerald-700"}
+                      onClick={() => inventoryMutation.mutate({ priceId: item.price_id, amount: item.amount, stock: item.stock_quantity, is_active: !item.is_active })}
                     >
-                      {item.is_active ? "Retirer" : "Re-publier"}
+                      {item.is_active ? "Retirer" : "Republier"}
                     </Button>
                     <Button
-                      className="border border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+                      size="sm"
+                      className="border border-red-200 bg-white text-red-600 hover:bg-red-50"
                       disabled={deleteInventoryMutation.isPending}
                       onClick={() => {
-                        const confirmed = window.confirm(
-                          `Supprimer "${item.product_name}" du catalogue vendeur ? Cette action le retire de la boutique publique.`,
-                        );
-                        if (confirmed) {
+                        if (window.confirm(`Supprimer "${item.product_name}" ?`)) {
                           deleteInventoryMutation.mutate(item.price_id);
                         }
                       }}
                     >
-                      <Trash2 className="mr-1 h-4 w-4" />
-                      Supprimer
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
-                <p className="mt-1 text-xs text-slate-500">
-                  {item.promo_price ? `Promo active: ${item.promo_price.toFixed(0)} XOF` : ""}
-                </p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-3 border-t border-slate-100 pt-3">
-                  <Input
-                    id={`name-${item.price_id}`}
-                    defaultValue={item.product_name}
-                    placeholder="Nom du produit"
-                    className="h-9 text-xs"
-                  />
-                  <Input
-                    id={`brand-${item.price_id}`}
-                    defaultValue={item.brand}
-                    placeholder="Marque"
-                    className="h-9 text-xs"
-                  />
-                  <Input
-                    id={`desc-${item.price_id}`}
-                    defaultValue={item.description ?? ""}
-                    placeholder="Description"
-                    className="h-9 text-xs sm:col-span-1"
-                  />
-                  <Button
-                    size="sm"
-                    className="bg-slate-700 text-white hover:bg-slate-800 sm:col-span-3 w-full sm:w-auto"
-                    onClick={() => {
-                      const nameInput = document.getElementById(`name-${item.price_id}`) as HTMLInputElement | null;
-                      const brandInput = document.getElementById(`brand-${item.price_id}`) as HTMLInputElement | null;
-                      const descInput = document.getElementById(`desc-${item.price_id}`) as HTMLInputElement | null;
-                      inventoryMutation.mutate({
-                        priceId: item.price_id,
-                        amount: item.amount,
-                        stock: item.stock_quantity,
-                        product_name: nameInput?.value.trim() || undefined,
-                        brand: brandInput?.value.trim() || undefined,
-                        description: descInput?.value.trim() || undefined,
-                      });
-                    }}
-                  >
-                    Modifier details
-                  </Button>
-                </div>
-                <div className="mt-3 border-t border-slate-100 pt-3">
-                  <div className="flex items-center gap-3">
-                    {item.main_image_url ? (
-                      <img
-                        src={resolveImageUrl(item.main_image_url) ?? ""}
-                        alt={item.product_name}
-                        className="h-14 w-14 rounded-md object-cover border border-slate-200"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                      />
-                    ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50 text-xs text-slate-400">
-                        Sans photo
-                      </div>
-                    )}
-                    {editingImagePriceId === item.price_id ? (
-                      <div className="flex flex-1 flex-col gap-2">
-                        <SingleMediaField
-                          label=""
-                          value={editImageUrl}
-                          onChange={setEditImageUrl}
-                          emptyMessage="Choisis ou uploade une photo"
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            className="bg-[#FF4D00] text-white hover:bg-[#e74700] text-xs px-3 h-8"
-                            onClick={() => {
-                              const normalized = normalizeImageInputForApi(editImageUrl);
-                              inventoryMutation.mutate({
-                                priceId: item.price_id,
-                                amount: item.amount,
-                                stock: item.stock_quantity,
-                                main_image_url: normalized ?? "",
-                              });
-                              setEditingImagePriceId(null);
-                              setEditImageUrl("");
-                            }}
-                          >
-                            Sauver photo
-                          </Button>
-                          <Button
-                            className="border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-xs px-3 h-8"
-                            onClick={() => { setEditingImagePriceId(null); setEditImageUrl(""); }}
-                          >
-                            Annuler
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <Button
-                        className="border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-xs px-3 h-8"
-                        onClick={() => {
-                          setEditingImagePriceId(item.price_id);
-                          setEditImageUrl(item.main_image_url ?? "");
-                        }}
-                      >
-                        {item.main_image_url ? "Changer photo" : "Ajouter photo"}
-                      </Button>
-                    )}
+
+                {/* Edition image (quand active) */}
+                {editingImagePriceId === item.price_id ? (
+                  <div className="mt-3 flex gap-2 items-end border-t border-slate-100 pt-3">
+                    <div className="flex-1">
+                      <SingleMediaField label="" value={editImageUrl} onChange={setEditImageUrl} emptyMessage="Choisis ou uploade une photo" />
+                    </div>
+                    <Button size="sm" className="bg-[#FF4D00] text-white" onClick={() => {
+                      inventoryMutation.mutate({ priceId: item.price_id, amount: item.amount, stock: item.stock_quantity, main_image_url: normalizeImageInputForApi(editImageUrl) ?? "" });
+                      setEditingImagePriceId(null); setEditImageUrl("");
+                    }}>
+                      Sauver photo
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => { setEditingImagePriceId(null); setEditImageUrl(""); }}>Annuler</Button>
                   </div>
-                </div>
+                ) : null}
               </article>
             ))}
             {!inventory.length ? (
@@ -1020,29 +926,36 @@ Catalogue produits
         {status ? <p className="text-sm text-slate-700">{status}</p> : null}
       </div>
 
-      <article className="premium-card border border-rose-200 bg-rose-50 p-6">
-        <h2 className="luxury-title text-lg font-semibold text-rose-700">Suppression Du Compte Vendeur</h2>
-        <p className="mt-1 text-sm text-rose-700/80">
-          Action irreversible: votre compte sera desactive, votre boutique fermee et vos donnees personnelles anonymisees.
-        </p>
-        <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center" onSubmit={onDeleteAccount}>
-          <PasswordInput
-            value={deletePassword}
-            onChange={(event) => setDeletePassword(event.target.value)}
-            placeholder="Mot de passe actuel"
-            required
-            wrapperClassName="w-full sm:flex-1"
-          />
-          <Button
-            type="submit"
-            disabled={deleteAccountMutation.isPending || !deletePassword}
-            className="bg-rose-600 text-white hover:bg-rose-500"
-          >
-            {deleteAccountMutation.isPending ? "Suppression..." : "Supprimer Mon Compte"}
-          </Button>
-        </form>
-        {deleteStatus ? <p className="mt-2 text-sm text-rose-800">{deleteStatus}</p> : null}
-      </article>
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowDeleteZone((v) => !v)}
+          className="text-xs text-slate-400 hover:text-rose-500 underline"
+        >
+          {showDeleteZone ? "Masquer" : "Supprimer mon compte"}
+        </button>
+        {showDeleteZone ? (
+          <article className="premium-card mt-3 border border-rose-200 bg-rose-50 p-5">
+            <h2 className="text-sm font-semibold text-rose-700">Suppression du compte vendeur</h2>
+            <p className="mt-1 text-xs text-rose-700/80">
+              Action irreversible: boutique fermee et donnees anonymisees.
+            </p>
+            <form className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center" onSubmit={onDeleteAccount}>
+              <PasswordInput
+                value={deletePassword}
+                onChange={(event) => setDeletePassword(event.target.value)}
+                placeholder="Mot de passe actuel"
+                required
+                wrapperClassName="w-full sm:flex-1"
+              />
+              <Button type="submit" disabled={deleteAccountMutation.isPending || !deletePassword} className="bg-rose-600 text-white hover:bg-rose-500" size="sm">
+                {deleteAccountMutation.isPending ? "..." : "Supprimer"}
+              </Button>
+            </form>
+            {deleteStatus ? <p className="mt-2 text-xs text-rose-800">{deleteStatus}</p> : null}
+          </article>
+        ) : null}
+      </div>
     </section>
   );
 }
