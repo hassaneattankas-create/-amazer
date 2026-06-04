@@ -218,8 +218,7 @@ function RegisterPageContent() {
     identifier.trim().length >= 6 &&
     password.length >= PASSWORD_MIN_LENGTH &&
     acceptedLegal &&
-    (!isSellerFlow || (businessName.trim().length >= 2 || fullName.trim().length >= 2)) &&
-    (!isSellerFlow || transactionRef.trim().length >= 4);
+    (!isSellerFlow || (businessName.trim().length >= 2 || fullName.trim().length >= 2));
 
   const canVerify = verifyCode.trim().length >= 4 && identifier.trim().length >= 6;
 
@@ -413,7 +412,7 @@ function RegisterPageContent() {
                 />
                 <input
                   type="text"
-                  placeholder="Reference transaction (obligatoire)"
+                  placeholder="Reference transaction"
                   value={transactionRef}
                   onChange={(e) => updateTransactionRef(e.target.value)}
                   className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
