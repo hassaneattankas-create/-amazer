@@ -2,7 +2,6 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Search, SearchX, SlidersHorizontal } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Drawer } from "vaul";
 import { useQuery } from "@tanstack/react-query";
@@ -14,12 +13,8 @@ import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { formatMoney } from "@/lib/currency";
-import { getProductRoute } from "@/lib/mobile-routes";
-import { getHomeContent } from "@/services/content-service";
 import { getPublicContactInfo } from "@/services/finance-service";
 import { useProductSearch } from "@/hooks/use-product-search";
-import { useAuthStore } from "@/store/auth-store";
 import { ProductSearchItem } from "@/types/product";
 
 const DEBOUNCE_MS = 250;
@@ -39,19 +34,11 @@ export default function HomePage() {
   const [query, setQuery] = useState("");
   const [barcode, setBarcode] = useState("");
   const [activeShelf, setActiveShelf] = useState<ShelfSlug>("all");
-  const preferredCurrency = useAuthStore((state) => state.preferredCurrency);
   const debouncedQuery = useDebouncedValue(query, DEBOUNCE_MS);
   const debouncedBarcode = useDebouncedValue(barcode, DEBOUNCE_MS);
 
   const hasActiveFilter = debouncedQuery.trim().length >= 2 || debouncedBarcode.trim().length >= 3;
 
-  const { data: homeContent } = useQuery({
-    queryKey: ["home-content"],
-    queryFn: getHomeContent,
-    staleTime: 180_000,
-    gcTime: 15 * 60_000,
-    refetchOnWindowFocus: false,
-  });
   const { data: contactInfo } = useQuery({
     queryKey: ["public-contact-info"],
     queryFn: getPublicContactInfo,
@@ -230,48 +217,6 @@ export default function HomePage() {
           ) : null}
         </AnimatePresence>
       </div>
-
-      {!hasActiveFilter && homeContent?.sections?.length ? (
-        <div className="mt-10 space-y-7">
-          {homeContent.sections.map((section) => {
-            if (!section.products.length) return null;
-            return (
-              <section key={section.id} className="space-y-3">
-                <h2 className="luxury-title text-2xl font-semibold text-slate-900">{section.title}</h2>
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-                  {section.products.map((item) => {
-                    const specs = (item as { specs?: Record<string, unknown> }).specs ?? {};
-                    const promoPrice = typeof specs.promo_price === "number" ? specs.promo_price : null;
-                    const originalPrice = typeof specs.original_price === "number" ? specs.original_price : null;
-                    return (
-                      <article key={item.id} className="premium-card overflow-hidden border border-slate-200 bg-white p-4">
-                        <p className="text-xs uppercase tracking-wide text-slate-500">{item.brand}</p>
-                        {promoPrice !== null ? (
-                          <span className="mt-1 inline-flex rounded-full border border-orange-300 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-[#FF4D00]">
-                            Promo
-                          </span>
-                        ) : null}
-                        <h3 className="mt-2 line-clamp-2 text-base font-semibold text-slate-900">{item.name}</h3>
-                        <div className="mt-2 flex items-baseline gap-2">
-                          {originalPrice !== null && promoPrice !== null ? (
-                            <span className="text-sm text-slate-400 line-through">{Math.round(originalPrice)} XOF</span>
-                          ) : null}
-                          <p className="text-lg font-semibold text-[#FF4D00]">
-                            {formatMoney(item.amount, preferredCurrency)}
-                          </p>
-                        </div>
-                        <Button asChild className="primary-glow-btn mt-3 w-full bg-[#FF4D00] text-white hover:bg-[#e74700]">
-                          <Link href={getProductRoute(item.id)}>Voir le detail</Link>
-                        </Button>
-                      </article>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-      ) : null}
 
       {contactInfo && (contactInfo.support_email || contactInfo.support_phone || contactInfo.support_whatsapp) ? (
         <article className="premium-card mt-10 border border-slate-200 bg-white p-5">
