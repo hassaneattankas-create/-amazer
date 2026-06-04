@@ -63,7 +63,6 @@ class PromotionItemResponse(BaseModel):
     promo_amount: float
     currency: str
     promo_until: str | None
-    is_boosted: bool
 
 
 class PromotionListResponse(BaseModel):

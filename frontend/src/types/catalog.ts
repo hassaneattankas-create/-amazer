@@ -46,5 +46,4 @@ export type PromotionItem = {
   promo_amount: number;
   currency: string;
   promo_until: string | null;
-  is_boosted: boolean;
 };

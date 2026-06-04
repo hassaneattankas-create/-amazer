@@ -39,8 +39,6 @@ export type ProductSearchItem = {
   brand: string;
   description: string | null;
   main_image_url: string | null;
-  is_sponsored: boolean;
-  is_boosted: boolean;
   ad_banner_url: string | null;
   specs: Record<string, unknown>;
   category: Category | null;

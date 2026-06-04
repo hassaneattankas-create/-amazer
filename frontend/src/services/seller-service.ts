@@ -50,15 +50,14 @@ export async function updateSellerInventory(
   priceId: string,
   payload: {
     product_name?: string;
+    brand?: string;
+    category_id?: string;
     amount?: number;
     stock_quantity?: number;
     description?: string;
     main_image_url?: string;
     is_active?: boolean;
     promo_amount?: number;
-    boost_duration_hours?: 24 | 168;
-    boost_payment_reference?: string;
-    boost_payment_mode?: "nita" | "amana";
   },
 ): Promise<SellerInventoryItem> {
   const response = await api.patch<SellerInventoryItem>(

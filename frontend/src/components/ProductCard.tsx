@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { getProductRoute } from "@/lib/mobile-routes";
 import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { productFallbackImage, resolveProductImageUrl } from "@/lib/product-image";
-import { trackAdClick } from "@/services/content-service";
 import { ProductSearchItem } from "@/types/product";
 
 type ProductCardProps = {
@@ -45,12 +44,6 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   );
   const fallbackImageUrl = productFallbackImage(product.category?.slug);
   const displayImageUrl = imageError ? fallbackImageUrl : resolvedImageUrl;
-
-  const onOpenDetail = () => {
-    if (product.is_sponsored) {
-      void trackAdClick(product.id);
-    }
-  };
 
   return (
     <motion.article
@@ -119,7 +112,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           size="sm"
           className="primary-glow-btn shine-btn w-full"
         >
-          <Link href={getProductRoute(product.id)} onClick={onOpenDetail}>
+          <Link href={getProductRoute(product.id)}>
             Voir le detail
           </Link>
         </Button>

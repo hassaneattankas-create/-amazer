@@ -144,30 +144,30 @@ export default function SellerDashboardPage() {
       stock,
       is_active,
       promo_amount,
-      boost_duration_hours,
-      boost_payment_reference,
-      boost_payment_mode,
       main_image_url,
+      product_name,
+      brand,
+      description,
     }: {
       priceId: string;
       amount: number;
       stock: number;
       is_active?: boolean;
       promo_amount?: number;
-      boost_duration_hours?: 24 | 168;
-      boost_payment_reference?: string;
-      boost_payment_mode?: "nita" | "amana";
       main_image_url?: string;
+      product_name?: string;
+      brand?: string;
+      description?: string;
     }) =>
       updateSellerInventory(priceId, {
         amount,
         stock_quantity: stock,
         is_active,
         promo_amount,
-        boost_duration_hours,
-        boost_payment_reference,
-        boost_payment_mode,
         main_image_url,
+        product_name,
+        brand,
+        description,
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["seller-inventory"] });
@@ -185,23 +185,6 @@ export default function SellerDashboardPage() {
     onError: () => setStatus("Erreur lors de la suppression du produit."),
   });
 
-  function readBoostProof(priceId: string): {
-    boost_payment_reference: string;
-    boost_payment_mode: "nita" | "amana";
-  } | null {
-    const refInput = document.getElementById(`boost-ref-${priceId}`) as HTMLInputElement | null;
-    const modeSelect = document.getElementById(`boost-mode-${priceId}`) as HTMLSelectElement | null;
-    const boost_payment_reference = (refInput?.value ?? "").trim();
-    const modeRaw = modeSelect?.value === "amana" ? "amana" : "nita";
-    if (boost_payment_reference.length < 4) {
-      setStatus("Boost: saisis la reference de paiement (apres versement Nita ou Amana) sur la ligne du produit.");
-      return null;
-    }
-    return {
-      boost_payment_reference,
-      boost_payment_mode: modeRaw,
-    };
-  }
 
   const shopOrderStatusMutation = useMutation({
     mutationFn: ({
@@ -923,63 +906,48 @@ export default function SellerDashboardPage() {
                     </Button>
                   </div>
                 </div>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-medium text-slate-700">Boost (apres paiement)</span>
-                  <select
-                    id={`boost-mode-${item.price_id}`}
-                    className="h-9 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-900"
-                    defaultValue="nita"
-                  >
-                    <option value="nita">Nita</option>
-                    <option value="amana">Amana</option>
-                  </select>
+                <p className="mt-1 text-xs text-slate-500">
+                  {item.promo_price ? `Promo active: ${item.promo_price.toFixed(0)} XOF` : ""}
+                </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3 border-t border-slate-100 pt-3">
                   <Input
-                    id={`boost-ref-${item.price_id}`}
-                    placeholder="Reference de paiement"
-                    className="h-9 w-full max-w-xs text-xs sm:w-56"
+                    id={`name-${item.price_id}`}
+                    defaultValue={item.product_name}
+                    placeholder="Nom du produit"
+                    className="h-9 text-xs"
+                  />
+                  <Input
+                    id={`brand-${item.price_id}`}
+                    defaultValue={item.brand}
+                    placeholder="Marque"
+                    className="h-9 text-xs"
+                  />
+                  <Input
+                    id={`desc-${item.price_id}`}
+                    defaultValue={item.description ?? ""}
+                    placeholder="Description"
+                    className="h-9 text-xs sm:col-span-1"
                   />
                   <Button
-                    className="border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                    size="sm"
+                    className="bg-slate-700 text-white hover:bg-slate-800 sm:col-span-3 w-full sm:w-auto"
                     onClick={() => {
-                      const proof = readBoostProof(item.price_id);
-                      if (!proof) {
-                        return;
-                      }
+                      const nameInput = document.getElementById(`name-${item.price_id}`) as HTMLInputElement | null;
+                      const brandInput = document.getElementById(`brand-${item.price_id}`) as HTMLInputElement | null;
+                      const descInput = document.getElementById(`desc-${item.price_id}`) as HTMLInputElement | null;
                       inventoryMutation.mutate({
                         priceId: item.price_id,
                         amount: item.amount,
                         stock: item.stock_quantity,
-                        boost_duration_hours: 24,
-                        ...proof,
+                        product_name: nameInput?.value.trim() || undefined,
+                        brand: brandInput?.value.trim() || undefined,
+                        description: descInput?.value.trim() || undefined,
                       });
                     }}
                   >
-                    Boost 24 h
-                  </Button>
-                  <Button
-                    className="border border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200"
-                    onClick={() => {
-                      const proof = readBoostProof(item.price_id);
-                      if (!proof) {
-                        return;
-                      }
-                      inventoryMutation.mutate({
-                        priceId: item.price_id,
-                        amount: item.amount,
-                        stock: item.stock_quantity,
-                        boost_duration_hours: 168,
-                        ...proof,
-                      });
-                    }}
-                  >
-                    Boost 7 j
+                    Modifier details
                   </Button>
                 </div>
-                <p className="mt-2 text-xs text-slate-500">
-                  {item.is_boosted ? "Boost actif" : "Boost inactif"}
-                  {item.boost_until ? ` jusqu au ${formatDateTime(item.boost_until)}` : ""}
-                  {item.promo_price ? ` | Promo: ${item.promo_price.toFixed(0)} XOF` : ""}
-                </p>
                 <div className="mt-3 border-t border-slate-100 pt-3">
                   <div className="flex items-center gap-3">
                     {item.main_image_url ? (

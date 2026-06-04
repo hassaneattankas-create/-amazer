@@ -124,14 +124,13 @@ export type SellerInventoryItem = {
   brand: string;
   description: string | null;
   main_image_url: string | null;
+  category_id: string | null;
   amount: number;
   currency: string;
   stock_quantity: number;
   is_active: boolean;
-  is_boosted: boolean;
   promo_price: number | null;
   promo_until: string | null;
-  boost_until: string | null;
 };
 
 export type SellerShopOrderItem = {
@@ -167,7 +166,6 @@ export type SellerStorefrontProduct = {
   description?: string | null;
   amount: number;
   currency: string;
-  is_boosted: boolean;
   main_image_url: string | null;
 };
 

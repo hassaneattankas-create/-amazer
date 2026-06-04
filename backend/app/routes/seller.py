@@ -61,7 +61,6 @@ from app.services.seller_finance_service import (
     build_effective_seller_finance_settings,
     get_or_create_global_settings,
 )
-from app.services.product_boost_service import clear_expired_boost_from_product
 from app.services.seller_profile_service import create_or_update_seller_profile
 from app.services.seller_profile_service import resolve_seller_plan_bucket
 from app.services.seller_subscription_reminder_service import run_seller_subscription_reminders_task
@@ -176,23 +175,15 @@ def _can_manage_shop_catalog(profile: SellerProfile) -> bool:
     return profile.activity_type == "shop" or profile.storefront_tier == "premium"
 
 
-def _sync_product_flags(product: Product) -> tuple[float | None, datetime | None, datetime | None]:
+def _sync_product_flags(product: Product) -> tuple[float | None, datetime | None]:
     specs = dict(product.specs or {})
     now = datetime.now(UTC)
     promo_price_raw = specs.get("promo_price")
     promo_until = _parse_utc_datetime(specs.get("promo_until"))
-
     promo_price = None
     if isinstance(promo_price_raw, (int, float)) and promo_until and promo_until > now:
         promo_price = float(promo_price_raw)
-
-    clear_expired_boost_from_product(product, now=now)
-    specs_after = dict(product.specs or {})
-    boost_until_active: datetime | None = None
-    bu = _parse_utc_datetime(specs_after.get("boost_until"))
-    if product.is_boosted and bu is not None and bu > now:
-        boost_until_active = bu
-    return promo_price, promo_until, boost_until_active
+    return promo_price, promo_until
 
 
 def _profile_response(profile: SellerProfile, db: Session) -> SellerProfileResponse:
@@ -585,7 +576,6 @@ def get_storefront(
                 description=row.product.description,
                 amount=row.amount,
                 currency=row.currency,
-                is_boosted=row.product.is_boosted,
                 main_image_url=_resolve_product_main_image(row.product),
             )
             for row in products
@@ -644,7 +634,6 @@ def create_product_listing(
         brand=payload.brand,
         description=payload.description,
         main_image_url=payload.main_image_url,
-        is_sponsored=payload.is_sponsored,
         category_id=payload.category_id,
         specs={},
     )
@@ -717,10 +706,7 @@ def list_inventory(
     for row in rows:
         if _is_seller_deleted_listing(row):
             continue
-        promo_price, promo_until, boost_until = _sync_product_flags(row.product)
-        sess = object_session(row.product)
-        if sess is not None and sess.is_modified(row.product, include_collections=False):
-            dirty = True
+        promo_price, promo_until = _sync_product_flags(row.product)
         payload.append(
             SellerInventoryItemResponse(
                 price_id=row.id,
@@ -729,14 +715,13 @@ def list_inventory(
                 brand=row.product.brand,
                 description=row.product.description,
                 main_image_url=_resolve_product_main_image(row.product),
+                category_id=row.product.category_id,
                 amount=row.amount,
                 currency=row.currency,
                 stock_quantity=row.stock_quantity,
                 is_active=row.is_active,
-                is_boosted=row.product.is_boosted,
                 promo_price=promo_price,
                 promo_until=promo_until,
-                boost_until=boost_until,
             )
         )
     if dirty:
@@ -825,10 +810,13 @@ def update_inventory_item(
     previous_amount = price.amount
     previous_stock = price.stock_quantity
     now = datetime.now(UTC)
-    clear_expired_boost_from_product(price.product, now=now)
     specs = dict(price.product.specs or {})
     if payload.product_name is not None:
         price.product.name = payload.product_name.strip()
+    if payload.brand is not None:
+        price.product.brand = payload.brand.strip()
+    if payload.category_id is not None:
+        price.product.category_id = payload.category_id or None
     if payload.description is not None:
         price.product.description = payload.description.strip() or None
     if payload.main_image_url is not None:
@@ -846,21 +834,6 @@ def update_inventory_item(
         specs["promo_price"] = payload.promo_amount
         specs["promo_until"] = (now + timedelta(days=7)).isoformat()
         price.amount = payload.promo_amount
-    if payload.boost_duration_hours is not None:
-        settings_row = get_or_create_global_settings(db)
-        hours = int(payload.boost_duration_hours)
-        tariff = (
-            float(settings_row.ad_boost_price_24h)
-            if hours <= 24
-            else float(settings_row.ad_boost_price_7d)
-        )
-        boost_ref = (payload.boost_payment_reference or "").strip()
-        price.product.is_boosted = True
-        specs["boost_until"] = (now + timedelta(hours=hours)).isoformat()
-        specs["boost_payment_reference"] = boost_ref
-        specs["boost_payment_mode"] = payload.boost_payment_mode
-        specs["boost_requested_at"] = now.isoformat()
-        specs["boost_price_tariff"] = tariff
     price.product.specs = specs
 
     db.add(
@@ -887,21 +860,14 @@ def update_inventory_item(
             "previous_stock": int(previous_stock),
             "new_stock": int(price.stock_quantity),
             "is_active": bool(price.is_active),
-            "boosted": bool(price.product.is_boosted),
             "promo_amount": payload.promo_amount,
-            "boost_tariff": float(specs.get("boost_price_tariff", 0) or 0)
-            if payload.boost_duration_hours is not None
-            else None,
-            "boost_payment_reference": (payload.boost_payment_reference or "").strip()
-            if payload.boost_duration_hours is not None
-            else None,
         },
     )
     db.commit()
     db.refresh(price)
     _invalidate_public_marketplace_cache()
 
-    promo_price, promo_until, boost_until = _sync_product_flags(price.product)
+    promo_price, promo_until = _sync_product_flags(price.product)
     return SellerInventoryItemResponse(
         price_id=price.id,
         product_id=price.product_id,
@@ -909,14 +875,13 @@ def update_inventory_item(
         brand=price.product.brand,
         description=price.product.description,
         main_image_url=_resolve_product_main_image(price.product),
+        category_id=price.product.category_id,
         amount=price.amount,
         currency=price.currency,
         stock_quantity=price.stock_quantity,
         is_active=price.is_active,
-        is_boosted=price.product.is_boosted,
         promo_price=promo_price,
         promo_until=promo_until,
-        boost_until=boost_until,
     )
 
 

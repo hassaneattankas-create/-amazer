@@ -102,9 +102,6 @@ class SellerProductCreateRequest(BaseModel):
     amount: float = Field(gt=0)
     currency: str = Field(default="XOF", min_length=3, max_length=3)
     stock_quantity: int = Field(default=0, ge=0)
-    is_sponsored: bool = False
-
-
 class SellerProductCreateResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -122,41 +119,27 @@ class SellerInventoryItemResponse(BaseModel):
     brand: str
     description: str | None = None
     main_image_url: str | None = None
+    category_id: str | None = None
     amount: float
     currency: str
     stock_quantity: int
     is_active: bool
-    is_boosted: bool
     promo_price: float | None = None
     promo_until: datetime | None = None
-    boost_until: datetime | None = None
 
 
 class SellerInventoryUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     product_name: str | None = Field(default=None, min_length=2, max_length=180)
+    brand: str | None = Field(default=None, min_length=1, max_length=120)
+    category_id: str | None = Field(default=None, max_length=36)
     amount: float | None = Field(default=None, gt=0)
     stock_quantity: int | None = Field(default=None, ge=0)
     description: str | None = Field(default=None, max_length=2000)
     main_image_url: str | None = Field(default=None, max_length=1024)
     is_active: bool | None = None
     promo_amount: float | None = Field(default=None, gt=0)
-    boost_duration_hours: int | None = Field(default=None, ge=24, le=168)
-    boost_payment_reference: str | None = Field(default=None, max_length=200)
-    boost_payment_mode: Literal["nita", "amana"] | None = None
-
-    @model_validator(mode="after")
-    def boost_requires_payment_proof(self) -> SellerInventoryUpdateRequest:
-        if self.boost_duration_hours is not None:
-            ref = (self.boost_payment_reference or "").strip()
-            if len(ref) < 4:
-                raise ValueError(
-                    "Référence de paiement boost obligatoire (relevé Nita/Amana après versement)."
-                )
-            if self.boost_payment_mode is None:
-                raise ValueError("Mode de paiement boost obligatoire: nita ou amana.")
-        return self
 
 
 class SellerShopOrderItemResponse(BaseModel):
@@ -242,7 +225,6 @@ class SellerStorefrontProductResponse(BaseModel):
     description: str | None = None
     amount: float
     currency: str
-    is_boosted: bool
     main_image_url: str | None
 
 

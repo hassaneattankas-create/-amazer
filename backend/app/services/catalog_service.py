@@ -15,7 +15,6 @@ from app.schemas.catalog import (
     VendorStorefrontResponse,
 )
 from app.schemas.product import CategoryResponse, VendorResponse
-from app.services.product_boost_service import product_boost_active_for_display
 from app.services.public_catalog_policy import (
     is_allowed_public_product_offer,
     is_allowed_public_storefront,
@@ -259,10 +258,9 @@ class CatalogService:
                     promo_amount=float(promo_amount),
                     currency=price.currency,
                     promo_until=self._promo_until(product),
-                    is_boosted=product_boost_active_for_display(product),
                 )
             )
-        promos.sort(key=lambda row: (0 if row.is_boosted else 1, row.promo_amount, row.product_name.lower()))
+        promos.sort(key=lambda row: (row.promo_amount, row.product_name.lower()))
         sliced = promos[offset : offset + limit]
         return PromotionListResponse(items=sliced)
 

@@ -545,52 +545,6 @@ export default function AdminTarifsPage() {
               }
               helper="Boutiques et restaurants en formule basic : plafond. Premium : illimite cote API."
             />
-            <AdminNumberField
-              label="Boost publicitaire principal"
-              value={effective.ad_boost_price}
-              suffix="XOF"
-              onChange={(value) =>
-                setDraft({
-                  ...effective,
-                  ad_boost_price: parseNonNegativeNumber(value, effective.ad_boost_price),
-                })
-              }
-            />
-            <AdminNumberField
-              label="Duree boost principale"
-              value={effective.ad_boost_duration_days}
-              suffix="jours"
-              min={1}
-              step="1"
-              onChange={(value) =>
-                setDraft({
-                  ...effective,
-                  ad_boost_duration_days: parsePositiveInteger(value, effective.ad_boost_duration_days),
-                })
-              }
-            />
-            <AdminNumberField
-              label="Boost 24h"
-              value={effective.ad_boost_price_24h}
-              suffix="XOF"
-              onChange={(value) =>
-                setDraft({
-                  ...effective,
-                  ad_boost_price_24h: parseNonNegativeNumber(value, effective.ad_boost_price_24h),
-                })
-              }
-            />
-            <AdminNumberField
-              label="Boost 7 jours"
-              value={effective.ad_boost_price_7d}
-              suffix="XOF"
-              onChange={(value) =>
-                setDraft({
-                  ...effective,
-                  ad_boost_price_7d: parseNonNegativeNumber(value, effective.ad_boost_price_7d),
-                })
-              }
-            />
           </div>
           <div className="grid gap-3 sm:grid-cols-1">
             <div>
