@@ -227,7 +227,7 @@ export default function AdminTarifsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-pending-sellers"] });
       queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
       queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
-      setStatus(result.decision === "approved" ? "Compte vendeur cree et boutique activee." : "Demande rejetee.");
+      setStatus(result.status === "approved" ? "Compte vendeur cree et boutique activee." : "Demande rejetee.");
     },
     onError: () => setStatus("Impossible de traiter la demande."),
   });
