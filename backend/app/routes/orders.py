@@ -561,6 +561,28 @@ def get_receipt_link(
     return ReceiptLinkResponse(order_id=order.id, token=token, receipt_url=receipt_url, verify_url=verify_url)
 
 
+@router.post("/{order_id}/confirm-reception", response_model=OrderResponse)
+def client_confirm_reception(
+    order_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> OrderResponse:
+    """Le client confirme qu il a bien recu sa commande."""
+    enforce_csrf(request)
+    order = db.scalar(select(Order).options(selectinload(Order.items)).where(Order.id == order_id).with_for_update())
+    if order is None:
+        raise ValidationDomainError("Commande introuvable")
+    if order.user_id != current_user.id:
+        raise UnauthorizedError("Acces non autorise")
+    if order.status not in {"livraison", "commande", "preparation"}:
+        raise ValidationDomainError("Cette commande ne peut pas etre confirmee dans son etat actuel")
+    order.status = "recu"
+    db.commit()
+    db.refresh(order)
+    return _to_order_response(order)
+
+
 @router.get("/receipt/{order_id}", response_model=ReceiptResponse)
 def get_secure_receipt(
     order_id: str,

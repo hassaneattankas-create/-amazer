@@ -31,6 +31,7 @@ import {
   verifyAdminFinancePin,
   verifyAdminSeller,
 } from "@/services/finance-service";
+import { hasAdminFinanceVerified } from "@/lib/api";
 import { AdminPendingSeller, FinanceSettings } from "@/types/finance";
 
 function parseNonNegativeNumber(value: string, fallback: number) {
@@ -90,7 +91,7 @@ export default function AdminTarifsPage() {
   const queryClient = useQueryClient();
   const [pin, setPin] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [pinVerified, setPinVerified] = useState(false);
+  const [pinVerified, setPinVerified] = useState(() => hasAdminFinanceVerified());
   const [status, setStatus] = useState("");
   const [draft, setDraft] = useState<FinanceSettings | null>(null);
   const [districtDraft, setDistrictDraft] = useState<string | null>(null);

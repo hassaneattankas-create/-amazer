@@ -30,6 +30,7 @@ import {
   resetAdminFinanceCounters,
   verifyAdminFinancePin,
 } from "@/services/finance-service";
+import { hasAdminFinanceVerified } from "@/lib/api";
 
 const AdminRevenueChart = dynamic(
   () => import("@/components/admin/AdminRevenueChart").then((m) => m.AdminRevenueChart),
@@ -49,7 +50,7 @@ export default function AdminFinancePage() {
   const [pinStatus, setPinStatus] = useState("");
   const [pin, setPin] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [pinVerified, setPinVerified] = useState(false);
+  const [pinVerified, setPinVerified] = useState(() => hasAdminFinanceVerified());
   const [transferAmount, setTransferAmount] = useState("");
   const [bankName, setBankName] = useState<"BOA" | "SONIBANK">("BOA");
   const [transferStatus, setTransferStatus] = useState("");

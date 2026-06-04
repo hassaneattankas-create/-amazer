@@ -400,12 +400,12 @@ export default function SellerDashboardPage() {
           Configuration vendeur
         </h2>
         <p className="mt-2 text-sm text-slate-600">
-          Le dashboard pilote maintenant les operations vendeur. Pour regler le profil complet,
-          les services premium, les chambres ou la galerie, ouvre aussi la page de configuration.
+          Pour modifier les informations de ta boutique (logo, cover, description, horaires, galerie, chambres) utilise la page de configuration.
+          La publication de produits et du menu restaurant se fait uniquement ici dans le dashboard.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <Button asChild variant="outline">
-            <Link href="/seller">Configurer mon profil vendeur</Link>
+            <Link href="/seller">Modifier le profil boutique</Link>
           </Button>
         </div>
       </article>

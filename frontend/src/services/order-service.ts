@@ -83,3 +83,8 @@ export async function confirmPayment(orderId: string, payload: PaymentConfirmPay
     throw error;
   }
 }
+
+export async function confirmOrderReception(orderId: string): Promise<Order> {
+  const response = await api.post<Order>(`/api/v1/orders/${orderId}/confirm-reception`);
+  return response.data;
+}

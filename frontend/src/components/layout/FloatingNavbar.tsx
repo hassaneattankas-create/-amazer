@@ -36,7 +36,6 @@ const clientNavItems = [
 
 const sellerNavItems = [
   { href: "/seller/dashboard", label: "Ma Boutique" },
-  { href: "/seller/delivery-scan", label: "Scan Livraison" },
 ];
 
 const SESSION_DRAFT_KEYS = [
