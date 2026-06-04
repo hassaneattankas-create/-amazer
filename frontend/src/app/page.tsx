@@ -8,6 +8,7 @@ import { Drawer } from "vaul";
 import { useQuery } from "@tanstack/react-query";
 
 import { BarcodeScannerDrawer } from "@/components/BarcodeScannerDrawer";
+import { HeroSection } from "@/components/HeroSection";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
@@ -96,6 +97,8 @@ export default function HomePage() {
 
   return (
     <section className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-6">
+      <HeroSection />
+
       <article className="premium-card mt-4 border border-slate-200 bg-white p-3">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           {SHELF_TABS.map((tab) => (
