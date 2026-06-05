@@ -178,7 +178,7 @@ export default function AdminFinancePage() {
         ordersError ? `Commandes: ${getAdminFinanceDataError(ordersError)}` : null,
         sellerPaymentsError ? `Paiements vendeurs: ${getAdminFinanceDataError(sellerPaymentsError)}` : null,
       ].filter(Boolean) as string[],
-    [adClicksError, historyError, ordersError, sellerPaymentsError]
+    [historyError, ordersError, sellerPaymentsError]
   );
   const chartData = useMemo(() => summary?.revenue_last_30_days ?? [], [summary]);
   const availableForTransfer = useMemo(() => {
