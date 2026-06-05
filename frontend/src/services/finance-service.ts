@@ -207,6 +207,13 @@ export async function restoreAdminSeller(profileId: string): Promise<AdminSeller
   });
 }
 
+export async function permanentlyDeleteAdminSeller(profileId: string): Promise<void> {
+  await adminProxyRequest<void>({
+    url: `/admin/finance/sellers/${profileId}/permanent-delete`,
+    method: "POST",
+  });
+}
+
 export async function verifyAdminSeller(profileId: string, verified: boolean): Promise<AdminSeller> {
   return adminProxyRequest<AdminSeller>({
     url: `/admin/finance/sellers/${profileId}/verify`,

@@ -3,6 +3,8 @@ import csv
 import io
 import json
 import re
+import secrets
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request, Response
@@ -1098,7 +1100,20 @@ def list_sellers_admin(
 ) -> list[AdminSellerResponse]:
     _require_finance_pin(request)
     settings_row = _get_or_create_settings(db)
-    rows = db.scalars(select(SellerProfile).order_by(desc(SellerProfile.created_at)).limit(500)).all()
+    # Exclure les vendeurs definitivement supprimes (email anonymise). Garder les desactives (restaurables)
+    # et les vendeurs WhatsApp sans email (email NULL).
+    rows = db.scalars(
+        select(SellerProfile)
+        .join(User, User.id == SellerProfile.user_id)
+        .where(
+            or_(
+                User.email.is_(None),
+                User.email.notlike("%@users.deleted.amazer.ne"),
+            )
+        )
+        .order_by(desc(SellerProfile.created_at))
+        .limit(500)
+    ).all()
     vendor_ids = {row.vendor_id for row in rows}
     vendors = db.scalars(select(Vendor).where(Vendor.id.in_(vendor_ids))).all() if vendor_ids else []
     vendor_map = {vendor.id: vendor for vendor in vendors}
@@ -1130,6 +1145,60 @@ def disable_seller(
     append_audit_log(
         db,
         event_type="admin_seller_disabled",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="seller_profile",
+        entity_id=profile.id,
+        details={"vendor_id": profile.vendor_id, "user_id": profile.user_id},
+    )
+    db.commit()
+    _invalidate_public_marketplace_cache()
+
+
+@router.post("/sellers/{profile_id}/permanent-delete", status_code=204)
+def permanently_delete_seller(
+    profile_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> None:
+    """Suppression definitive: anonymise le compte et libere l'email (meme methode que la
+    suppression de compte cote utilisateur). Preserve l'historique des commandes."""
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    profile = db.get(SellerProfile, profile_id)
+    if profile is None:
+        raise ValidationDomainError("Profil vendeur introuvable")
+    user = db.get(User, profile.user_id)
+    if user is not None and user.email and user.email.lower() == settings.admin_email.lower():
+        raise ValidationDomainError("Le compte administrateur ne peut pas etre supprime.")
+
+    vendor = db.get(Vendor, profile.vendor_id)
+    if vendor is not None:
+        vendor.is_active = False
+        db.execute(update(Price).where(Price.vendor_id == vendor.id).values(is_active=False))
+
+    # Anonymiser le profil vendeur
+    profile.phone = None
+    profile.address = None
+    profile.description = "Compte vendeur supprime"
+    profile.whatsapp_contact = None
+    profile.contact_email = None
+    profile.is_verified = False
+
+    # Anonymiser l'utilisateur et liberer l'email/telephone pour reutilisation
+    if user is not None:
+        marker = f"deleted-{user.id[:8]}-{uuid.uuid4().hex[:10]}"
+        user.email = f"{marker}@users.deleted.amazer.ne"
+        user.full_name = "Compte supprime"
+        user.whatsapp_phone = None
+        user.hashed_password = hash_password(secrets.token_urlsafe(32))
+        user.is_active = False
+
+    append_audit_log(
+        db,
+        event_type="admin_seller_permanently_deleted",
         actor=admin_user,
         ip_address=request.client.host if request.client else None,
         path=str(request.url.path),

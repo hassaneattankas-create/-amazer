@@ -22,6 +22,7 @@ import {
   listAdminAuditHistory,
   listAdminPendingSellers,
   listAdminSellers,
+  permanentlyDeleteAdminSeller,
   replaceAdminDistrictFees,
   restoreAdminSeller,
   toggleLaunchMode,
@@ -179,18 +180,27 @@ export default function AdminTarifsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
       queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
-      setStatus("Vendeur desactive.");
+      setStatus("Vendeur retire (desactive). Tu peux le remettre en ligne a tout moment.");
     },
-    onError: () => setStatus("Suppression vendeur impossible."),
+    onError: () => setStatus("Retrait du vendeur impossible."),
   });
   const restoreSellerMutation = useMutation({
     mutationFn: restoreAdminSeller,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
       queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
-      setStatus("Vendeur restaure.");
+      setStatus("Vendeur remis en ligne.");
     },
-    onError: () => setStatus("Restauration vendeur impossible."),
+    onError: () => setStatus("Remise en ligne impossible."),
+  });
+  const permanentDeleteSellerMutation = useMutation({
+    mutationFn: permanentlyDeleteAdminSeller,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
+      setStatus("Vendeur supprime definitivement. Son email est de nouveau disponible.");
+    },
+    onError: () => setStatus("Suppression definitive impossible."),
   });
 
   const verifySellerMutation = useMutation({
@@ -798,20 +808,43 @@ export default function AdminTarifsPage() {
                       Rétrograder Basic
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    className="border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
-                    onClick={() => deleteSellerMutation.mutate(seller.profile_id)}
-                  >
-                    Supprimer vendeur
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => restoreSellerMutation.mutate(seller.profile_id)}
-                  >
-                    Restaurer
-                  </Button>
+                  {seller.is_active ? (
+                    <Button
+                      size="sm"
+                      className="border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                      disabled={deleteSellerMutation.isPending}
+                      onClick={() => deleteSellerMutation.mutate(seller.profile_id)}
+                    >
+                      Retirer
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        size="sm"
+                        className="border border-green-300 bg-green-50 text-green-800 hover:bg-green-100"
+                        disabled={restoreSellerMutation.isPending}
+                        onClick={() => restoreSellerMutation.mutate(seller.profile_id)}
+                      >
+                        Remettre en ligne
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                        disabled={permanentDeleteSellerMutation.isPending}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Supprimer DEFINITIVEMENT "${seller.business_name}" ?\n\nLe compte sera anonymise et son email libere. L'historique des commandes est conserve. Action irreversible.`,
+                            )
+                          ) {
+                            permanentDeleteSellerMutation.mutate(seller.profile_id);
+                          }
+                        }}
+                      >
+                        Supprimer definitivement
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="mt-3 grid gap-3 md:grid-cols-3">

@@ -564,36 +564,53 @@ export default function AdminFinancePage() {
       </article>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
-        <h2 className="luxury-title text-lg font-semibold">Pilotage Manuel Livraison</h2>
-        <p className="mt-2 text-sm text-slate-600">Bouton &quot;Envoyer Livreur&quot; pour mise a jour temps reel.</p>
+        <h2 className="luxury-title text-lg font-semibold">Suivi des commandes</h2>
+        <p className="mt-2 text-sm text-slate-600">Un seul bouton fait avancer chaque commande a l&apos;etape suivante.</p>
         {isOrdersError ? <p className="mt-4 text-sm text-amber-700">{getAdminFinanceDataError(ordersError)}</p> : null}
-        <div className="mt-4 space-y-3">
-          {(adminOrders ?? []).slice(0, 12).map((order) => (
-            <div key={order.id} className="rounded-xl border border-slate-200 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-medium text-slate-900">
-                  {order.customer_name} | {order.id.slice(0, 8)} | {order.status}
-                </p>
-                <p className="text-sm text-[#FF4D00]">{formatXOF(order.total_amount)}</p>
+        <div className="mt-4 space-y-2">
+          {(adminOrders ?? []).slice(0, 12).map((order) => {
+            const label =
+              order.status === "recu" || order.status === "CLAIMED"
+                ? "Livree"
+                : order.status === "livraison"
+                  ? "En livraison"
+                  : order.status === "preparation"
+                    ? "En preparation"
+                    : "Nouvelle";
+            const nextAction =
+              order.status === "livraison"
+                ? { label: "Marquer livree", to: "recu" as const }
+                : order.status === "recu" || order.status === "CLAIMED"
+                  ? null
+                  : { label: "Envoyer en livraison", to: "livraison" as const };
+            return (
+              <div key={order.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 p-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-900">
+                    {order.customer_name} <span className="text-xs text-slate-400">#{order.id.slice(0, 8)}</span>
+                  </p>
+                  <p className="mt-0.5 text-sm font-semibold text-[#FF4D00]">{formatXOF(order.total_amount)}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600">{label}</span>
+                  {nextAction ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={dispatchMutation.isPending}
+                      onClick={() => dispatchMutation.mutate({ orderId: order.id, status: nextAction.to })}
+                      className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
+                    >
+                      {nextAction.label}
+                    </Button>
+                  ) : null}
+                </div>
               </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  onClick={() => dispatchMutation.mutate({ orderId: order.id, status: "livraison" })}
-                  className="border border-[#FF4D00]/35 bg-[#FF4D00]/10 text-[#FF4D00]"
-                >
-                  Envoyer Livreur
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => dispatchMutation.mutate({ orderId: order.id, status: "recu" })}
-                  className="border border-emerald-300 bg-emerald-50 text-emerald-700"
-                >
-                  Marquer Livre
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
+          {!(adminOrders ?? []).length ? (
+            <p className="text-sm text-slate-500">Aucune commande pour le moment.</p>
+          ) : null}
         </div>
       </article>
     </section>
