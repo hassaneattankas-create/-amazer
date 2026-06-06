@@ -224,6 +224,7 @@ def _profile_response(profile: SellerProfile, db: Session) -> SellerProfileRespo
         accepts_table_reservations=bool(profile.accepts_table_reservations),
         accepts_hotel_bookings=bool(profile.accepts_hotel_bookings),
         is_enterprise=bool(getattr(profile, "is_enterprise", False)),
+        offers_transport=bool(getattr(profile, "offers_transport", False)),
         is_verified=profile.is_verified,
         created_at=profile.created_at,
     )
@@ -570,6 +571,7 @@ def get_storefront(
         effective_service_fee=finance.service_fee,
         accepts_table_reservations=bool(profile.accepts_table_reservations),
         accepts_hotel_bookings=bool(profile.accepts_hotel_bookings),
+        offers_transport=bool(getattr(profile, "offers_transport", False)),
         is_verified=profile.is_verified,
         products=[
             SellerStorefrontProductResponse(
@@ -1215,7 +1217,7 @@ def create_hotel_booking(
     if not profile.accepts_hotel_bookings:
         raise ConflictError("Hotel bookings are disabled for this storefront")
 
-    is_transport = profile.activity_type == "transport"
+    is_transport = bool(getattr(profile, "offers_transport", False)) or profile.activity_type == "transport"
 
     room_map = {
         str(room.get("id")): room

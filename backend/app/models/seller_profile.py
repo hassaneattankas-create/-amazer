@@ -59,6 +59,8 @@ class SellerProfile(Base):
     accepts_hotel_bookings: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # Premium Entreprise (sur devis): debloque import/export, reservations et calendrier d'un coup.
     is_enterprise: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Entreprise de transport: affiche la reservation en mode trajets/billets au lieu de chambres.
+    offers_transport: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

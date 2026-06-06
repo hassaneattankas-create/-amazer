@@ -143,6 +143,7 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS accepts_table_reservations BOOLEAN DEFAULT FALSE",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS accepts_hotel_bookings BOOLEAN DEFAULT FALSE",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS is_enterprise BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS offers_transport BOOLEAN DEFAULT FALSE",
         "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS delivery_fee DOUBLE PRECISION DEFAULT 0",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS fee_breakdown JSONB",
         "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(40)",

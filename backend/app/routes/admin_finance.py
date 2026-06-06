@@ -181,6 +181,7 @@ def _build_admin_seller_response(
         activity_type=profile.activity_type or "shop",
         storefront_tier=profile.storefront_tier or "basic",
         is_enterprise=bool(getattr(profile, "is_enterprise", False)),
+        offers_transport=bool(getattr(profile, "offers_transport", False)),
         subscription_paid_until=profile.subscription_paid_until.isoformat() if profile.subscription_paid_until else None,
         commission_rate_override=profile.commission_rate_override,
         service_fee_override=profile.service_fee_override,
@@ -1385,6 +1386,45 @@ def update_seller_type(
         entity_type="seller_profile",
         entity_id=profile.id,
         details=payload.model_dump(),
+    )
+    db.commit()
+    db.refresh(profile)
+    _invalidate_public_marketplace_cache()
+    vendor = db.get(Vendor, profile.vendor_id)
+    return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
+
+
+@router.post("/sellers/{profile_id}/transport", response_model=AdminSellerResponse)
+def set_seller_transport(
+    profile_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+    enabled: Annotated[bool, Query()] = True,
+) -> AdminSellerResponse:
+    """Marque une entreprise comme societe de transport (reservation de trajets)."""
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    profile = db.get(SellerProfile, profile_id)
+    if profile is None:
+        raise ValidationDomainError("Profil vendeur introuvable")
+    profile.offers_transport = bool(enabled)
+    if enabled:
+        # Le transport est une entreprise : on s'assure du niveau Premium Entreprise + reservations.
+        profile.is_enterprise = True
+        profile.storefront_tier = "premium"
+        if profile.activity_type not in ("enterprise", "hotel"):
+            profile.activity_type = "enterprise"
+        profile.accepts_hotel_bookings = True
+    append_audit_log(
+        db,
+        event_type="admin_seller_transport_set",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="seller_profile",
+        entity_id=profile.id,
+        details={"enabled": bool(enabled)},
     )
     db.commit()
     db.refresh(profile)

@@ -88,6 +88,7 @@ class SellerProfileResponse(BaseModel):
     accepts_table_reservations: bool
     accepts_hotel_bookings: bool
     is_enterprise: bool = False
+    offers_transport: bool = False
     is_verified: bool
     created_at: datetime
 
@@ -255,6 +256,7 @@ class SellerStorefrontResponse(BaseModel):
     effective_service_fee: float
     accepts_table_reservations: bool
     accepts_hotel_bookings: bool
+    offers_transport: bool = False
     is_verified: bool
     products: list[SellerStorefrontProductResponse]
     restaurant_menu: list[RestaurantMenuItemResponse]

@@ -87,7 +87,7 @@ export default function SellerDashboardPage() {
   const showRestaurantTools = sellerMode === "restaurant" || sellerMode === "enterprise";
   const showRestaurantReservationTools =
     showRestaurantTools && Boolean(profile?.accepts_table_reservations);
-  const isTransport = profile?.activity_type === "transport";
+  const isTransport = Boolean(profile?.offers_transport) || profile?.activity_type === "transport";
   const showHotelBookingTools =
     Boolean(profile) &&
     (profile?.activity_type === "hotel" || profile?.activity_type === "enterprise" || isTransport) &&

@@ -115,14 +115,12 @@ function loadDraft<T>(key: string, fallback: T): T {
 
 function normalizeSellerActivityType(
   value: string | null | undefined,
-): "shop" | "restaurant" | "enterprise" | "transport" {
+): "shop" | "restaurant" | "enterprise" {
   if (value === "restaurant") {
     return "restaurant";
   }
-  if (value === "transport") {
-    return "transport";
-  }
-  if (value === "enterprise" || value === "hotel") {
+  // Le transport est gere comme une entreprise (drapeau offers_transport en plus).
+  if (value === "enterprise" || value === "hotel" || value === "transport") {
     return "enterprise";
   }
   return "shop";
@@ -446,7 +444,7 @@ function SellerPageContent() {
   const profileGalleryImages = splitListInput(profileForm.gallery_images_text);
   const isShop = profileForm.activity_type === "shop";
   const isRestaurant = profileForm.activity_type === "restaurant";
-  const isTransport = profileForm.activity_type === "transport";
+  const isTransport = Boolean(profile?.offers_transport);
   const isPremium = profileForm.activity_type === "hotel" || profileForm.activity_type === "enterprise";
   const showRestaurantSection = isRestaurant || isPremium;
   const showProductSection = isShop || isPremium;
@@ -863,19 +861,17 @@ function SellerPageContent() {
               className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900"
               value={profileForm.activity_type}
               onChange={(event) => {
-                const activityType = event.target.value as "shop" | "restaurant" | "enterprise" | "transport";
+                const activityType = event.target.value as "shop" | "restaurant" | "enterprise";
                 setProfileForm((prev) => ({
                   ...prev,
                   activity_type: activityType,
-                  storefront_tier:
-                    activityType === "enterprise" || activityType === "transport" ? "premium" : "basic",
+                  storefront_tier: activityType === "enterprise" ? "premium" : "basic",
                 }));
               }}
             >
               <option value="shop">Boutique (produits)</option>
               <option value="restaurant">Restaurant (menu)</option>
               <option value="enterprise">Premium entreprise (mini-site complet)</option>
-              <option value="transport">Transport (trajets / billets)</option>
             </select>
             <textarea
               placeholder="Description courte"

@@ -53,6 +53,7 @@ export type SellerProfile = {
   accepts_table_reservations: boolean;
   accepts_hotel_bookings: boolean;
   is_enterprise?: boolean;
+  offers_transport?: boolean;
   is_verified: boolean;
   created_at: string;
 };
@@ -194,6 +195,7 @@ export type SellerStorefront = {
   effective_service_fee: number;
   accepts_table_reservations: boolean;
   accepts_hotel_bookings: boolean;
+  offers_transport?: boolean;
   is_verified: boolean;
   products: SellerStorefrontProduct[];
   restaurant_menu: RestaurantMenuItem[];

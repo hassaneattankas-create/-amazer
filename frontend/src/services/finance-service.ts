@@ -252,6 +252,14 @@ export async function setAdminSellerEnterprise(profileId: string, enabled: boole
   });
 }
 
+export async function setAdminSellerTransport(profileId: string, enabled: boolean): Promise<AdminSeller> {
+  return adminProxyRequest<AdminSeller>({
+    url: `/admin/finance/sellers/${profileId}/transport`,
+    method: "POST",
+    params: { enabled },
+  });
+}
+
 export async function grantAdminSellerSubscription(profileId: string, months = 1): Promise<AdminSeller> {
   return adminProxyRequest<AdminSeller>({
     url: `/admin/finance/sellers/${profileId}/grant-subscription`,

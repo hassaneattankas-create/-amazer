@@ -26,6 +26,7 @@ import {
   replaceAdminDistrictFees,
   restoreAdminSeller,
   setAdminSellerEnterprise,
+  setAdminSellerTransport,
   toggleLaunchMode,
   updateAdminFinanceSettings,
   updateAdminSellerPricing,
@@ -207,6 +208,20 @@ export default function AdminTarifsPage() {
       );
     },
     onError: () => setStatus("Impossible de changer le niveau Entreprise."),
+  });
+  const transportMutation = useMutation({
+    mutationFn: ({ profileId, enabled }: { profileId: string; enabled: boolean }) =>
+      setAdminSellerTransport(profileId, enabled),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
+      setStatus(
+        vars.enabled
+          ? "Entreprise marquee Transport : reservation de trajets activee."
+          : "Fonction Transport retiree.",
+      );
+    },
+    onError: () => setStatus("Impossible de changer la fonction Transport."),
   });
   const permanentDeleteSellerMutation = useMutation({
     mutationFn: permanentlyDeleteAdminSeller,
@@ -762,6 +777,11 @@ export default function AdminTarifsPage() {
                         Entreprise
                       </span>
                     ) : null}
+                    {seller.offers_transport ? (
+                      <span className="ml-1 rounded-full border border-cyan-300 bg-cyan-50 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-700">
+                        Transport
+                      </span>
+                    ) : null}
                     {" | "}
                     {seller.subscription_paid_until ? (
                       <span className={new Date(seller.subscription_paid_until) > new Date() ? "text-green-600" : "text-rose-600"}>
@@ -847,6 +867,25 @@ export default function AdminTarifsPage() {
                       Passer Premium Entreprise
                     </Button>
                   )}
+                  {seller.offers_transport ? (
+                    <Button
+                      size="sm"
+                      className="border border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                      disabled={transportMutation.isPending}
+                      onClick={() => transportMutation.mutate({ profileId: seller.profile_id, enabled: false })}
+                    >
+                      Retirer Transport
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="border border-cyan-300 bg-cyan-50 text-cyan-800 hover:bg-cyan-100"
+                      disabled={transportMutation.isPending}
+                      onClick={() => transportMutation.mutate({ profileId: seller.profile_id, enabled: true })}
+                    >
+                      Marquer Transport
+                    </Button>
+                  )}
                   <select
                     aria-label="Type d'activite du vendeur"
                     title="Type d'activite"
@@ -863,7 +902,6 @@ export default function AdminTarifsPage() {
                     <option value="shop">Boutique</option>
                     <option value="restaurant">Restaurant</option>
                     <option value="enterprise">Premium</option>
-                    <option value="transport">Transport</option>
                   </select>
                   {seller.is_active ? (
                     <Button

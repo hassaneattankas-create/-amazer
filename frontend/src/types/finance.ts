@@ -111,6 +111,7 @@ export type AdminSeller = {
   activity_type: string;
   storefront_tier: string;
   is_enterprise: boolean;
+  offers_transport: boolean;
   subscription_paid_until: string | null;
   commission_rate_override: number | null;
   service_fee_override: number | null;

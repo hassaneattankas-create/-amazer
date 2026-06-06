@@ -153,7 +153,7 @@ export default function VendorShopPage() {
     mutationFn: () => {
       // Transport: une seule date (voyage). On derive la date de fin pour reutiliser le meme backend.
       let checkOut = hotelForm.check_out_date;
-      if (data?.activity_type === "transport" && hotelForm.check_in_date) {
+      if ((data?.offers_transport || data?.activity_type === "transport") && hotelForm.check_in_date) {
         const d = new Date(hotelForm.check_in_date);
         d.setDate(d.getDate() + 1);
         checkOut = d.toISOString().slice(0, 10);
@@ -282,7 +282,7 @@ export default function VendorShopPage() {
     );
   }, [data, normalizedQuery]);
 
-  const isTransport = data?.activity_type === "transport";
+  const isTransport = Boolean(data?.offers_transport) || data?.activity_type === "transport";
   const isPremiumStore =
     data?.storefront_tier === "premium" || data?.activity_type === "hotel" || data?.activity_type === "enterprise";
   const showRestaurantSection = !isTransport && (data?.activity_type === "restaurant" || Boolean(isPremiumStore));
