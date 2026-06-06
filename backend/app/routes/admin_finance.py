@@ -1412,7 +1412,7 @@ def set_seller_enterprise(
     if enabled:
         # Premium Entreprise = tier premium + activite enterprise + reservations debloquees.
         profile.storefront_tier = "premium"
-        if profile.activity_type not in ("restaurant", "enterprise", "hotel"):
+        if profile.activity_type not in ("restaurant", "enterprise", "hotel", "transport"):
             profile.activity_type = "enterprise"
         profile.accepts_table_reservations = True
         profile.accepts_hotel_bookings = True

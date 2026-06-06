@@ -115,9 +115,12 @@ function loadDraft<T>(key: string, fallback: T): T {
 
 function normalizeSellerActivityType(
   value: string | null | undefined,
-): "shop" | "restaurant" | "enterprise" {
+): "shop" | "restaurant" | "enterprise" | "transport" {
   if (value === "restaurant") {
     return "restaurant";
+  }
+  if (value === "transport") {
+    return "transport";
   }
   if (value === "enterprise" || value === "hotel") {
     return "enterprise";
@@ -443,9 +446,11 @@ function SellerPageContent() {
   const profileGalleryImages = splitListInput(profileForm.gallery_images_text);
   const isShop = profileForm.activity_type === "shop";
   const isRestaurant = profileForm.activity_type === "restaurant";
+  const isTransport = profileForm.activity_type === "transport";
   const isPremium = profileForm.activity_type === "hotel" || profileForm.activity_type === "enterprise";
   const showRestaurantSection = isRestaurant || isPremium;
   const showProductSection = isShop || isPremium;
+  const showRoomTypes = isPremium || isTransport;
   const { data: publicFinance } = useQuery({
     queryKey: ["public-finance-settings"],
     queryFn: getPublicFinanceSettings,
@@ -858,17 +863,19 @@ function SellerPageContent() {
               className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900"
               value={profileForm.activity_type}
               onChange={(event) => {
-                const activityType = event.target.value as "shop" | "restaurant" | "enterprise";
+                const activityType = event.target.value as "shop" | "restaurant" | "enterprise" | "transport";
                 setProfileForm((prev) => ({
                   ...prev,
                   activity_type: activityType,
-                  storefront_tier: activityType === "enterprise" ? "premium" : "basic",
+                  storefront_tier:
+                    activityType === "enterprise" || activityType === "transport" ? "premium" : "basic",
                 }));
               }}
             >
               <option value="shop">Boutique (produits)</option>
               <option value="restaurant">Restaurant (menu)</option>
               <option value="enterprise">Premium entreprise (mini-site complet)</option>
+              <option value="transport">Transport (trajets / billets)</option>
             </select>
             <textarea
               placeholder="Description courte"
@@ -999,9 +1006,13 @@ function SellerPageContent() {
                 className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm"
               />
             ) : null}
-            {isPremium ? (
+            {showRoomTypes ? (
               <textarea
-                placeholder="Chambres: nom | prix | capacite | amenites | acompte"
+                placeholder={
+                  isTransport
+                    ? "Trajets: nom (ex: Niamey - Maradi 08h) | prix place | capacite | options | acompte"
+                    : "Chambres: nom | prix | capacite | amenites | acompte"
+                }
                 value={profileForm.room_types_text}
                 onChange={(event) =>
                   setProfileForm((prev) => ({ ...prev, room_types_text: event.target.value }))
@@ -1035,8 +1046,8 @@ function SellerPageContent() {
                     })
                   : [],
                 service_offerings: isPremium ? parseServices(profileForm.service_offerings_text) : [],
-                room_types: isPremium ? parseRoomTypes(profileForm.room_types_text) : [],
-                deposit_payment_method: isPremium ? profileForm.deposit_payment_method : undefined,
+                room_types: showRoomTypes ? parseRoomTypes(profileForm.room_types_text) : [],
+                deposit_payment_method: showRoomTypes ? profileForm.deposit_payment_method : undefined,
                 deposit_amount: isPremium
                   ? profileForm.deposit_amount
                     ? Number(profileForm.deposit_amount)

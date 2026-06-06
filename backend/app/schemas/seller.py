@@ -36,7 +36,7 @@ class SellerProfileRequest(BaseModel):
     phone: str | None = Field(default=None, max_length=40)
     city: str = Field(default="Niamey", min_length=2, max_length=80)
     address: str | None = Field(default=None, max_length=220)
-    activity_type: Literal["shop", "restaurant", "hotel", "enterprise"] = "shop"
+    activity_type: Literal["shop", "restaurant", "hotel", "enterprise", "transport"] = "shop"
     storefront_tier: Literal["basic", "premium"] = "basic"
     description: str | None = Field(default=None, max_length=2000)
     logo_url: str | None = Field(default=None, max_length=1024)
@@ -63,7 +63,7 @@ class SellerProfileResponse(BaseModel):
     phone: str | None
     city: str
     address: str | None
-    activity_type: Literal["shop", "restaurant", "hotel", "enterprise"]
+    activity_type: Literal["shop", "restaurant", "hotel", "enterprise", "transport"]
     storefront_tier: Literal["basic", "premium"]
     description: str | None
     logo_url: str | None
@@ -235,7 +235,7 @@ class SellerStorefrontResponse(BaseModel):
     vendor_id: str
     vendor_slug: str
     business_name: str
-    activity_type: Literal["shop", "restaurant", "hotel", "enterprise"]
+    activity_type: Literal["shop", "restaurant", "hotel", "enterprise", "transport"]
     storefront_tier: Literal["basic", "premium"]
     city: str | None
     address: str | None

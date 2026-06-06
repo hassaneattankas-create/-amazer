@@ -87,9 +87,10 @@ export default function SellerDashboardPage() {
   const showRestaurantTools = sellerMode === "restaurant" || sellerMode === "enterprise";
   const showRestaurantReservationTools =
     showRestaurantTools && Boolean(profile?.accepts_table_reservations);
+  const isTransport = profile?.activity_type === "transport";
   const showHotelBookingTools =
     Boolean(profile) &&
-    (profile?.activity_type === "hotel" || profile?.activity_type === "enterprise") &&
+    (profile?.activity_type === "hotel" || profile?.activity_type === "enterprise" || isTransport) &&
     Boolean(profile?.accepts_hotel_bookings);
 
   const { data: financeSettings } = useQuery({
@@ -795,7 +796,7 @@ export default function SellerDashboardPage() {
           <article className="premium-card border border-slate-200 bg-white p-6">
             <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
               <Hotel className="h-5 w-5 text-[#FF4D00]" />
-              Reservations hotel
+              {isTransport ? "Reservations de trajets" : "Reservations hotel"}
             </h2>
             <div className="mt-4 space-y-3">
               {hotelBookings.map((booking) => (

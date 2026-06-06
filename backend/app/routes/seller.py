@@ -1208,11 +1208,14 @@ def create_hotel_booking(
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == vendor_id))
     if profile is None or (
-        profile.activity_type not in {"hotel", "enterprise"} and profile.storefront_tier != "premium"
+        profile.activity_type not in {"hotel", "enterprise", "transport"}
+        and profile.storefront_tier != "premium"
     ):
         raise NotFoundError("Premium storefront not found")
     if not profile.accepts_hotel_bookings:
         raise ConflictError("Hotel bookings are disabled for this storefront")
+
+    is_transport = profile.activity_type == "transport"
 
     room_map = {
         str(room.get("id")): room
@@ -1224,7 +1227,7 @@ def create_hotel_booking(
         raise NotFoundError("Room type not found")
 
     nights = (payload.check_out_date - payload.check_in_date).days
-    if nights <= 0:
+    if nights <= 0 and not is_transport:
         raise ConflictError("Check-out must be after check-in")
     deposit_amount = float(room.get("deposit_amount") or profile.deposit_amount or 0)
     if deposit_amount <= 0:

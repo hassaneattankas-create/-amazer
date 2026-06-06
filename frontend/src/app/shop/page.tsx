@@ -29,6 +29,7 @@ const activityLabels = {
   restaurant: "Restaurant",
   hotel: "Premium",
   enterprise: "Premium",
+  transport: "Transport",
 } as const;
 
 type SelectedMenuItem = {

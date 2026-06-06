@@ -847,6 +847,24 @@ export default function AdminTarifsPage() {
                       Passer Premium Entreprise
                     </Button>
                   )}
+                  <select
+                    aria-label="Type d'activite du vendeur"
+                    title="Type d'activite"
+                    value={seller.activity_type}
+                    onChange={(event) =>
+                      sellerTypeMutation.mutate({
+                        profileId: seller.profile_id,
+                        activityType: event.target.value,
+                        storefrontTier: seller.storefront_tier,
+                      })
+                    }
+                    className="h-8 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-700"
+                  >
+                    <option value="shop">Boutique</option>
+                    <option value="restaurant">Restaurant</option>
+                    <option value="enterprise">Premium</option>
+                    <option value="transport">Transport</option>
+                  </select>
                   {seller.is_active ? (
                     <Button
                       size="sm"

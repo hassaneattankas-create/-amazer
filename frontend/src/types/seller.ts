@@ -1,6 +1,6 @@
 import type { RestaurantMenuItem } from "@/types/restaurant";
 
-export type SellerActivityType = "shop" | "restaurant" | "hotel" | "enterprise";
+export type SellerActivityType = "shop" | "restaurant" | "hotel" | "enterprise" | "transport";
 export type StorefrontTier = "basic" | "premium";
 
 export type SellerServiceOffering = {

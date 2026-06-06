@@ -200,7 +200,7 @@ class AdminSellerPricingUpdateRequest(BaseModel):
 class AdminSellerTypeUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    activity_type: str = Field(..., pattern=r"^(shop|restaurant|enterprise)$")
+    activity_type: str = Field(..., pattern=r"^(shop|restaurant|enterprise|transport)$")
     storefront_tier: str = Field(..., pattern=r"^(basic|premium)$")
 
 
@@ -263,7 +263,7 @@ class SellerPreRegisterRequest(BaseModel):
     identifier: str = Field(..., min_length=6, max_length=320)
     password: str = Field(..., min_length=8, max_length=128)
     business_name: str | None = Field(default=None, max_length=255)
-    activity_type: str = Field(default="shop", pattern=r"^(shop|restaurant|enterprise)$")
+    activity_type: str = Field(default="shop", pattern=r"^(shop|restaurant|enterprise|transport)$")
     storefront_tier: str = Field(default="basic", pattern=r"^(basic|premium)$")
     payment_mode: str = Field(default="nita", pattern=r"^(nita|amana)$")
     months: int = Field(default=1, ge=1, le=12)

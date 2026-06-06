@@ -15,6 +15,7 @@ const activityMeta = {
   restaurant: { label: "Restaurant", icon: UtensilsCrossed },
   hotel: { label: "Premium", icon: BedDouble },
   enterprise: { label: "Premium", icon: Store },
+  transport: { label: "Transport", icon: Store },
 } as const;
 
 const COVER_GRADIENTS = [
@@ -46,7 +47,8 @@ export function StorefrontShowcaseCard({
   const activityKey =
     store.activity_type === "restaurant" ||
     store.activity_type === "hotel" ||
-    store.activity_type === "enterprise"
+    store.activity_type === "enterprise" ||
+    store.activity_type === "transport"
       ? store.activity_type
       : "shop";
   const meta = activityMeta[activityKey];

@@ -29,6 +29,7 @@ const activityLabels = {
   restaurant: "Restaurant",
   hotel: "Premium",
   enterprise: "Premium",
+  transport: "Transport",
 } as const;
 
 type SelectedMenuItem = {
@@ -149,20 +150,28 @@ export default function VendorShopPage() {
   });
 
   const hotelBookingMutation = useMutation({
-    mutationFn: () =>
-      createHotelBooking(vendorId, {
+    mutationFn: () => {
+      // Transport: une seule date (voyage). On derive la date de fin pour reutiliser le meme backend.
+      let checkOut = hotelForm.check_out_date;
+      if (data?.activity_type === "transport" && hotelForm.check_in_date) {
+        const d = new Date(hotelForm.check_in_date);
+        d.setDate(d.getDate() + 1);
+        checkOut = d.toISOString().slice(0, 10);
+      }
+      return createHotelBooking(vendorId, {
         vendor_id: vendorId,
         room_type_id: hotelForm.room_type_id,
         guest_name: hotelForm.guest_name,
         guest_phone: hotelForm.guest_phone,
         guest_email: hotelForm.guest_email || undefined,
         check_in_date: hotelForm.check_in_date,
-        check_out_date: hotelForm.check_out_date,
+        check_out_date: checkOut,
         guest_count: Number(hotelForm.guest_count || 1),
         deposit_payment_method: hotelForm.deposit_payment_method,
         transaction_reference: hotelForm.transaction_reference || undefined,
         special_request: hotelForm.special_request || undefined,
-      }),
+      });
+    },
     onSuccess: () => {
       setStatus("Demande de reservation premium envoyee.");
       setHotelForm((prev) => ({
@@ -273,9 +282,10 @@ export default function VendorShopPage() {
     );
   }, [data, normalizedQuery]);
 
+  const isTransport = data?.activity_type === "transport";
   const isPremiumStore =
     data?.storefront_tier === "premium" || data?.activity_type === "hotel" || data?.activity_type === "enterprise";
-  const showRestaurantSection = data?.activity_type === "restaurant" || Boolean(isPremiumStore);
+  const showRestaurantSection = !isTransport && (data?.activity_type === "restaurant" || Boolean(isPremiumStore));
   const canOrder = showRestaurantSection && filteredMenu.length > 0;
 
   const total = useMemo(
@@ -506,28 +516,29 @@ export default function VendorShopPage() {
         </>
       ) : null}
 
-      {data.activity_type === "hotel" || data.activity_type === "enterprise" ? (
+      {data.activity_type === "hotel" || data.activity_type === "enterprise" || isTransport ? (
         <>
-          <HotelRoomSection rooms={filteredRooms} />
+          {!isTransport ? <HotelRoomSection rooms={filteredRooms} /> : null}
           {data.accepts_hotel_bookings ? (
             <article className="premium-card border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-5">
               <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
                 <Hotel className="h-5 w-5 text-[#0ea5e9]" />
-                Reservation premium avec acompte
+                {isTransport ? "Reservation de trajet avec acompte" : "Reservation premium avec acompte"}
               </h2>
               <p className="mt-2 text-sm text-slate-600">
                 Acompte obligatoire via {data.deposit_payment_method || "Nita/Amana"} pour valider la demande.
               </p>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <select
+                  aria-label={isTransport ? "Choisir un trajet" : "Choisir une chambre"}
                   value={hotelForm.room_type_id}
                   onChange={(event) => setHotelForm((prev) => ({ ...prev, room_type_id: event.target.value }))}
                   className="h-11 rounded-md border border-slate-300 px-3 text-sm"
                 >
-                  <option value="">Choisir une chambre</option>
+                  <option value="">{isTransport ? "Choisir un trajet" : "Choisir une chambre"}</option>
                   {data.room_types.map((room) => (
                     <option key={room.id || room.name} value={room.id || room.name}>
-                      {room.name} - {formatXOF(room.night_price)}/nuit
+                      {room.name} - {formatXOF(room.night_price)}{isTransport ? "/place" : "/nuit"}
                     </option>
                   ))}
                 </select>
@@ -546,24 +557,35 @@ export default function VendorShopPage() {
                   value={hotelForm.guest_email}
                   onChange={(event) => setHotelForm((prev) => ({ ...prev, guest_email: event.target.value }))}
                 />
-                <Input
-                  type="date"
-                  value={hotelForm.check_in_date}
-                  onChange={(event) => setHotelForm((prev) => ({ ...prev, check_in_date: event.target.value }))}
-                />
-                <Input
-                  type="date"
-                  value={hotelForm.check_out_date}
-                  onChange={(event) => setHotelForm((prev) => ({ ...prev, check_out_date: event.target.value }))}
-                />
+                <div className={isTransport ? "md:col-span-2" : ""}>
+                  <label className="mb-1 block text-xs text-slate-500">
+                    {isTransport ? "Date de voyage" : "Date d'arrivee"}
+                  </label>
+                  <Input
+                    type="date"
+                    value={hotelForm.check_in_date}
+                    onChange={(event) => setHotelForm((prev) => ({ ...prev, check_in_date: event.target.value }))}
+                  />
+                </div>
+                {!isTransport ? (
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-500">Date de depart</label>
+                    <Input
+                      type="date"
+                      value={hotelForm.check_out_date}
+                      onChange={(event) => setHotelForm((prev) => ({ ...prev, check_out_date: event.target.value }))}
+                    />
+                  </div>
+                ) : null}
                 <Input
                   type="number"
                   min={1}
                   value={hotelForm.guest_count}
                   onChange={(event) => setHotelForm((prev) => ({ ...prev, guest_count: event.target.value }))}
-                  placeholder="Voyageurs"
+                  placeholder={isTransport ? "Nombre de places" : "Voyageurs"}
                 />
                 <select
+                  aria-label="Mode de paiement de l'acompte"
                   value={hotelForm.deposit_payment_method}
                   onChange={(event) =>
                     setHotelForm((prev) => ({
