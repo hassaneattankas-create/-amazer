@@ -1674,13 +1674,13 @@ def decide_seller_pre_registration(
         db.flush()
         db.add(UserPreferences(user_id=user.id, preferred_currency="XOF"))
 
-        # Creer le vendeur
+        # Creer le vendeur (slug unique obligatoire)
+        from app.services.seller_profile_service import build_unique_vendor_slug
         vendor = _Vendor(
             id=str(_uuid.uuid4()),
             name=reg.business_name or reg.full_name,
-            city="Niamey",
+            slug=build_unique_vendor_slug(db, reg.business_name or reg.full_name, user.id),
             is_active=True,
-            owner_id=user.id,
         )
         db.add(vendor)
         db.flush()

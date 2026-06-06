@@ -243,8 +243,12 @@ def _build_subscription_status(profile: SellerProfile | None, db: Session) -> Se
         onboarding_fee = 0.0
         onboarding_fee_paid = profile.onboarding_fee_paid_at is not None
         subscription_paid_until = profile.subscription_paid_until
+        # Coherent avec _has_active_subscription: la boutique n'est active qu'apres
+        # validation du 1er paiement (onboarding) ET un abonnement non expire.
         subscription_active = (
-            subscription_paid_until is not None and subscription_paid_until > datetime.now(UTC)
+            onboarding_fee_paid
+            and subscription_paid_until is not None
+            and subscription_paid_until > datetime.now(UTC)
         )
     amount_due_now = 0.0
     if profile is not None:
@@ -985,16 +989,19 @@ def update_inventory_item(
         price.amount = payload.promo_amount
     price.product.specs = specs
 
-    db.add(
-        PriceHistory(
-            price_id=price.id,
-            previous_amount=previous_amount,
-            new_amount=price.amount,
-            previous_stock_quantity=previous_stock,
-            new_stock_quantity=price.stock_quantity,
-            reason="seller_inventory_update",
+    # N'historiser que si le prix ou le stock change reellement (pas pour une edition
+    # de nom/marque/description seule).
+    if price.amount != previous_amount or price.stock_quantity != previous_stock:
+        db.add(
+            PriceHistory(
+                price_id=price.id,
+                previous_amount=previous_amount,
+                new_amount=price.amount,
+                previous_stock_quantity=previous_stock,
+                new_stock_quantity=price.stock_quantity,
+                reason="seller_inventory_update",
+            )
         )
-    )
     append_audit_log(
         db,
         event_type="seller_price_updated",

@@ -19,9 +19,9 @@ def _price(*, vendor_id: str = "vendor-1") -> SimpleNamespace:
         brand="AMAZER",
         description="Ancienne description",
         main_image_url="https://example.test/old.jpg",
+        category_id=None,
         images=[],
         specs={},
-        is_boosted=False,
     )
     return SimpleNamespace(
         id="price-1",

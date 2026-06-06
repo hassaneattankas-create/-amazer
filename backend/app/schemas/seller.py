@@ -23,7 +23,8 @@ class HotelRoomTypeSchema(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     description: str | None = Field(default=None, max_length=1000)
     night_price: float = Field(gt=0)
-    capacity: int = Field(default=1, ge=1, le=12)
+    # Jusqu'a 200: couvre les chambres d'hotel comme les places d'un bus (transport).
+    capacity: int = Field(default=1, ge=1, le=200)
     amenities: list[str] = Field(default_factory=list, max_length=20)
     photo_urls: list[str] = Field(default_factory=list, max_length=20)
     deposit_amount: float | None = Field(default=None, ge=0)
