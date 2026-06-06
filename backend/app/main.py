@@ -291,7 +291,7 @@ def ping() -> dict[str, str]:
     from datetime import UTC, datetime
     from sqlalchemy import update
     from app.models.seller_profile import SellerProfile
-    from app.models.price import Price
+    from app.models.product import Price
 
     try:
         now = datetime.now(UTC)
