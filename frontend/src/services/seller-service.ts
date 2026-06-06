@@ -138,3 +138,27 @@ export async function listSellerSubscriptionPaymentRequests(): Promise<SellerSub
   const response = await api.get<SellerSubscriptionPaymentRequest[]>("/api/v1/seller/subscription/payment-requests");
   return response.data;
 }
+
+export async function importSellerProductsCsv(file: File): Promise<{ created: number; errors: string[] }> {
+  const form = new FormData();
+  form.append("file", file);
+  const response = await api.post<{ created: number; errors: string[] }>(
+    "/api/v1/seller/products/import",
+    form,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return response.data;
+}
+
+export async function exportSellerOrdersCsv(): Promise<void> {
+  const response = await api.get("/api/v1/seller/orders/export", { responseType: "blob" });
+  const blob = new Blob([response.data as BlobPart], { type: "text/csv" });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `ventes_amazer_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}

@@ -178,6 +178,7 @@ class AdminSellerResponse(BaseModel):
     is_active: bool
     activity_type: str = "shop"
     storefront_tier: str = "basic"
+    is_enterprise: bool = False
     subscription_paid_until: str | None = None
     commission_rate_override: float | None = None
     service_fee_override: float | None = None

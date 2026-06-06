@@ -25,6 +25,7 @@ import {
   permanentlyDeleteAdminSeller,
   replaceAdminDistrictFees,
   restoreAdminSeller,
+  setAdminSellerEnterprise,
   toggleLaunchMode,
   updateAdminFinanceSettings,
   updateAdminSellerPricing,
@@ -192,6 +193,20 @@ export default function AdminTarifsPage() {
       setStatus("Vendeur remis en ligne.");
     },
     onError: () => setStatus("Remise en ligne impossible."),
+  });
+  const enterpriseMutation = useMutation({
+    mutationFn: ({ profileId, enabled }: { profileId: string; enabled: boolean }) =>
+      setAdminSellerEnterprise(profileId, enabled),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
+      setStatus(
+        vars.enabled
+          ? "Vendeur passe en Premium Entreprise. Reservations, import et export debloques."
+          : "Premium Entreprise retire.",
+      );
+    },
+    onError: () => setStatus("Impossible de changer le niveau Entreprise."),
   });
   const permanentDeleteSellerMutation = useMutation({
     mutationFn: permanentlyDeleteAdminSeller,
@@ -742,6 +757,11 @@ export default function AdminTarifsPage() {
                   <p className="mt-0.5 text-xs font-medium text-slate-600">
                     Type: <span className="text-[#FF4D00]">{seller.activity_type}</span> | Tier:{" "}
                     <span className="text-[#FF4D00]">{seller.storefront_tier}</span>
+                    {seller.is_enterprise ? (
+                      <span className="ml-1 rounded-full border border-indigo-300 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">
+                        Entreprise
+                      </span>
+                    ) : null}
                     {" | "}
                     {seller.subscription_paid_until ? (
                       <span className={new Date(seller.subscription_paid_until) > new Date() ? "text-green-600" : "text-rose-600"}>
@@ -806,6 +826,25 @@ export default function AdminTarifsPage() {
                       }
                     >
                       Rétrograder Basic
+                    </Button>
+                  )}
+                  {seller.is_enterprise ? (
+                    <Button
+                      size="sm"
+                      className="border border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                      disabled={enterpriseMutation.isPending}
+                      onClick={() => enterpriseMutation.mutate({ profileId: seller.profile_id, enabled: false })}
+                    >
+                      Retirer Entreprise
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="border border-indigo-300 bg-indigo-50 text-indigo-800 hover:bg-indigo-100"
+                      disabled={enterpriseMutation.isPending}
+                      onClick={() => enterpriseMutation.mutate({ profileId: seller.profile_id, enabled: true })}
+                    >
+                      Passer Premium Entreprise
                     </Button>
                   )}
                   {seller.is_active ? (

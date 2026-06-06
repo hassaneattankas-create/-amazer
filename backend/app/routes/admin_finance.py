@@ -180,6 +180,7 @@ def _build_admin_seller_response(
         is_active=bool(vendor.is_active) if vendor else False,
         activity_type=profile.activity_type or "shop",
         storefront_tier=profile.storefront_tier or "basic",
+        is_enterprise=bool(getattr(profile, "is_enterprise", False)),
         subscription_paid_until=profile.subscription_paid_until.isoformat() if profile.subscription_paid_until else None,
         commission_rate_override=profile.commission_rate_override,
         service_fee_override=profile.service_fee_override,
@@ -1384,6 +1385,46 @@ def update_seller_type(
         entity_type="seller_profile",
         entity_id=profile.id,
         details=payload.model_dump(),
+    )
+    db.commit()
+    db.refresh(profile)
+    _invalidate_public_marketplace_cache()
+    vendor = db.get(Vendor, profile.vendor_id)
+    return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
+
+
+@router.post("/sellers/{profile_id}/enterprise", response_model=AdminSellerResponse)
+def set_seller_enterprise(
+    profile_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+    enabled: Annotated[bool, Query()] = True,
+) -> AdminSellerResponse:
+    """Active/desactive le niveau Premium Entreprise (sur devis). Un seul switch debloque
+    import, export, reservations (chambres/tables/transport) et calendrier."""
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    profile = db.get(SellerProfile, profile_id)
+    if profile is None:
+        raise ValidationDomainError("Profil vendeur introuvable")
+    profile.is_enterprise = bool(enabled)
+    if enabled:
+        # Premium Entreprise = tier premium + activite enterprise + reservations debloquees.
+        profile.storefront_tier = "premium"
+        if profile.activity_type not in ("restaurant", "enterprise", "hotel"):
+            profile.activity_type = "enterprise"
+        profile.accepts_table_reservations = True
+        profile.accepts_hotel_bookings = True
+    append_audit_log(
+        db,
+        event_type="admin_seller_enterprise_set",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="seller_profile",
+        entity_id=profile.id,
+        details={"enabled": bool(enabled)},
     )
     db.commit()
     db.refresh(profile)

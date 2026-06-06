@@ -87,6 +87,7 @@ class SellerProfileResponse(BaseModel):
     effective_seller_subscription_fee: float
     accepts_table_reservations: bool
     accepts_hotel_bookings: bool
+    is_enterprise: bool = False
     is_verified: bool
     created_at: datetime
 

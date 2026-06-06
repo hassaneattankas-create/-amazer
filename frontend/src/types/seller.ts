@@ -52,6 +52,7 @@ export type SellerProfile = {
   effective_seller_subscription_fee: number;
   accepts_table_reservations: boolean;
   accepts_hotel_bookings: boolean;
+  is_enterprise?: boolean;
   is_verified: boolean;
   created_at: string;
 };

@@ -1,8 +1,11 @@
+import csv
+import io
 import re
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Request, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, object_session, selectinload
 
@@ -11,7 +14,7 @@ from app.core.cache import cache_delete_prefixes
 from app.core.deps import get_admin_user, get_current_user, get_seller_user
 from app.core.crypto import decrypt_phone_value, encrypt_phone_value
 from app.core.csrf import enforce_csrf
-from app.core.exceptions import ConflictError, NotFoundError, ValidationDomainError
+from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationDomainError
 from app.core.rate_limit import enforce_rate_limit
 from app.database import get_db
 from app.models.hospitality import HotelBooking, RestaurantReservation
@@ -220,6 +223,7 @@ def _profile_response(profile: SellerProfile, db: Session) -> SellerProfileRespo
         effective_seller_subscription_fee=finance.seller_subscription_fee,
         accepts_table_reservations=bool(profile.accepts_table_reservations),
         accepts_hotel_bookings=bool(profile.accepts_hotel_bookings),
+        is_enterprise=bool(getattr(profile, "is_enterprise", False)),
         is_verified=profile.is_verified,
         created_at=profile.created_at,
     )
@@ -686,6 +690,96 @@ def create_product_listing(
     )
 
 
+def _csv_get(row: dict[str, str], *names: str) -> str:
+    """Recupere une valeur CSV en testant plusieurs noms de colonnes (FR/EN), insensible a la casse."""
+    lowered = {(k or "").strip().lower(): (v or "") for k, v in row.items()}
+    for name in names:
+        if name in lowered and lowered[name].strip():
+            return lowered[name].strip()
+    return ""
+
+
+@router.post("/products/import")
+def import_products_csv(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+    file: Annotated[UploadFile, File()],
+) -> dict[str, object]:
+    """Import en masse de produits via CSV (Premium Entreprise uniquement).
+    Colonnes acceptees: nom/name, marque/brand, prix/amount, stock, description."""
+    enforce_csrf(request)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        raise NotFoundError("Create a seller profile first")
+    if not getattr(profile, "is_enterprise", False):
+        raise ForbiddenError("Import en masse reserve au Premium Entreprise.")
+
+    raw = file.file.read()
+    if len(raw) > 2_000_000:
+        raise ValidationDomainError("Fichier trop volumineux (max 2 Mo).")
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = raw.decode("latin-1", errors="ignore")
+
+    reader = csv.DictReader(io.StringIO(text))
+    created = 0
+    errors: list[str] = []
+    vendor = db.get(Vendor, profile.vendor_id)
+    for index, row in enumerate(reader, start=2):
+        if created >= 2000:
+            errors.append("Limite de 2000 produits par import atteinte.")
+            break
+        name = _csv_get(row, "nom", "name", "produit", "product")
+        brand = _csv_get(row, "marque", "brand") or name
+        amount_raw = _csv_get(row, "prix", "amount", "price").replace(" ", "").replace(",", ".")
+        stock_raw = _csv_get(row, "stock", "quantite", "quantity") or "0"
+        description = _csv_get(row, "description", "desc") or None
+        if not name or not amount_raw:
+            errors.append(f"Ligne {index}: nom ou prix manquant, ignoree.")
+            continue
+        try:
+            amount = float(amount_raw)
+            stock = int(float(stock_raw))
+        except ValueError:
+            errors.append(f"Ligne {index}: prix ou stock invalide, ignoree.")
+            continue
+        if amount <= 0:
+            errors.append(f"Ligne {index}: prix doit etre positif, ignoree.")
+            continue
+        product = Product(name=name[:200], brand=brand[:120], description=description, specs={})
+        db.add(product)
+        db.flush()
+        db.add(
+            Price(
+                product_id=product.id,
+                vendor_id=profile.vendor_id,
+                currency="XOF",
+                amount=amount,
+                stock_quantity=max(0, stock),
+                is_active=True,
+            )
+        )
+        created += 1
+
+    if vendor is not None and created > 0:
+        vendor.is_active = _has_active_subscription(profile)
+    append_audit_log(
+        db,
+        event_type="seller_products_imported",
+        actor=current_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="vendor",
+        entity_id=profile.vendor_id,
+        details={"created": created, "errors": len(errors)},
+    )
+    db.commit()
+    _invalidate_public_marketplace_cache()
+    return {"created": created, "errors": errors[:50]}
+
+
 @router.get("/inventory", response_model=list[SellerInventoryItemResponse])
 def list_inventory(
     db: Annotated[Session, Depends(get_db)],
@@ -756,6 +850,59 @@ def list_seller_orders(
         _seller_shop_order_response(order, profile.vendor_id, product_names=product_names)
         for order in rows
     ]
+
+
+@router.get("/orders/export")
+def export_seller_orders(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> StreamingResponse:
+    """Export CSV des ventes du vendeur (Premium Entreprise uniquement)."""
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        raise NotFoundError("Seller profile not found")
+    if not getattr(profile, "is_enterprise", False):
+        raise ForbiddenError("Export reserve au Premium Entreprise.")
+
+    rows = db.scalars(
+        select(Order)
+        .join(Order.items)
+        .where(OrderItem.vendor_id == profile.vendor_id)
+        .options(selectinload(Order.user), selectinload(Order.items))
+        .order_by(Order.created_at.desc())
+        .limit(5000)
+    ).unique().all()
+    product_ids = {item.product_id for order in rows for item in order.items if item.vendor_id == profile.vendor_id}
+    product_names = {
+        row.id: row.name
+        for row in db.scalars(select(Product).where(Product.id.in_(product_ids))).all()
+    } if product_ids else {}
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["Date", "Commande", "Client", "Articles", "Montant total XOF", "Paiement", "Statut"])
+    for order in rows:
+        items_for_vendor = [it for it in order.items if it.vendor_id == profile.vendor_id]
+        articles = "; ".join(
+            f"{product_names.get(it.product_id, it.product_id)} x{it.quantity}" for it in items_for_vendor
+        )
+        montant = sum(float(it.unit_price) * int(it.quantity) for it in items_for_vendor)
+        writer.writerow([
+            order.created_at.strftime("%Y-%m-%d %H:%M") if order.created_at else "",
+            (order.tracking_code or order.id[:8]),
+            order.user.full_name if order.user else "",
+            articles,
+            round(montant),
+            (order.payment_mode or "").upper(),
+            order.status,
+        ])
+    buffer.seek(0)
+    filename = f"ventes_amazer_{datetime.now(UTC).strftime('%Y%m%d')}.csv"
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 @router.patch("/orders/{order_id}/status", response_model=SellerShopOrderResponse)

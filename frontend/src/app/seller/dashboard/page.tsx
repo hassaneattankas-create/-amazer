@@ -29,7 +29,9 @@ import {
 import {
   createSellerProduct,
   deleteSellerInventoryItem,
+  exportSellerOrdersCsv,
   getSellerProfile,
+  importSellerProductsCsv,
   listSellerHotelBookings,
   listSellerInventory,
   listSellerOrders,
@@ -183,6 +185,16 @@ export default function SellerDashboardPage() {
       setStatus("Produit supprime du catalogue.");
     },
     onError: () => setStatus("Erreur lors de la suppression du produit."),
+  });
+
+  const importProductsMutation = useMutation({
+    mutationFn: importSellerProductsCsv,
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ["seller-inventory"] });
+      const errs = result.errors.length ? ` (${result.errors.length} ligne(s) ignoree(s))` : "";
+      setStatus(`${result.created} produit(s) importe(s)${errs}.`);
+    },
+    onError: () => setStatus("Import impossible. Verifie le format du fichier CSV."),
   });
 
 
@@ -414,6 +426,45 @@ export default function SellerDashboardPage() {
           </Button>
         </div>
       </header>
+
+      {profile?.is_enterprise ? (
+        <article className="premium-card border border-indigo-200 bg-indigo-50/50 p-5">
+          <h2 className="luxury-title text-lg font-semibold text-slate-900">Outils Premium Entreprise</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Gere ton gros catalogue et ta comptabilite en quelques clics.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                void exportSellerOrdersCsv().catch(() => setStatus("Export impossible."));
+              }}
+            >
+              Exporter mes ventes (CSV)
+            </Button>
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
+              {importProductsMutation.isPending ? "Import en cours..." : "Importer des produits (CSV)"}
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                disabled={importProductsMutation.isPending}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) {
+                    importProductsMutation.mutate(file);
+                  }
+                  event.target.value = "";
+                }}
+              />
+            </label>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">
+            Format CSV: colonnes <span className="font-medium">nom, marque, prix, stock, description</span>.
+          </p>
+        </article>
+      ) : null}
 
       <div className="space-y-6">
         {showProductTools ? (
