@@ -883,8 +883,13 @@ def _clean_photo_product_name(filename: str | None) -> str:
 
 def _compress_image_to_limit(raw: bytes, *, max_bytes: int = 480_000) -> bytes:
     """Compresse/redimensionne une image (JPEG) pour tenir sous la limite de stockage
-    (512 KB en base). Les photos brutes de telephone passent ainsi sans rejet."""
-    from PIL import Image
+    (512 KB en base). Les photos brutes de telephone passent ainsi sans rejet.
+    Si Pillow est indisponible, on renvoie l'image telle quelle (le stockage rejettera
+    proprement les images trop lourdes) afin de ne jamais bloquer le demarrage."""
+    try:
+        from PIL import Image
+    except Exception:
+        return raw
 
     image = Image.open(io.BytesIO(raw))
     if image.mode != "RGB":
