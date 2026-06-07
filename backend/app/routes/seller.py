@@ -870,6 +870,142 @@ def import_products_csv(
     return {"created": created, "errors": errors[:50]}
 
 
+def _clean_photo_product_name(filename: str | None) -> str:
+    """Derive un nom de produit lisible a partir du nom de fichier de la photo."""
+    if not filename:
+        return ""
+    base = filename.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+    base = base.rsplit(".", 1)[0]
+    base = re.sub(r"[_\-]+", " ", base)
+    base = re.sub(r"\s+", " ", base).strip()
+    return base[:200]
+
+
+def _compress_image_to_limit(raw: bytes, *, max_bytes: int = 480_000) -> bytes:
+    """Compresse/redimensionne une image (JPEG) pour tenir sous la limite de stockage
+    (512 KB en base). Les photos brutes de telephone passent ainsi sans rejet."""
+    from PIL import Image
+
+    image = Image.open(io.BytesIO(raw))
+    if image.mode != "RGB":
+        image = image.convert("RGB")
+    if max(image.size) > 1280:
+        image.thumbnail((1280, 1280))
+    for quality in (85, 75, 65, 55, 45):
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG", quality=quality, optimize=True)
+        if buffer.tell() <= max_bytes:
+            return buffer.getvalue()
+    image.thumbnail((900, 900))
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG", quality=45, optimize=True)
+    return buffer.getvalue()
+
+
+async def _store_image_bytes(data: bytes) -> str:
+    """Stocke des octets d'image via le provider media actif et renvoie l'URL publique."""
+    from starlette.datastructures import Headers
+    from starlette.datastructures import UploadFile as StarletteUploadFile
+
+    from app.services.media_storage import get_media_storage
+
+    upload = StarletteUploadFile(
+        file=io.BytesIO(data),
+        filename="import.jpg",
+        headers=Headers({"content-type": "image/jpeg"}),
+    )
+    stored = await get_media_storage().save_upload(upload, ".jpg")
+    return stored.url
+
+
+@router.post("/products/import-photos")
+async def import_product_photos(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+    files: Annotated[list[UploadFile], File()],
+) -> dict[str, object]:
+    """Import en masse par photos: cree un produit brouillon par image (image remplie,
+    masque du public). Le vendeur complete ensuite nom/prix/stock dans le dashboard."""
+    enforce_csrf(request)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        raise NotFoundError("Create a seller profile first")
+    # L'envoi de plusieurs produits a la fois (par photos) est reserve au Premium.
+    if not is_premium_profile(profile):
+        raise ForbiddenError(
+            "L'envoi de plusieurs produits a la fois est reserve aux boutiques Premium."
+        )
+    if len(files) > 40:
+        raise ValidationDomainError("Maximum 40 photos par envoi. Reessayez par lots.")
+    remaining = 10_000
+
+    created = 0
+    errors: list[str] = []
+    vendor = db.get(Vendor, profile.vendor_id)
+    for upload in files:
+        if created >= remaining:
+            errors.append("Limite de catalogue atteinte, photos restantes ignorees.")
+            break
+        content_type = (upload.content_type or "").lower()
+        if not content_type.startswith("image/"):
+            errors.append(f"{upload.filename or 'fichier'}: pas une image, ignore.")
+            continue
+        raw = await upload.read()
+        if not raw:
+            errors.append(f"{upload.filename or 'fichier'}: vide, ignore.")
+            continue
+        try:
+            data = _compress_image_to_limit(raw)
+        except Exception:
+            errors.append(f"{upload.filename or 'fichier'}: image illisible, ignore.")
+            continue
+        try:
+            url = await _store_image_bytes(data)
+        except Exception:
+            errors.append(f"{upload.filename or 'fichier'}: stockage impossible, ignore.")
+            continue
+        name = _clean_photo_product_name(upload.filename) or "Produit a completer"
+        product = Product(
+            name=name,
+            brand=name[:120] or "A completer",
+            description=None,
+            main_image_url=url,
+            specs={"draft_from_photo": True},
+        )
+        db.add(product)
+        db.flush()
+        # Produit brouillon: prix placeholder + inactif => masque du public tant que
+        # le vendeur n'a pas saisi le vrai prix et reactive l'article.
+        db.add(
+            Price(
+                product_id=product.id,
+                vendor_id=profile.vendor_id,
+                currency="XOF",
+                amount=1,
+                stock_quantity=0,
+                is_active=False,
+            )
+        )
+        created += 1
+
+    if vendor is not None and created > 0:
+        vendor.is_active = _has_active_subscription(profile)
+    append_audit_log(
+        db,
+        event_type="seller_product_photos_imported",
+        actor=current_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="vendor",
+        entity_id=profile.vendor_id,
+        details={"created": created, "errors": len(errors)},
+    )
+    db.commit()
+    _invalidate_public_marketplace_cache()
+    return {"created": created, "errors": errors[:50]}
+
+
 @router.get("/inventory", response_model=list[SellerInventoryItemResponse])
 def list_inventory(
     db: Annotated[Session, Depends(get_db)],

@@ -13,3 +13,4 @@ redis==5.2.1
 boto3==1.35.24
 python-multipart==0.0.20
 firebase-admin==7.1.0
+Pillow==11.3.0
