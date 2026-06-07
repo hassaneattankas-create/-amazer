@@ -642,9 +642,23 @@ export default function VendorShopPage() {
 }
 
 function StorefrontHero({ data }: { data: SellerStorefront }) {
+  const isPremium = data.storefront_tier === "premium";
   return (
-    <header className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-      <div className="relative h-52 w-full bg-gradient-to-br from-slate-900 via-slate-800 to-[#0f172a]">
+    <header
+      className={`overflow-hidden rounded-[28px] border bg-white ${
+        isPremium
+          ? "border-amber-300/70 shadow-[0_10px_40px_rgba(217,164,65,0.25)] ring-1 ring-amber-200/60"
+          : "border-slate-200 shadow-sm"
+      }`}
+    >
+      {isPremium ? (
+        <div className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-950">
+          <span aria-hidden>👑</span>
+          Boutique Premium AMAZER
+          <span aria-hidden>👑</span>
+        </div>
+      ) : null}
+      <div className="relative h-56 w-full bg-gradient-to-br from-slate-900 via-slate-800 to-[#0f172a]">
         {data.cover_image_url ? (
           <Image
             src={resolveImageUrl(data.cover_image_url) ?? "/images/placeholders/default.svg"}
@@ -653,44 +667,66 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
             sizes="(max-width: 768px) 100vw, 1200px"
             quality={82}
             unoptimized
-            className="object-cover opacity-80"
+            className="object-cover opacity-85"
           />
         ) : null}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/35 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-transparent" />
+
+        {isPremium ? (
+          <div className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full border border-amber-300/60 bg-amber-400/90 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-950 shadow-lg backdrop-blur">
+            <span aria-hidden>👑</span>
+            Premium
+          </div>
+        ) : null}
+
         <div className="absolute bottom-5 left-5 right-5 flex flex-wrap items-end justify-between gap-4">
           <div className="flex items-end gap-4">
-            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl border border-white/25 bg-white/10 backdrop-blur">
+            <div
+              className={`flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl backdrop-blur ${
+                isPremium ? "border-2 border-amber-300/70 bg-white/10" : "border border-white/25 bg-white/10"
+              }`}
+            >
               {data.logo_url ? (
                 <Image
                   src={resolveImageUrl(data.logo_url) ?? "/images/placeholders/default.svg"}
                   alt={data.business_name}
-                  width={80}
-                  height={80}
-                  sizes="80px"
+                  width={96}
+                  height={96}
+                  sizes="96px"
                   quality={85}
                   unoptimized
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <Store className="h-8 w-8 text-white" />
+                <Store className="h-9 w-9 text-white" />
               )}
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="luxury-title text-3xl font-semibold text-white">{data.business_name}</h1>
-                {data.is_verified ? <ShieldCheck className="h-5 w-5 text-emerald-300" /> : null}
+                {data.is_verified ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/50 bg-emerald-500/20 px-2 py-0.5 text-[11px] font-semibold text-emerald-200">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Vérifié
+                  </span>
+                ) : null}
               </div>
               <p className="mt-2 text-sm text-white/80">
-                {activityLabels[data.activity_type]} {data.storefront_tier === "premium" ? "Premium" : "Basic"} -{" "}
+                {activityLabels[data.activity_type]} {isPremium ? "Premium" : "Basic"} -{" "}
                 {data.city ?? "Niamey"}
               </p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Pill>{activityLabels[data.activity_type]}</Pill>
-            {data.storefront_tier === "premium" ? <Pill>Premium</Pill> : null}
+            {isPremium ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/50 bg-amber-400/25 px-3 py-1 text-xs font-semibold text-amber-100">
+                <span aria-hidden>👑</span> Premium
+              </span>
+            ) : null}
             {data.accepts_table_reservations ? <Pill>Reservation table</Pill> : null}
             {data.accepts_hotel_bookings ? <Pill>Reservation premium</Pill> : null}
+            {data.offers_transport ? <Pill>Transport</Pill> : null}
           </div>
         </div>
       </div>
@@ -698,16 +734,21 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
         <div>
           {data.description ? <p className="text-sm leading-6 text-slate-700">{data.description}</p> : null}
           <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-600">
-            {data.address ? <span>{data.address}</span> : null}
-            {data.opening_hours ? <span>{data.opening_hours}</span> : null}
+            {data.address ? <span>📍 {data.address}</span> : null}
+            {data.opening_hours ? <span>🕒 {data.opening_hours}</span> : null}
           </div>
         </div>
-        <div className="space-y-1 text-sm text-slate-600">
-          {data.phone ? <p>Telephone: {data.phone}</p> : null}
-          {data.whatsapp_contact ? <p>WhatsApp: {data.whatsapp_contact}</p> : null}
-          {data.contact_email ? <p>Email: {data.contact_email}</p> : null}
+        <div
+          className={`space-y-1 rounded-2xl p-4 text-sm text-slate-600 ${
+            isPremium ? "border border-amber-100 bg-amber-50/60" : "border border-slate-100 bg-slate-50/60"
+          }`}
+        >
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Contact</p>
+          {data.phone ? <p>Téléphone : {data.phone}</p> : null}
+          {data.whatsapp_contact ? <p>WhatsApp : {data.whatsapp_contact}</p> : null}
+          {data.contact_email ? <p>Email : {data.contact_email}</p> : null}
           {data.deposit_amount ? (
-            <p>Acompte de reference: {formatXOF(data.deposit_amount)}</p>
+            <p>Acompte de référence : {formatXOF(data.deposit_amount)}</p>
           ) : null}
         </div>
       </div>
