@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from sqlalchemy import func, or_, select
+from datetime import UTC, datetime
+
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm import Session
 
@@ -9,6 +11,21 @@ from app.models.product import Price, Product
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
+
+
+def active_subscription_clause():
+    """Condition SQL: un vendeur n'est visible au public que si son abonnement est paye et
+    non expire. Des qu'un abonnement arrive a echeance (peu importe le type), la boutique
+    disparait du public et ne revient qu'apres reabonnement. Les vendeurs catalogue sans
+    profil vendeur (crees par l'admin) restent toujours visibles."""
+    return or_(
+        SellerProfile.user_id.is_(None),
+        and_(
+            SellerProfile.onboarding_fee_paid_at.isnot(None),
+            SellerProfile.subscription_paid_until.isnot(None),
+            SellerProfile.subscription_paid_until > datetime.now(UTC),
+        ),
+    )
 
 
 class CatalogRepository:
@@ -32,6 +49,7 @@ class CatalogRepository:
             .outerjoin(User, User.id == SellerProfile.user_id)
             .where(Vendor.is_active.is_(True))
             .where(or_(SellerProfile.user_id.is_(None), User.is_active.is_(True)))
+            .where(active_subscription_clause())
             .order_by(Vendor.name.asc())
             .offset(offset)
             .limit(limit)
@@ -65,6 +83,7 @@ class CatalogRepository:
             .join(User, User.id == SellerProfile.user_id)
             .options(selectinload(Vendor.seller_profile))
             .where(Vendor.is_active.is_(True), User.is_active.is_(True))
+            .where(active_subscription_clause())
             .order_by(Vendor.updated_at.desc(), Vendor.name.asc())
             .offset(offset)
             .limit(limit)
@@ -104,6 +123,7 @@ class CatalogRepository:
             .where(Price.is_active.is_(True))
             .where(Vendor.is_active.is_(True))
             .where(or_(SellerProfile.user_id.is_(None), User.is_active.is_(True)))
+            .where(active_subscription_clause())
             .options(
                 selectinload(Price.product).selectinload(Product.category),
                 selectinload(Price.vendor).selectinload(Vendor.seller_profile),

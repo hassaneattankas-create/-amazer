@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -140,6 +140,9 @@ class RestaurantReservationCreateRequest(BaseModel):
     reservation_at: datetime
     guest_count: int = Field(default=2, ge=1, le=20)
     note: str | None = Field(default=None, max_length=1000)
+    # Paiement de l'acompte: requis seulement si le restaurant a configure un acompte (> 0).
+    deposit_payment_method: Literal["nita", "amana"] | None = None
+    transaction_reference: str | None = Field(default=None, max_length=180)
 
 
 class RestaurantReservationStatusUpdateRequest(BaseModel):
@@ -158,5 +161,8 @@ class RestaurantReservationResponse(BaseModel):
     reservation_at: datetime
     guest_count: int
     note: str | None
+    deposit_amount: float = 0
+    payment_status: str = "paid"
+    transaction_reference: str | None = None
     status: str
     created_at: datetime
