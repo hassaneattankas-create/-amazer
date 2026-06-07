@@ -931,26 +931,14 @@ async def import_product_photos(
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
         raise NotFoundError("Create a seller profile first")
-    if not _can_manage_shop_catalog(profile):
-        raise ValidationDomainError(
-            "Cette formule vendeur ne permet pas de publier des produits. "
-            "Passez en boutique ou en Premium."
+    # L'envoi de plusieurs produits a la fois (par photos) est reserve au Premium.
+    if not is_premium_profile(profile):
+        raise ForbiddenError(
+            "L'envoi de plusieurs produits a la fois est reserve aux boutiques Premium."
         )
     if len(files) > 40:
         raise ValidationDomainError("Maximum 40 photos par envoi. Reessayez par lots.")
-
-    # Limite de catalogue pour les comptes non-Premium.
-    if is_premium_profile(profile):
-        remaining = 10_000
-    else:
-        cap = max_products_for_basic_tier(db)
-        current = count_vendor_catalog_products(db, profile.vendor_id)
-        remaining = cap - current
-        if remaining <= 0:
-            raise ValidationDomainError(
-                f"Limite atteinte: {cap} article(s) maximum hors Premium. "
-                "Passez en Premium pour publier sans limite."
-            )
+    remaining = 10_000
 
     created = 0
     errors: list[str] = []

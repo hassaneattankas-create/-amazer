@@ -506,34 +506,39 @@ export default function SellerDashboardPage() {
               Cree un nouvel article directement depuis le dashboard.
             </p>
 
-            <div className="mt-4 rounded-xl border border-dashed border-[#FF4D00]/40 bg-orange-50/60 p-4">
-              <p className="text-sm font-medium text-slate-900">
-                Import rapide par photos
-              </p>
-              <p className="mt-1 text-xs text-slate-600">
-                Selectionne plusieurs photos : on cree automatiquement{" "}
-                <span className="font-medium">un produit brouillon par photo</span> (masque du
-                public). Tu completes ensuite le nom et le prix de chaque article, puis tu
-                l&apos;actives.
-              </p>
-              <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-md border border-[#FF4D00]/50 bg-white px-3 py-1.5 text-sm font-medium text-[#FF4D00] hover:bg-orange-50">
-                {importPhotosMutation.isPending ? "Envoi des photos..." : "Choisir des photos"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  disabled={importPhotosMutation.isPending}
-                  onChange={(event) => {
-                    const files = Array.from(event.target.files ?? []);
-                    if (files.length) {
-                      importPhotosMutation.mutate(files);
-                    }
-                    event.target.value = "";
-                  }}
-                />
-              </label>
-            </div>
+            {profile?.storefront_tier === "premium" ? (
+              <div className="mt-4 rounded-xl border border-dashed border-[#FF4D00]/40 bg-orange-50/60 p-4">
+                <p className="text-sm font-medium text-slate-900">
+                  Import rapide par photos
+                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                    Premium
+                  </span>
+                </p>
+                <p className="mt-1 text-xs text-slate-600">
+                  Selectionne plusieurs photos : on cree automatiquement{" "}
+                  <span className="font-medium">un produit brouillon par photo</span> (masque du
+                  public). Tu completes ensuite le nom et le prix de chaque article, puis tu
+                  l&apos;actives.
+                </p>
+                <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-md border border-[#FF4D00]/50 bg-white px-3 py-1.5 text-sm font-medium text-[#FF4D00] hover:bg-orange-50">
+                  {importPhotosMutation.isPending ? "Envoi des photos..." : "Choisir des photos"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    disabled={importPhotosMutation.isPending}
+                    onChange={(event) => {
+                      const files = Array.from(event.target.files ?? []);
+                      if (files.length) {
+                        importPhotosMutation.mutate(files);
+                      }
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+            ) : null}
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <Input

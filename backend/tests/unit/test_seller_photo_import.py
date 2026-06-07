@@ -3,10 +3,12 @@ import io
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import pytest
 from PIL import Image
 from starlette.datastructures import Headers
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
+from app.core.exceptions import ForbiddenError
 from app.routes import seller as seller_route
 
 
@@ -90,3 +92,19 @@ def test_import_photos_skips_non_images(monkeypatch) -> None:
 
     assert result["created"] == 0
     assert len(result["errors"]) == 1
+
+
+def test_import_photos_rejected_for_non_premium(monkeypatch) -> None:
+    _patch_common(monkeypatch)
+    monkeypatch.setattr(seller_route, "is_premium_profile", lambda _p: False)
+
+    profile = SimpleNamespace(vendor_id="vendor-1", activity_type="shop", storefront_tier="basic")
+    db = Mock()
+    db.scalar.return_value = profile
+
+    with pytest.raises(ForbiddenError):
+        asyncio.run(
+            seller_route.import_product_photos(
+                _request(), db, SimpleNamespace(id="user-1"), [_png_upload("x.png")]
+            )
+        )
