@@ -64,6 +64,8 @@ export default function VendorShopPage() {
     reservation_at: "",
     guest_count: "2",
     note: "",
+    deposit_payment_method: "nita" as "nita" | "amana",
+    transaction_reference: "",
   });
   const [hotelForm, setHotelForm] = useState({
     room_type_id: "",
@@ -104,6 +106,8 @@ export default function VendorShopPage() {
         reservation_at: reservationForm.reservation_at,
         guest_count: Number(reservationForm.guest_count || 2),
         note: reservationForm.note || undefined,
+        deposit_payment_method: reservationForm.deposit_payment_method,
+        transaction_reference: reservationForm.transaction_reference || undefined,
       }),
     onSuccess: () => {
       setStatus("Reservation de table envoyee au restaurateur.");
@@ -113,10 +117,13 @@ export default function VendorShopPage() {
         reservation_at: "",
         guest_count: "2",
         note: "",
+        deposit_payment_method: "nita",
+        transaction_reference: "",
       });
       queryClient.invalidateQueries({ queryKey: ["seller-storefront", vendorId] });
     },
-    onError: () => setStatus("Impossible d'envoyer la reservation de table."),
+    onError: (error) =>
+      setStatus(getApiErrorMessage(error, "Impossible d'envoyer la reservation de table.")),
   });
 
   const orderMutation = useMutation({
@@ -186,7 +193,8 @@ export default function VendorShopPage() {
         special_request: "",
       }));
     },
-    onError: () => setStatus("Impossible d'envoyer la reservation premium."),
+    onError: (error) =>
+      setStatus(getApiErrorMessage(error, "Impossible d'envoyer la reservation premium.")),
   });
 
   const handleAddProduct = (productId: string, redirectToCart = false) => {
@@ -442,6 +450,13 @@ export default function VendorShopPage() {
           {data.accepts_table_reservations ? (
             <article className="premium-card border border-orange-200 bg-gradient-to-br from-orange-50 to-white p-5">
               <h2 className="luxury-title text-xl font-semibold">Reservation de table</h2>
+              {data.deposit_amount && data.deposit_amount > 0 ? (
+                <p className="mt-2 text-sm text-slate-600">
+                  Acompte de {formatXOF(data.deposit_amount)} via{" "}
+                  {data.deposit_payment_method?.toUpperCase() || "Nita/Amana"} obligatoire : la
+                  reservation n&apos;est validee qu&apos;apres paiement.
+                </p>
+              ) : null}
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <Input
                   placeholder="Nom"
@@ -479,11 +494,49 @@ export default function VendorShopPage() {
                   className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm md:col-span-2"
                   placeholder="Demande speciale"
                 />
+                {data.deposit_amount && data.deposit_amount > 0 ? (
+                  <>
+                    <select
+                      aria-label="Mode de paiement de l'acompte"
+                      value={reservationForm.deposit_payment_method}
+                      onChange={(event) =>
+                        setReservationForm((prev) => ({
+                          ...prev,
+                          deposit_payment_method: event.target.value as "nita" | "amana",
+                        }))
+                      }
+                      className="h-11 rounded-md border border-slate-300 px-3 text-sm"
+                    >
+                      <option value="nita">Nita</option>
+                      <option value="amana">Amana</option>
+                    </select>
+                    <Input
+                      placeholder="Reference de paiement de l'acompte"
+                      value={reservationForm.transaction_reference}
+                      onChange={(event) =>
+                        setReservationForm((prev) => ({
+                          ...prev,
+                          transaction_reference: event.target.value,
+                        }))
+                      }
+                    />
+                  </>
+                ) : null}
               </div>
               <Button
                 className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
                 onClick={() => {
                   if (!requireSession()) return;
+                  if (
+                    data.deposit_amount &&
+                    data.deposit_amount > 0 &&
+                    !reservationForm.transaction_reference.trim()
+                  ) {
+                    setStatus(
+                      "Saisis la reference de paiement de l'acompte pour valider la reservation."
+                    );
+                    return;
+                  }
                   reservationMutation.mutate();
                 }}
               >
@@ -526,7 +579,9 @@ export default function VendorShopPage() {
                 {isTransport ? "Reservation de trajet avec acompte" : "Reservation premium avec acompte"}
               </h2>
               <p className="mt-2 text-sm text-slate-600">
-                Acompte obligatoire via {data.deposit_payment_method || "Nita/Amana"} pour valider la demande.
+                {data.deposit_amount && data.deposit_amount > 0
+                  ? `Acompte via ${data.deposit_payment_method?.toUpperCase() || "Nita/Amana"} obligatoire : la reservation n'est validee qu'apres paiement.`
+                  : "Acompte optionnel selon le prestataire. Si un acompte est demande, la reservation n'est validee qu'apres paiement."}
               </p>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <select
@@ -617,6 +672,16 @@ export default function VendorShopPage() {
                 className="mt-4 border border-sky-300 bg-sky-600 text-white hover:bg-sky-700"
                 onClick={() => {
                   if (!requireSession()) return;
+                  const selectedRoom = data.room_types.find(
+                    (room) => (room.id || room.name) === hotelForm.room_type_id
+                  );
+                  const deposit = Number(selectedRoom?.deposit_amount || data.deposit_amount || 0);
+                  if (deposit > 0 && !hotelForm.transaction_reference.trim()) {
+                    setStatus(
+                      "Saisis la reference de paiement de l'acompte pour valider la reservation."
+                    );
+                    return;
+                  }
                   hotelBookingMutation.mutate();
                 }}
               >

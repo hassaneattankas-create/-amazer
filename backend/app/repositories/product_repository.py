@@ -10,6 +10,7 @@ from app.models.product import Price, Product
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
+from app.repositories.catalog_repository import active_subscription_clause
 
 
 @dataclass(frozen=True)
@@ -73,6 +74,7 @@ class ProductRepository:
             .where(Price.is_active.is_(True))
             .where(Vendor.is_active.is_(True))
             .where(or_(SellerProfile.user_id.is_(None), User.is_active.is_(True)))
+            .where(active_subscription_clause())
             .options(
                 selectinload(Product.images),
                 selectinload(Product.category),

@@ -66,6 +66,16 @@ def _is_vendor_publicly_visible(vendor: Vendor | None) -> bool:
     owner = getattr(profile, "user", None)
     if owner is not None and not owner.is_active:
         return False
+    # Abonnement expire => boutique masquee du public jusqu'au reabonnement.
+    # (Les vendeurs catalogue sans profil restent visibles.)
+    if profile is not None:
+        until = getattr(profile, "subscription_paid_until", None)
+        if getattr(profile, "onboarding_fee_paid_at", None) is None or until is None:
+            return False
+        if until.tzinfo is None:
+            until = until.replace(tzinfo=UTC)
+        if until <= datetime.now(UTC):
+            return False
     return True
 
 

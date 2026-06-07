@@ -152,11 +152,11 @@ export async function importSellerProductsCsv(file: File): Promise<{ created: nu
 
 export async function exportSellerOrdersCsv(): Promise<void> {
   const response = await api.get("/api/v1/seller/orders/export", { responseType: "blob" });
-  const blob = new Blob([response.data as BlobPart], { type: "text/csv" });
+  const blob = new Blob([response.data as BlobPart], { type: "text/plain;charset=utf-8" });
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `ventes_amazer_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `ventes_amazer_${new Date().toISOString().slice(0, 10)}.txt`;
   document.body.appendChild(link);
   link.click();
   link.remove();

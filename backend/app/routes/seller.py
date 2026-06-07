@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 import re
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
@@ -321,8 +322,26 @@ def _hotel_booking_response(row: HotelBooking) -> HotelBookingResponse:
         deposit_payment_method=row.deposit_payment_method,  # type: ignore[arg-type]
         deposit_amount=row.deposit_amount,
         transaction_reference=row.transaction_reference,
+        payment_status=getattr(row, "payment_status", "paid") or "paid",
         special_request=row.special_request,
         status=row.status,  # type: ignore[arg-type]
+        created_at=row.created_at,
+    )
+
+
+def _restaurant_reservation_response(row: RestaurantReservation) -> RestaurantReservationResponse:
+    return RestaurantReservationResponse(
+        id=row.id,
+        vendor_id=row.vendor_id,
+        customer_name=row.customer_name,
+        customer_phone=decrypt_phone_value(row.customer_phone) or "***",
+        reservation_at=row.reservation_at,
+        guest_count=row.guest_count,
+        note=row.note,
+        deposit_amount=float(getattr(row, "deposit_amount", 0) or 0),
+        payment_status=getattr(row, "payment_status", "paid") or "paid",
+        transaction_reference=getattr(row, "transaction_reference", None),
+        status=row.status,
         created_at=row.created_at,
     )
 
@@ -697,12 +716,76 @@ def create_product_listing(
 
 
 def _csv_get(row: dict[str, str], *names: str) -> str:
-    """Recupere une valeur CSV en testant plusieurs noms de colonnes (FR/EN), insensible a la casse."""
+    """Recupere une valeur en testant plusieurs noms de colonnes (FR/EN), insensible a la casse."""
     lowered = {(k or "").strip().lower(): (v or "") for k, v in row.items()}
     for name in names:
-        if name in lowered and lowered[name].strip():
-            return lowered[name].strip()
+        if name in lowered and str(lowered[name]).strip():
+            return str(lowered[name]).strip()
     return ""
+
+
+_IMPORT_HEADER_KEYWORDS = {
+    "nom", "name", "produit", "product", "marque", "brand", "prix", "amount",
+    "price", "stock", "quantite", "quantity", "description", "desc",
+}
+_IMPORT_POSITIONAL_COLUMNS = ["nom", "marque", "prix", "stock", "description"]
+
+
+def _detect_delimiter(sample: str) -> str:
+    """Choisit le separateur le plus probable parmi ; , tabulation | (sans dependance externe)."""
+    candidates = [";", ",", "\t", "|"]
+    first_line = next((ln for ln in sample.splitlines() if ln.strip()), "")
+    counts = {sep: first_line.count(sep) for sep in candidates}
+    best = max(counts, key=lambda sep: counts[sep])
+    return best if counts[best] > 0 else ","
+
+
+def _parse_import_rows(text: str) -> list[dict[str, str]]:
+    """Import multi-format (pas seulement CSV): JSON, CSV/TSV, point-virgule, pipe, ou
+    fichier texte sans en-tete (colonnes positionnelles nom, marque, prix, stock, description)."""
+    stripped = text.strip()
+    if not stripped:
+        return []
+
+    # 1) JSON: tableau d'objets [{"nom": ..., "prix": ...}, ...]
+    if stripped[0] in "[{":
+        try:
+            data = json.loads(stripped)
+        except ValueError:
+            data = None
+        if isinstance(data, dict):
+            data = data.get("produits") or data.get("products") or data.get("items") or []
+        if isinstance(data, list):
+            return [
+                {str(k): ("" if v is None else str(v)) for k, v in item.items()}
+                for item in data
+                if isinstance(item, dict)
+            ]
+
+    # 2) Texte tabulaire: detection du separateur + en-tete optionnel
+    delimiter = _detect_delimiter(stripped)
+    rows = list(csv.reader(io.StringIO(text), delimiter=delimiter))
+    rows = [r for r in rows if any((cell or "").strip() for cell in r)]
+    if not rows:
+        return []
+
+    header_cells = [(cell or "").strip().lower() for cell in rows[0]]
+    has_header = any(cell in _IMPORT_HEADER_KEYWORDS for cell in header_cells)
+    if has_header:
+        columns = header_cells
+        data_rows = rows[1:]
+    else:
+        columns = _IMPORT_POSITIONAL_COLUMNS
+        data_rows = rows
+
+    parsed: list[dict[str, str]] = []
+    for cells in data_rows:
+        record: dict[str, str] = {}
+        for idx, col in enumerate(columns):
+            if idx < len(cells):
+                record[col] = (cells[idx] or "").strip()
+        parsed.append(record)
+    return parsed
 
 
 @router.post("/products/import")
@@ -712,8 +795,9 @@ def import_products_csv(
     current_user: Annotated[User, Depends(get_seller_user)],
     file: Annotated[UploadFile, File()],
 ) -> dict[str, object]:
-    """Import en masse de produits via CSV (Premium Entreprise uniquement).
-    Colonnes acceptees: nom/name, marque/brand, prix/amount, stock, description."""
+    """Import en masse de produits, multi-format (Premium Entreprise uniquement).
+    Formats: CSV, TSV, point-virgule, pipe, texte sans en-tete, ou JSON.
+    Colonnes: nom/name, marque/brand, prix/amount, stock, description."""
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -729,11 +813,11 @@ def import_products_csv(
     except UnicodeDecodeError:
         text = raw.decode("latin-1", errors="ignore")
 
-    reader = csv.DictReader(io.StringIO(text))
+    parsed_rows = _parse_import_rows(text)
     created = 0
     errors: list[str] = []
     vendor = db.get(Vendor, profile.vendor_id)
-    for index, row in enumerate(reader, start=2):
+    for index, row in enumerate(parsed_rows, start=2):
         if created >= 2000:
             errors.append("Limite de 2000 produits par import atteinte.")
             break
@@ -863,7 +947,7 @@ def export_seller_orders(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_seller_user)],
 ) -> StreamingResponse:
-    """Export CSV des ventes du vendeur (Premium Entreprise uniquement)."""
+    """Export des ventes du vendeur en fichier texte (Premium Entreprise uniquement)."""
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
         raise NotFoundError("Seller profile not found")
@@ -884,29 +968,35 @@ def export_seller_orders(
         for row in db.scalars(select(Product).where(Product.id.in_(product_ids))).all()
     } if product_ids else {}
 
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(["Date", "Commande", "Client", "Articles", "Montant total XOF", "Paiement", "Statut"])
+    # Export en texte lisible (tout melange sur chaque ligne), pas en colonnes CSV.
+    lines: list[str] = []
+    lines.append(f"VENTES AMAZER - {profile.business_name}")
+    lines.append(f"Genere le {datetime.now(UTC).strftime('%d/%m/%Y %H:%M')} UTC")
+    lines.append(f"{len(rows)} commande(s)")
+    lines.append("=" * 60)
+    total_global = 0.0
     for order in rows:
         items_for_vendor = [it for it in order.items if it.vendor_id == profile.vendor_id]
-        articles = "; ".join(
+        articles = ", ".join(
             f"{product_names.get(it.product_id, it.product_id)} x{it.quantity}" for it in items_for_vendor
         )
         montant = sum(float(it.unit_price) * int(it.quantity) for it in items_for_vendor)
-        writer.writerow([
-            order.created_at.strftime("%Y-%m-%d %H:%M") if order.created_at else "",
-            (order.tracking_code or order.id[:8]),
-            order.user.full_name if order.user else "",
-            articles,
-            round(montant),
-            (order.payment_mode or "").upper(),
-            order.status,
-        ])
-    buffer.seek(0)
-    filename = f"ventes_amazer_{datetime.now(UTC).strftime('%Y%m%d')}.csv"
+        total_global += montant
+        date_str = order.created_at.strftime("%d/%m/%Y %H:%M") if order.created_at else "-"
+        ref = order.tracking_code or order.id[:8]
+        client = order.user.full_name if order.user else "Client AMAZER"
+        lines.append(
+            f"[{date_str}] #{ref} - {client} - {articles} - "
+            f"{round(montant)} XOF - {(order.payment_mode or '').upper()} - {order.status}"
+        )
+    lines.append("=" * 60)
+    lines.append(f"TOTAL: {round(total_global)} XOF")
+    content = "\n".join(lines) + "\n"
+
+    filename = f"ventes_amazer_{datetime.now(UTC).strftime('%Y%m%d')}.txt"
     return StreamingResponse(
-        iter([buffer.getvalue()]),
-        media_type="text/csv",
+        iter([content]),
+        media_type="text/plain; charset=utf-8",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
@@ -1112,6 +1202,15 @@ def create_restaurant_reservation(
     if not profile.accepts_table_reservations:
         raise ConflictError("Table reservations are disabled for this restaurant")
 
+    # Acompte optionnel: si le restaurant a configure un acompte, le client doit l'avoir
+    # paye (reference de transaction fournie) pour que la reservation passe.
+    deposit_amount = float(profile.deposit_amount or 0)
+    transaction_reference = (payload.transaction_reference or "").strip() or None
+    if deposit_amount > 0 and not transaction_reference:
+        raise ConflictError(
+            "Paiement de l'acompte requis: la reservation ne peut pas etre confirmee sans paiement."
+        )
+
     reservation = RestaurantReservation(
         vendor_id=vendor_id,
         user_id=current_user.id,
@@ -1120,22 +1219,16 @@ def create_restaurant_reservation(
         reservation_at=payload.reservation_at,
         guest_count=payload.guest_count,
         note=payload.note,
+        deposit_amount=deposit_amount,
+        deposit_payment_method=payload.deposit_payment_method,
+        transaction_reference=transaction_reference,
+        payment_status="paid",
         status="pending",
     )
     db.add(reservation)
     db.commit()
     db.refresh(reservation)
-    return RestaurantReservationResponse(
-        id=reservation.id,
-        vendor_id=reservation.vendor_id,
-        customer_name=reservation.customer_name,
-        customer_phone=decrypt_phone_value(reservation.customer_phone) or "***",
-        reservation_at=reservation.reservation_at,
-        guest_count=reservation.guest_count,
-        note=reservation.note,
-        status=reservation.status,
-        created_at=reservation.created_at,
-    )
+    return _restaurant_reservation_response(reservation)
 
 
 @router.get("/restaurant-reservations", response_model=list[RestaurantReservationResponse])
@@ -1152,20 +1245,7 @@ def list_seller_restaurant_reservations(
         .order_by(RestaurantReservation.reservation_at.asc())
         .limit(100)
     ).all()
-    return [
-        RestaurantReservationResponse(
-            id=row.id,
-            vendor_id=row.vendor_id,
-            customer_name=row.customer_name,
-            customer_phone=decrypt_phone_value(row.customer_phone) or "***",
-            reservation_at=row.reservation_at,
-            guest_count=row.guest_count,
-            note=row.note,
-            status=row.status,
-            created_at=row.created_at,
-        )
-        for row in rows
-    ]
+    return [_restaurant_reservation_response(row) for row in rows]
 
 
 @router.patch(
@@ -1189,17 +1269,7 @@ def update_restaurant_reservation_status(
     reservation.status = payload.status
     db.commit()
     db.refresh(reservation)
-    return RestaurantReservationResponse(
-        id=reservation.id,
-        vendor_id=reservation.vendor_id,
-        customer_name=reservation.customer_name,
-        customer_phone=decrypt_phone_value(reservation.customer_phone) or "***",
-        reservation_at=reservation.reservation_at,
-        guest_count=reservation.guest_count,
-        note=reservation.note,
-        status=reservation.status,
-        created_at=reservation.created_at,
-    )
+    return _restaurant_reservation_response(reservation)
 
 
 @router.post(
@@ -1238,9 +1308,14 @@ def create_hotel_booking(
     nights = (payload.check_out_date - payload.check_in_date).days
     if nights <= 0 and not is_transport:
         raise ConflictError("Check-out must be after check-in")
+    # Acompte optionnel: si un acompte est configure (> 0), le client doit l'avoir paye
+    # (reference fournie) pour que la reservation passe. Sinon la reservation est gratuite.
     deposit_amount = float(room.get("deposit_amount") or profile.deposit_amount or 0)
-    if deposit_amount <= 0:
-        raise ConflictError("A deposit amount must be configured for this hotel booking")
+    transaction_reference = (payload.transaction_reference or "").strip() or None
+    if deposit_amount > 0 and not transaction_reference:
+        raise ConflictError(
+            "Paiement de l'acompte requis: la reservation ne peut pas etre confirmee sans paiement."
+        )
 
     booking = HotelBooking(
         vendor_id=vendor_id,
@@ -1255,7 +1330,8 @@ def create_hotel_booking(
         guest_count=payload.guest_count,
         deposit_payment_method=payload.deposit_payment_method,
         deposit_amount=deposit_amount,
-        transaction_reference=payload.transaction_reference,
+        transaction_reference=transaction_reference,
+        payment_status="paid",
         special_request=payload.special_request,
         status="pending",
     )

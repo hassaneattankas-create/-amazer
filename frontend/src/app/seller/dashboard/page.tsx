@@ -442,13 +442,13 @@ export default function SellerDashboardPage() {
                 void exportSellerOrdersCsv().catch(() => setStatus("Export impossible."));
               }}
             >
-              Exporter mes ventes (CSV)
+              Exporter mes ventes (texte)
             </Button>
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
-              {importProductsMutation.isPending ? "Import en cours..." : "Importer des produits (CSV)"}
+              {importProductsMutation.isPending ? "Import en cours..." : "Importer des produits"}
               <input
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv,.tsv,.txt,.json,text/csv,text/plain,text/tab-separated-values,application/json"
                 className="hidden"
                 disabled={importProductsMutation.isPending}
                 onChange={(event) => {
@@ -462,7 +462,8 @@ export default function SellerDashboardPage() {
             </label>
           </div>
           <p className="mt-2 text-xs text-slate-500">
-            Format CSV: colonnes <span className="font-medium">nom, marque, prix, stock, description</span>.
+            Formats acceptes: CSV, TSV, point-virgule, texte ou JSON. Colonnes{" "}
+            <span className="font-medium">nom, marque, prix, stock, description</span>.
           </p>
         </article>
       ) : null}

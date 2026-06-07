@@ -31,6 +31,12 @@ class RestaurantReservation(Base):
     reservation_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     guest_count: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
     note: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    # Acompte optionnel: si le restaurateur configure un acompte (> 0), le client doit le
+    # payer (reference fournie) pour que la reservation passe.
+    deposit_amount: Mapped[float] = mapped_column(Float, nullable=False, default=0)
+    deposit_payment_method: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    transaction_reference: Mapped[str | None] = mapped_column(String(180), nullable=True)
+    payment_status: Mapped[str] = mapped_column(String(20), nullable=False, default="paid")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -67,6 +73,7 @@ class HotelBooking(Base):
     deposit_payment_method: Mapped[str] = mapped_column(String(20), nullable=False)
     deposit_amount: Mapped[float] = mapped_column(Float, nullable=False)
     transaction_reference: Mapped[str | None] = mapped_column(String(180), nullable=True)
+    payment_status: Mapped[str] = mapped_column(String(20), nullable=False, default="paid")
     special_request: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

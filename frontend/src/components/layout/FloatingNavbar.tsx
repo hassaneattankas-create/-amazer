@@ -96,7 +96,6 @@ export function FloatingNavbar() {
   const groupedNavItems = [
     ...clientNavItems,
     ...(isAuthenticated ? [{ href: "/dashboard", label: "Dashboard" }] : []),
-    ...(isAuthenticated ? [{ href: "/notifications", label: "Notifications" }] : []),
     ...(showSellerLink ? sellerNavigationItems : []),
     ...(showAdminLink ? [{ href: "/admin", label: "Espace Admin" }] : []),
   ].filter((item, index, array) => array.findIndex((entry) => entry.href === item.href) === index);
@@ -453,17 +452,6 @@ export function FloatingNavbar() {
             className="whitespace-nowrap rounded-xl border border-[#FF4D00]/35 bg-[#FF4D00]/10 px-3 py-1.5 text-xs text-[#FF4D00] hover:bg-[#FF4D00]/15"
           >
             Espace Admin
-          </Link>
-        ) : null}
-        {isAuthenticated ? (
-          <Link
-            href="/notifications"
-            className="relative whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
-          >
-            Notifications
-            {unreadNotifications > 0 ? (
-              <span className="ml-1 font-semibold text-[#FF4D00]">({unreadNotifications})</span>
-            ) : null}
           </Link>
         ) : null}
       </nav>

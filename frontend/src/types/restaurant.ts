@@ -85,6 +85,8 @@ export type RestaurantReservationRequest = {
   reservation_at: string;
   guest_count: number;
   note?: string;
+  deposit_payment_method?: "nita" | "amana";
+  transaction_reference?: string;
 };
 
 export type RestaurantReservation = {
@@ -95,6 +97,9 @@ export type RestaurantReservation = {
   reservation_at: string;
   guest_count: number;
   note: string | null;
+  deposit_amount: number;
+  payment_status: string;
+  transaction_reference: string | null;
   status: "pending" | "confirmed" | "declined";
   created_at: string;
 };

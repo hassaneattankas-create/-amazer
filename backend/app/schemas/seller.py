@@ -301,6 +301,7 @@ class HotelBookingResponse(BaseModel):
     deposit_payment_method: Literal["nita", "amana"]
     deposit_amount: float
     transaction_reference: str | None
+    payment_status: str = "paid"
     special_request: str | None
     status: Literal["pending", "confirmed", "cancelled"]
     created_at: datetime
