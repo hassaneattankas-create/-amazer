@@ -150,6 +150,19 @@ export async function importSellerProductsCsv(file: File): Promise<{ created: nu
   return response.data;
 }
 
+export async function importSellerProductPhotos(
+  files: File[],
+): Promise<{ created: number; errors: string[] }> {
+  const form = new FormData();
+  files.forEach((file) => form.append("files", file));
+  const response = await api.post<{ created: number; errors: string[] }>(
+    "/api/v1/seller/products/import-photos",
+    form,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return response.data;
+}
+
 export async function exportSellerOrdersCsv(): Promise<void> {
   const response = await api.get("/api/v1/seller/orders/export", { responseType: "blob" });
   const blob = new Blob([response.data as BlobPart], { type: "text/plain;charset=utf-8" });

@@ -31,6 +31,7 @@ import {
   deleteSellerInventoryItem,
   exportSellerOrdersCsv,
   getSellerProfile,
+  importSellerProductPhotos,
   importSellerProductsCsv,
   listSellerHotelBookings,
   listSellerInventory,
@@ -196,6 +197,32 @@ export default function SellerDashboardPage() {
       setStatus(`${result.created} produit(s) importe(s)${errs}.`);
     },
     onError: () => setStatus("Import impossible. Verifie le format du fichier CSV."),
+  });
+
+  const importPhotosMutation = useMutation({
+    mutationFn: async (files: File[]) => {
+      const chunkSize = 8;
+      let created = 0;
+      const errors: string[] = [];
+      const total = files.length;
+      for (let i = 0; i < files.length; i += chunkSize) {
+        const chunk = files.slice(i, i + chunkSize);
+        setStatus(`Envoi des photos... ${Math.min(i + chunk.length, total)}/${total}`);
+        const res = await importSellerProductPhotos(chunk);
+        created += res.created;
+        errors.push(...res.errors);
+      }
+      return { created, errors };
+    },
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ["seller-inventory"] });
+      const errs = result.errors.length ? ` (${result.errors.length} ignoree(s))` : "";
+      setStatus(
+        `${result.created} produit(s) cree(s) depuis tes photos${errs}. ` +
+          "Complete le nom et le prix de chaque article puis active-le.",
+      );
+    },
+    onError: () => setStatus("Envoi des photos impossible. Reessaie avec moins de photos."),
   });
 
 
@@ -478,6 +505,36 @@ export default function SellerDashboardPage() {
             <p className="mt-2 text-sm text-slate-600">
               Cree un nouvel article directement depuis le dashboard.
             </p>
+
+            <div className="mt-4 rounded-xl border border-dashed border-[#FF4D00]/40 bg-orange-50/60 p-4">
+              <p className="text-sm font-medium text-slate-900">
+                Import rapide par photos
+              </p>
+              <p className="mt-1 text-xs text-slate-600">
+                Selectionne plusieurs photos : on cree automatiquement{" "}
+                <span className="font-medium">un produit brouillon par photo</span> (masque du
+                public). Tu completes ensuite le nom et le prix de chaque article, puis tu
+                l&apos;actives.
+              </p>
+              <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-md border border-[#FF4D00]/50 bg-white px-3 py-1.5 text-sm font-medium text-[#FF4D00] hover:bg-orange-50">
+                {importPhotosMutation.isPending ? "Envoi des photos..." : "Choisir des photos"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  disabled={importPhotosMutation.isPending}
+                  onChange={(event) => {
+                    const files = Array.from(event.target.files ?? []);
+                    if (files.length) {
+                      importPhotosMutation.mutate(files);
+                    }
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <Input
                 value={productForm.name}
