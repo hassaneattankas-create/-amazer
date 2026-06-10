@@ -1,9 +1,13 @@
 import type { NextRequest } from "next/server";
 
-import { proxy, config } from "./src/proxy";
+import { proxy } from "./src/proxy";
 
 export function middleware(request: NextRequest) {
   return proxy(request);
 }
 
-export { config };
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|logo-amazer.*|images/).*)",
+  ],
+};

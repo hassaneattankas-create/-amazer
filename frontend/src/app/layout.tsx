@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { AppFooter } from "@/components/layout/AppFooter";
+import { ChatWidget } from "@/components/ChatWidget";
 import { AndroidBackButtonHandler } from "@/components/providers/AndroidBackButtonHandler";
 import { FaviconBadge } from "@/components/FaviconBadge";
 import { FloatingNavbar } from "@/components/layout/FloatingNavbar";
@@ -88,6 +89,7 @@ export default function RootLayout({
           <FloatingNavbar />
           <main className="min-h-screen pt-24">{children}</main>
           <AppFooter />
+          <ChatWidget />
         </QueryProvider>
       </body>
     </html>
