@@ -10,16 +10,18 @@ jobs:
   ping:
     name: Ping Render backend
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 4
     steps:
       - name: Ping /ping
         run: |
+          # `|| echo 000` : sous `bash -e`, un curl qui timeout (cold start Render)
+          # ferait echouer l'etape avant le test. On capture toujours un statut.
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            --max-time 20 \
-            "https://amazer-api.onrender.com/ping")
+            --max-time 90 --retry 2 --retry-all-errors \
+            "https://amazer-api.onrender.com/ping" || echo "000")
           echo "Status HTTP: $STATUS"
           if [ "$STATUS" != "200" ]; then
-            echo "Backend ne repond pas (status $STATUS) — cold start probablement en cours."
+            echo "Backend ne repond pas (status $STATUS) — cold start probablement en cours, on reessaiera dans 14 min."
             exit 0
           fi
           echo "Backend actif."
