@@ -1,0 +1,39 @@
+name: Deploy backend to Render
+
+# Remplace le webhook GitHub->Render (cassé) : declenche un deploiement Render
+# a chaque push/merge sur main, ou manuellement depuis l'onglet Actions.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/render-deploy.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: srv-d6jcoqngi27c73d335i0
+        run: |
+          if [ -z "$RENDER_API_KEY" ]; then
+            echo "::error::Secret RENDER_API_KEY manquant. Ajoute-le dans Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          echo "Declenchement du deploiement Render pour le service $RENDER_SERVICE_ID..."
+          http_code=$(curl -sS -o response.json -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+            -d '{"clearCache":"do_not_clear"}')
+          echo "HTTP $http_code"
+          cat response.json
+          echo
+          if [ "$http_code" != "201" ] && [ "$http_code" != "200" ]; then
+            echo "::error::Echec du declenchement (HTTP $http_code)."
+            exit 1
+          fi
+          echo "Deploiement Render declenche avec succes."
