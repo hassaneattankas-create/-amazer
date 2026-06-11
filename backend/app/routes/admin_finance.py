@@ -2,6 +2,7 @@ from datetime import UTC, date, datetime, timedelta
 import csv
 import io
 import json
+import logging
 import re
 import secrets
 import uuid
@@ -1658,21 +1659,46 @@ def decide_seller_pre_registration(
     reg.reviewed_by_user_id = admin_user.id
 
     if payload.decision == "approved":
-        # Creer l utilisateur
         import uuid as _uuid
         from app.models.vendor import Vendor as _Vendor
+        from app.models.seller_profile import SellerProfile as _SP
+        from app.repositories.user_repository import UserRepository
+
         identifier = reg.identifier.strip().lower()
-        user = User(
-            id=str(_uuid.uuid4()),
-            email=identifier if "@" in identifier else None,
-            whatsapp_phone=identifier if "@" not in identifier else None,
-            full_name=reg.full_name.strip(),
-            hashed_password=reg.hashed_password,
-            is_active=True,
+        is_email = "@" in identifier
+        existing_user = (
+            UserRepository(db).get_by_email(identifier)
+            if is_email
+            else UserRepository(db).get_by_whatsapp_phone(identifier)
         )
-        db.add(user)
-        db.flush()
-        db.add(UserPreferences(user_id=user.id, preferred_currency="XOF"))
+        if existing_user is not None:
+            # Le compte existe deja (souvent un ancien compte acheteur avec le meme
+            # email/WhatsApp). On le reutilise au lieu de creer un doublon, qui plantait
+            # avant sur la contrainte d'unicite (-> "Impossible de traiter la demande").
+            if db.scalar(select(_SP).where(_SP.user_id == existing_user.id)) is not None:
+                raise ValidationDomainError(
+                    "Ce compte possede deja une boutique. Gerez son abonnement depuis la liste des vendeurs."
+                )
+            user = existing_user
+            user.is_active = True
+            if reg.full_name and reg.full_name.strip():
+                user.full_name = reg.full_name.strip()
+            user.hashed_password = reg.hashed_password
+            db.flush()
+            if db.scalar(select(UserPreferences).where(UserPreferences.user_id == user.id)) is None:
+                db.add(UserPreferences(user_id=user.id, preferred_currency="XOF"))
+        else:
+            user = User(
+                id=str(_uuid.uuid4()),
+                email=identifier if is_email else None,
+                whatsapp_phone=identifier if not is_email else None,
+                full_name=reg.full_name.strip(),
+                hashed_password=reg.hashed_password,
+                is_active=True,
+            )
+            db.add(user)
+            db.flush()
+            db.add(UserPreferences(user_id=user.id, preferred_currency="XOF"))
 
         # Creer le vendeur (slug unique obligatoire)
         from app.services.seller_profile_service import build_unique_vendor_slug
@@ -1735,6 +1761,33 @@ def decide_seller_pre_registration(
             entity_id=reg.id,
             details={"full_name": reg.full_name, "identifier": reg.identifier, "months": reg.months},
         )
+
+        # Prevenir le vendeur que sa boutique est active (notification in-app, visible
+        # des sa connexion). N'echoue jamais l'approbation si la notif ne part pas.
+        try:
+            from app.services.notification_service import NotificationPayload, NotificationService
+
+            shop_label = reg.business_name or reg.full_name
+            NotificationService(db).send_to_user(
+                user_id=user.id,
+                payload=NotificationPayload(
+                    title="Votre boutique est active !",
+                    body=(
+                        f"Felicitations ! Votre compte vendeur \"{shop_label}\" a ete valide. "
+                        "Connectez-vous pour gerer votre boutique et votre abonnement."
+                    ),
+                    data={
+                        "tag": f"seller-approved-{reg.id}",
+                        "href": "/seller/dashboard",
+                        "kind": "seller_approved",
+                    },
+                ),
+            )
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "Notification d'activation vendeur non envoyee pour %s", reg.identifier
+            )
+
         _invalidate_public_marketplace_cache()
     else:
         append_audit_log(
