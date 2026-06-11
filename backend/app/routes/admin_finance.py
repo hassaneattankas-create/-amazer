@@ -1671,14 +1671,9 @@ def decide_seller_pre_registration(
             if is_email
             else UserRepository(db).get_by_whatsapp_phone(identifier)
         )
+        # 1) Compte: reutiliser s'il existe deja (ancien acheteur, ou demande deja
+        #    partiellement traitee), sinon le creer. Evite tout doublon/erreur.
         if existing_user is not None:
-            # Le compte existe deja (souvent un ancien compte acheteur avec le meme
-            # email/WhatsApp). On le reutilise au lieu de creer un doublon, qui plantait
-            # avant sur la contrainte d'unicite (-> "Impossible de traiter la demande").
-            if db.scalar(select(_SP).where(_SP.user_id == existing_user.id)) is not None:
-                raise ValidationDomainError(
-                    "Ce compte possede deja une boutique. Gerez son abonnement depuis la liste des vendeurs."
-                )
             user = existing_user
             user.is_active = True
             if reg.full_name and reg.full_name.strip():
@@ -1700,34 +1695,57 @@ def decide_seller_pre_registration(
             db.flush()
             db.add(UserPreferences(user_id=user.id, preferred_currency="XOF"))
 
-        # Creer le vendeur (slug unique obligatoire)
+        # 2) Boutique: reutiliser celle du compte si elle existe (reactivation +
+        #    prolongation de l'abonnement), sinon la creer. La confirmation reussit
+        #    TOUJOURS, qu'il s'agisse d'un nouveau compte ou d'un compte deja vendeur.
         from app.services.seller_profile_service import build_unique_vendor_slug
-        vendor = _Vendor(
-            id=str(_uuid.uuid4()),
-            name=reg.business_name or reg.full_name,
-            slug=build_unique_vendor_slug(db, reg.business_name or reg.full_name, user.id),
-            is_active=True,
-        )
-        db.add(vendor)
-        db.flush()
-
-        # Creer le profil vendeur avec abonnement actif
-        from app.models.seller_profile import SellerProfile as _SP
         subscription_end = now + timedelta(days=30 * reg.months)
-        profile = _SP(
-            id=str(_uuid.uuid4()),
-            user_id=user.id,
-            vendor_id=vendor.id,
-            business_name=reg.business_name or reg.full_name,
-            activity_type=reg.activity_type,
-            storefront_tier=reg.storefront_tier,
-            city="Niamey",
-            onboarding_fee_paid_at=now,
-            subscription_paid_until=subscription_end,
-            subscription_last_payment_reference=reg.transaction_reference or f"ADMIN::PRE-REG::{reg.id}"[:180],
-        )
-        db.add(profile)
-        db.flush()
+        profile = db.scalar(select(_SP).where(_SP.user_id == user.id))
+        if profile is None:
+            vendor = _Vendor(
+                id=str(_uuid.uuid4()),
+                name=reg.business_name or reg.full_name,
+                slug=build_unique_vendor_slug(db, reg.business_name or reg.full_name, user.id),
+                is_active=True,
+            )
+            db.add(vendor)
+            db.flush()
+            profile = _SP(
+                id=str(_uuid.uuid4()),
+                user_id=user.id,
+                vendor_id=vendor.id,
+                business_name=reg.business_name or reg.full_name,
+                activity_type=reg.activity_type,
+                storefront_tier=reg.storefront_tier,
+                city="Niamey",
+                onboarding_fee_paid_at=now,
+                subscription_paid_until=subscription_end,
+                subscription_last_payment_reference=(reg.transaction_reference or f"ADMIN::PRE-REG::{reg.id}")[:180],
+            )
+            db.add(profile)
+            db.flush()
+        else:
+            vendor = db.get(_Vendor, profile.vendor_id)
+            if vendor is not None:
+                vendor.is_active = True
+                db.execute(update(Price).where(Price.vendor_id == vendor.id).values(is_active=True))
+            if reg.business_name:
+                profile.business_name = reg.business_name
+            if reg.activity_type:
+                profile.activity_type = reg.activity_type
+            if reg.storefront_tier:
+                profile.storefront_tier = reg.storefront_tier
+            profile.onboarding_fee_paid_at = profile.onboarding_fee_paid_at or now
+            start_from = (
+                profile.subscription_paid_until
+                if profile.subscription_paid_until and profile.subscription_paid_until > now
+                else now
+            )
+            profile.subscription_paid_until = start_from + timedelta(days=30 * reg.months)
+            profile.subscription_last_payment_reference = (
+                reg.transaction_reference or f"ADMIN::PRE-REG::{reg.id}"
+            )[:180]
+            db.flush()
 
         # Creer l enregistrement de paiement approuve
         from app.models.seller_subscription_payment import SellerSubscriptionPayment as _SSP
