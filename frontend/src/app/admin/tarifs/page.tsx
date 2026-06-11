@@ -35,6 +35,7 @@ import {
   verifyAdminSeller,
 } from "@/services/finance-service";
 import { hasAdminFinanceVerified } from "@/lib/api";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { AdminPendingSeller, FinanceSettings } from "@/types/finance";
 
 function parseNonNegativeNumber(value: string, fallback: number) {
@@ -184,7 +185,7 @@ export default function AdminTarifsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
       setStatus("Vendeur retire (desactive). Tu peux le remettre en ligne a tout moment.");
     },
-    onError: () => setStatus("Retrait du vendeur impossible."),
+    onError: (error) => setStatus(getApiErrorMessage(error, "Retrait du vendeur impossible.")),
   });
   const restoreSellerMutation = useMutation({
     mutationFn: restoreAdminSeller,
@@ -230,7 +231,7 @@ export default function AdminTarifsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
       setStatus("Vendeur supprime definitivement. Son email est de nouveau disponible.");
     },
-    onError: () => setStatus("Suppression definitive impossible."),
+    onError: (error) => setStatus(getApiErrorMessage(error, "Suppression definitive impossible.")),
   });
 
   const verifySellerMutation = useMutation({
@@ -251,7 +252,7 @@ export default function AdminTarifsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
       setStatus("Abonnement accorde. La boutique est maintenant visible.");
     },
-    onError: () => setStatus("Impossible d'accorder l'abonnement."),
+    onError: (error) => setStatus(getApiErrorMessage(error, "Impossible d'accorder l'abonnement.")),
   });
 
   const { data: pendingSellers } = useQuery({
@@ -270,7 +271,7 @@ export default function AdminTarifsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
       setStatus(result.status === "approved" ? "Compte vendeur cree et boutique activee." : "Demande rejetee.");
     },
-    onError: () => setStatus("Impossible de traiter la demande."),
+    onError: (error) => setStatus(getApiErrorMessage(error, "Impossible de traiter la demande.")),
   });
 
   const sellerTypeMutation = useMutation({
