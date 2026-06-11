@@ -133,6 +133,30 @@ class ChatResponse(BaseModel):
     mode: Literal["ai", "faq"]
 
 
+# Chaine de modeles gratuits essayes dans l'ordre. Un seul modele est trop
+# fragile (429 quota / 503 surcharge intermittents cote Google) : on bascule
+# automatiquement sur le suivant, et seulement en dernier recours sur la FAQ.
+_DEFAULT_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-2.0-flash",
+]
+
+
+def _models_from_env() -> list[str]:
+    """Liste de modeles depuis ASSISTANT_MODEL (separes par des virgules), sinon defauts.
+    On ajoute toujours les defauts en repli pour rester robuste meme si une seule
+    valeur (eventuellement saturee) est configuree."""
+    raw = (os.getenv("ASSISTANT_MODEL") or "").strip()
+    configured = [m.strip() for m in raw.split(",") if m.strip()]
+    ordered: list[str] = []
+    for m in [*configured, *_DEFAULT_MODELS]:
+        if m not in ordered:
+            ordered.append(m)
+    return ordered
+
+
 @router.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest, request: Request) -> ChatResponse:
     enforce_rate_limit(request, key="assistant_chat", limit=20, window_seconds=60)
@@ -141,9 +165,9 @@ def chat(payload: ChatRequest, request: Request) -> ChatResponse:
 
     api_key = (os.getenv("ASSISTANT_API_KEY") or "").strip()
     if api_key:
-        model = (os.getenv("ASSISTANT_MODEL") or "gemini-2.0-flash").strip()
-        ai = _gemini_reply(history, model, api_key)
-        if ai:
-            return ChatResponse(reply=ai, mode="ai")
+        for model in _models_from_env():
+            ai = _gemini_reply(history, model, api_key)
+            if ai:
+                return ChatResponse(reply=ai, mode="ai")
     # Repli FAQ (gratuit, toujours disponible)
     return ChatResponse(reply=faq_reply(last_user), mode="faq")
