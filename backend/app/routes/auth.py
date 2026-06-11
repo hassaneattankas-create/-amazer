@@ -300,6 +300,28 @@ def pre_register_seller(
     db.add(reg)
     db.commit()
     db.refresh(reg)
+
+    # Prevenir l'admin qu'une nouvelle demande vendeur attend sa validation
+    # (notification in-app, visible dans son espace). N'echoue jamais la demande.
+    try:
+        admin_user = db.scalar(select(User).where(User.email == settings.admin_email.strip().lower()))
+        if admin_user is not None:
+            NotificationService(db).send_to_user(
+                user_id=admin_user.id,
+                payload=NotificationPayload(
+                    title="Nouvelle demande vendeur",
+                    body=f"{reg.full_name} ({reg.identifier}) a soumis une demande vendeur a valider.",
+                    data={
+                        "tag": f"seller-prereg-{reg.id}",
+                        "href": "/admin/tarifs",
+                        "kind": "seller_pre_registration",
+                    },
+                ),
+            )
+            db.commit()
+    except Exception:
+        db.rollback()
+
     return SellerPreRegisterResponse(
         id=reg.id,
         status="pending",
