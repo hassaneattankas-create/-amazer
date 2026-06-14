@@ -12,6 +12,12 @@ import {
 } from "lucide-react";
 
 import { GalleryMediaField, SingleMediaField } from "@/components/seller/MediaFields";
+import {
+  RoomTypesEditor,
+  payloadToRoomRows,
+  roomRowsToPayload,
+  type RoomRow,
+} from "@/components/seller/RoomTypesEditor";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,35 +75,6 @@ function parseServices(value: string) {
       };
     })
     .filter((entry) => entry.title);
-}
-
-function parseRoomTypes(value: string) {
-  return value
-    .split(/\r?\n/)
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-    .map((entry, index) => {
-      const [
-        name,
-        priceText = "0",
-        capacityText = "1",
-        amenitiesText = "",
-        depositText = "",
-        departureText = "",
-      ] = entry.split("|").map((part) => part.trim());
-      return {
-        id: `room-${index + 1}`,
-        name,
-        description: null,
-        night_price: Number(priceText || 0),
-        capacity: Number(capacityText || 1),
-        amenities: splitListInput(amenitiesText),
-        photo_urls: [],
-        deposit_amount: depositText ? Number(depositText) : null,
-        departure_times: splitListInput(departureText),
-      };
-    })
-    .filter((entry) => entry.name && entry.night_price > 0);
 }
 
 function loadDraft<T>(key: string, fallback: T): T {
@@ -206,7 +183,7 @@ function SellerPageContent() {
       contact_email: "",
       gallery_images_text: "",
       service_offerings_text: "",
-      room_types_text: "",
+      room_types_list: [] as RoomRow[],
       deposit_payment_method: "nita" as "nita" | "amana",
       deposit_amount: "",
       accepts_table_reservations: false,
@@ -345,20 +322,10 @@ function SellerPageContent() {
         (profile.service_offerings || [])
           .map((item) => [item.title, item.description || "", item.display_mode].join(" | "))
           .join("\n"),
-      room_types_text:
-        prev.room_types_text ||
-        (profile.room_types || [])
-          .map((room) =>
-            [
-              room.name,
-              String(room.night_price),
-              String(room.capacity),
-              (room.amenities || []).join(", "),
-              room.deposit_amount ? String(room.deposit_amount) : "",
-              (room.departure_times || []).join(", "),
-            ].join(" | "),
-          )
-          .join("\n"),
+      room_types_list:
+        prev.room_types_list && prev.room_types_list.length
+          ? prev.room_types_list
+          : payloadToRoomRows(profile.room_types || []),
       deposit_payment_method:
         prev.deposit_payment_method || profile.deposit_payment_method || "nita",
       deposit_amount:
@@ -1038,18 +1005,18 @@ function SellerPageContent() {
               />
             ) : null}
             {showRoomTypes ? (
-              <textarea
-                placeholder={
-                  isTransport
-                    ? "Trajets: nom (ex: Niamey - Maradi) | prix place | capacite | options | acompte | heures depart (ex: 06:00,14:00,20:30)"
-                    : "Chambres: nom | prix | capacite | amenites | acompte"
-                }
-                value={profileForm.room_types_text}
-                onChange={(event) =>
-                  setProfileForm((prev) => ({ ...prev, room_types_text: event.target.value }))
-                }
-                className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
-              />
+              <div className="sm:col-span-2">
+                <p className="mb-2 text-sm font-medium text-slate-800">
+                  {isTransport ? "Vos trajets" : "Vos chambres"}
+                </p>
+                <RoomTypesEditor
+                  value={profileForm.room_types_list}
+                  onChange={(rows) =>
+                    setProfileForm((prev) => ({ ...prev, room_types_list: rows }))
+                  }
+                  isTransport={isTransport}
+                />
+              </div>
             ) : null}
               </>
             ) : null}
@@ -1077,7 +1044,7 @@ function SellerPageContent() {
                     })
                   : [],
                 service_offerings: isPremium ? parseServices(profileForm.service_offerings_text) : [],
-                room_types: showRoomTypes ? parseRoomTypes(profileForm.room_types_text) : [],
+                room_types: showRoomTypes ? roomRowsToPayload(profileForm.room_types_list) : [],
                 deposit_payment_method: showRoomTypes ? profileForm.deposit_payment_method : undefined,
                 deposit_amount: isPremium
                   ? profileForm.deposit_amount
