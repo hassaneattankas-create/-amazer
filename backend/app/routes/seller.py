@@ -226,6 +226,8 @@ def _profile_response(profile: SellerProfile, db: Session) -> SellerProfileRespo
         accepts_hotel_bookings=bool(profile.accepts_hotel_bookings),
         is_enterprise=bool(getattr(profile, "is_enterprise", False)),
         offers_transport=bool(getattr(profile, "offers_transport", False)),
+        offers_shop=bool(getattr(profile, "offers_shop", False)),
+        offers_restaurant=bool(getattr(profile, "offers_restaurant", False)),
         is_verified=profile.is_verified,
         created_at=profile.created_at,
     )
@@ -595,6 +597,8 @@ def get_storefront(
         accepts_table_reservations=bool(profile.accepts_table_reservations),
         accepts_hotel_bookings=bool(profile.accepts_hotel_bookings),
         offers_transport=bool(getattr(profile, "offers_transport", False)),
+        offers_shop=bool(getattr(profile, "offers_shop", False)),
+        offers_restaurant=bool(getattr(profile, "offers_restaurant", False)),
         is_verified=profile.is_verified,
         products=[
             SellerStorefrontProductResponse(

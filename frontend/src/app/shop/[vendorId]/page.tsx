@@ -78,6 +78,7 @@ export default function VendorShopPage() {
     deposit_payment_method: "nita" as "nita" | "amana",
     transaction_reference: "",
     special_request: "",
+    departure_time: "",
   });
 
   const { data, isPending, isError } = useQuery({
@@ -176,7 +177,13 @@ export default function VendorShopPage() {
         guest_count: Number(hotelForm.guest_count || 1),
         deposit_payment_method: hotelForm.deposit_payment_method,
         transaction_reference: hotelForm.transaction_reference || undefined,
-        special_request: hotelForm.special_request || undefined,
+        special_request:
+          [
+            hotelForm.departure_time ? `Depart souhaite: ${hotelForm.departure_time}` : "",
+            hotelForm.special_request,
+          ]
+            .filter(Boolean)
+            .join(" — ") || undefined,
       });
     },
     onSuccess: () => {
@@ -191,6 +198,7 @@ export default function VendorShopPage() {
         guest_count: "1",
         transaction_reference: "",
         special_request: "",
+        departure_time: "",
       }));
     },
     onError: (error) =>
@@ -293,8 +301,18 @@ export default function VendorShopPage() {
   const isTransport = Boolean(data?.offers_transport) || data?.activity_type === "transport";
   const isPremiumStore =
     data?.storefront_tier === "premium" || data?.activity_type === "hotel" || data?.activity_type === "enterprise";
-  const showRestaurantSection = !isTransport && (data?.activity_type === "restaurant" || Boolean(isPremiumStore));
+  // Premium: le proprietaire choisit d'activer la boutique et/ou le restaurant (cases a cocher).
+  // Comptes non-premium: pilote par activity_type (comportement inchange).
+  const showShopSection = isPremiumStore ? Boolean(data?.offers_shop) : true;
+  const showRestaurantSection =
+    !isTransport &&
+    (isPremiumStore ? Boolean(data?.offers_restaurant) : data?.activity_type === "restaurant");
   const canOrder = showRestaurantSection && filteredMenu.length > 0;
+  const transportDepartureTimes =
+    (isTransport &&
+      data?.room_types?.find((room) => (room.id || room.name) === hotelForm.room_type_id)
+        ?.departure_times) ||
+    [];
 
   const total = useMemo(
     () =>
@@ -594,9 +612,29 @@ export default function VendorShopPage() {
                   {data.room_types.map((room) => (
                     <option key={room.id || room.name} value={room.id || room.name}>
                       {room.name} - {formatXOF(room.night_price)}{isTransport ? "/place" : "/nuit"}
+                      {isTransport && room.departure_times?.length
+                        ? ` (departs: ${room.departure_times.join(", ")})`
+                        : ""}
                     </option>
                   ))}
                 </select>
+                {isTransport && transportDepartureTimes.length ? (
+                  <select
+                    aria-label="Heure de depart"
+                    value={hotelForm.departure_time}
+                    onChange={(event) =>
+                      setHotelForm((prev) => ({ ...prev, departure_time: event.target.value }))
+                    }
+                    className="h-11 rounded-md border border-slate-300 px-3 text-sm"
+                  >
+                    <option value="">Heure de depart</option>
+                    {transportDepartureTimes.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
                 <Input
                   placeholder="Nom"
                   value={hotelForm.guest_name}
@@ -692,7 +730,7 @@ export default function VendorShopPage() {
         </>
       ) : null}
 
-      {data.products.length ? (
+      {showShopSection && data.products.length ? (
         <RetailShopContent
           products={filteredProducts}
           onAddToCart={(productId) => handleAddProduct(productId)}

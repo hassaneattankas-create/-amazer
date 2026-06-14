@@ -148,6 +148,7 @@ def _normalize_room_types(values: Any) -> list[dict[str, Any]]:
                 deposit_amount = max(0.0, float(raw_deposit))
             except (TypeError, ValueError):
                 deposit_amount = None
+        departure_times = _normalize_string_list(value.get("departure_times", []))
         items.append(
             {
                 "id": room_id[:64],
@@ -158,6 +159,7 @@ def _normalize_room_types(values: Any) -> list[dict[str, Any]]:
                 "amenities": amenities,
                 "photo_urls": photo_urls,
                 "deposit_amount": deposit_amount,
+                "departure_times": departure_times,
             }
         )
     return items[:24]
@@ -196,6 +198,12 @@ def apply_seller_profile_payload(profile: SellerProfile, payload: Mapping[str, A
             profile.deposit_amount = None
     profile.accepts_table_reservations = bool(payload.get("accepts_table_reservations", False))
     profile.accepts_hotel_bookings = bool(payload.get("accepts_hotel_bookings", False))
+    # Premium: n'ecraser que si le champ est fourni (None = inchange) pour ne pas
+    # desactiver par erreur la boutique/resto d'un Premium existant.
+    if payload.get("offers_shop") is not None:
+        profile.offers_shop = bool(payload.get("offers_shop"))
+    if payload.get("offers_restaurant") is not None:
+        profile.offers_restaurant = bool(payload.get("offers_restaurant"))
 
 
 def create_or_update_seller_profile(
