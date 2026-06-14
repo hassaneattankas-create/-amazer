@@ -83,6 +83,7 @@ function parseRoomTypes(value: string) {
         capacityText = "1",
         amenitiesText = "",
         depositText = "",
+        departureText = "",
       ] = entry.split("|").map((part) => part.trim());
       return {
         id: `room-${index + 1}`,
@@ -93,6 +94,7 @@ function parseRoomTypes(value: string) {
         amenities: splitListInput(amenitiesText),
         photo_urls: [],
         deposit_amount: depositText ? Number(depositText) : null,
+        departure_times: splitListInput(departureText),
       };
     })
     .filter((entry) => entry.name && entry.night_price > 0);
@@ -209,6 +211,8 @@ function SellerPageContent() {
       deposit_amount: "",
       accepts_table_reservations: false,
       accepts_hotel_bookings: false,
+      offers_shop: false,
+      offers_restaurant: false,
     });
     const normalizedDraftActivity =
       (draft.activity_type as string) === "hotel" ? "enterprise" : draft.activity_type;
@@ -351,6 +355,7 @@ function SellerPageContent() {
               String(room.capacity),
               (room.amenities || []).join(", "),
               room.deposit_amount ? String(room.deposit_amount) : "",
+              (room.departure_times || []).join(", "),
             ].join(" | "),
           )
           .join("\n"),
@@ -362,6 +367,8 @@ function SellerPageContent() {
         prev.accepts_table_reservations || profile.accepts_table_reservations || false,
       accepts_hotel_bookings:
         prev.accepts_hotel_bookings || profile.accepts_hotel_bookings || false,
+      offers_shop: prev.offers_shop || profile.offers_shop || false,
+      offers_restaurant: prev.offers_restaurant || profile.offers_restaurant || false,
     }));
     setProfileHydratedFromServer(true);
   }, [profile, profileHydratedFromServer]);
@@ -981,6 +988,34 @@ function SellerPageContent() {
               </div>
             ) : null}
             {isPremium ? (
+              <div className="rounded-md border border-orange-200 bg-orange-50 p-3 text-sm text-slate-700 sm:col-span-2">
+                <p className="font-medium text-slate-900">Que propose votre Premium ?</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Cochez ce que vous voulez activer. Seuls les espaces cochés apparaitront sur votre mini-site.
+                </p>
+                <label className="mt-2 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={profileForm.offers_shop}
+                    onChange={(event) =>
+                      setProfileForm((prev) => ({ ...prev, offers_shop: event.target.checked }))
+                    }
+                  />
+                  Boutique (vendre des produits)
+                </label>
+                <label className="mt-2 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={profileForm.offers_restaurant}
+                    onChange={(event) =>
+                      setProfileForm((prev) => ({ ...prev, offers_restaurant: event.target.checked }))
+                    }
+                  />
+                  Restaurant (menu et commandes)
+                </label>
+              </div>
+            ) : null}
+            {isPremium ? (
               <GalleryMediaField
                 label="Galerie photos"
                 values={profileGalleryImages}
@@ -1006,7 +1041,7 @@ function SellerPageContent() {
               <textarea
                 placeholder={
                   isTransport
-                    ? "Trajets: nom (ex: Niamey - Maradi 08h) | prix place | capacite | options | acompte"
+                    ? "Trajets: nom (ex: Niamey - Maradi) | prix place | capacite | options | acompte | heures depart (ex: 06:00,14:00,20:30)"
                     : "Chambres: nom | prix | capacite | amenites | acompte"
                 }
                 value={profileForm.room_types_text}
@@ -1053,6 +1088,8 @@ function SellerPageContent() {
                   ? profileForm.accepts_table_reservations
                   : false,
                 accepts_hotel_bookings: isPremium ? profileForm.accepts_hotel_bookings : false,
+                offers_shop: isPremium ? profileForm.offers_shop : undefined,
+                offers_restaurant: isPremium ? profileForm.offers_restaurant : undefined,
               })
               }
             >

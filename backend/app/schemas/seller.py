@@ -28,6 +28,8 @@ class HotelRoomTypeSchema(BaseModel):
     amenities: list[str] = Field(default_factory=list, max_length=20)
     photo_urls: list[str] = Field(default_factory=list, max_length=20)
     deposit_amount: float | None = Field(default=None, ge=0)
+    # Transport: heures de depart du trajet, ex: ["06:00", "14:00", "20:30"].
+    departure_times: list[str] = Field(default_factory=list, max_length=40)
 
 
 class SellerProfileRequest(BaseModel):
@@ -52,6 +54,10 @@ class SellerProfileRequest(BaseModel):
     deposit_amount: float | None = Field(default=None, ge=0)
     accepts_table_reservations: bool = False
     accepts_hotel_bookings: bool = False
+    # Premium: le proprietaire active la boutique et/ou le restaurant. None = ne pas modifier
+    # (un ancien client qui n'envoie pas le champ ne desactive pas par erreur).
+    offers_shop: bool | None = None
+    offers_restaurant: bool | None = None
 
 
 class SellerProfileResponse(BaseModel):
@@ -90,6 +96,8 @@ class SellerProfileResponse(BaseModel):
     accepts_hotel_bookings: bool
     is_enterprise: bool = False
     offers_transport: bool = False
+    offers_shop: bool = False
+    offers_restaurant: bool = False
     is_verified: bool
     created_at: datetime
 
@@ -258,6 +266,8 @@ class SellerStorefrontResponse(BaseModel):
     accepts_table_reservations: bool
     accepts_hotel_bookings: bool
     offers_transport: bool = False
+    offers_shop: bool = False
+    offers_restaurant: bool = False
     is_verified: bool
     products: list[SellerStorefrontProductResponse]
     restaurant_menu: list[RestaurantMenuItemResponse]

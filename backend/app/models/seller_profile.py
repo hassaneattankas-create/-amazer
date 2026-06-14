@@ -59,6 +59,10 @@ class SellerProfile(Base):
     accepts_hotel_bookings: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # Premium Entreprise (sur devis): debloque import/export, reservations et calendrier d'un coup.
     is_enterprise: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Premium: le proprietaire choisit lui-meme d'activer la boutique (produits) et/ou le
+    # restaurant (menu). Les comptes Premium existants sont migres a true; les nouveaux a false.
+    offers_shop: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    offers_restaurant: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # Entreprise de transport: affiche la reservation en mode trajets/billets au lieu de chambres.
     offers_transport: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

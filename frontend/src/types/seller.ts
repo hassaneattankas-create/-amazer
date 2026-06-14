@@ -18,6 +18,8 @@ export type HotelRoomType = {
   amenities: string[];
   photo_urls: string[];
   deposit_amount: number | null;
+  /** Transport: heures de depart du trajet, ex: ["06:00", "14:00"]. */
+  departure_times?: string[];
 };
 
 export type SellerProfile = {
@@ -54,6 +56,8 @@ export type SellerProfile = {
   accepts_hotel_bookings: boolean;
   is_enterprise?: boolean;
   offers_transport?: boolean;
+  offers_shop?: boolean;
+  offers_restaurant?: boolean;
   is_verified: boolean;
   created_at: string;
 };
@@ -106,6 +110,8 @@ export type SellerProfilePayload = {
   deposit_amount?: number;
   accepts_table_reservations?: boolean;
   accepts_hotel_bookings?: boolean;
+  offers_shop?: boolean;
+  offers_restaurant?: boolean;
 };
 
 export type SellerProductPayload = {
@@ -196,6 +202,8 @@ export type SellerStorefront = {
   accepts_table_reservations: boolean;
   accepts_hotel_bookings: boolean;
   offers_transport?: boolean;
+  offers_shop?: boolean;
+  offers_restaurant?: boolean;
   is_verified: boolean;
   products: SellerStorefrontProduct[];
   restaurant_menu: RestaurantMenuItem[];
