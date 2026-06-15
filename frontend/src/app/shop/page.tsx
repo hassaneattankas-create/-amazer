@@ -514,10 +514,11 @@ function VendorShopPageContent() {
             <article className="premium-card border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-5">
               <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
                 <Hotel className="h-5 w-5 text-[#0ea5e9]" />
-                Reservation premium avec acompte
+                Reserver
               </h2>
               <p className="mt-2 text-sm text-slate-600">
-                Acompte obligatoire via {data.deposit_payment_method || "Nita/Amana"} pour valider la demande.
+                Paiement obligatoire via Nita ou Amana : la reservation est validee une fois le
+                paiement effectue et la reference saisie.
               </p>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <select
@@ -525,7 +526,7 @@ function VendorShopPageContent() {
                   onChange={(event) => setHotelForm((prev) => ({ ...prev, room_type_id: event.target.value }))}
                   className="h-11 rounded-md border border-slate-300 px-3 text-sm"
                 >
-                  <option value="">Choisir une chambre</option>
+                  <option value="">Choisir</option>
                   {data.room_types.map((room) => (
                     <option key={room.id || room.name} value={room.id || room.name}>
                       {room.name} - {formatXOF(room.night_price)}/nuit
@@ -596,10 +597,20 @@ function VendorShopPageContent() {
                 className="mt-4 border border-sky-300 bg-sky-600 text-white hover:bg-sky-700"
                 onClick={() => {
                   if (!requireSession()) return;
+                  if (!hotelForm.room_type_id) {
+                    setStatus("Choisis une option.");
+                    return;
+                  }
+                  if (!hotelForm.transaction_reference.trim()) {
+                    setStatus(
+                      "Paiement obligatoire : saisis la reference de ton paiement (Nita/Amana) pour valider.",
+                    );
+                    return;
+                  }
                   hotelBookingMutation.mutate();
                 }}
               >
-                Envoyer ma reservation
+                Payer et reserver
               </Button>
             </article>
           ) : null}
@@ -693,8 +704,8 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
           {data.phone ? <p>Telephone: {data.phone}</p> : null}
           {data.whatsapp_contact ? <p>WhatsApp: {data.whatsapp_contact}</p> : null}
           {data.contact_email ? <p>Email: {data.contact_email}</p> : null}
-          {data.deposit_amount ? (
-            <p>Acompte de reference: {formatXOF(data.deposit_amount)}</p>
+          {data.deposit_amount && data.activity_type === "restaurant" ? (
+            <p>Frais de réservation de table : {formatXOF(data.deposit_amount)}</p>
           ) : null}
         </div>
       </div>
@@ -1049,9 +1060,6 @@ function HotelRoomSection({ rooms }: { rooms: HotelRoomType[] }) {
             </div>
             {room.description ? <p className="mt-2 text-sm text-slate-600">{room.description}</p> : null}
             <p className="mt-2 text-xs text-slate-500">Capacite: {room.capacity} personne(s)</p>
-            {room.deposit_amount ? (
-              <p className="mt-1 text-xs text-slate-500">Acompte: {formatXOF(room.deposit_amount)}</p>
-            ) : null}
             {room.amenities.length ? (
               <div className="mt-3 flex flex-wrap gap-2">
                 {room.amenities.map((amenity) => (

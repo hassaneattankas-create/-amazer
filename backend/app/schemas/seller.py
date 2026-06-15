@@ -28,8 +28,11 @@ class HotelRoomTypeSchema(BaseModel):
     amenities: list[str] = Field(default_factory=list, max_length=20)
     photo_urls: list[str] = Field(default_factory=list, max_length=20)
     deposit_amount: float | None = Field(default=None, ge=0)
-    # Transport: heures de depart du trajet, ex: ["06:00", "14:00", "20:30"].
+    # Transport: le vendeur publie ses heures de depart (ex: ["06:00", "14:00"]) et ses
+    # jours disponibles (dates ISO, ex: ["2026-06-20", "2026-06-22"]). Le client choisit
+    # un jour et une heure parmi ceux publies (il ne les fixe pas lui-meme).
     departure_times: list[str] = Field(default_factory=list, max_length=40)
+    available_days: list[str] = Field(default_factory=list, max_length=120)
 
 
 class SellerProfileRequest(BaseModel):

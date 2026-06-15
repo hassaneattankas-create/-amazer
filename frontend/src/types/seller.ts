@@ -20,6 +20,8 @@ export type HotelRoomType = {
   deposit_amount: number | null;
   /** Transport: heures de depart du trajet, ex: ["06:00", "14:00"]. */
   departure_times?: string[];
+  /** Transport: jours disponibles publies par le vendeur (dates ISO). */
+  available_days?: string[];
 };
 
 export type SellerProfile = {

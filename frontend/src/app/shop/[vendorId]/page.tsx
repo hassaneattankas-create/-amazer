@@ -308,11 +308,26 @@ export default function VendorShopPage() {
     !isTransport &&
     (isPremiumStore ? Boolean(data?.offers_restaurant) : data?.activity_type === "restaurant");
   const canOrder = showRestaurantSection && filteredMenu.length > 0;
-  const transportDepartureTimes =
-    (isTransport &&
-      data?.room_types?.find((room) => (room.id || room.name) === hotelForm.room_type_id)
-        ?.departure_times) ||
-    [];
+  const selectedHotelRoom = data?.room_types?.find(
+    (room) => (room.id || room.name) === hotelForm.room_type_id,
+  );
+  const transportDepartureTimes = (isTransport && selectedHotelRoom?.departure_times) || [];
+  const transportAvailableDays = (isTransport && selectedHotelRoom?.available_days) || [];
+  const hotelNights =
+    !isTransport && hotelForm.check_in_date && hotelForm.check_out_date
+      ? Math.max(
+          1,
+          Math.round(
+            (new Date(hotelForm.check_out_date).getTime() -
+              new Date(hotelForm.check_in_date).getTime()) /
+              86400000,
+          ),
+        )
+      : 1;
+  const hotelQuantity = isTransport ? Math.max(1, Number(hotelForm.guest_count || 1)) : hotelNights;
+  const hotelAmountDue = selectedHotelRoom
+    ? Number(selectedHotelRoom.night_price || 0) * hotelQuantity
+    : 0;
 
   const total = useMemo(
     () =>
@@ -470,9 +485,9 @@ export default function VendorShopPage() {
               <h2 className="luxury-title text-xl font-semibold">Reservation de table</h2>
               {data.deposit_amount && data.deposit_amount > 0 ? (
                 <p className="mt-2 text-sm text-slate-600">
-                  Acompte de {formatXOF(data.deposit_amount)} via{" "}
-                  {data.deposit_payment_method?.toUpperCase() || "Nita/Amana"} obligatoire : la
-                  reservation n&apos;est validee qu&apos;apres paiement.
+                  Frais de reservation de {formatXOF(data.deposit_amount)} via{" "}
+                  {data.deposit_payment_method?.toUpperCase() || "Nita/Amana"} : paiement
+                  obligatoire pour valider la reservation.
                 </p>
               ) : null}
               <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -515,7 +530,7 @@ export default function VendorShopPage() {
                 {data.deposit_amount && data.deposit_amount > 0 ? (
                   <>
                     <select
-                      aria-label="Mode de paiement de l'acompte"
+                      aria-label="Mode de paiement"
                       value={reservationForm.deposit_payment_method}
                       onChange={(event) =>
                         setReservationForm((prev) => ({
@@ -529,7 +544,7 @@ export default function VendorShopPage() {
                       <option value="amana">Amana</option>
                     </select>
                     <Input
-                      placeholder="Reference de paiement de l'acompte"
+                      placeholder="Reference de paiement"
                       value={reservationForm.transaction_reference}
                       onChange={(event) =>
                         setReservationForm((prev) => ({
@@ -551,7 +566,7 @@ export default function VendorShopPage() {
                     !reservationForm.transaction_reference.trim()
                   ) {
                     setStatus(
-                      "Saisis la reference de paiement de l'acompte pour valider la reservation."
+                      "Paiement obligatoire : saisis la reference de ton paiement pour valider.",
                     );
                     return;
                   }
@@ -594,21 +609,28 @@ export default function VendorShopPage() {
             <article className="premium-card border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-5">
               <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
                 <Hotel className="h-5 w-5 text-[#0ea5e9]" />
-                {isTransport ? "Reservation de trajet avec acompte" : "Reservation premium avec acompte"}
+                {isTransport ? "Reserver un trajet" : "Reserver"}
               </h2>
               <p className="mt-2 text-sm text-slate-600">
-                {data.deposit_amount && data.deposit_amount > 0
-                  ? `Acompte via ${data.deposit_payment_method?.toUpperCase() || "Nita/Amana"} obligatoire : la reservation n'est validee qu'apres paiement.`
-                  : "Acompte optionnel selon le prestataire. Si un acompte est demande, la reservation n'est validee qu'apres paiement."}
+                Paiement obligatoire via Nita ou Amana : la reservation est validee une fois le
+                paiement effectue et la reference saisie.
               </p>
+              {selectedHotelRoom ? (
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  Montant a payer : {formatXOF(hotelAmountDue)}
+                  {isTransport
+                    ? ` (${hotelQuantity} place${hotelQuantity > 1 ? "s" : ""})`
+                    : ` (${hotelQuantity} nuit${hotelQuantity > 1 ? "s" : ""})`}
+                </p>
+              ) : null}
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <select
-                  aria-label={isTransport ? "Choisir un trajet" : "Choisir une chambre"}
+                  aria-label="Choisir"
                   value={hotelForm.room_type_id}
                   onChange={(event) => setHotelForm((prev) => ({ ...prev, room_type_id: event.target.value }))}
                   className="h-11 rounded-md border border-slate-300 px-3 text-sm"
                 >
-                  <option value="">{isTransport ? "Choisir un trajet" : "Choisir une chambre"}</option>
+                  <option value="">Choisir</option>
                   {data.room_types.map((room) => (
                     <option key={room.id || room.name} value={room.id || room.name}>
                       {room.name} - {formatXOF(room.night_price)}{isTransport ? "/place" : "/nuit"}
@@ -652,13 +674,33 @@ export default function VendorShopPage() {
                 />
                 <div className={isTransport ? "md:col-span-2" : ""}>
                   <label className="mb-1 block text-xs text-slate-500">
-                    {isTransport ? "Date de voyage" : "Date d'arrivee"}
+                    {isTransport ? "Jour de depart" : "Date d'arrivee"}
                   </label>
-                  <Input
-                    type="date"
-                    value={hotelForm.check_in_date}
-                    onChange={(event) => setHotelForm((prev) => ({ ...prev, check_in_date: event.target.value }))}
-                  />
+                  {isTransport && transportAvailableDays.length ? (
+                    <select
+                      aria-label="Jour de depart"
+                      value={hotelForm.check_in_date}
+                      onChange={(event) =>
+                        setHotelForm((prev) => ({ ...prev, check_in_date: event.target.value }))
+                      }
+                      className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm"
+                    >
+                      <option value="">Choisir un jour</option>
+                      {transportAvailableDays.map((day) => (
+                        <option key={day} value={day}>
+                          {day}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      type="date"
+                      value={hotelForm.check_in_date}
+                      onChange={(event) =>
+                        setHotelForm((prev) => ({ ...prev, check_in_date: event.target.value }))
+                      }
+                    />
+                  )}
                 </div>
                 {!isTransport ? (
                   <div>
@@ -678,7 +720,7 @@ export default function VendorShopPage() {
                   placeholder={isTransport ? "Nombre de places" : "Voyageurs"}
                 />
                 <select
-                  aria-label="Mode de paiement de l'acompte"
+                  aria-label="Mode de paiement"
                   value={hotelForm.deposit_payment_method}
                   onChange={(event) =>
                     setHotelForm((prev) => ({
@@ -710,20 +752,20 @@ export default function VendorShopPage() {
                 className="mt-4 border border-sky-300 bg-sky-600 text-white hover:bg-sky-700"
                 onClick={() => {
                   if (!requireSession()) return;
-                  const selectedRoom = data.room_types.find(
-                    (room) => (room.id || room.name) === hotelForm.room_type_id
-                  );
-                  const deposit = Number(selectedRoom?.deposit_amount || data.deposit_amount || 0);
-                  if (deposit > 0 && !hotelForm.transaction_reference.trim()) {
+                  if (!hotelForm.room_type_id) {
+                    setStatus(isTransport ? "Choisis un trajet." : "Choisis une option.");
+                    return;
+                  }
+                  if (!hotelForm.transaction_reference.trim()) {
                     setStatus(
-                      "Saisis la reference de paiement de l'acompte pour valider la reservation."
+                      "Paiement obligatoire : saisis la reference de ton paiement (Nita/Amana) pour valider.",
                     );
                     return;
                   }
                   hotelBookingMutation.mutate();
                 }}
               >
-                Envoyer ma reservation
+                {hotelAmountDue > 0 ? `Payer ${formatXOF(hotelAmountDue)} et reserver` : "Payer et reserver"}
               </Button>
             </article>
           ) : null}
@@ -850,8 +892,8 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
           {data.phone ? <p>Téléphone : {data.phone}</p> : null}
           {data.whatsapp_contact ? <p>WhatsApp : {data.whatsapp_contact}</p> : null}
           {data.contact_email ? <p>Email : {data.contact_email}</p> : null}
-          {data.deposit_amount ? (
-            <p>Acompte de référence : {formatXOF(data.deposit_amount)}</p>
+          {data.deposit_amount && data.activity_type === "restaurant" ? (
+            <p>Frais de réservation de table : {formatXOF(data.deposit_amount)}</p>
           ) : null}
         </div>
       </div>
@@ -1206,9 +1248,6 @@ function HotelRoomSection({ rooms }: { rooms: HotelRoomType[] }) {
             </div>
             {room.description ? <p className="mt-2 text-sm text-slate-600">{room.description}</p> : null}
             <p className="mt-2 text-xs text-slate-500">Capacite: {room.capacity} personne(s)</p>
-            {room.deposit_amount ? (
-              <p className="mt-1 text-xs text-slate-500">Acompte: {formatXOF(room.deposit_amount)}</p>
-            ) : null}
             {room.amenities.length ? (
               <div className="mt-3 flex flex-wrap gap-2">
                 {room.amenities.map((amenity) => (
