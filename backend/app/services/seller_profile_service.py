@@ -149,6 +149,7 @@ def _normalize_room_types(values: Any) -> list[dict[str, Any]]:
             except (TypeError, ValueError):
                 deposit_amount = None
         departure_times = _normalize_string_list(value.get("departure_times", []))
+        available_days = _normalize_string_list(value.get("available_days", []))
         items.append(
             {
                 "id": room_id[:64],
@@ -160,6 +161,7 @@ def _normalize_room_types(values: Any) -> list[dict[str, Any]]:
                 "photo_urls": photo_urls,
                 "deposit_amount": deposit_amount,
                 "departure_times": departure_times,
+                "available_days": available_days,
             }
         )
     return items[:24]

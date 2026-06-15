@@ -1347,13 +1347,13 @@ def create_restaurant_reservation(
     if not profile.accepts_table_reservations:
         raise ConflictError("Table reservations are disabled for this restaurant")
 
-    # Acompte optionnel: si le restaurant a configure un acompte, le client doit l'avoir
-    # paye (reference de transaction fournie) pour que la reservation passe.
+    # Frais de reservation fixe par le restaurant: si > 0, le paiement est OBLIGATOIRE
+    # (le client paie et fournit sa reference, comme une commande boutique).
     deposit_amount = float(profile.deposit_amount or 0)
     transaction_reference = (payload.transaction_reference or "").strip() or None
     if deposit_amount > 0 and not transaction_reference:
         raise ConflictError(
-            "Paiement de l'acompte requis: la reservation ne peut pas etre confirmee sans paiement."
+            "Paiement requis: saisissez la reference de votre paiement pour valider la reservation."
         )
 
     reservation = RestaurantReservation(
@@ -1453,13 +1453,15 @@ def create_hotel_booking(
     nights = (payload.check_out_date - payload.check_in_date).days
     if nights <= 0 and not is_transport:
         raise ConflictError("Check-out must be after check-in")
-    # Acompte optionnel: si un acompte est configure (> 0), le client doit l'avoir paye
-    # (reference fournie) pour que la reservation passe. Sinon la reservation est gratuite.
-    deposit_amount = float(room.get("deposit_amount") or profile.deposit_amount or 0)
+    # Paiement complet OBLIGATOIRE (plus d'acompte): le client paie le montant total
+    # (prix unitaire x quantite) et fournit sa reference, comme une commande boutique.
+    unit_price = float(room.get("night_price") or 0)
+    quantity = max(1, int(payload.guest_count or 1)) if is_transport else max(1, nights)
+    amount_due = round(unit_price * quantity, 2)
     transaction_reference = (payload.transaction_reference or "").strip() or None
-    if deposit_amount > 0 and not transaction_reference:
+    if amount_due > 0 and not transaction_reference:
         raise ConflictError(
-            "Paiement de l'acompte requis: la reservation ne peut pas etre confirmee sans paiement."
+            "Paiement requis: saisissez la reference de votre paiement pour valider la reservation."
         )
 
     booking = HotelBooking(
@@ -1474,7 +1476,7 @@ def create_hotel_booking(
         check_out_date=payload.check_out_date,
         guest_count=payload.guest_count,
         deposit_payment_method=payload.deposit_payment_method,
-        deposit_amount=deposit_amount,
+        deposit_amount=amount_due,
         transaction_reference=transaction_reference,
         payment_status="paid",
         special_request=payload.special_request,

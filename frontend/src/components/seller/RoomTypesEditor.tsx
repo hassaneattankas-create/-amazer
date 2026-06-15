@@ -10,8 +10,8 @@ export type RoomRow = {
   night_price: string;
   capacity: string;
   amenities: string;
-  deposit_amount: string;
   departure_times: string[];
+  available_days: string[];
 };
 
 export function emptyRoomRow(): RoomRow {
@@ -20,8 +20,8 @@ export function emptyRoomRow(): RoomRow {
     night_price: "",
     capacity: "1",
     amenities: "",
-    deposit_amount: "",
     departure_times: [],
+    available_days: [],
   };
 }
 
@@ -47,18 +47,24 @@ export function RoomTypesEditor({
   function add() {
     onChange([...value, emptyRoomRow()]);
   }
-  function addTime(index: number) {
-    update(index, { departure_times: [...value[index].departure_times, ""] });
+
+  function addEntry(index: number, key: "departure_times" | "available_days") {
+    update(index, { [key]: [...value[index][key], ""] } as Partial<RoomRow>);
   }
-  function updateTime(index: number, timeIndex: number, time: string) {
+  function updateEntry(
+    index: number,
+    key: "departure_times" | "available_days",
+    entryIndex: number,
+    next: string,
+  ) {
     update(index, {
-      departure_times: value[index].departure_times.map((t, ti) => (ti === timeIndex ? time : t)),
-    });
+      [key]: value[index][key].map((v, i) => (i === entryIndex ? next : v)),
+    } as Partial<RoomRow>);
   }
-  function removeTime(index: number, timeIndex: number) {
+  function removeEntry(index: number, key: "departure_times" | "available_days", entryIndex: number) {
     update(index, {
-      departure_times: value[index].departure_times.filter((_, ti) => ti !== timeIndex),
-    });
+      [key]: value[index][key].filter((_, i) => i !== entryIndex),
+    } as Partial<RoomRow>);
   }
 
   return (
@@ -104,7 +110,7 @@ export function RoomTypesEditor({
                 onChange={(event) => update(index, { capacity: event.target.value })}
               />
             </label>
-            <label className="text-xs text-slate-600">
+            <label className="text-xs text-slate-600 sm:col-span-2">
               Options (separees par virgule)
               <Input
                 value={row.amenities}
@@ -112,45 +118,73 @@ export function RoomTypesEditor({
                 placeholder={isTransport ? "Climatise, WiFi, Bagages" : "Climatise, TV, Petit-dejeuner"}
               />
             </label>
-            <label className="text-xs text-slate-600">
-              Acompte (FCFA, optionnel)
-              <Input
-                type="number"
-                min={0}
-                value={row.deposit_amount}
-                onChange={(event) => update(index, { deposit_amount: event.target.value })}
-              />
-            </label>
           </div>
+
           {isTransport ? (
-            <div className="mt-2">
-              <p className="text-xs font-medium text-slate-600">Heures de depart</p>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                {row.departure_times.map((time, timeIndex) => (
-                  <div key={timeIndex} className="flex items-center gap-1">
-                    <input
-                      type="time"
-                      value={time}
-                      onChange={(event) => updateTime(index, timeIndex, event.target.value)}
-                      className="h-9 rounded-md border border-slate-300 px-2 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeTime(index, timeIndex)}
-                      aria-label="Retirer cette heure"
-                      className="text-xs text-rose-600"
-                    >
-                      x
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => addTime(index)}
-                  className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
-                >
-                  + Ajouter une heure
-                </button>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <p className="text-xs font-medium text-slate-600">Jours disponibles</p>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  {row.available_days.map((day, dayIndex) => (
+                    <div key={dayIndex} className="flex items-center gap-1">
+                      <input
+                        type="date"
+                        value={day}
+                        onChange={(event) =>
+                          updateEntry(index, "available_days", dayIndex, event.target.value)
+                        }
+                        className="h-9 rounded-md border border-slate-300 px-2 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeEntry(index, "available_days", dayIndex)}
+                        aria-label="Retirer ce jour"
+                        className="text-xs text-rose-600"
+                      >
+                        x
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => addEntry(index, "available_days")}
+                    className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  >
+                    + Ajouter un jour
+                  </button>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-600">Heures de depart</p>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  {row.departure_times.map((time, timeIndex) => (
+                    <div key={timeIndex} className="flex items-center gap-1">
+                      <input
+                        type="time"
+                        value={time}
+                        onChange={(event) =>
+                          updateEntry(index, "departure_times", timeIndex, event.target.value)
+                        }
+                        className="h-9 rounded-md border border-slate-300 px-2 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeEntry(index, "departure_times", timeIndex)}
+                        aria-label="Retirer cette heure"
+                        className="text-xs text-rose-600"
+                      >
+                        x
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => addEntry(index, "departure_times")}
+                    className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  >
+                    + Ajouter une heure
+                  </button>
+                </div>
               </div>
             </div>
           ) : null}
@@ -182,8 +216,9 @@ export function roomRowsToPayload(rows: RoomRow[]) {
         .map((value) => value.trim())
         .filter(Boolean),
       photo_urls: [],
-      deposit_amount: row.deposit_amount ? Number(row.deposit_amount) : null,
+      deposit_amount: null,
       departure_times: row.departure_times.map((time) => time.trim()).filter(Boolean),
+      available_days: row.available_days.map((day) => day.trim()).filter(Boolean),
     }));
 }
 
@@ -195,8 +230,8 @@ export function payloadToRoomRows(
     night_price?: number;
     capacity?: number;
     amenities?: string[];
-    deposit_amount?: number | null;
     departure_times?: string[];
+    available_days?: string[];
   }>,
 ): RoomRow[] {
   return (rooms || []).map((room) => ({
@@ -205,7 +240,7 @@ export function payloadToRoomRows(
     night_price: room.night_price != null ? String(room.night_price) : "",
     capacity: room.capacity != null ? String(room.capacity) : "1",
     amenities: (room.amenities || []).join(", "),
-    deposit_amount: room.deposit_amount != null ? String(room.deposit_amount) : "",
     departure_times: room.departure_times || [],
+    available_days: room.available_days || [],
   }));
 }

@@ -899,7 +899,7 @@ function SellerPageContent() {
             />
             {isPremium ? (
               <Input
-                placeholder="Acompte XOF"
+                placeholder="Frais de reservation de table (XOF, optionnel)"
                 type="number"
                 value={profileForm.deposit_amount}
                 onChange={(event) =>
