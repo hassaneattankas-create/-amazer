@@ -32,6 +32,35 @@ const activityLabels = {
   transport: "Transport",
 } as const;
 
+function PayoutNotice({
+  payoutPhone,
+  method,
+  amount,
+}: {
+  payoutPhone: string | null | undefined;
+  method: "nita" | "amana";
+  amount?: number;
+}) {
+  if (!payoutPhone) {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+        Le vendeur n&apos;a pas encore renseigne son numero de versement. Contacte-le avant de payer.
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-slate-800">
+      <p className="font-semibold text-slate-900">Comment payer</p>
+      <p className="mt-1">
+        1. Envoie {amount && amount > 0 ? <span className="font-semibold">{formatXOF(amount)}</span> : "le montant"} via{" "}
+        <span className="font-semibold uppercase">{method}</span> au numero{" "}
+        <span className="font-semibold text-[#FF4D00]">{payoutPhone}</span>.
+      </p>
+      <p className="mt-1">2. Reviens ici et valide ci-dessous (la reference est facultative).</p>
+    </div>
+  );
+}
+
 type SelectedMenuItem = {
   menu_item_id: string;
   vendor_id: string;
@@ -529,6 +558,13 @@ export default function VendorShopPage() {
                 />
                 {data.deposit_amount && data.deposit_amount > 0 ? (
                   <>
+                    <div className="md:col-span-2">
+                      <PayoutNotice
+                        payoutPhone={data.payout_phone}
+                        method={reservationForm.deposit_payment_method}
+                        amount={data.deposit_amount}
+                      />
+                    </div>
                     <select
                       aria-label="Mode de paiement"
                       value={reservationForm.deposit_payment_method}
@@ -563,7 +599,7 @@ export default function VendorShopPage() {
                   reservationMutation.mutate();
                 }}
               >
-                Reserver
+                {data.deposit_amount && data.deposit_amount > 0 ? "J'ai paye - reserver" : "Reserver"}
               </Button>
             </article>
           ) : null}
@@ -613,6 +649,13 @@ export default function VendorShopPage() {
                     : ` (${hotelQuantity} nuit${hotelQuantity > 1 ? "s" : ""})`}
                 </p>
               ) : null}
+              <div className="mt-3">
+                <PayoutNotice
+                  payoutPhone={data.payout_phone}
+                  method={hotelForm.deposit_payment_method}
+                  amount={hotelAmountDue}
+                />
+              </div>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <select
                   aria-label="Choisir"
@@ -666,22 +709,30 @@ export default function VendorShopPage() {
                   <label className="mb-1 block text-xs text-slate-500">
                     {isTransport ? "Jour de depart" : "Date d'arrivee"}
                   </label>
-                  {isTransport && transportAvailableDays.length ? (
-                    <select
-                      aria-label="Jour de depart"
-                      value={hotelForm.check_in_date}
-                      onChange={(event) =>
-                        setHotelForm((prev) => ({ ...prev, check_in_date: event.target.value }))
-                      }
-                      className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm"
-                    >
-                      <option value="">Choisir un jour</option>
-                      {transportAvailableDays.map((day) => (
-                        <option key={day} value={day}>
-                          {day}
-                        </option>
-                      ))}
-                    </select>
+                  {isTransport ? (
+                    transportAvailableDays.length ? (
+                      <select
+                        aria-label="Jour de depart"
+                        value={hotelForm.check_in_date}
+                        onChange={(event) =>
+                          setHotelForm((prev) => ({ ...prev, check_in_date: event.target.value }))
+                        }
+                        className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm"
+                      >
+                        <option value="">Choisir un jour</option>
+                        {transportAvailableDays.map((day) => (
+                          <option key={day} value={day}>
+                            {day}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                        {hotelForm.room_type_id
+                          ? "Aucun jour de depart publie pour ce trajet."
+                          : "Choisis d'abord un trajet pour voir les jours de depart."}
+                      </p>
+                    )
                   ) : (
                     <Input
                       type="date"
@@ -738,6 +789,25 @@ export default function VendorShopPage() {
                   placeholder="Demande speciale"
                 />
               </div>
+              <div className="mt-4 rounded-2xl border border-sky-200 bg-white p-4">
+                <p className="text-sm text-slate-700">
+                  Paiement obligatoire via Nita ou Amana : la reservation est validee une fois le
+                  paiement effectue et la reference saisie.
+                </p>
+                {selectedHotelRoom ? (
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    Montant a payer : {formatXOF(hotelAmountDue)}
+                    {isTransport
+                      ? ` (${hotelQuantity} place${hotelQuantity > 1 ? "s" : ""})`
+                      : ` (${hotelQuantity} nuit${hotelQuantity > 1 ? "s" : ""})`}
+                  </p>
+                ) : null}
+                <PayoutNotice
+                  payoutPhone={data.payout_phone}
+                  method={hotelForm.deposit_payment_method}
+                  amount={hotelAmountDue}
+                />
+              </div>
               <Button
                 className="mt-4 border border-sky-300 bg-sky-600 text-white hover:bg-sky-700"
                 onClick={() => {
@@ -749,7 +819,7 @@ export default function VendorShopPage() {
                   hotelBookingMutation.mutate();
                 }}
               >
-                {hotelAmountDue > 0 ? `Payer ${formatXOF(hotelAmountDue)} et reserver` : "Payer et reserver"}
+                {hotelAmountDue > 0 ? `J'ai paye ${formatXOF(hotelAmountDue)} - reserver` : "J'ai paye - reserver"}
               </Button>
             </article>
           ) : null}

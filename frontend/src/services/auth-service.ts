@@ -167,3 +167,20 @@ export async function preRegisterSeller(payload: SellerPreRegisterPayload): Prom
   const response = await api.post<SellerPreRegisterResponse>("/api/v1/auth/pre-register-seller", payload);
   return response.data;
 }
+
+export type SellerPreRegisterStatusResponse = {
+  id: string;
+  status: "pending" | "approved" | "rejected";
+  business_name?: string | null;
+  identifier?: string | null;
+  message: string;
+};
+
+export async function getPreRegisterSellerStatus(
+  regId: string,
+): Promise<SellerPreRegisterStatusResponse> {
+  const response = await api.get<SellerPreRegisterStatusResponse>(
+    `/api/v1/auth/pre-register-seller/${regId}`,
+  );
+  return response.data;
+}

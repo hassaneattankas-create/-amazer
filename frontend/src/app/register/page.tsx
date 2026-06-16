@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import { login, preRegisterSeller, register, verifyAccount, type RegisterResponse } from "@/services/auth-service";
+import { setPendingSellerPreReg } from "@/lib/pending-seller";
 import { getPublicFinanceSettings } from "@/services/finance-service";
 import type { FinanceSettings } from "@/types/finance";
 import type { SellerActivityType, StorefrontTier } from "@/types/seller";
@@ -116,7 +117,7 @@ function RegisterPageContent() {
     try {
       if (isSellerFlow) {
         // Flux vendeur : pre-inscription, pas de compte cree avant confirmation admin
-        await preRegisterSeller({
+        const preReg = await preRegisterSeller({
           full_name: fullName.trim(),
           identifier: identifier.trim(),
           password,
@@ -126,6 +127,13 @@ function RegisterPageContent() {
           payment_mode: paymentMode,
           months: subscriptionMonths,
           transaction_reference: transactionRef.trim() || undefined,
+        });
+        // Memorise la demande sur l'appareil pour pouvoir notifier l'activation
+        // du compte directement dans l'app, meme avant connexion.
+        setPendingSellerPreReg({
+          id: preReg.id,
+          identifier: identifier.trim(),
+          businessName: businessName.trim() || fullName.trim(),
         });
         setPreRegSubmitted(true);
         return;
@@ -200,7 +208,9 @@ function RegisterPageContent() {
             Votre compte et votre boutique seront crees des que le paiement sera confirme.
           </p>
           <p className="text-sm text-slate-500">
-            Vous serez contacte sur <span className="font-medium text-slate-700">{identifier}</span> pour activer votre acces.
+            Gardez l&apos;application ouverte : vous recevrez une notification ici meme,
+            sans connexion, des que votre compte sera pret. Vous pourrez alors vous connecter
+            avec <span className="font-medium text-slate-700">{identifier}</span>.
           </p>
           <Link href="/" className="inline-block mt-2 text-sm font-medium text-[#FF4D00] hover:underline">
             Retour a l accueil
@@ -383,6 +393,7 @@ function RegisterPageContent() {
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
                 <select
+                  aria-label="Mode de paiement"
                   value={paymentMode}
                   onChange={(e) => setPaymentMode(e.target.value as "nita" | "amana")}
                   className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
