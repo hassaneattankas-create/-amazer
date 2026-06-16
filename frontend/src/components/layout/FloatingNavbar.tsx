@@ -21,6 +21,14 @@ import {
   requestAndRegisterNotifications,
 } from "@/services/notification-service";
 import { getSellerProfile, getSellerSubscriptionStatus } from "@/services/seller-service";
+import { getPreRegisterSellerStatus } from "@/services/auth-service";
+import {
+  clearPendingSellerPreReg,
+  getPendingSellerPreReg,
+  PENDING_SELLER_EVENT,
+  setPendingSellerPreReg,
+  type PendingSellerPreReg,
+} from "@/lib/pending-seller";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cartStore";
 import { useNotificationStore } from "@/store/notification-store";
@@ -55,6 +63,7 @@ export function FloatingNavbar() {
   const { data: user } = useCurrentUser();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [pendingPreReg, setPendingPreReg] = useState<PendingSellerPreReg | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const appMode = useAuthStore((state) => state.appMode);
   const setAppMode = useAuthStore((state) => state.setAppMode);
@@ -87,6 +96,17 @@ export function FloatingNavbar() {
     staleTime: 10_000,
   });
 
+  // Pre-inscription vendeur en attente sur cet appareil: on interroge son statut
+  // meme sans connexion pour prevenir l'utilisateur que son compte est pret.
+  const { data: preRegStatus } = useQuery({
+    queryKey: ["pending-seller-prereg", pendingPreReg?.id],
+    queryFn: () => getPreRegisterSellerStatus(pendingPreReg!.id),
+    enabled: Boolean(isClient && pendingPreReg?.id && !pendingPreReg?.notified),
+    refetchInterval: 20_000,
+    staleTime: 10_000,
+    retry: false,
+  });
+
   const showAdminLink = Boolean(adminMe?.is_admin) || isAdminEmail(user?.email);
   const showSellerLink = Boolean(sellerProfile?.id);
   const sellerNavigationItems = sellerSubscriptionStatus?.subscription_active
@@ -109,6 +129,63 @@ export function FloatingNavbar() {
     }
     void requestAndRegisterNotifications();
   }, [isClient, user?.id]);
+
+  // Une fois connecte, la pre-inscription locale n'a plus d'utilite (le compte
+  // existe et les notifications serveur prennent le relais).
+  useEffect(() => {
+    if (!isClient || !user?.id) {
+      return;
+    }
+    if (getPendingSellerPreReg()) {
+      clearPendingSellerPreReg();
+      setPendingPreReg(null);
+    }
+  }, [isClient, user?.id]);
+
+  // Charge la pre-inscription locale et reagit a ses mises a jour (soumission/clear).
+  useEffect(() => {
+    if (!isClient) {
+      return;
+    }
+    const sync = () => setPendingPreReg(getPendingSellerPreReg());
+    sync();
+    window.addEventListener(PENDING_SELLER_EVENT, sync);
+    window.addEventListener("focus", sync);
+    return () => {
+      window.removeEventListener(PENDING_SELLER_EVENT, sync);
+      window.removeEventListener("focus", sync);
+    };
+  }, [isClient]);
+
+  // Quand l'admin valide (ou refuse) la pre-inscription: notifier dans l'app,
+  // meme avant connexion, puis arreter d'interroger.
+  useEffect(() => {
+    if (!isClient || !pendingPreReg?.id || pendingPreReg.notified || !preRegStatus) {
+      return;
+    }
+    if (preRegStatus.status === "approved") {
+      void notifyLocalOrderEvent({
+        title: "Votre compte est pret !",
+        body:
+          `Felicitations ! Votre compte vendeur` +
+          (pendingPreReg.businessName ? ` "${pendingPreReg.businessName}"` : "") +
+          ` est active. Connectez-vous pour commencer a utiliser AMAZER.`,
+        tag: `prereg-approved-${pendingPreReg.id}`,
+        href: `/login?next=${encodeURIComponent("/seller/dashboard")}`,
+      });
+      // Marque comme notifie (garde l'entree pour eviter une 2e notif) puis nettoie.
+      setPendingSellerPreReg({ ...pendingPreReg, notified: true });
+      setPendingPreReg((prev) => (prev ? { ...prev, notified: true } : prev));
+    } else if (preRegStatus.status === "rejected") {
+      void notifyLocalOrderEvent({
+        title: "Demande vendeur refusee",
+        body: "Votre demande n'a pas ete validee. Contactez le support AMAZER.",
+        tag: `prereg-rejected-${pendingPreReg.id}`,
+      });
+      clearPendingSellerPreReg();
+      setPendingPreReg(null);
+    }
+  }, [isClient, pendingPreReg, preRegStatus]);
 
   useEffect(() => {
     if (!isClient || !user?.id) {

@@ -117,6 +117,7 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS room_types JSONB DEFAULT '[]'::jsonb",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS deposit_payment_method VARCHAR(20)",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS deposit_amount DOUBLE PRECISION",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS payout_phone VARCHAR(40)",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS commission_rate_override DOUBLE PRECISION",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS service_fee_override DOUBLE PRECISION",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS seller_subscription_fee_override DOUBLE PRECISION",

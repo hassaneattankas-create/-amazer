@@ -7,7 +7,7 @@ from app.core.deps import get_auth_service, get_current_user
 from app.core.cache import cache_delete_prefixes
 from app.core.csrf import enforce_csrf, generate_csrf_token
 from app.config import get_settings
-from app.core.exceptions import UnauthorizedError
+from app.core.exceptions import NotFoundError, UnauthorizedError
 from app.core.rate_limit import enforce_rate_limit
 from app.models.user import User
 from app.models.user_preferences import UserPreferences
@@ -23,7 +23,11 @@ from app.schemas.auth import (
     VerifyAccountRequest,
     VerifyAccountResponse,
 )
-from app.schemas.finance import SellerPreRegisterRequest, SellerPreRegisterResponse
+from app.schemas.finance import (
+    SellerPreRegisterRequest,
+    SellerPreRegisterResponse,
+    SellerPreRegisterStatusResponse,
+)
 from app.schemas.user import UserResponse
 from app.services.auth_service import AuthService
 from app.models.seller_pending_registration import SellerPendingRegistration
@@ -326,6 +330,37 @@ def pre_register_seller(
         id=reg.id,
         status="pending",
         message="Votre demande a ete envoyee. Votre compte et votre boutique seront crees apres verification de votre paiement.",
+    )
+
+
+@router.get("/pre-register-seller/{reg_id}", response_model=SellerPreRegisterStatusResponse)
+def get_pre_register_seller_status(
+    reg_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+) -> SellerPreRegisterStatusResponse:
+    """Statut d'une pre-inscription, interroge par l'app du demandeur AVANT connexion.
+    L'id est un UUID opaque connu uniquement de l'appareil qui a soumis la demande:
+    on ne renvoie donc que le statut et le nom de la boutique (aucune donnee sensible)."""
+    enforce_rate_limit(request, key="pre_register_status", limit=60, window_seconds=60)
+    reg = db.get(SellerPendingRegistration, reg_id)
+    if reg is None:
+        raise NotFoundError("Inscription introuvable")
+    if reg.status == "approved":
+        message = (
+            "Felicitations ! Votre compte est pret. Vous pouvez vous connecter "
+            "et commencer a utiliser AMAZER."
+        )
+    elif reg.status == "rejected":
+        message = "Votre demande n'a pas ete validee. Contactez le support AMAZER."
+    else:
+        message = "Votre demande est en cours de verification."
+    return SellerPreRegisterStatusResponse(
+        id=reg.id,
+        status=reg.status,
+        business_name=reg.business_name,
+        identifier=reg.identifier,
+        message=message,
     )
 
 

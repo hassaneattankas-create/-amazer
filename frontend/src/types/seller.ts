@@ -30,6 +30,7 @@ export type SellerProfile = {
   vendor_id: string;
   business_name: string;
   phone: string | null;
+  payout_phone: string | null;
   city: string;
   address: string | null;
   activity_type: SellerActivityType;
@@ -95,6 +96,7 @@ export type SellerSubscriptionPaymentRequest = {
 export type SellerProfilePayload = {
   business_name: string;
   phone?: string;
+  payout_phone?: string;
   city: string;
   address?: string;
   activity_type?: SellerActivityType;
@@ -199,6 +201,7 @@ export type SellerStorefront = {
   room_types: HotelRoomType[];
   deposit_payment_method: "nita" | "amana" | null;
   deposit_amount: number | null;
+  payout_phone?: string | null;
   effective_commission_rate: number;
   effective_service_fee: number;
   accepts_table_reservations: boolean;

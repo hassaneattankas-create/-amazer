@@ -40,6 +40,7 @@ class SellerProfileRequest(BaseModel):
 
     business_name: str = Field(min_length=2, max_length=140)
     phone: str | None = Field(default=None, max_length=40)
+    payout_phone: str | None = Field(default=None, max_length=40)
     city: str = Field(default="Niamey", min_length=2, max_length=80)
     address: str | None = Field(default=None, max_length=220)
     activity_type: Literal["shop", "restaurant", "hotel", "enterprise", "transport"] = "shop"
@@ -71,6 +72,7 @@ class SellerProfileResponse(BaseModel):
     vendor_id: str
     business_name: str
     phone: str | None
+    payout_phone: str | None = None
     city: str
     address: str | None
     activity_type: Literal["shop", "restaurant", "hotel", "enterprise", "transport"]
@@ -264,6 +266,7 @@ class SellerStorefrontResponse(BaseModel):
     room_types: list[HotelRoomTypeSchema]
     deposit_payment_method: Literal["nita", "amana"] | None
     deposit_amount: float | None
+    payout_phone: str | None = None
     effective_commission_rate: float
     effective_service_fee: float
     accepts_table_reservations: bool

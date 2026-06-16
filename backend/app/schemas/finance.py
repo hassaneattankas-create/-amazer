@@ -279,6 +279,19 @@ class SellerPreRegisterResponse(BaseModel):
     message: str
 
 
+class SellerPreRegisterStatusResponse(BaseModel):
+    """Statut public d'une pre-inscription, interroge par l'app AVANT connexion.
+    Clef par l'id opaque (UUID) que seul le demandeur possede sur son appareil."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    status: str
+    business_name: str | None = None
+    identifier: str | None = None
+    message: str
+
+
 class AdminPendingSellerResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

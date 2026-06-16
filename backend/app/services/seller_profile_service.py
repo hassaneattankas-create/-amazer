@@ -170,6 +170,8 @@ def _normalize_room_types(values: Any) -> list[dict[str, Any]]:
 def apply_seller_profile_payload(profile: SellerProfile, payload: Mapping[str, Any]) -> None:
     profile.business_name = str(payload.get("business_name", profile.business_name)).strip() or profile.business_name
     profile.phone = encrypt_phone_value(payload.get("phone"))
+    if "payout_phone" in payload:
+        profile.payout_phone = str(payload.get("payout_phone", "")).strip() or None
     profile.city = str(payload.get("city", profile.city)).strip() or "Niamey"
     profile.address = str(payload.get("address", "")).strip() or None
     # Normalisation obligatoire: les filtres de catalog côté DB comparent via égalité stricte.

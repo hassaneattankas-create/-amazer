@@ -455,9 +455,11 @@ export default function SellerDashboardPage() {
         </div>
       </header>
 
-      {profile?.is_enterprise ? (
+      {profile?.storefront_tier === "premium" ||
+      profile?.activity_type === "enterprise" ||
+      profile?.activity_type === "hotel" ? (
         <article className="premium-card border border-indigo-200 bg-indigo-50/50 p-5">
-          <h2 className="luxury-title text-lg font-semibold text-slate-900">Outils Premium Entreprise</h2>
+          <h2 className="luxury-title text-lg font-semibold text-slate-900">Outils Premium</h2>
           <p className="mt-1 text-sm text-slate-600">
             Gere ton gros catalogue et ta comptabilite en quelques clics.
           </p>

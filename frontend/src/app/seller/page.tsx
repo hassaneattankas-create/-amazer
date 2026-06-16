@@ -171,6 +171,7 @@ function SellerPageContent() {
       business_name: "",
       city: "Niamey",
       phone: "",
+      payout_phone: "",
       address: "",
       activity_type: requestedSellerType as "shop" | "restaurant" | "hotel" | "enterprise",
       storefront_tier:
@@ -303,6 +304,7 @@ function SellerPageContent() {
       business_name: prev.business_name || profile.business_name || "",
       city: prev.city || profile.city || "Niamey",
       phone: prev.phone || profile.phone || "",
+      payout_phone: prev.payout_phone || profile.payout_phone || "",
       address: prev.address || profile.address || "",
       activity_type: normalizeSellerActivityType(profile.activity_type),
       storefront_tier:
@@ -897,6 +899,23 @@ function SellerPageContent() {
                 setProfileForm((prev) => ({ ...prev, contact_email: event.target.value }))
               }
             />
+            {isPremium || profileForm.activity_type === "restaurant" ? (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-slate-700 sm:col-span-2">
+                <p className="font-medium text-slate-900">Numero de versement (Nita / Amana)</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Numero sur lequel tes clients t&apos;envoient l&apos;argent (reservations, trajets, commandes).
+                  Il s&apos;affiche au client au moment de payer.
+                </p>
+                <Input
+                  className="mt-2 bg-white"
+                  placeholder="Ex: 90 00 00 00"
+                  value={profileForm.payout_phone}
+                  onChange={(event) =>
+                    setProfileForm((prev) => ({ ...prev, payout_phone: event.target.value }))
+                  }
+                />
+              </div>
+            ) : null}
             {isPremium ? (
               <Input
                 placeholder="Frais de reservation de table (XOF, optionnel)"
@@ -1028,6 +1047,7 @@ function SellerPageContent() {
                 business_name: profileForm.business_name,
                 city: profileForm.city,
                 phone: profileForm.phone || undefined,
+                payout_phone: profileForm.payout_phone ?? "",
                 address: profileForm.address || undefined,
                 activity_type: profileForm.activity_type,
                 storefront_tier: profileForm.storefront_tier as StorefrontTier,

@@ -25,7 +25,6 @@ import {
   permanentlyDeleteAdminSeller,
   replaceAdminDistrictFees,
   restoreAdminSeller,
-  setAdminSellerEnterprise,
   setAdminSellerTransport,
   toggleLaunchMode,
   updateAdminFinanceSettings,
@@ -195,20 +194,6 @@ export default function AdminTarifsPage() {
       setStatus("Vendeur remis en ligne.");
     },
     onError: () => setStatus("Remise en ligne impossible."),
-  });
-  const enterpriseMutation = useMutation({
-    mutationFn: ({ profileId, enabled }: { profileId: string; enabled: boolean }) =>
-      setAdminSellerEnterprise(profileId, enabled),
-    onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
-      setStatus(
-        vars.enabled
-          ? "Vendeur passe en Premium Entreprise. Reservations, import et export debloques."
-          : "Premium Entreprise retire.",
-      );
-    },
-    onError: () => setStatus("Impossible de changer le niveau Entreprise."),
   });
   const transportMutation = useMutation({
     mutationFn: ({ profileId, enabled }: { profileId: string; enabled: boolean }) =>
@@ -847,25 +832,6 @@ export default function AdminTarifsPage() {
                       }
                     >
                       Rétrograder Basic
-                    </Button>
-                  )}
-                  {seller.is_enterprise ? (
-                    <Button
-                      size="sm"
-                      className="border border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                      disabled={enterpriseMutation.isPending}
-                      onClick={() => enterpriseMutation.mutate({ profileId: seller.profile_id, enabled: false })}
-                    >
-                      Retirer Entreprise
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      className="border border-indigo-300 bg-indigo-50 text-indigo-800 hover:bg-indigo-100"
-                      disabled={enterpriseMutation.isPending}
-                      onClick={() => enterpriseMutation.mutate({ profileId: seller.profile_id, enabled: true })}
-                    >
-                      Passer Premium Entreprise
                     </Button>
                   )}
                   {seller.offers_transport ? (

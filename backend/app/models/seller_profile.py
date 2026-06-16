@@ -34,6 +34,9 @@ class SellerProfile(Base):
     )
     business_name: Mapped[str] = mapped_column(String(140), nullable=False)
     phone: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Numero (Nita/Amana) sur lequel le vendeur recoit les versements de ses clients.
+    # Affiche publiquement sur le mini-site au moment du paiement => stocke en clair.
+    payout_phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     city: Mapped[str] = mapped_column(String(80), nullable=False, default="Niamey")
     address: Mapped[str | None] = mapped_column(String(220), nullable=True)
     activity_type: Mapped[str] = mapped_column(String(32), nullable=False, default="shop")
