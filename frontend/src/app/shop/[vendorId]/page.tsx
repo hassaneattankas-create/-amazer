@@ -560,16 +560,6 @@ export default function VendorShopPage() {
                 className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
                 onClick={() => {
                   if (!requireSession()) return;
-                  if (
-                    data.deposit_amount &&
-                    data.deposit_amount > 0 &&
-                    !reservationForm.transaction_reference.trim()
-                  ) {
-                    setStatus(
-                      "Paiement obligatoire : saisis la reference de ton paiement pour valider.",
-                    );
-                    return;
-                  }
                   reservationMutation.mutate();
                 }}
               >
@@ -754,12 +744,6 @@ export default function VendorShopPage() {
                   if (!requireSession()) return;
                   if (!hotelForm.room_type_id) {
                     setStatus(isTransport ? "Choisis un trajet." : "Choisis une option.");
-                    return;
-                  }
-                  if (!hotelForm.transaction_reference.trim()) {
-                    setStatus(
-                      "Paiement obligatoire : saisis la reference de ton paiement (Nita/Amana) pour valider.",
-                    );
                     return;
                   }
                   hotelBookingMutation.mutate();

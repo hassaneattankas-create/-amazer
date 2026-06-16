@@ -1347,14 +1347,10 @@ def create_restaurant_reservation(
     if not profile.accepts_table_reservations:
         raise ConflictError("Table reservations are disabled for this restaurant")
 
-    # Frais de reservation fixe par le restaurant: si > 0, le paiement est OBLIGATOIRE
-    # (le client paie et fournit sa reference, comme une commande boutique).
+    # Frais de reservation fixe par le restaurant (le client paie comme une commande
+    # boutique). La reference de paiement est facultative: on ne bloque pas la reservation.
     deposit_amount = float(profile.deposit_amount or 0)
     transaction_reference = (payload.transaction_reference or "").strip() or None
-    if deposit_amount > 0 and not transaction_reference:
-        raise ConflictError(
-            "Paiement requis: saisissez la reference de votre paiement pour valider la reservation."
-        )
 
     reservation = RestaurantReservation(
         vendor_id=vendor_id,
@@ -1453,16 +1449,12 @@ def create_hotel_booking(
     nights = (payload.check_out_date - payload.check_in_date).days
     if nights <= 0 and not is_transport:
         raise ConflictError("Check-out must be after check-in")
-    # Paiement complet OBLIGATOIRE (plus d'acompte): le client paie le montant total
-    # (prix unitaire x quantite) et fournit sa reference, comme une commande boutique.
+    # Le client paie le montant total (prix unitaire x quantite), comme une commande
+    # boutique. La reference de paiement est facultative: on ne bloque pas la reservation.
     unit_price = float(room.get("night_price") or 0)
     quantity = max(1, int(payload.guest_count or 1)) if is_transport else max(1, nights)
     amount_due = round(unit_price * quantity, 2)
     transaction_reference = (payload.transaction_reference or "").strip() or None
-    if amount_due > 0 and not transaction_reference:
-        raise ConflictError(
-            "Paiement requis: saisissez la reference de votre paiement pour valider la reservation."
-        )
 
     booking = HotelBooking(
         vendor_id=vendor_id,
