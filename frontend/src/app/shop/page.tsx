@@ -601,12 +601,6 @@ function VendorShopPageContent() {
                     setStatus("Choisis une option.");
                     return;
                   }
-                  if (!hotelForm.transaction_reference.trim()) {
-                    setStatus(
-                      "Paiement obligatoire : saisis la reference de ton paiement (Nita/Amana) pour valider.",
-                    );
-                    return;
-                  }
                   hotelBookingMutation.mutate();
                 }}
               >
