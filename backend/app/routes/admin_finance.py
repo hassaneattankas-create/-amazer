@@ -1666,10 +1666,21 @@ def decide_seller_pre_registration(
 
         identifier = reg.identifier.strip().lower()
         is_email = "@" in identifier
+        # Identifiant telephone: on canonicalise le numero (+227...) et on genere un
+        # email "fantome" (la colonne email est obligatoire). Meme logique que
+        # l'inscription classique, sinon l'INSERT plante (email NULL) => 500.
+        if is_email:
+            email_value: str = identifier
+            whatsapp_value: str | None = None
+        else:
+            _digits = "".join(ch for ch in identifier if ch.isdigit())
+            whatsapp_value = f"+{_digits}" if _digits.startswith("227") else f"+227{_digits[-8:]}"
+            _wdigits = "".join(ch for ch in whatsapp_value if ch.isdigit())
+            email_value = f"wa-{_wdigits}@users.amazer.ne"
         existing_user = (
-            UserRepository(db).get_by_email(identifier)
+            UserRepository(db).get_by_email(email_value)
             if is_email
-            else UserRepository(db).get_by_whatsapp_phone(identifier)
+            else UserRepository(db).get_by_whatsapp_phone(whatsapp_value)
         )
         # 1) Compte: reutiliser s'il existe deja (ancien acheteur, ou demande deja
         #    partiellement traitee), sinon le creer. Evite tout doublon/erreur.
@@ -1685,8 +1696,8 @@ def decide_seller_pre_registration(
         else:
             user = User(
                 id=str(_uuid.uuid4()),
-                email=identifier if is_email else None,
-                whatsapp_phone=identifier if not is_email else None,
+                email=email_value,
+                whatsapp_phone=whatsapp_value,
                 full_name=reg.full_name.strip(),
                 hashed_password=reg.hashed_password,
                 is_active=True,

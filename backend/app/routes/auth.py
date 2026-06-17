@@ -355,11 +355,12 @@ def get_pre_register_seller_status(
         message = "Votre demande n'a pas ete validee. Contactez le support AMAZER."
     else:
         message = "Votre demande est en cours de verification."
+    # Durcissement: ne pas exposer l'identifiant (tel/email) sur un endpoint public,
+    # meme keye par UUID. Le client le connait deja sur son appareil.
     return SellerPreRegisterStatusResponse(
         id=reg.id,
         status=reg.status,
         business_name=reg.business_name,
-        identifier=reg.identifier,
         message=message,
     )
 

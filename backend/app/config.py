@@ -97,6 +97,9 @@ class Settings(BaseSettings):
     firebase_service_account_json: str | None = Field(default=None)
     firebase_service_account_base64: str | None = Field(default=None)
     firebase_service_account_path: str | None = Field(default=None)
+    # Secret partage pour declencher les taches planifiees (cron GitHub Action).
+    # Si vide => l'endpoint /maintenance/run est desactive (503).
+    cron_secret: str | None = Field(default=None)
 
     def get_cors_origins(self) -> list[str]:
         defaults = [
