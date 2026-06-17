@@ -40,6 +40,7 @@ from app.routes.content import router as content_router, admin_router as admin_c
 from app.routes.feedback import router as feedback_router, admin_router as admin_feedback_router
 from app.routes.notifications import router as notifications_router
 from app.routes.assistant import router as assistant_router
+from app.routes.maintenance import router as maintenance_router
 from app.services.security_log_service import log_security_event
 
 settings = get_settings()
@@ -359,6 +360,24 @@ def request_validation_exception_handler(
     return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 
+@app.exception_handler(Exception)
+def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Filet de securite : toute erreur inattendue (500) est loguee ET notifiee a
+    l'admin (in-app + push). Les erreurs metier/validation gardent leurs handlers
+    dedies (plus specifiques) et ne passent pas ici."""
+    logging.getLogger(__name__).exception("Unhandled error on %s %s", request.method, request.url.path)
+    try:
+        from app.services.error_alert_service import alert_admin_error
+
+        alert_admin_error(path=str(request.url.path), method=request.method, exc=exc)
+    except Exception:
+        pass
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "code": "internal_error"},
+    )
+
+
 app.include_router(auth_router, prefix=settings.api_prefix)
 app.include_router(alerts_router, prefix=settings.api_prefix)
 app.include_router(products_router, prefix=settings.api_prefix)
@@ -378,6 +397,7 @@ app.include_router(feedback_router, prefix=settings.api_prefix)
 app.include_router(admin_feedback_router, prefix=settings.api_prefix)
 app.include_router(notifications_router, prefix=settings.api_prefix)
 app.include_router(assistant_router, prefix=settings.api_prefix)
+app.include_router(maintenance_router, prefix=settings.api_prefix)
 
 
 @app.middleware("http")

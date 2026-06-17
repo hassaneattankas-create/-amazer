@@ -1,0 +1,32 @@
+name: Maintenance quotidienne AMAZER
+# Declenche les taches planifiees (rappels d'abonnement, nettoyage) une fois par jour.
+# Necessite le secret repo CRON_SECRET (Settings > Secrets and variables > Actions),
+# qui doit etre identique a la variable d'env CRON_SECRET cote Render.
+on:
+  schedule:
+    - cron: "0 6 * * *" # tous les jours a 06:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Declencher la maintenance
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::Secret CRON_SECRET manquant. Ajoute-le dans Settings > Secrets and variables > Actions (et la meme valeur en env Render)."
+            exit 1
+          fi
+          http_code=$(curl -sS -o response.json -w "%{http_code}" -X POST \
+            -H "X-Cron-Secret: $CRON_SECRET" \
+            "https://amazer-api.onrender.com/api/v1/maintenance/run" || echo "000")
+          echo "HTTP $http_code"
+          cat response.json 2>/dev/null || true
+          echo
+          if [ "$http_code" != "200" ]; then
+            echo "::error::Maintenance a echoue (HTTP $http_code)"
+            exit 1
+          fi
+          echo "Maintenance OK."
