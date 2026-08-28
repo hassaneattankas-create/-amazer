@@ -41,6 +41,9 @@ class Order(Base):
         index=True,
         unique=True,
     )
+    gateway_payment_reference: Mapped[str | None] = mapped_column(
+        String(120), nullable=True, index=True, unique=True
+    )
     payment_status: Mapped[str] = mapped_column(String(20), nullable=False, default="paid")
     payment_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     tracking_code: Mapped[str | None] = mapped_column(String(120), nullable=True)

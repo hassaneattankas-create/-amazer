@@ -6,7 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { ManualPaymentCard } from "@/components/order/ManualPaymentCard";
 import { getOrderSuccessRoute } from "@/lib/mobile-routes";
-import { confirmPayment, getPaymentIntent } from "@/services/order-service";
+import { confirmPayment, getPaymentIntent, startAmanaPayment } from "@/services/order-service";
 
 function OrderPayPageContent() {
   const searchParams = useSearchParams();
@@ -28,6 +28,7 @@ function OrderPayPageContent() {
       window.setTimeout(() => router.push(getOrderSuccessRoute(orderId)), 600);
     },
   });
+  const startMutation = useMutation({ mutationFn: () => startAmanaPayment(orderId) });
 
   return (
     <ManualPaymentCard
@@ -36,14 +37,18 @@ function OrderPayPageContent() {
       isPending={isPending}
       isError={isError}
       isConfirming={mutation.isPending}
+      isStarting={startMutation.isPending}
       status={
-        mutation.isSuccess
+        startMutation.isSuccess
+          ? "Paiement initialise. Validez dans AmanaTa, puis cliquez sur Verifier le paiement."
+          : mutation.isSuccess
           ? "Paiement confirme. Redirection..."
           : mutation.isError
             ? "Confirmation impossible. Reessayez."
             : ""
       }
       onConfirm={(providerReference) => mutation.mutate(providerReference)}
+      onStart={() => startMutation.mutate()}
     />
   );
 }

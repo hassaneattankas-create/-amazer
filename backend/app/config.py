@@ -100,6 +100,8 @@ class Settings(BaseSettings):
     # Secret partage pour declencher les taches planifiees (cron GitHub Action).
     # Si vide => l'endpoint /maintenance/run est desactive (503).
     cron_secret: str | None = Field(default=None)
+    payment_gateway_url: str | None = Field(default=None)
+    payment_gateway_secret: str | None = Field(default=None)
 
     def get_cors_origins(self) -> list[str]:
         defaults = [
