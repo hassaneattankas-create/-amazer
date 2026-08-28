@@ -84,6 +84,11 @@ export async function confirmPayment(orderId: string, payload: PaymentConfirmPay
   }
 }
 
+export async function startAmanaPayment(orderId: string): Promise<PaymentConfirmResult> {
+  const response = await api.post<PaymentConfirmResult>(`/api/v1/orders/${orderId}/payment/start`);
+  return response.data;
+}
+
 export async function confirmOrderReception(orderId: string): Promise<Order> {
   const response = await api.post<Order>(`/api/v1/orders/${orderId}/confirm-reception`);
   return response.data;

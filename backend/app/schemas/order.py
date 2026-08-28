@@ -139,3 +139,11 @@ class PaymentConfirmResponse(BaseModel):
     payment_status: str
     order_status: str
     message: str
+
+
+class PaymentStartResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    order_id: str
+    payment_status: str
+    message: str

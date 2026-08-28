@@ -1,0 +1,1 @@
+"""AMAZER payment gateway package."""
