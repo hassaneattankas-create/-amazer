@@ -5,6 +5,7 @@ import hmac
 import json
 import time
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -64,13 +65,18 @@ class AmanaClient:
             headers["Authorization"] = f"Bearer {token}"
         return headers
 
+    def _canonical_path(self, path: str) -> str:
+        """Return the URI that Amana requires in its signed canonical string."""
+        base_path = urlsplit(self._base_url).path.rstrip("/")
+        return f"{base_path}{path}" if base_path else path
+
     def _post(self, path: str, payload: dict[str, object], token: str | None = None) -> dict[str, object]:
         """Send one signed JSON request and normalize provider failures."""
         body = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode()
         response = self._client.post(
             f"{self._base_url}{path}",
             content=body,
-            headers=self._signed_headers("POST", path, body, token),
+            headers=self._signed_headers("POST", self._canonical_path(path), body, token),
         )
         try:
             data = response.json()

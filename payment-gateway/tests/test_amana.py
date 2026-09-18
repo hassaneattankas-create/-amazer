@@ -34,3 +34,15 @@ def test_amana_token_is_sent_as_a_bearer_token() -> None:
 
 def test_amana_provider_reference_is_extracted_from_nested_response() -> None:
     assert AmanaClient.provider_reference({"paiement": {"referenceTransaction": "B2B-123"}}) == "B2B-123"
+
+
+def test_amana_production_signature_uses_index_php_path() -> None:
+    settings = Settings(
+        gateway_shared_secret="a" * 32,
+        amana_base_url="https://paiement.example/index.php/",
+        amana_user_login="login",
+        amana_user_password="password",
+        amana_api_key="key",
+    )
+
+    assert AmanaClient(settings)._canonical_path("/v1/auth") == "/index.php/v1/auth"
