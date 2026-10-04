@@ -24,6 +24,7 @@ from app.schemas.order import (
     PaymentConfirmRequest,
     PaymentConfirmResponse,
     PaymentIntentResponse,
+    PaymentStartResponse,
     ReceiptItemResponse,
     ReceiptLinkResponse,
     ReceiptResponse,
@@ -45,6 +46,12 @@ from app.services.listing_limit_service import (
     max_products_for_basic_tier,
 )
 from app.services.payment_security_service import verify_payment_code
+from app.services.payment_gateway_service import (
+    GatewayPayment,
+    PaymentGatewayError,
+    create_amana_payment,
+    get_amana_payment_status,
+)
 from app.services.public_catalog_policy import is_allowed_public_restaurant_name
 
 router = APIRouter(prefix="/restaurant", tags=["restaurant"])
@@ -75,6 +82,16 @@ def _build_payment_url(payment_mode: str, payment_reference: str, amount: float)
     if payment_mode == "nita":
         return f"https://pay.amazer.ne/nita?ref={payment_reference}&amount={amount_xof}"
     return f"https://pay.amazer.ne/amana?ref={payment_reference}&amount={amount_xof}"
+
+
+def _amana_phone(phone: str | None) -> str:
+    """Normalize a Niger phone number to Amana's required format."""
+    compact = "".join(char for char in (phone or "") if char.isdigit())
+    if compact.startswith("227") and len(compact) == 11:
+        return f"00{compact}"
+    if len(compact) == 8:
+        return f"00227{compact}"
+    raise ValidationDomainError("Un numero Niger valide est necessaire pour payer par Amana")
 
 
 def _resolve_platform_wallet_phone(db: Session) -> str | None:
@@ -737,6 +754,54 @@ def get_restaurant_payment_intent(
     )
 
 
+@router.post("/orders/{order_id}/payment/start", response_model=PaymentStartResponse)
+def start_restaurant_order_payment(
+    order_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> PaymentStartResponse:
+    """Start an Amana restaurant payment through the trusted fixed-IP gateway."""
+    enforce_csrf(request)
+    enforce_rate_limit(request, key="payment_start_restaurant", limit=6, window_seconds=300)
+    order = db.scalar(select(RestaurantOrder).where(RestaurantOrder.id == order_id).with_for_update())
+    if order is None:
+        raise ValidationDomainError("Order not found")
+    if order.user_id != current_user.id and not _is_admin(current_user):
+        raise UnauthorizedError("Unauthorized order access")
+    if order.payment_status == "paid":
+        return PaymentStartResponse(order_id=order.id, payment_status="paid", message="Paiement deja confirme.")
+    if order.payment_mode != "amana":
+        raise ValidationDomainError("Ce mode de paiement ne requiert pas Amana")
+    if order.gateway_payment_reference:
+        return PaymentStartResponse(
+            order_id=order.id,
+            payment_status="pending",
+            message="Paiement Amana deja initialise. Validez-le dans AmanaTa puis verifiez son statut.",
+        )
+    reference = order.payment_reference or _build_payment_reference(order.id)
+    order.payment_reference = reference
+    try:
+        provider_reference = create_amana_payment(
+            _settings,
+            GatewayPayment(
+                reference=reference,
+                amount_xof=int(round(order.total_amount)),
+                description=f"Commande restaurant AMAZER {reference}",
+                payer_phone=_amana_phone(order.customer_phone),
+            ),
+        )
+    except PaymentGatewayError as exc:
+        raise ValidationDomainError("Impossible de demarrer le paiement Amana. Reessayez.") from exc
+    order.gateway_payment_reference = provider_reference
+    db.commit()
+    return PaymentStartResponse(
+        order_id=order.id,
+        payment_status="pending",
+        message="Paiement Amana initialise. Validez-le dans AmanaTa puis verifiez son statut.",
+    )
+
+
 @router.post("/orders/{order_id}/payment/confirm", response_model=PaymentConfirmResponse)
 def confirm_restaurant_order_payment(
     order_id: str,
@@ -761,12 +826,28 @@ def confirm_restaurant_order_payment(
             message="Paiement deja confirme.",
         )
 
-    reference = order.payment_reference or _build_payment_reference(order.id)
-    order.payment_reference = reference
-    provider_ref = (payload.provider_reference or payload.code_last4 or "").strip()
-    synthetic_code = f"AUTO-{reference}-{provider_ref or 'OK'}"
-    order.transaction_code = encrypt_payment_code(synthetic_code)
-    order.transaction_code_hash = payment_code_hash(synthetic_code)
+    if order.payment_mode == "amana":
+        if not order.gateway_payment_reference:
+            raise ValidationDomainError("Demarrez d'abord le paiement Amana")
+        try:
+            provider_status = get_amana_payment_status(_settings, order.gateway_payment_reference)
+        except PaymentGatewayError as exc:
+            raise ValidationDomainError("Verification Amana indisponible. Reessayez.") from exc
+        if provider_status != "SUCCESS":
+            return PaymentConfirmResponse(
+                order_id=order.id,
+                payment_status="pending",
+                order_status=order.status,
+                message="Paiement Amana en attente de validation.",
+            )
+        transaction_code = f"AMANA-{order.gateway_payment_reference}"
+    else:
+        reference = order.payment_reference or _build_payment_reference(order.id)
+        order.payment_reference = reference
+        provider_ref = (payload.provider_reference or payload.code_last4 or "").strip()
+        transaction_code = f"MANUAL-{reference}-{provider_ref or 'OK'}"
+    order.transaction_code = encrypt_payment_code(transaction_code)
+    order.transaction_code_hash = payment_code_hash(transaction_code)
     order.payment_status = "paid"
     order.payment_confirmed_at = datetime.now(UTC)
     if order.status == "payment_pending":

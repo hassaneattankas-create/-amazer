@@ -10,6 +10,7 @@ import {
   confirmRestaurantPayment,
   getRestaurantPaymentIntent,
   getRestaurantReceiptLink,
+  startRestaurantAmanaPayment,
 } from "@/services/restaurant-service";
 
 function RestaurantOrderPayPageContent() {
@@ -36,6 +37,7 @@ function RestaurantOrderPayPageContent() {
       );
     },
   });
+  const startMutation = useMutation({ mutationFn: () => startRestaurantAmanaPayment(orderId) });
 
   return (
     <ManualPaymentCard
@@ -44,14 +46,18 @@ function RestaurantOrderPayPageContent() {
       isPending={isPending}
       isError={isError}
       isConfirming={mutation.isPending}
+      isStarting={startMutation.isPending}
       status={
-        mutation.isSuccess
+        startMutation.isSuccess
+          ? "Paiement initialise. Validez dans AmanaTa, puis cliquez sur Verifier le paiement."
+          : mutation.isSuccess
           ? "Paiement confirme. Redirection..."
           : mutation.isError
             ? "Confirmation impossible. Reessayez."
             : ""
       }
       onConfirm={(providerReference) => mutation.mutate(providerReference)}
+      onStart={() => startMutation.mutate()}
     />
   );
 }

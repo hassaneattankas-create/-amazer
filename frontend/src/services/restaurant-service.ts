@@ -48,6 +48,11 @@ export async function confirmRestaurantPayment(
   return response.data;
 }
 
+export async function startRestaurantAmanaPayment(orderId: string): Promise<PaymentConfirmResult> {
+  const response = await api.post<PaymentConfirmResult>(`/api/v1/restaurant/orders/${orderId}/payment/start`);
+  return response.data;
+}
+
 export async function getRestaurantReceiptLink(orderId: string): Promise<ReceiptLink> {
   const response = await api.get<ReceiptLink>(`/api/v1/restaurant/orders/${orderId}/receipt-link`);
   return response.data;

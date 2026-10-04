@@ -156,6 +156,8 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS gateway_payment_reference VARCHAR(120)",
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_gateway_payment_reference ON orders (gateway_payment_reference) WHERE gateway_payment_reference IS NOT NULL",
         "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(40)",
+        "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS gateway_payment_reference VARCHAR(120)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_restaurant_orders_gateway_payment_reference ON restaurant_orders (gateway_payment_reference) WHERE gateway_payment_reference IS NOT NULL",
         "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) DEFAULT 'pending'",
         "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS payment_confirmed_at TIMESTAMPTZ",
         "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS fee_breakdown JSONB",

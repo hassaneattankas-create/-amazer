@@ -62,6 +62,9 @@ class RestaurantOrder(Base):
     delivery_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
     payment_mode: Mapped[str] = mapped_column(String(30), nullable=False, default="nita")
     payment_reference: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True, unique=True)
+    gateway_payment_reference: Mapped[str | None] = mapped_column(
+        String(120), nullable=True, index=True, unique=True
+    )
     payment_status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     payment_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     transaction_code: Mapped[str | None] = mapped_column(String(180), nullable=True)

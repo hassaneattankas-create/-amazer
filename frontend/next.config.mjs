@@ -116,6 +116,13 @@ const nextConfig = {
       1200, 1280,
     ],
     imageSizes: [16, 32, 44, 48, 64, 80, 96, 128, 224, 256, 384],
+    // Next 16 exige cette liste (défaut : [75]). Toute valeur absente est
+    // silencieusement ramenée à la plus proche autorisée : sans 82 et 85,
+    // les 15 `<Image quality={82|85} />` du code seraient servies en 75.
+    qualities: [75, 82, 85],
+    // Le proxy valide l'URL amont ; son paramètre dynamique `url` doit être
+    // accepté par Next/Image pour les images externes relayées localement.
+    localPatterns: [{ pathname: "/api/image-proxy" }],
     remotePatterns: isStaticExport
       ? []
       : [
