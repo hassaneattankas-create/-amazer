@@ -20,3 +20,12 @@ __pycache__/
 .android-sdk/
 jdk-*/
 temp_ad_review/
+
+# Points de recuperation locaux (peuvent contenir des .env) — jamais versionnes
+_recovery/
+*.bak
+
+# Artefacts de rendu video
+jde-motion/frames/
+jde-motion/output.mp4
+motion/remotion/out/

@@ -1,0 +1,21 @@
+{
+  "name": "amazer-remotion-eval",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Workspace d'EVALUATION Remotion, isole de l'application Next. Voir LICENSE-NOTICE.md avant tout usage commercial.",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render",
+    "still": "remotion still"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.532",
+    "remotion": "4.0.532",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.2",
+    "typescript": "^5.9.0"
+  }
+}

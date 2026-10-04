@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" fill="none">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1200" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF7ED"/>
+      <stop offset="1" stop-color="#DBEAFE"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#g)"/>
+  <rect x="130" y="110" width="940" height="680" rx="40" fill="#fff" stroke="#FDBA74" stroke-width="4"/>
+  <text x="600" y="410" text-anchor="middle" fill="#EA580C" font-size="108" font-family="Arial, sans-serif">💻</text>
+  <text x="600" y="500" text-anchor="middle" fill="#9A3412" font-size="42" font-family="Arial, sans-serif" font-weight="700">Technologie</text>
+</svg>

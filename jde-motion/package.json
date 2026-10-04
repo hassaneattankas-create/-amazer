@@ -1,0 +1,17 @@
+{
+  "name": "jde-motion",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Film institutionnel anime du Jeudi de l'Entrepreneur — Maison de l'Entreprise du Niger (30 s, 1920x1080, 60 fps, rendu deterministe)",
+  "scripts": {
+    "build": "node build.js",
+    "render": "node build.js && node render_pipeline.js",
+    "compile": "node compile_video.js",
+    "all": "node build.js && node render_pipeline.js && node compile_video.js",
+    "sheet": "node build.js && node contact_sheet.js 24 4"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "puppeteer": "^25.12.0"
+  }
+}
