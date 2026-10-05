@@ -23,3 +23,16 @@ frontend/*.out.log
 frontend/*3000*.err.log
 frontend/*3000*.out.log
 frontend/tsconfig.tsbuildinfo
+
+# Outillage local et production video — jamais deployes
+jde-motion/
+motion/
+_recovery/
+uploads/
+amazer-main-3bfa/
+amazer-production-bce21bd/
+*.bundle
+*.tar.gz
+.claude/
+CLAUDE.md
+payment-gateway/
