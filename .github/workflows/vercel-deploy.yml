@@ -1,0 +1,83 @@
+name: Deploy frontend to Vercel
+
+# Remplace l'integration GitHub->Vercel (cassee) : le projet Vercel est encore
+# rattache a `amazerniger-hub/amazer`, un depot qui n'existe plus. Vercel ne voit
+# donc jamais les pushs sur `hassaneattankas-create/-amazer`, et le site est reste
+# quatre mois sur un build du 17 juin.
+#
+# Ici c'est GitHub qui pousse vers Vercel, et non l'inverse : aucune liaison
+# OAuth n'est necessaire, seul le token compte.
+#
+# Prerequis : secret VERCEL_TOKEN dans Settings > Secrets and variables > Actions.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".vercelignore"
+      - ".github/workflows/vercel-deploy.yml"
+  workflow_dispatch: {}
+
+# Un seul deploiement a la fois : si deux pushs se suivent, seul le dernier compte.
+concurrency:
+  group: vercel-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploiement production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Identifiants de projet, non secrets (visibles dans le dashboard Vercel).
+      # amazerniger-hub-amazer = le SEUL projet qui sert amazer.store.
+      VERCEL_ORG_ID: team_bL8FCYwfFX0DGa2Ppa1DYX7z
+      VERCEL_PROJECT_ID: prj_QWZPAAiIg4fl8GbkxAFTpfYP6ZWP
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+    steps:
+      - name: Verifier le secret
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::Secret VERCEL_TOKEN manquant. Ajoute-le dans Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Installer Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Deployer en production
+        id: deploy
+        run: |
+          # Le `rootDirectory` (frontend) et la commande de build viennent des
+          # reglages du projet Vercel : on deploie depuis la racine du depot,
+          # .vercelignore ecarte l'outillage local et les artefacts video.
+          url=$(vercel deploy --prod --yes --token="$VERCEL_TOKEN" 2>&1 | tee /dev/stderr | grep -oE 'https://[a-z0-9.-]+\.vercel\.app' | tail -1)
+          if [ -z "$url" ]; then
+            echo "::error::Aucune URL de deploiement renvoyee — voir le journal ci-dessus."
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deploiement : $url"
+
+      - name: Verifier que amazer.store repond
+        run: |
+          # Le deploiement est alias sur amazer.store par Vercel. On controle que
+          # le domaine public repond avant de declarer le job vert.
+          for i in 1 2 3 4 5; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://amazer.store || echo 000)
+            echo "tentative $i : HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          echo "::error::amazer.store ne repond pas 200 apres le deploiement."
+          exit 1
+
+      - name: Resume
+        run: echo "### Deploye sur https://amazer.store" >> "$GITHUB_STEP_SUMMARY"
