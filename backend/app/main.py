@@ -351,9 +351,35 @@ def domain_error_handler(_: Request, exc: DomainError) -> JSONResponse:
     )
 
 
+def _safe_validation_errors(exc: ValidationError | RequestValidationError) -> list[dict]:
+    """Rend les erreurs Pydantic v2 serialisables ET sures a renvoyer au client.
+
+    Deux problemes dans `exc.errors()` brut :
+
+    1. `ctx` contient l'exception d'origine (ex. ValueError). `json.dumps` echoue
+       alors avec "Object of type ValueError is not JSON serializable", le 422
+       se transforme en 500 et la vraie cause est masquee (observe en production
+       sur POST /auth/login le 2026-07-05).
+    2. `input` contient la valeur soumise. Sur /auth/login, une erreur de
+       validation sur le mot de passe le renverrait **en clair** au client et
+       dans les journaux. On ne le renvoie jamais.
+
+    On conserve `loc`, `msg` et `type` : suffisant pour que le client sache quel
+    champ corriger.
+    """
+    cleaned: list[dict] = []
+    for err in exc.errors():
+        item = {k: v for k, v in err.items() if k not in ("input", "url")}
+        ctx = item.get("ctx")
+        if isinstance(ctx, dict):
+            item["ctx"] = {k: str(v) for k, v in ctx.items()}
+        cleaned.append(item)
+    return cleaned
+
+
 @app.exception_handler(ValidationError)
 def validation_exception_handler(_: Request, exc: ValidationError) -> JSONResponse:
-    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+    return JSONResponse(status_code=422, content={"detail": _safe_validation_errors(exc)})
 
 
 @app.exception_handler(RequestValidationError)
@@ -361,7 +387,7 @@ def request_validation_exception_handler(
     _: Request,
     exc: RequestValidationError,
 ) -> JSONResponse:
-    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+    return JSONResponse(status_code=422, content={"detail": _safe_validation_errors(exc)})
 
 
 @app.exception_handler(Exception)
