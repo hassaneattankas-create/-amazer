@@ -131,7 +131,12 @@ déploiement Render n'est pas visible d'ici (dépôt privé, pas de CLI GitHub).
 | 4 | Un vendeur pouvait traiter une commande boutique non payée. | Refus côté serveur (409). Le bouton est masqué dans le tableau de bord. | `backend/app/routes/seller.py`, `frontend/src/app/seller/dashboard/page.tsx` |
 | 5 | Bug d'affichage : une commande restaurant non payée apparaissait comme « Livrée ». | Libellé « Paiement en attente ». | `frontend/src/app/seller/dashboard/page.tsx` |
 
-Tests : 9 tests ajoutés (`backend/tests/unit/test_p1_hardening.py`), suite backend 112/112 OK.
+Tests : 9 tests ajoutés (`backend/tests/unit/test_p1_hardening.py`), suite backend 113/113 OK.
+
+Vérifications en production (2026-10-12, après le déploiement `e5bba0ec`) :
+- 8 connexions échouées avec un faux `X-Forwarded-For` différent à chaque fois : blocage (429) à la 7ᵉ. La falsification ne contourne plus la limite.
+- Un faux `CF-Connecting-IP` est rejeté directement par Cloudflare (403).
+- `/health` 200, amazer.store 200.
 
 Non traité, car impossible d'ici sans accès au tableau de bord Render : le plan de la
 base PostgreSQL et ses sauvegardes. C'est une vérification manuelle (voir §5).
