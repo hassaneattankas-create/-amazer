@@ -38,17 +38,22 @@ def _get_redis_client() -> Redis | None:
 def client_ip(request: Request) -> str:
     """IP du client reel.
 
-    Derriere le proxy Render, la connexion vient d'une IP interne du proxy : sans
-    lecture de X-Forwarded-For, tous les clients partageraient le meme compteur.
-    L'en-tete n'est lu que si le pair est une adresse privee (le proxy), jamais
-    sur une connexion directe ou il serait falsifiable.
+    Chaine en production : client -> Cloudflare -> proxy Render (IP privee) -> app.
+    - CF-Connecting-IP est ecrase par Cloudflare : non falsifiable par le client.
+    - X-Forwarded-For conserve ce que le client envoie en tete (verifie en production
+      le 2026-10-12) : seule sa derniere entree, ajoutee par l'infrastructure, est fiable.
+    Ces en-tetes ne sont lus que si le pair est une adresse privee (le proxy), jamais
+    sur une connexion directe.
     """
     peer = request.client.host if request.client else ""
-    forwarded = request.headers.get("x-forwarded-for", "")
-    if forwarded and _is_private_address(peer):
-        first = forwarded.split(",")[0].strip()
-        if first:
-            return first
+    if _is_private_address(peer):
+        cloudflare_ip = request.headers.get("cf-connecting-ip", "").strip()
+        if cloudflare_ip:
+            return cloudflare_ip
+        forwarded = request.headers.get("x-forwarded-for", "")
+        last = forwarded.split(",")[-1].strip() if forwarded else ""
+        if last:
+            return last
     return peer or "unknown"
 
 

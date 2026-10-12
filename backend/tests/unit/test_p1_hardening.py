@@ -15,15 +15,25 @@ from app.schemas.seller import SellerShopOrderStatusUpdateRequest
 from app.services.auth_service import AuthService
 
 
-def _request(peer: str, forwarded: str | None = None) -> SimpleNamespace:
-    headers = {"x-forwarded-for": forwarded} if forwarded else {}
+def _request(peer: str, forwarded: str | None = None, cloudflare: str | None = None) -> SimpleNamespace:
+    headers = {}
+    if forwarded:
+        headers["x-forwarded-for"] = forwarded
+    if cloudflare:
+        headers["cf-connecting-ip"] = cloudflare
     return SimpleNamespace(client=SimpleNamespace(host=peer), headers=headers)
 
 
 # --- IP reelle -----------------------------------------------------------------
 
-def test_client_ip_uses_forwarded_header_behind_private_proxy() -> None:
-    assert client_ip(_request("10.201.4.7", "41.203.10.20, 10.201.4.7")) == "41.203.10.20"
+def test_client_ip_prefers_cloudflare_header_behind_private_proxy() -> None:
+    request = _request("10.201.4.7", "198.51.100.1, 41.203.10.20", cloudflare="41.203.10.20")
+    assert client_ip(request) == "41.203.10.20"
+
+
+def test_client_ip_ignores_spoofed_first_forwarded_entry() -> None:
+    # Le client a injecte 198.51.100.1 en tete : seule la derniere entree est fiable.
+    assert client_ip(_request("10.201.4.7", "198.51.100.1, 41.203.10.20")) == "41.203.10.20"
 
 
 def test_client_ip_ignores_forwarded_header_on_direct_public_connection() -> None:
