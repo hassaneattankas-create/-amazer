@@ -1328,6 +1328,11 @@ def delete_inventory_item(
     _invalidate_public_marketplace_cache()
 
 
+def _deposit_payment_status(amount_due: float) -> str:
+    """Un acompte du est en attente tant que le vendeur ne l'a pas confirme."""
+    return "pending" if amount_due > 0 else "paid"
+
+
 @router.post(
     "/storefront/{vendor_id}/restaurant-reservations",
     response_model=RestaurantReservationResponse,
@@ -1365,7 +1370,8 @@ def create_restaurant_reservation(
         deposit_amount=deposit_amount,
         deposit_payment_method=payload.deposit_payment_method,
         transaction_reference=transaction_reference,
-        payment_status="paid",
+        # Acompte verse au vendeur : la reference du client n'est pas une preuve de paiement.
+        payment_status=_deposit_payment_status(deposit_amount),
         status="pending",
     )
     db.add(reservation)
@@ -1410,6 +1416,9 @@ def update_restaurant_reservation_status(
     if reservation is None or reservation.vendor_id != profile.vendor_id:
         raise NotFoundError("Reservation not found")
     reservation.status = payload.status
+    if payload.status == "confirmed":
+        # Le vendeur confirme apres avoir constate l'acompte sur son propre compte.
+        reservation.payment_status = "paid"
     db.commit()
     db.refresh(reservation)
     return _restaurant_reservation_response(reservation)
@@ -1472,7 +1481,8 @@ def create_hotel_booking(
         deposit_payment_method=payload.deposit_payment_method,
         deposit_amount=amount_due,
         transaction_reference=transaction_reference,
-        payment_status="paid",
+        # Acompte verse au vendeur : la reference du client n'est pas une preuve de paiement.
+        payment_status=_deposit_payment_status(amount_due),
         special_request=payload.special_request,
         status="pending",
     )
@@ -1515,6 +1525,9 @@ def update_hotel_booking_status(
     if booking is None or booking.vendor_id != profile.vendor_id:
         raise NotFoundError("Hotel booking not found")
     booking.status = payload.status
+    if payload.status == "confirmed":
+        # Le vendeur confirme apres avoir constate l'acompte sur son propre compte.
+        booking.payment_status = "paid"
     db.commit()
     db.refresh(booking)
     return _hotel_booking_response(booking)

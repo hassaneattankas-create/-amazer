@@ -241,6 +241,7 @@ export type HotelBooking = {
   guest_count: number;
   deposit_payment_method: "nita" | "amana";
   deposit_amount: number;
+  payment_status: "pending" | "paid";
   transaction_reference: string | null;
   special_request: string | null;
   status: "pending" | "confirmed" | "cancelled";

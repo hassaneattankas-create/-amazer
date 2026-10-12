@@ -39,7 +39,12 @@ from app.schemas.order import (
     ReceiptVerifyResponse,
 )
 from app.services.notification_service import NotificationPayload, NotificationService
-from app.services.payment_security_service import verify_payment_code
+from app.services.audit_log_service import append_audit_log
+from app.services.payment_security_service import (
+    MANUAL_PAYMENT_PENDING_MESSAGE,
+    resolve_manual_payment_code,
+    verify_payment_code,
+)
 from app.services.payment_gateway_service import (
     GatewayPayment,
     PaymentGatewayError,
@@ -416,11 +421,9 @@ def checkout(
     if payload.transaction_code:
         if not verify_payment_code(db, payload.transaction_code):
             raise ValidationDomainError("Transaction code already used")
+        # Code declare par le client : conserve pour controle, jamais une preuve de paiement.
         encrypted_code = encrypt_payment_code(payload.transaction_code)
         code_hash = payment_code_hash(payload.transaction_code)
-        payment_status = "paid"
-        order_status = "commande"
-        payment_confirmed_at = datetime.now(UTC)
 
     if order_currency and payload.currency.upper() != order_currency:
         raise ValidationDomainError("Devise invalide pour cette commande")
@@ -600,10 +603,35 @@ def confirm_order_payment(
             )
         transaction_code = f"AMANA-{order.gateway_payment_reference}"
     else:
-        reference = order.payment_reference or _build_payment_reference(order.id)
-        order.payment_reference = reference
-        provider_ref = (payload.provider_reference or payload.code_last4 or "").strip()
-        transaction_code = f"MANUAL-{reference}-{provider_ref or 'OK'}"
+        actor_is_admin = _is_admin(current_user)
+        manual_code = resolve_manual_payment_code(
+            db, order, payload.provider_reference, actor_is_admin=actor_is_admin
+        )
+        if manual_code is None:
+            db.commit()
+            return PaymentConfirmResponse(
+                order_id=order.id,
+                payment_status=order.payment_status,
+                order_status=order.status,
+                message=MANUAL_PAYMENT_PENDING_MESSAGE,
+            )
+        if order.payment_reference is None:
+            order.payment_reference = _build_payment_reference(order.id)
+        transaction_code = manual_code
+        append_audit_log(
+            db,
+            event_type="order_payment_manually_confirmed",
+            actor=current_user,
+            ip_address=request.client.host if request.client else None,
+            path=str(request.url.path),
+            entity_type="order",
+            entity_id=order.id,
+            details={
+                "payment_mode": order.payment_mode,
+                "amount": round(float(order.total_amount), 2),
+                "provider_reference_last4": manual_code[-4:],
+            },
+        )
     order.transaction_code = encrypt_payment_code(transaction_code)
     order.transaction_code_hash = payment_code_hash(transaction_code)
     order.payment_status = "paid"

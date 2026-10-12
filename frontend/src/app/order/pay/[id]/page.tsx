@@ -21,7 +21,11 @@ export default function OrderPayPage() {
       confirmPayment(orderId, {
         provider_reference: providerReference || undefined,
       }),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      // Hors Amana, le serveur laisse le paiement en attente de verification admin.
+      if (result.payment_status !== "paid") {
+        return;
+      }
       window.setTimeout(() => router.push(`/order/success/${orderId}`), 600);
     },
   });
@@ -39,7 +43,9 @@ export default function OrderPayPage() {
         startMutation.isSuccess
           ? "Paiement initialise. Validez dans AmanaTa, puis cliquez sur Verifier le paiement."
           : mutation.isSuccess
-          ? "Paiement confirme. Redirection..."
+          ? mutation.data.payment_status === "paid"
+            ? "Paiement confirme. Redirection..."
+            : mutation.data.message
           : mutation.isError
             ? "Confirmation impossible. Reessayez."
             : ""

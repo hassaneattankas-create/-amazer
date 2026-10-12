@@ -29,7 +29,11 @@ function RestaurantOrderPayPageContent() {
       confirmRestaurantPayment(orderId, {
         provider_reference: providerReference || undefined,
       }),
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      // Hors Amana, le serveur laisse le paiement en attente de verification admin.
+      if (result.payment_status !== "paid") {
+        return;
+      }
       const receipt = await getRestaurantReceiptLink(orderId);
       window.setTimeout(
         () => router.push(getRestaurantOrderReceiptRoute(orderId, receipt.token)),
@@ -51,7 +55,9 @@ function RestaurantOrderPayPageContent() {
         startMutation.isSuccess
           ? "Paiement initialise. Validez dans AmanaTa, puis cliquez sur Verifier le paiement."
           : mutation.isSuccess
-          ? "Paiement confirme. Redirection..."
+          ? mutation.data.payment_status === "paid"
+            ? "Paiement confirme. Redirection..."
+            : mutation.data.message
           : mutation.isError
             ? "Confirmation impossible. Reessayez."
             : ""

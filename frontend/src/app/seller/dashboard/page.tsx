@@ -877,7 +877,7 @@ export default function SellerDashboardPage() {
                     {formatDateTime(booking.check_in_date)} au {formatDateTime(booking.check_out_date)}
                   </p>
                   <p className="mt-1 text-xs text-slate-500">
-                    {booking.guest_count} personne(s) | paye {formatXOF(booking.deposit_amount)}
+                    {booking.guest_count} personne(s) | {booking.payment_status === "paid" ? "paye" : "a verifier"} {formatXOF(booking.deposit_amount)}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {booking.status !== "confirmed" ? (
