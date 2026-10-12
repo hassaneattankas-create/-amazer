@@ -114,11 +114,34 @@ Les réservations existantes ne sont pas modifiées : celles déjà marquées `p
 Limite connue : un vendeur qui confirme sans avoir vérifié son compte marque l'acompte
 comme payé. C'est sa propre responsabilité, puisque l'argent arrive chez lui.
 
-## 5. Décisions en attente d'approbation
+### Déploiement de l'étape 2 — 2026-10-12
 
-- Rotation des secrets.
-- Déploiement de l'étape 2.
-- Étape suivante de la feuille de route : stock, rôle admin en base, IP réelle derrière le proxy, plan et sauvegardes de la base Render.
+Commit `e966f2f9` poussé sur `main`, ce qui déclenche les déploiements automatiques
+Render (backend) et Vercel (frontend). Vérifié en ligne : le JavaScript servi par
+amazer.store contient la nouvelle logique de paiement. Côté backend, le statut du
+déploiement Render n'est pas visible d'ici (dépôt privé, pas de CLI GitHub).
+
+## 4 ter. Étape P1 — Durcissement — 2026-10-12
+
+| # | Problème | Correction | Fichier |
+|---|---|---|---|
+| 1 | Derrière le proxy Render, `request.client.host` donne l'IP du proxy : la limite de tentatives devenait commune à tous les clients (risque de blocage général de la connexion). | `client_ip()` lit la première entrée de `X-Forwarded-For`, uniquement si la connexion vient d'une adresse privée (le proxy). Sur une connexion directe, l'en-tête est ignoré. | `backend/app/core/rate_limit.py` |
+| 2 | Une adresse e-mail admin non encore créée pouvait être réservée par n'importe qui via l'inscription publique. | L'inscription refuse `ADMIN_EMAIL`. Le compte admin reste créé au démarrage par `ADMIN_PASSWORD`. | `backend/app/services/auth_service.py` |
+| 3 | Le stock n'était jamais décrémenté. | Le stock est décrémenté à la **confirmation du paiement** (Amana ou admin), pas au checkout : une commande jamais payée ne bloque pas de stock. Le stock ne descend jamais sous 0 ; un manque éventuel est journalisé. | `backend/app/routes/orders.py` |
+| 4 | Un vendeur pouvait traiter une commande boutique non payée. | Refus côté serveur (409). Le bouton est masqué dans le tableau de bord. | `backend/app/routes/seller.py`, `frontend/src/app/seller/dashboard/page.tsx` |
+| 5 | Bug d'affichage : une commande restaurant non payée apparaissait comme « Livrée ». | Libellé « Paiement en attente ». | `frontend/src/app/seller/dashboard/page.tsx` |
+
+Tests : 9 tests ajoutés (`backend/tests/unit/test_p1_hardening.py`), suite backend 112/112 OK.
+
+Non traité, car impossible d'ici sans accès au tableau de bord Render : le plan de la
+base PostgreSQL et ses sauvegardes. C'est une vérification manuelle (voir §5).
+
+## 5. Décisions et vérifications en attente
+
+- **Secrets exposés : non renouvelés, par décision du propriétaire (2026-10-12).** Ils restent utilisés. Ce risque est accepté et documenté.
+- Vérifier sur Render (Dashboard → base PostgreSQL) : le plan (une base gratuite expire), les sauvegardes et la restauration.
+- Vérifier sur Render que `ADMIN_PASSWORD` est défini (création du compte admin au démarrage).
+- Prochaines étapes de la feuille de route : rôle admin en base, e-mails, sous-commandes par vendeur, liens `pay.amazer.ne`.
 
 ## 6. Prochaine étape approuvée
 

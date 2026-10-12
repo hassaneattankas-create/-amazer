@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from datetime import UTC, datetime, timedelta
+from ipaddress import ip_address
 
 from fastapi import Request
 try:
@@ -34,9 +35,34 @@ def _get_redis_client() -> Redis | None:
         return None
 
 
+def client_ip(request: Request) -> str:
+    """IP du client reel.
+
+    Derriere le proxy Render, la connexion vient d'une IP interne du proxy : sans
+    lecture de X-Forwarded-For, tous les clients partageraient le meme compteur.
+    L'en-tete n'est lu que si le pair est une adresse privee (le proxy), jamais
+    sur une connexion directe ou il serait falsifiable.
+    """
+    peer = request.client.host if request.client else ""
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded and _is_private_address(peer):
+        first = forwarded.split(",")[0].strip()
+        if first:
+            return first
+    return peer or "unknown"
+
+
+def _is_private_address(value: str) -> bool:
+    try:
+        address = ip_address(value)
+    except ValueError:
+        return False
+    return address.is_private or address.is_loopback
+
+
 def enforce_rate_limit(request: Request, *, key: str, limit: int, window_seconds: int) -> None:
-    client_ip = request.client.host if request.client else "unknown"
-    bucket_key = f"{key}:{client_ip}"
+    client_ip_value = client_ip(request)
+    bucket_key = f"{key}:{client_ip_value}"
     redis_client = _get_redis_client()
     if redis_client is not None:
         count = redis_client.incr(bucket_key)

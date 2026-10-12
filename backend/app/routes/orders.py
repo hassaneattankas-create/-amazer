@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
@@ -53,6 +54,8 @@ from app.services.payment_gateway_service import (
 )
 from app.services.seller_finance_service import get_or_create_global_settings
 from app.services.security_log_service import log_security_event
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 settings = get_settings()
@@ -292,6 +295,32 @@ def _resolve_platform_wallet_phone(db: Session) -> str | None:
         return primary
     fallback = (row.support_phone or "").strip()
     return fallback or None
+
+
+def _consume_stock(db: Session, order: Order) -> None:
+    """Retire du stock les articles d'une commande dont le paiement vient d'etre confirme.
+
+    Le stock est pris au paiement et non au checkout : une commande jamais payee ne
+    bloque rien. Si deux paiements se croisent, le stock s'arrete a 0 et l'ecart est
+    journalise pour traitement manuel (l'argent est deja recu).
+    """
+    for item in order.items:
+        price = db.scalar(
+            select(Price)
+            .where(Price.product_id == item.product_id, Price.vendor_id == item.vendor_id)
+            .with_for_update()
+        )
+        if price is None:
+            continue
+        remaining = int(price.stock_quantity) - int(item.quantity)
+        if remaining < 0:
+            logger.warning(
+                "Stock insuffisant a la confirmation du paiement (commande %s, produit %s, manque %s)",
+                order.id,
+                item.product_id,
+                -remaining,
+            )
+        price.stock_quantity = max(0, remaining)
 
 
 def _resolve_checkout_delivery_fee(db: Session, delivery_type: str) -> float:
@@ -638,6 +667,7 @@ def confirm_order_payment(
     order.payment_confirmed_at = datetime.now(UTC)
     if order.status == "payment_pending":
         order.status = "commande"
+    _consume_stock(db, order)
 
     db.commit()
     db.refresh(order)

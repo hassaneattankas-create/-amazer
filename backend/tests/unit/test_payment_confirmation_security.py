@@ -45,6 +45,7 @@ def _order(**overrides) -> SimpleNamespace:
         "transaction_code_hash": None,
         "payment_confirmed_at": None,
         "total_amount": 15000.0,
+        "items": [],
     }
     values.update(overrides)
     return SimpleNamespace(**values)

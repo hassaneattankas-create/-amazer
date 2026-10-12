@@ -65,7 +65,9 @@ class AuthService:
             raise ConflictError(
                 "Les adresses @amazer.demo sont reservees aux comptes demonstration configures par la plateforme."
             )
-        if existing:
+        # Le compte admin est cree au demarrage (ADMIN_PASSWORD), jamais par inscription
+        # publique : sinon un inconnu pourrait le reserver et obtenir les droits admin.
+        if existing or email == settings.admin_email.strip().lower():
             raise ConflictError("Email ou WhatsApp deja enregistre")
 
         is_active = not settings.registration_requires_verification and settings.auto_activate_new_accounts

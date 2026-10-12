@@ -1168,6 +1168,10 @@ def update_seller_order_status(
     )
     if order is None or not any(item.vendor_id == profile.vendor_id for item in order.items):
         raise NotFoundError("Order not found")
+    if order.payment_status != "paid":
+        raise ConflictError(
+            "Paiement non confirme : attendez la validation du paiement avant de traiter cette commande."
+        )
 
     order.status = payload.status
     db.commit()
