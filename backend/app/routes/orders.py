@@ -46,6 +46,7 @@ from app.services.audit_log_service import append_audit_log
 from app.services.order_fulfillment_service import create_initial_fulfillments, sync_fulfillments
 from app.services.payment_security_service import (
     MANUAL_PAYMENT_PENDING_MESSAGE,
+    build_payment_page_url,
     resolve_manual_payment_code,
     verify_payment_code,
 )
@@ -155,13 +156,6 @@ def _mask_transaction_code(raw_code: str | None) -> str | None:
 
 def _build_payment_reference(order_id: str) -> str:
     return f"AMZ-{order_id[:6].upper()}-{order_id[-4:].upper()}"
-
-
-def _build_payment_url(payment_mode: str, payment_reference: str, amount: float) -> str:
-    amount_xof = int(round(amount))
-    if payment_mode == "nita":
-        return f"https://pay.amazer.ne/nita?ref={payment_reference}&amount={amount_xof}"
-    return f"https://pay.amazer.ne/amana?ref={payment_reference}&amount={amount_xof}"
 
 
 def _amana_phone(phone: str | None) -> str:
@@ -548,7 +542,7 @@ def get_payment_intent(
         order.payment_reference = reference
         db.commit()
         db.refresh(order)
-    payment_url = _build_payment_url(order.payment_mode, reference, order.total_amount)
+    payment_url = build_payment_page_url(order.id)
     return PaymentIntentResponse(
         order_id=order.id,
         payment_mode=order.payment_mode,
@@ -773,7 +767,7 @@ def get_secure_receipt(
         token = create_receipt_access_token(order_id=order.id, digest=digest)
 
     reference = order.payment_reference or _build_payment_reference(order.id)
-    payment_url = _build_payment_url(order.payment_mode, reference, order.total_amount)
+    payment_url = build_payment_page_url(order.id)
     wallet_phone = _resolve_platform_wallet_phone(db)
 
     return _to_receipt_response(

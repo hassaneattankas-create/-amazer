@@ -5,6 +5,7 @@ from typing import Protocol
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.core.crypto import encrypt_payment_code, payment_code_hash
 from app.core.exceptions import ValidationDomainError
 from app.models.order import Order
@@ -20,6 +21,13 @@ class _PayableOrder(Protocol):
     id: str
     transaction_code: str | None
     transaction_code_hash: str | None
+
+
+def build_payment_page_url(order_id: str, *, restaurant: bool = False) -> str:
+    """Lien vers la vraie page de paiement AMAZER de la commande."""
+    base = get_settings().public_site_url.rstrip("/")
+    path = "restaurant/order/pay" if restaurant else "order/pay"
+    return f"{base}/{path}/{order_id}"
 
 
 def payment_code_in_use(db: Session, code: str, *, order_id: str | None = None) -> bool:

@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     verification_code_ttl_minutes: int = Field(default=10, ge=3, le=30)
     verification_code_max_attempts: int = Field(default=5, ge=3, le=10)
     admin_email: str = Field(default="amazer.niger2@gmail.com")
+    # Adresse publique du site, utilisee pour les liens envoyes aux clients.
+    public_site_url: str = Field(default="https://amazer.store")
     # Utilise uniquement a la creation du compte admin ou si admin_sync_password_on_startup=true.
     admin_password: str | None = Field(default="AmazerAdmin@2026")
     # Si true, re-applique admin_password au demarrage (ecrase le hash en base). Defaut: false.

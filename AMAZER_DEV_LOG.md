@@ -202,12 +202,17 @@ support reste le recours.
 - Adresse de support publique mise à jour partout : pied de page, pages légales, page « mot de passe oublié », valeur par défaut côté frontend et backend.
 - ⚠️ L'ancien compte AMAZER (`amazer.niger@…`) garde `role=admin` en base. Il faut le lui retirer depuis le nouveau compte : Admin → Utilisateurs → « Retirer admin ».
 
+## 4 decies. Corrections de paiement (P2) — 2026-10-13
+
+- **Liens `pay.amazer.ne` supprimés** : ce domaine n'appartient pas à AMAZER. Les champs `payment_url` et `qr_payload` des réponses de l'API pointent désormais vers la vraie page de paiement (`https://amazer.store/order/pay/{id}` ou sa version restaurant). Nouveau réglage `PUBLIC_SITE_URL`, par défaut `https://amazer.store`. Ces liens n'étaient affichés nulle part dans le frontend.
+- **Montant Amana : analysé, pas de modification.** La passerelle ne renvoie que le statut. Le risque n'est pas exploitable : le paiement est créé par le serveur avec le montant calculé côté serveur, la référence Amana n'est enregistrée que par le serveur, et le montant de la commande ne change pas ensuite. Un contrôle supplémentaire demanderait de modifier la passerelle sur le VPS et de connaître le format de réponse d'Amana, qui n'est pas documenté ici.
+
 ## 5. Décisions et vérifications en attente
 
 - **Secrets exposés : non renouvelés, par décision du propriétaire (2026-10-12).** Ils restent utilisés. Ce risque est accepté et documenté.
 - Vérifier sur Render (Dashboard → base PostgreSQL) : le plan (une base gratuite expire), les sauvegardes et la restauration.
 - Vérifier sur Render que `ADMIN_PASSWORD` est défini (création du compte admin au démarrage).
-- Restant (P2) : liens `pay.amazer.ne` vers un domaine non vérifié ; montant Amana non recontrôlé à la confirmation ; annulation et remboursement par vendeur ; montants en `Float`.
+- Restant (P2) : annulation et remboursement par vendeur ; montants en `Float`.
 
 ## 6. Prochaine étape approuvée
 
