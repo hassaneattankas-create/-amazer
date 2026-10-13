@@ -207,6 +207,14 @@ support reste le recours.
 - **Liens `pay.amazer.ne` supprimés** : ce domaine n'appartient pas à AMAZER. Les champs `payment_url` et `qr_payload` des réponses de l'API pointent désormais vers la vraie page de paiement (`https://amazer.store/order/pay/{id}` ou sa version restaurant). Nouveau réglage `PUBLIC_SITE_URL`, par défaut `https://amazer.store`. Ces liens n'étaient affichés nulle part dans le frontend.
 - **Montant Amana : analysé, pas de modification.** La passerelle ne renvoie que le statut. Le risque n'est pas exploitable : le paiement est créé par le serveur avec le montant calculé côté serveur, la référence Amana n'est enregistrée que par le serveur, et le montant de la commande ne change pas ensuite. Un contrôle supplémentaire demanderait de modifier la passerelle sur le VPS et de connaître le format de réponse d'Amana, qui n'est pas documenté ici.
 
+## 4 undecies. Sauvegarde quotidienne de la base — 2026-10-13
+
+- Workflow `.github/workflows/db-backup.yml` : chaque nuit à 02:30 UTC, `pg_dump` (client 17, format compressé), contrôle que l'archive est lisible, puis conservation 14 jours comme artefact GitHub. Peut aussi être lancé à la main (« Run workflow »).
+- Procédure de restauration : `docs/RESTAURATION_BASE.md` (toujours sur une nouvelle branche Neon, jamais directement sur la production).
+- **Activation : il faut ajouter le secret GitHub `NEON_DATABASE_URL`.** Le jeton GitHub disponible est révoqué (401), je ne peux pas le faire moi-même. Tant que le secret manque, le workflow échoue avec un message explicite.
+
+⚠️ **Quota GitHub Actions** : le ping Render toutes les 14 minutes représente environ 3 100 exécutions par mois. Sur un dépôt privé, chacune compte au minimum 1 minute, ce qui dépasse les 2 000 minutes gratuites par mois. Si le quota est épuisé, les déploiements Vercel par GitHub Actions s'arrêtent aussi. Solution envisagée : déplacer ce ping vers un service externe gratuit (cron-job.org ou UptimeRobot).
+
 ## 5. Décisions et vérifications en attente
 
 - **Secrets exposés : non renouvelés, par décision du propriétaire (2026-10-12).** Ils restent utilisés. Ce risque est accepté et documenté.

@@ -1,0 +1,63 @@
+name: Sauvegarde quotidienne de la base
+
+# Neon gratuit ne permet de revenir en arriere que sur 6 h : cette copie
+# quotidienne (format pg_dump compresse) est conservee 14 jours comme artefact.
+# Restauration : voir docs/RESTAURATION_BASE.md.
+#
+# Secret requis : NEON_DATABASE_URL (meme valeur que DATABASE_URL sur Render,
+# en remplacant "postgresql+psycopg://" par "postgresql://").
+
+on:
+  schedule:
+    - cron: "30 2 * * *" # 02:30 UTC chaque nuit
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: pg_dump de la base de production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Verifier le secret
+        env:
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          if [ -z "$NEON_DATABASE_URL" ]; then
+            echo "::error::Secret NEON_DATABASE_URL absent : ajoutez-le dans Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Installer le client PostgreSQL 17
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          /usr/lib/postgresql/17/bin/pg_dump --version
+
+      - name: Exporter la base
+        env:
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          STAMP=$(date -u +%Y-%m-%d_%H%M)
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          /usr/lib/postgresql/17/bin/pg_dump "$NEON_DATABASE_URL" \
+            --format=custom --compress=9 --no-owner --no-privileges \
+            --file="amazer_${STAMP}.dump"
+          ls -lh "amazer_${STAMP}.dump"
+          # Controle d'integrite : la liste des objets doit etre lisible.
+          /usr/lib/postgresql/17/bin/pg_restore --list "amazer_${STAMP}.dump" | grep -c "TABLE DATA" \
+            | xargs -I{} echo "Tables exportees : {}"
+
+      - name: Conserver la sauvegarde (14 jours)
+        uses: actions/upload-artifact@v4
+        with:
+          name: amazer-db-${{ env.STAMP }}
+          path: amazer_${{ env.STAMP }}.dump
+          retention-days: 14
+          if-no-files-found: error
