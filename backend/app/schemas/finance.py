@@ -25,6 +25,8 @@ class FinanceSettingsResponse(BaseModel):
     support_email: str | None = None
     support_phone: str | None = None
     support_whatsapp: str | None = None
+    seller_trial_days: int = 0
+    seller_launch_discount_percent: float = 0
 
 
 class FinanceSettingsUpdateRequest(BaseModel):
@@ -48,6 +50,9 @@ class FinanceSettingsUpdateRequest(BaseModel):
     support_email: str | None = Field(default=None, max_length=255)
     support_phone: str | None = Field(default=None, max_length=40)
     support_whatsapp: str | None = Field(default=None, max_length=40)
+    # Essai gratuit a l'inscription vendeur (0 = desactive) et reduction de lancement en %.
+    seller_trial_days: int = Field(default=0, ge=0, le=365)
+    seller_launch_discount_percent: float = Field(default=0, ge=0, le=100)
 
 
 class PublicContactInfoResponse(BaseModel):

@@ -152,6 +152,8 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
         launch_mode_zero_commission=settings.launch_mode_zero_commission,
         max_products_basic_tier=int(settings.max_products_basic_tier or 10),
         platform_wallet_phone=settings.platform_wallet_phone,
+        seller_trial_days=int(getattr(settings, "seller_trial_days", 0) or 0),
+        seller_launch_discount_percent=float(getattr(settings, "seller_launch_discount_percent", 0) or 0),
         support_email=settings.support_email,
         support_phone=settings.support_phone,
         support_whatsapp=settings.support_whatsapp,
@@ -442,6 +444,8 @@ def update_finance_settings(
     settings_row.launch_mode_zero_commission = payload.launch_mode_zero_commission
     settings_row.max_products_basic_tier = payload.max_products_basic_tier
     settings_row.platform_wallet_phone = payload.platform_wallet_phone
+    settings_row.seller_trial_days = payload.seller_trial_days
+    settings_row.seller_launch_discount_percent = payload.seller_launch_discount_percent
     settings_row.support_email = payload.support_email
     settings_row.support_phone = payload.support_phone
     settings_row.support_whatsapp = payload.support_whatsapp

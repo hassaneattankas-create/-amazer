@@ -175,6 +175,8 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS seller_subscription_fee_restaurant DOUBLE PRECISION DEFAULT 5000",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS seller_subscription_fee_premium DOUBLE PRECISION DEFAULT 5000",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS finance_counters_reset_at TIMESTAMPTZ",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS seller_trial_days INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS seller_launch_discount_percent DOUBLE PRECISION NOT NULL DEFAULT 0",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS ad_click_counters_reset_at TIMESTAMPTZ",
         (
             "CREATE TABLE IF NOT EXISTS media_files ("

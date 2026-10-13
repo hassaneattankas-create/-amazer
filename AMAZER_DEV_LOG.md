@@ -251,6 +251,16 @@ support reste le recours.
 - Nettoyage : workflow « auto-commit » supprimé (il ne pouvait rien commiter), fichier de test supprimé de Backblaze. Les dépendances Redux étaient déjà retirées.
 - 10 tests. Suite backend : 165/165.
 
+## 4 sexdecies bis. Abonnements vendeurs — 2026-10-13
+
+État constaté : tarifs par formule (boutique, restaurant, premium) réglables dans Admin → Tarifs ; droits vérifiés côté serveur (`get_seller_user` bloque la publication sans abonnement actif) ; paiements d'abonnement validés manuellement par l'admin ; tarif négociable par boutique.
+Écarts avec le cahier des charges, corrigés :
+- **Essai gratuit** (« premier mois gratuit ») : il dépendait d'une variable serveur, à 0 en production. Il devient un réglage admin (`seller_trial_days`), **0 par défaut**. Il est accordé une seule fois par boutique.
+- **Réduction de lancement** (−50 % envisagé) : elle n'existait pas. Nouveau réglage admin `seller_launch_discount_percent`, **0 par défaut**. Elle s'applique aux tarifs standard, jamais aux tarifs négociés.
+- La page « Devenir vendeur » affiche ces offres uniquement quand elles sont actives.
+- **Les montants (500 / 1 000 / 5 000 FCFA) ne sont pas modifiés** : ce sont des décisions commerciales à prendre dans Admin → Tarifs.
+- 8 tests. Suite backend : 172/172.
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).

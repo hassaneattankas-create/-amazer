@@ -13,6 +13,10 @@ export type FinanceSettings = {
   support_email: string | null;
   support_phone: string | null;
   support_whatsapp: string | null;
+  /** Essai gratuit a l'inscription vendeur, en jours (0 = desactive). */
+  seller_trial_days?: number;
+  /** Reduction de lancement sur le tarif standard, en % (0 = desactivee). */
+  seller_launch_discount_percent?: number;
 };
 
 export type PublicContactInfo = {

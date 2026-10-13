@@ -14,7 +14,7 @@ from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.services.auth_service import AuthService
-from app.services.seller_profile_service import apply_seller_onboarding_and_trial
+from app.services.seller_profile_service import apply_seller_onboarding_and_trial, resolve_trial_days
 
 http_bearer = HTTPBearer(auto_error=False)
 
@@ -77,7 +77,7 @@ def get_seller_user(
         return current_user
     # Comptes créés avant l'essai gratuit : complète onboarding + période d’essai une fois.
     if profile.onboarding_fee_paid_at is None:
-        apply_seller_onboarding_and_trial(profile, allow_subscription_trial=True)
+        apply_seller_onboarding_and_trial(profile, allow_subscription_trial=True, trial_days=resolve_trial_days(db))
         vendor = db.get(Vendor, profile.vendor_id)
         if vendor is not None:
             vendor.is_active = profile.subscription_paid_until is not None and profile.subscription_paid_until > datetime.now(

@@ -95,6 +95,11 @@ def build_effective_seller_finance_settings(
         else _base_subscription_fee_for_profile(settings, profile)
     )
 
+    discount = getattr(settings, "seller_launch_discount_percent", 0)
+    if not subscription_overridden and isinstance(discount, (int, float)) and 0 < discount <= 100:
+        # Reduction de lancement : sur le tarif standard seulement, jamais sur un tarif negocie.
+        seller_subscription_fee = round(seller_subscription_fee * (1 - discount / 100), 2)
+
     return EffectiveSellerFinanceSettings(
         commission_rate=commission_rate,
         service_fee=service_fee,

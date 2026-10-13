@@ -580,6 +580,37 @@ export default function AdminTarifsPage() {
               }
               helper="Boutiques et restaurants en formule basic : plafond. Premium : illimite cote API."
             />
+            <AdminNumberField
+              label="Essai gratuit a l'inscription vendeur"
+              value={effective.seller_trial_days ?? 0}
+              suffix="jours"
+              min={0}
+              step="1"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  seller_trial_days: Math.min(365, Math.round(parseNonNegativeNumber(value, effective.seller_trial_days ?? 0))),
+                })
+              }
+              helper="0 = pas d'essai. Exemple : 30 pour un premier mois gratuit. Accorde une seule fois par boutique."
+            />
+            <AdminNumberField
+              label="Reduction de lancement sur l'abonnement"
+              value={effective.seller_launch_discount_percent ?? 0}
+              suffix="%"
+              min={0}
+              step="1"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  seller_launch_discount_percent: Math.min(
+                    100,
+                    parseNonNegativeNumber(value, effective.seller_launch_discount_percent ?? 0)
+                  ),
+                })
+              }
+              helper="0 = pas de reduction. S'applique aux tarifs ci-dessus, jamais aux tarifs negocies par boutique."
+            />
           </div>
           <div className="grid gap-3 sm:grid-cols-1">
             <div>

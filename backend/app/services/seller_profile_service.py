@@ -23,16 +23,26 @@ def _seller_subscription_is_active(profile: SellerProfile) -> bool:
     )
 
 
+def resolve_trial_days(db: Session) -> int:
+    """Essai gratuit : reglage admin en priorite, variable d'environnement en secours."""
+    from app.services.seller_finance_service import get_or_create_global_settings
+
+    value = getattr(get_or_create_global_settings(db), "seller_trial_days", 0)
+    configured = value if isinstance(value, int) else 0
+    return configured if configured > 0 else int(get_settings().seller_registration_trial_days or 0)
+
+
 def apply_seller_onboarding_and_trial(
     profile: SellerProfile,
     *,
     allow_subscription_trial: bool,
+    trial_days: int | None = None,
 ) -> None:
     """Frais d'entrée vendeur = 0 côté produit : on marque l'onboarding acquis.
     Essai gratuit optionnel si aucune échéance ni paiement enregistré (nouveaux comptes ou migration)."""
     now = datetime.now(UTC)
-    settings = get_settings()
-    trial_days = int(settings.seller_registration_trial_days or 0)
+    if trial_days is None:
+        trial_days = int(get_settings().seller_registration_trial_days or 0)
 
     if profile.onboarding_fee_paid_at is None:
         profile.onboarding_fee_paid_at = now
@@ -260,7 +270,9 @@ def create_or_update_seller_profile(
         profile.subscription_last_payment_reference = None
     vendor.name = profile.business_name
     # Essai / onboarding : autorisé sauf si l'utilisateur vient de changer de formule (évite de redonner un essai).
-    apply_seller_onboarding_and_trial(profile, allow_subscription_trial=not plan_changed)
+    apply_seller_onboarding_and_trial(
+        profile, allow_subscription_trial=not plan_changed, trial_days=resolve_trial_days(db)
+    )
     # Mini-site visible uniquement si l'abonnement vendeur est à jour (même logique que /seller/profile).
     vendor.is_active = _seller_subscription_is_active(profile)
     return profile

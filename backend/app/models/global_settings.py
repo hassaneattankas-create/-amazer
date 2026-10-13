@@ -30,6 +30,9 @@ class GlobalSettings(Base):
     support_phone: Mapped[str | None] = mapped_column(nullable=True, default=None)
     support_whatsapp: Mapped[str | None] = mapped_column(nullable=True, default=None)
     finance_counters_reset_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Offres de lancement : desactivees par defaut, activees par l'admin quand la decision est prise.
+    seller_trial_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    seller_launch_discount_percent: Mapped[float] = mapped_column(Float, nullable=False, default=0, server_default="0")
     ad_click_counters_reset_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

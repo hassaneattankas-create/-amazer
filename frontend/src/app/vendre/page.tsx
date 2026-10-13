@@ -56,6 +56,17 @@ export default function VendrePage() {
               Livraison peripherique: {formatXOF(pricing.peripheral_delivery_fee)}
             </li>
           </ul>
+          {(pricing.seller_trial_days ?? 0) > 0 || (pricing.seller_launch_discount_percent ?? 0) > 0 ? (
+            <ul className="mt-4 space-y-1 rounded-field bg-surface-1 px-3 py-2 text-sm text-ink-800">
+              <li className="font-semibold">Offre de lancement en cours</li>
+              {(pricing.seller_trial_days ?? 0) > 0 ? (
+                <li>Essai gratuit de {pricing.seller_trial_days} jours a l&apos;ouverture de votre boutique.</li>
+              ) : null}
+              {(pricing.seller_launch_discount_percent ?? 0) > 0 ? (
+                <li>-{pricing.seller_launch_discount_percent}% sur l&apos;abonnement vendeur.</li>
+              ) : null}
+            </ul>
+          ) : null}
         </article>
       ) : null}
     </section>
