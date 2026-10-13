@@ -8,12 +8,16 @@ from app.core.cache import cache_delete_prefixes
 from app.core.csrf import enforce_csrf, generate_csrf_token
 from app.config import get_settings
 from app.core.exceptions import NotFoundError, UnauthorizedError
-from app.core.rate_limit import enforce_rate_limit
+from app.core.rate_limit import client_ip, enforce_rate_limit
 from app.models.user import User
 from app.models.user_preferences import UserPreferences
 from app.schemas.auth import (
     DeleteAccountRequest,
     LoginRequest,
+    PasswordForgotRequest,
+    PasswordForgotResponse,
+    PasswordResetRequest,
+    PasswordResetResponse,
     RefreshTokenRequest,
     RegisterRequest,
     RegisterResponse,
@@ -186,6 +190,49 @@ def login(
         )
         auth_service.db.commit()
         raise
+
+
+PASSWORD_FORGOT_MESSAGE = (
+    "Si un compte correspond a cet identifiant, un code de reinitialisation vient d'etre envoye."
+)
+
+
+@router.post("/password/forgot", response_model=PasswordForgotResponse)
+def forgot_password(
+    payload: PasswordForgotRequest,
+    request: Request,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+) -> PasswordForgotResponse:
+    # Reponse identique que le compte existe ou non : on ne revele pas les comptes inscrits.
+    enforce_rate_limit(request, key="auth_password_forgot", limit=3, window_seconds=900)
+    result = auth_service.request_password_reset(payload.identifier)
+    return PasswordForgotResponse(message=PASSWORD_FORGOT_MESSAGE, code_preview=result.get("code_preview"))
+
+
+@router.post("/password/reset", response_model=PasswordResetResponse)
+def reset_password(
+    payload: PasswordResetRequest,
+    request: Request,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+) -> PasswordResetResponse:
+    enforce_rate_limit(request, key="auth_password_reset", limit=8, window_seconds=900)
+    try:
+        auth_service.reset_password(
+            identifier=payload.identifier,
+            code=payload.code,
+            new_password=payload.new_password.get_secret_value(),
+        )
+    except UnauthorizedError:
+        log_security_event(
+            auth_service.db,
+            event_type="password_reset_failed",
+            ip_address=client_ip(request),
+            path=str(request.url.path),
+            details={"identifier": payload.identifier[:3] + "***"},
+        )
+        auth_service.db.commit()
+        raise
+    return PasswordResetResponse(message="Mot de passe modifie. Vous pouvez vous connecter.")
 
 
 @router.post("/refresh", response_model=TokenPair)

@@ -141,6 +141,32 @@ Vérifications en production (2026-10-12, après le déploiement `e5bba0ec`) :
 Non traité, car impossible d'ici sans accès au tableau de bord Render : le plan de la
 base PostgreSQL et ses sauvegardes. C'est une vérification manuelle (voir §5).
 
+## 4 quater. Rôle admin en base — 2026-10-13
+
+- Colonne `users.role` (`user` | `admin`), ajoutée sans effet destructif au démarrage (`ADD COLUMN IF NOT EXISTS`, valeur par défaut `user`).
+- Une seule fonction `is_admin()` (`backend/app/core/permissions.py`) remplace 7 contrôles basés sur l'e-mail. Le compte principal `ADMIN_EMAIL` reste reconnu et reçoit `role=admin` au démarrage.
+- `PATCH /admin/finance/users/{id}/role` permet de nommer ou retirer un admin. La route exige le PIN finance et chaque changement est tracé dans le journal d'audit. Le rôle du compte principal ne peut pas être modifié, ni celui de l'admin qui fait la demande.
+- Page admin des utilisateurs : boutons « Nommer admin » et « Retirer admin ».
+- 8 tests. Déployé (commit `dc8700db`).
+
+## 4 quinquies. Mot de passe oublié et e-mails — 2026-10-13
+
+- Envoi SMTP avec la bibliothèque standard de Python (`email_delivery_service.py`), donc **aucune dépendance ajoutée**. Il est inactif tant que `SMTP_HOST` et `SMTP_FROM` ne sont pas définis, et n'indique jamais un envoi qui n'a pas eu lieu.
+- `POST /auth/password/forgot` donne la même réponse que le compte existe ou non. Limite : 3 demandes par 15 min. Le code est envoyé par WhatsApp si le compte a un numéro, sinon par e-mail.
+- `POST /auth/password/reset` : code à 6 chiffres, à usage unique, expirant ; nombre d'essais limité ; mot de passe fort exigé. Toutes les sessions ouvertes sont fermées après le changement.
+- Les codes de réinitialisation ont un canal dédié (`reset`) : ils ne peuvent jamais servir à vérifier un compte, et inversement.
+- La vérification de compte passe désormais aussi par e-mail quand le SMTP est configuré.
+- Frontend : page `/forgot-password` en deux étapes ; lien depuis la page de connexion ; le contact du support reste affiché en secours.
+- 13 tests (envoi SMTP simulé, aucun e-mail réel). Suite backend : 134/134.
+
+**Pour activer les e-mails (action du propriétaire) :** créer un compte chez un fournisseur
+SMTP. Brevo propose une offre gratuite (environ 300 e-mails/jour, à confirmer sur leur site).
+Il faut ensuite authentifier le domaine `amazer.store` (enregistrements DNS donnés par le
+fournisseur), puis renseigner `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`
+et `SMTP_FROM` dans les variables Render. Tant que ce n'est pas fait, le code n'est envoyé
+que par WhatsApp (si cette messagerie est configurée), sinon nulle part : le lien vers le
+support reste le recours.
+
 ## 5. Décisions et vérifications en attente
 
 - **Secrets exposés : non renouvelés, par décision du propriétaire (2026-10-12).** Ils restent utilisés. Ce risque est accepté et documenté.

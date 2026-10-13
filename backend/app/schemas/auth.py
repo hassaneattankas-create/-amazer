@@ -170,3 +170,39 @@ class DeleteAccountRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     password: SecretStr = Field(min_length=8, max_length=72)
+
+
+class PasswordForgotRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    identifier: str = Field(min_length=6, max_length=120)
+
+
+class PasswordForgotResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    message: str
+    code_preview: str | None = None
+
+
+class PasswordResetRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    identifier: str = Field(min_length=6, max_length=120)
+    code: str = Field(pattern=r"^\d{6}$")
+    new_password: SecretStr = Field(min_length=8, max_length=72)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password_strength(cls, value: SecretStr) -> SecretStr:
+        if not REGISTER_PASSWORD_STRENGTH.fullmatch(value.get_secret_value()):
+            raise ValueError(
+                "Le mot de passe doit contenir au moins une minuscule, une majuscule, un chiffre et un caractère spécial."
+            )
+        return value
+
+
+class PasswordResetResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    message: str

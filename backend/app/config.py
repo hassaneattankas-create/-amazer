@@ -81,6 +81,14 @@ class Settings(BaseSettings):
     whatsapp_api_version: str = Field(default="v22.0")
     whatsapp_access_token: str | None = Field(default=None)
     whatsapp_phone_number_id: str | None = Field(default=None)
+    # E-mails transactionnels (SMTP). Inactifs tant que SMTP_HOST et SMTP_FROM ne sont pas definis.
+    smtp_host: str | None = Field(default=None)
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str | None = Field(default=None)
+    smtp_password: str | None = Field(default=None)
+    smtp_from: str | None = Field(default=None)
+    smtp_use_ssl: bool = Field(default=False)
+    smtp_timeout_seconds: int = Field(default=15, ge=3, le=60)
     # Premiers jours d’accès catalogue vendeur sans paiement enregistré (0 = pas d’essai auto).
     seller_registration_trial_days: int = Field(default=0, ge=0, le=365)
     media_upload_dir: str = Field(default="uploads")

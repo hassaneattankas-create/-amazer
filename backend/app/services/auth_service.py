@@ -35,9 +35,13 @@ from app.models.vendor import Vendor
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.user_repository import UserRepository
 from app.services.seller_profile_service import create_or_update_seller_profile
+from app.services.email_delivery_service import send_verification_code_email
 from app.services.verification_delivery_service import send_verification_code_via_whatsapp
 
 logger = logging.getLogger(__name__)
+
+# Canal dedie : un code de reinitialisation ne peut jamais servir a verifier un compte, et inversement.
+RESET_CHANNEL = "reset"
 
 
 class AuthService:
@@ -118,6 +122,7 @@ class AuthService:
             .where(
                 LoginVerificationCode.user_id == user.id,
                 LoginVerificationCode.consumed_at.is_(None),
+                LoginVerificationCode.channel != RESET_CHANNEL,
             )
             .order_by(LoginVerificationCode.created_at.desc())
             .limit(1)
@@ -285,7 +290,9 @@ class AuthService:
             if not delivered:
                 logger.warning("WhatsApp verification fallback active for %s", destination_masked)
         else:
-            logger.warning("Email verification provider is not configured; preview fallback active.")
+            delivered = send_verification_code_email(user.email, code, purpose="verify")
+            if not delivered:
+                logger.warning("Email verification not delivered; preview fallback active.")
 
         if settings.is_production() and not delivered:
             raise ForbiddenError("Verification WhatsApp n'est pas encore configure en production")
@@ -295,6 +302,71 @@ class AuthService:
             "destination_masked": destination_masked,
             "code_preview": None if settings.is_production() else code,
         }
+
+    def request_password_reset(self, identifier: str) -> dict[str, str | None]:
+        """Envoie un code de reinitialisation. Reponse identique que le compte existe ou non."""
+        settings = get_settings()
+        user = self._get_user_by_identifier(identifier)
+        if user is None or not user.is_active:
+            return {"code_preview": None}
+
+        code = self._generate_verification_code()
+        destination = user.whatsapp_phone or user.email
+        self.db.execute(
+            delete(LoginVerificationCode).where(
+                LoginVerificationCode.user_id == user.id,
+                LoginVerificationCode.channel == RESET_CHANNEL,
+                LoginVerificationCode.consumed_at.is_(None),
+            )
+        )
+        self.db.add(
+            LoginVerificationCode(
+                user_id=user.id,
+                channel=RESET_CHANNEL,
+                destination_masked=self._mask_destination(destination),
+                code_hash=self._hash_verification_code(user.id, code),
+                expires_at=datetime.now(UTC) + timedelta(minutes=settings.verification_code_ttl_minutes),
+            )
+        )
+        self.db.commit()
+
+        if user.whatsapp_phone:
+            delivered = send_verification_code_via_whatsapp(user.whatsapp_phone, code)
+        else:
+            delivered = send_verification_code_email(user.email, code, purpose="reset")
+        if not delivered:
+            logger.warning("Code de reinitialisation non delivre (canal non configure) pour %s", user.id)
+        return {"code_preview": None if settings.is_production() else code}
+
+    def reset_password(self, identifier: str, code: str, new_password: str) -> None:
+        settings = get_settings()
+        user = self._get_user_by_identifier(identifier)
+        if user is None or not user.is_active:
+            raise UnauthorizedError("Code de reinitialisation invalide ou expire")
+        record = self.db.scalar(
+            select(LoginVerificationCode)
+            .where(
+                LoginVerificationCode.user_id == user.id,
+                LoginVerificationCode.channel == RESET_CHANNEL,
+                LoginVerificationCode.consumed_at.is_(None),
+            )
+            .order_by(LoginVerificationCode.created_at.desc())
+            .limit(1)
+        )
+        if record is None or record.expires_at <= datetime.now(UTC):
+            raise UnauthorizedError("Code de reinitialisation invalide ou expire")
+        if record.attempt_count >= settings.verification_code_max_attempts:
+            raise ForbiddenError("Trop de tentatives. Demandez un nouveau code.")
+        if record.code_hash != self._hash_verification_code(user.id, code):
+            record.attempt_count += 1
+            self.db.commit()
+            raise UnauthorizedError("Code de reinitialisation invalide ou expire")
+
+        record.consumed_at = datetime.now(UTC)
+        user.hashed_password = hash_password(new_password)
+        # Toutes les sessions ouvertes avec l'ancien mot de passe sont fermees.
+        self.refresh_tokens.revoke_all_for_user(user.id)
+        self.db.commit()
 
     def _get_user_by_identifier(self, identifier: str) -> User | None:
         if self._is_whatsapp_identifier(identifier):

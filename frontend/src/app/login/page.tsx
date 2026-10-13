@@ -21,7 +21,9 @@ function LoginPageContent() {
   const searchParams = useSearchParams();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(() =>
+    searchParams.get("reset") === "1" ? "Mot de passe modifie. Connectez-vous avec le nouveau mot de passe." : ""
+  );
   const [isLoading, setIsLoading] = useState(false);
   const setAppMode = useAuthStore((state) => state.setAppMode);
 
@@ -99,14 +101,9 @@ function LoginPageContent() {
           />
 
           <p className="text-sm text-slate-600">
-            Mot de passe oublie ? AMAZER ne propose pas encore la reinitialisation automatique dans l&apos;app.{" "}
-            <a
-              className="font-medium text-[#FF4D00] hover:underline"
-              href="mailto:amazer.niger@gmail.com?subject=AMAZER%20-%20Reinitialisation%20mot%20de%20passe&body=Bonjour%2C%0D%0A%0D%0AIdentifiant%20utilise%20%28email%20ou%20WhatsApp%20%2B227%29%20%3A%0D%0A%0D%0ANom%20de%20la%20boutique%20%28si%20vendeur%29%20%3A%0D%0A"
-            >
-              Contactez le support
-            </a>{" "}
-            en indiquant l&apos;email ou le WhatsApp utilises a l&apos;inscription (ex. Karma Tech).
+            <Link href="/forgot-password" className="font-medium text-brand-600 hover:underline">
+              Mot de passe oublie ?
+            </Link>
           </p>
 
           <Button
