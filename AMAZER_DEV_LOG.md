@@ -185,12 +185,22 @@ support reste le recours.
 - Variables absentes : `SMTP_*` et `WHATSAPP_*`. Les codes de réinitialisation ne sont donc envoyés **par aucun canal** en production. Absente aussi : `REDIS_URL`, ce qui est sans effet avec un seul processus.
 - Non vérifié : la taille réelle de la base et les tables créées au démarrage. La lecture directe de la base de production a été refusée par le système de permissions et doit être autorisée par le propriétaire.
 
+## 4 octies. E-mails activés avec Brevo — 2026-10-13
+
+- Compte Brevo, offre gratuite (300 e-mails/jour). Domaine `amazer.store` authentifié : DKIM (`brevo1/brevo2._domainkey`) et DMARC (`p=none`) en place. Les MX Private Email et le SPF existant sont inchangés.
+- Expéditeur vérifié : `AMAZER <no-reply@amazer.store>`. Ne jamais utiliser l'expéditeur Gmail du compte (refusé par Google, Yahoo et Microsoft).
+- Variables Render `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` et `SMTP_FROM` configurées par l'API, puis redéploiement.
+- Test local d'envoi via le service AMAZER : accepté par Brevo.
+- **Port 2525 obligatoire** : sur le port 587, l'envoi depuis Render échouait (`TimeoutError` dans les logs), car l'offre gratuite de Render bloque les ports SMTP sortants (25, 465, 587). `SMTP_PORT=2525`, accepté par Brevo, fonctionne.
+- Test en production (2026-10-13 à 10:12 UTC) : « mot de passe oublié » sur le compte admin, sans aucune erreur SMTP dans les logs Render. Réception à confirmer dans la boîte de l'admin.
+- ⚠️ **La clé SMTP expire le 13/10/2027**, ou plus tôt après 90 jours sans aucun envoi. Il faudra alors en générer une nouvelle dans Brevo (SMTP et API) et mettre à jour `SMTP_PASSWORD` sur Render.
+- Le blocage des IP non autorisées dans Brevo ne doit pas être activé : Render n'envoie pas depuis des adresses fixes.
+
 ## 5. Décisions et vérifications en attente
 
 - **Secrets exposés : non renouvelés, par décision du propriétaire (2026-10-12).** Ils restent utilisés. Ce risque est accepté et documenté.
 - Vérifier sur Render (Dashboard → base PostgreSQL) : le plan (une base gratuite expire), les sauvegardes et la restauration.
 - Vérifier sur Render que `ADMIN_PASSWORD` est défini (création du compte admin au démarrage).
-- Activer les e-mails : compte chez un fournisseur SMTP et variables Render (voir §4 quinquies).
 - Restant (P2) : liens `pay.amazer.ne` vers un domaine non vérifié ; montant Amana non recontrôlé à la confirmation ; annulation et remboursement par vendeur ; montants en `Float`.
 
 ## 6. Prochaine étape approuvée

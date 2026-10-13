@@ -335,7 +335,7 @@ class AuthService:
         else:
             delivered = send_verification_code_email(user.email, code, purpose="reset")
         if not delivered:
-            logger.warning("Code de reinitialisation non delivre (canal non configure) pour %s", user.id)
+            logger.warning("Code de reinitialisation non delivre (canal absent ou envoi en echec) pour %s", user.id)
         return {"code_preview": None if settings.is_production() else code}
 
     def reset_password(self, identifier: str, code: str, new_password: str) -> None:
