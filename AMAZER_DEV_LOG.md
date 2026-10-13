@@ -280,6 +280,13 @@ Corrigé : **cache mémoire de secours** quand Redis est absent (`core/cache.py`
 
 Recommandé, non fait : **déplacer la base Neon en Europe (Francfort)**, à côté de l'API. C'est le principal gain restant, mais cela demande une migration des données (export puis import). À faire seulement une fois la sauvegarde quotidienne active.
 
+## 4 novodecies. Tests de bout en bout — 2026-10-13
+
+- `tools/e2e/smoke.mjs` (Puppeteer, écran mobile) : **parcours en lecture seule sur le vrai site**, sans compte ni commande créés. Il vérifie l'API (santé, boutiques, 401 sur les données privées), l'accueil, la liste des boutiques, la page boutique avec son bouton « Écrire à la boutique », le centre d'aide, « mot de passe oublié », la redirection de `/messages` vers la connexion, et l'absence d'erreur JavaScript.
+- Premier passage en production : **10/10 OK**.
+- Workflow `.github/workflows/e2e-smoke.yml` : chaque jour à 07:15 UTC et à la demande. Un échec déclenche l'e-mail habituel de GitHub, ce qui fait office de surveillance gratuite du site.
+- Non couvert : les parcours qui écrivent des données (commande, paiement, message). Il faudrait un environnement de test séparé ou des comptes de test dédiés.
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).

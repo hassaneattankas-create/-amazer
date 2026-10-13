@@ -1,0 +1,12 @@
+{
+  "name": "amazer-e2e-smoke",
+  "private": true,
+  "type": "module",
+  "description": "Parcours de bout en bout en lecture seule sur le site public (aucune donnee creee).",
+  "scripts": {
+    "smoke": "node smoke.mjs"
+  },
+  "dependencies": {
+    "puppeteer": "25.12.0"
+  }
+}

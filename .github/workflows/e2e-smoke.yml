@@ -1,0 +1,33 @@
+name: Parcours de bout en bout (site public)
+
+# Verifie chaque jour, dans un vrai navigateur, que les parcours publics
+# d'amazer.store fonctionnent. Lecture seule : aucun compte ni commande cree.
+# En cas d'echec, GitHub previent le proprietaire du depot par e-mail.
+
+on:
+  schedule:
+    - cron: "15 7 * * *" # 07:15 UTC chaque jour
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Parcours publics (mobile)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: tools/e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installer Puppeteer
+        run: npm install --no-audit --no-fund
+      - name: Reveiller l'API (demarrage a froid Render)
+        run: curl -s -o /dev/null --max-time 90 --retry 2 https://amazer-api.onrender.com/health || true
+      - name: Lancer les parcours
+        run: node smoke.mjs

@@ -29,3 +29,6 @@ _recovery/
 jde-motion/frames/
 jde-motion/output.mp4
 motion/remotion/out/
+
+# Tests de bout en bout : modules installes localement ou en CI
+tools/e2e/node_modules/
