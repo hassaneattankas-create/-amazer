@@ -177,6 +177,14 @@ support reste le recours.
 - Les paiements et les frais ne changent pas : paiement unique par commande, frais de livraison par vendeur (comportement déjà existant). Une annulation partielle ou un remboursement par vendeur n'est pas géré (il n'existe pas d'annulation aujourd'hui).
 - 8 tests. Suite backend : 142/142.
 
+## 4 septies. Infrastructure vérifiée via l'API Render — 2026-10-13
+
+- Service `amazer-api` : **plan gratuit**, branche `main`, déploiement automatique. Les 6 déploiements des 12-13 octobre sont tous passés ; `7b8cc8d4` est en ligne.
+- **La base PostgreSQL n'est pas chez Render mais chez Neon** (us-east-1). Offre gratuite Neon (source tierce, 2026) : 0,5 Go de stockage, 100 heures de calcul par mois, restauration possible sur 6 h seulement.
+- `MEDIA_STORAGE_PROVIDER=database` : **les images sont stockées dans la base**. Avec 0,5 Go, c'est le principal risque de saturation. Passer sur Backblaze (déjà prévu dans `render.yaml`) libérerait la base.
+- Variables absentes : `SMTP_*` et `WHATSAPP_*`. Les codes de réinitialisation ne sont donc envoyés **par aucun canal** en production. Absente aussi : `REDIS_URL`, ce qui est sans effet avec un seul processus.
+- Non vérifié : la taille réelle de la base et les tables créées au démarrage. La lecture directe de la base de production a été refusée par le système de permissions et doit être autorisée par le propriétaire.
+
 ## 5. Décisions et vérifications en attente
 
 - **Secrets exposés : non renouvelés, par décision du propriétaire (2026-10-12).** Ils restent utilisés. Ce risque est accepté et documenté.
