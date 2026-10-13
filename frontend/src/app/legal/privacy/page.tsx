@@ -36,7 +36,7 @@ export default function PrivacyPolicyPage() {
             d obligations legales ou a la defense de droits.
           </p>
           <p>
-            Contact editeur et confidentialite: amazer.niger@gmail.com.
+            Contact editeur et confidentialite: amazer.niger2@gmail.com.
           </p>
         </div>
       </article>

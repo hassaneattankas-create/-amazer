@@ -25,7 +25,7 @@ export default function TermsPage() {
             securite, ou non-respect des presentes conditions.
           </p>
           <p>
-            Pour toute question legale ou support, contactez amazer.niger@gmail.com.
+            Pour toute question legale ou support, contactez amazer.niger2@gmail.com.
           </p>
         </div>
       </article>

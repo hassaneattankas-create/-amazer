@@ -196,6 +196,12 @@ support reste le recours.
 - ⚠️ **La clé SMTP expire le 13/10/2027**, ou plus tôt après 90 jours sans aucun envoi. Il faudra alors en générer une nouvelle dans Brevo (SMTP et API) et mettre à jour `SMTP_PASSWORD` sur Render.
 - Le blocage des IP non autorisées dans Brevo ne doit pas être activé : Render n'envoie pas depuis des adresses fixes.
 
+## 4 nonies. Changement du compte admin — 2026-10-13
+
+- L'ancienne boîte admin est bloquée. `ADMIN_EMAIL` vaut désormais `amazer.niger2@gmail.com` (variable Render). Le compte est créé au démarrage s'il n'existe pas.
+- Adresse de support publique mise à jour partout : pied de page, pages légales, page « mot de passe oublié », valeur par défaut côté frontend et backend.
+- ⚠️ L'ancien compte AMAZER (`amazer.niger@…`) garde `role=admin` en base. Il faut le lui retirer depuis le nouveau compte : Admin → Utilisateurs → « Retirer admin ».
+
 ## 5. Décisions et vérifications en attente
 
 - **Secrets exposés : non renouvelés, par décision du propriétaire (2026-10-12).** Ils restent utilisés. Ce risque est accepté et documenté.

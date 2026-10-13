@@ -12,7 +12,7 @@ import { requestPasswordReset, resetPassword } from "@/services/auth-service";
 type Step = "request" | "reset";
 
 const SUPPORT_MAILTO =
-  "mailto:amazer.niger@gmail.com?subject=AMAZER%20-%20Reinitialisation%20mot%20de%20passe";
+  "mailto:amazer.niger2@gmail.com?subject=AMAZER%20-%20Reinitialisation%20mot%20de%20passe";
 
 const fieldClass =
   "mt-1 w-full rounded-field border border-input bg-background px-3 py-2 text-sm text-ink-900";

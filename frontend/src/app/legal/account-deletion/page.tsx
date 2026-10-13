@@ -22,8 +22,8 @@ export default function AccountDeletionPage() {
           <p>
             Si vous ne pouvez plus acceder a l application, envoyez une demande depuis l adresse
             email ou le numero WhatsApp associe au compte a{" "}
-            <a className="font-medium text-[#FF4D00] hover:underline" href="mailto:amazer.niger@gmail.com">
-              amazer.niger@gmail.com
+            <a className="font-medium text-[#FF4D00] hover:underline" href="mailto:amazer.niger2@gmail.com">
+              amazer.niger2@gmail.com
             </a>{" "}
             en indiquant:
           </p>

@@ -4,7 +4,7 @@ export function AppFooter() {
   return (
     <footer className="border-t border-slate-200 bg-white/95 px-4 py-6 text-sm text-slate-600">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p>AMAZER - Support: amazer.niger@gmail.com</p>
+        <p>AMAZER - Support: amazer.niger2@gmail.com</p>
         <div className="flex flex-wrap items-center gap-4">
           <Link href="/legal/privacy" className="hover:text-[#FF4D00] hover:underline">
             Politique de confidentialite
