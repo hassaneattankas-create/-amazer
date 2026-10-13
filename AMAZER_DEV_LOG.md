@@ -269,6 +269,17 @@ Ajouts (`/api/v1/admin/moderation`, page **Admin → Modération**) :
 - **Annonces produit** : recherche, puis « Masquer » avec un motif transmis au vendeur, ou « Réafficher ». Nouveau marqueur `prices.hidden_by_admin` (ajouté au démarrage, sans effet destructif) : **le vendeur ne peut plus réafficher lui-même** une annonce masquée (409). Les listes publiques filtrent déjà les annonces inactives. Chaque action est inscrite au journal d'audit.
 - 5 tests. Suite backend : 177/177.
 
+## 4 octodecies. Performances — 2026-10-13
+
+Mesures en production, depuis le poste du propriétaire (Afrique, via Cloudflare) :
+- Frontend : environ 310 Ko de JS et CSS compressés sur l'accueil. Les pages sont servies depuis le cache Vercel (`X-Vercel-Cache: HIT`). Pas de problème de poids.
+- API : environ 0,6 s pour une requête sans base (`/health`, réseau + TLS), et **0,9 à 1,3 s** avec la base. **La base ajoute 0,3 à 0,7 s par requête**, car l'API est à Francfort (Render) et la base aux États-Unis (Neon us-east-1) : chaque requête SQL traverse l'Atlantique.
+- **Aucun cache actif** : le cache de l'API ne fonctionnait qu'avec Redis, qui n'est pas configuré.
+
+Corrigé : **cache mémoire de secours** quand Redis est absent (`core/cache.py`). Il reste fiable avec un seul processus, l'invalidation existante continue de fonctionner (`catalog:`, `content:` après une modification vendeur), la mémoire est limitée à 512 entrées, et les durées existantes (60 à 120 s) s'appliquent. 4 tests.
+
+Recommandé, non fait : **déplacer la base Neon en Europe (Francfort)**, à côté de l'API. C'est le principal gain restant, mais cela demande une migration des données (export puis import). À faire seulement une fois la sauvegarde quotidienne active.
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).
