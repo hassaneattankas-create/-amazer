@@ -1223,6 +1223,10 @@ def update_inventory_item(
     if payload.stock_quantity is not None:
         price.stock_quantity = payload.stock_quantity
     if payload.is_active is not None:
+        if payload.is_active and getattr(price, "hidden_by_admin", False):
+            raise ConflictError(
+                "Ce produit a ete masque par l'equipe AMAZER. Contactez le support pour le reafficher."
+            )
         price.is_active = payload.is_active
     if payload.promo_amount is not None:
         current = float(price.amount)

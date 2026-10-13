@@ -120,6 +120,8 @@ class Price(Base):
     amount: Mapped[float] = mapped_column(Float, nullable=False)
     stock_quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
+    # Masque par la moderation : le vendeur ne peut pas le reafficher lui-meme.
+    hidden_by_admin: Mapped[bool] = mapped_column(nullable=False, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

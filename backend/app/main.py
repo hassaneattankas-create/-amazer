@@ -40,6 +40,7 @@ from app.routes.content import router as content_router, admin_router as admin_c
 from app.routes.feedback import router as feedback_router, admin_router as admin_feedback_router
 from app.routes.notifications import router as notifications_router
 from app.routes.conversations import router as conversations_router
+from app.routes.admin_moderation import router as admin_moderation_router
 from app.routes.assistant import router as assistant_router
 from app.routes.maintenance import router as maintenance_router
 from app.services.security_log_service import log_security_event
@@ -102,6 +103,7 @@ def _bootstrap_database_if_needed() -> None:
     for statement in (
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_phone VARCHAR(24)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user'",
+        "ALTER TABLE prices ADD COLUMN IF NOT EXISTS hidden_by_admin BOOLEAN NOT NULL DEFAULT FALSE",
         (
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_whatsapp_phone "
             "ON users (whatsapp_phone) WHERE whatsapp_phone IS NOT NULL"
@@ -433,6 +435,7 @@ app.include_router(feedback_router, prefix=settings.api_prefix)
 app.include_router(admin_feedback_router, prefix=settings.api_prefix)
 app.include_router(notifications_router, prefix=settings.api_prefix)
 app.include_router(conversations_router, prefix=settings.api_prefix)
+app.include_router(admin_moderation_router, prefix=settings.api_prefix)
 app.include_router(assistant_router, prefix=settings.api_prefix)
 app.include_router(maintenance_router, prefix=settings.api_prefix)
 

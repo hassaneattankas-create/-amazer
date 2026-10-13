@@ -32,6 +32,7 @@ declare module "lucide-react" {
   export const EyeOff: LucideIcon;
   export const Flame: LucideIcon;
   export const FolderTree: LucideIcon;
+  export const Flag: LucideIcon;
   export const ForkKnife: LucideIcon;
   export const Hotel: LucideIcon;
   export const ImageOff: LucideIcon;

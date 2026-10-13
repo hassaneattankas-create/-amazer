@@ -261,6 +261,14 @@ support reste le recours.
 - **Les montants (500 / 1 000 / 5 000 FCFA) ne sont pas modifiés** : ce sont des décisions commerciales à prendre dans Admin → Tarifs.
 - 8 tests. Suite backend : 172/172.
 
+## 4 septdecies. Administration : modération — 2026-10-13
+
+Existant : gestion des boutiques (retrait, restauration, vérification, tarifs), des utilisateurs (retrait, restauration, rôle), des catégories, des commandes.
+Ajouts (`/api/v1/admin/moderation`, page **Admin → Modération**) :
+- **Signalements** : liste des conversations signalées (motif, auteur, boutique, date). Le contenu des conversations reste privé.
+- **Annonces produit** : recherche, puis « Masquer » avec un motif transmis au vendeur, ou « Réafficher ». Nouveau marqueur `prices.hidden_by_admin` (ajouté au démarrage, sans effet destructif) : **le vendeur ne peut plus réafficher lui-même** une annonce masquée (409). Les listes publiques filtrent déjà les annonces inactives. Chaque action est inscrite au journal d'audit.
+- 5 tests. Suite backend : 177/177.
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).
