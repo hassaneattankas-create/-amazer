@@ -55,6 +55,7 @@ from app.schemas.seller import (
 )
 from app.schemas.seller_lead import SellerLeadCreateRequest, SellerLeadResponse
 from app.services.audit_log_service import append_audit_log
+from app.services.order_cancellation_service import ensure_not_cancelled
 from app.services.order_fulfillment_service import set_vendor_status, vendor_status
 from app.services.listing_limit_service import (
     count_vendor_catalog_products,
@@ -1169,6 +1170,7 @@ def update_seller_order_status(
     )
     if order is None or not any(item.vendor_id == profile.vendor_id for item in order.items):
         raise NotFoundError("Order not found")
+    ensure_not_cancelled(order)
     if order.payment_status != "paid":
         raise ConflictError(
             "Paiement non confirme : attendez la validation du paiement avant de traiter cette commande."

@@ -76,7 +76,7 @@ export type CountersResetResult = {
 export type AdminOrderTracking = {
   id: string;
   customer_name: string;
-  status: "commande" | "preparation" | "livraison" | "recu" | "CLAIMED";
+  status: "commande" | "preparation" | "livraison" | "recu" | "CLAIMED" | "annulee";
   payment_mode: string;
   total_amount: number;
   tracking_code: string | null;

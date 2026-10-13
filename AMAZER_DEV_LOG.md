@@ -242,6 +242,21 @@ support reste le recours.
 - Frontend : page `/messages` protégée (liste et fil, adaptée au mobile), bouton « Écrire à la boutique » sur les pages boutique, lien « Messages » dans la navigation, aide mise à jour.
 - 12 tests. Suite backend : 155/155.
 
+## 4 quindecies. Annulation des commandes et nettoyage — 2026-10-13
+
+- **Client** : il peut annuler lui-même une commande **non payée**, tant qu'elle est en attente de paiement ou nouvelle (`POST /orders/{id}/cancel`, bouton « Annuler la commande » dans le tableau de bord). Une commande payée ne s'annule pas en ligne : le message invite à contacter le support.
+- **Admin** : il peut annuler toute commande non livrée (`POST /admin/finance/orders/{id}/cancel`, avec PIN finance, bouton « Annuler »). Si elle était payée, le stock est remis en vente et le journal d'audit indique `refund_to_handle_manually` : **aucun remboursement automatique n'existe**.
+- Une commande annulée est figée : plus de paiement possible (démarrage ou confirmation), plus de préparation par le vendeur, plus de livraison par l'admin. Les vendeurs sont notifiés, ainsi que le client quand c'est l'admin qui annule.
+- Statut `annulee` affiché côté client, vendeur et admin. Aide mise à jour.
+- Nettoyage : workflow « auto-commit » supprimé (il ne pouvait rien commiter), fichier de test supprimé de Backblaze. Les dépendances Redux étaient déjà retirées.
+- 10 tests. Suite backend : 165/165.
+
+## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
+
+- **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).
+- **Migration des anciennes images vers Backblaze** : elle réécrirait des données de production (les URL des boutiques et produits), alors que la croissance de la base est déjà arrêtée. Gain faible, risque réel : reportée.
+- **Montants `Float` → `Numeric`** : il faudrait convertir les colonnes de production (`ALTER COLUMN TYPE`), alors que les montants en XOF sont entiers et que le volume est faible. Reportée à une étape dédiée, avec sauvegarde préalable : la sauvegarde quotidienne doit d'abord être active.
+
 ## 5. Décisions et vérifications en attente
 
 - **Secrets exposés : non renouvelés, par décision du propriétaire (2026-10-12).** Ils restent utilisés. Ce risque est accepté et documenté.

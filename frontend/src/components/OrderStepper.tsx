@@ -4,7 +4,7 @@ import { CheckCircle2, Circle, Truck } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
-import { confirmOrderReception } from "@/services/order-service";
+import { cancelOrder, confirmOrderReception } from "@/services/order-service";
 import { Order } from "@/types/order";
 
 type OrderStepperProps = {
@@ -21,16 +21,30 @@ const STEP_LABELS: Record<string, string> = {
 export function OrderStepper({ order }: OrderStepperProps) {
   const queryClient = useQueryClient();
   const steps = ["commande", "preparation", "livraison", "recu"] as const;
-  const normalizedStatus =
-    order.status === "CLAIMED" ? "recu" : order.status === "payment_pending" ? "commande" : order.status;
-  const activeIndex = steps.indexOf(normalizedStatus);
+  const isCancelled = order.status === "annulee";
+  const normalizedStatus: (typeof steps)[number] | null = order.status === "annulee"
+    ? null
+    : order.status === "CLAIMED"
+      ? "recu"
+      : order.status === "payment_pending"
+        ? "commande"
+        : order.status;
+  const activeIndex = normalizedStatus ? steps.indexOf(normalizedStatus) : -1;
 
   const confirmMutation = useMutation({
     mutationFn: () => confirmOrderReception(order.id),
     onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ["orders-me"] }); },
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: () => cancelOrder(order.id),
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ["orders-me"] }); },
+  });
+
   const canConfirm = normalizedStatus === "livraison";
+  // Le serveur n'accepte l'annulation que pour une commande non payee et pas encore traitee.
+  const canCancel =
+    order.payment_status !== "paid" && (order.status === "payment_pending" || order.status === "commande");
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -39,6 +53,26 @@ export function OrderStepper({ order }: OrderStepperProps) {
           <p className="text-xs text-slate-500">Commande #{order.id.slice(0, 8)}</p>
           {order.status === "payment_pending" ? (
             <p className="mt-1 text-xs text-amber-700">Paiement en attente de confirmation.</p>
+          ) : null}
+          {isCancelled ? <p className="mt-1 text-xs font-medium text-danger">Commande annulée.</p> : null}
+          {canCancel ? (
+            <button
+              type="button"
+              className="mt-1 min-h-11 text-xs font-medium text-ink-600 hover:text-danger disabled:opacity-50"
+              disabled={cancelMutation.isPending}
+              onClick={() => {
+                if (window.confirm("Annuler cette commande ? Cette action est définitive.")) {
+                  cancelMutation.mutate();
+                }
+              }}
+            >
+              {cancelMutation.isPending ? "Annulation…" : "Annuler la commande"}
+            </button>
+          ) : null}
+          {cancelMutation.isError ? (
+            <p className="mt-1 text-xs text-danger" role="alert">
+              Annulation impossible : la commande a peut-être déjà été traitée.
+            </p>
           ) : null}
         </div>
         {canConfirm ? (

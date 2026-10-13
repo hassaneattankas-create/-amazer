@@ -43,6 +43,7 @@ from app.schemas.order import (
 )
 from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.audit_log_service import append_audit_log
+from app.services.order_cancellation_service import cancel_order, ensure_not_cancelled, notify_order_cancelled
 from app.services.order_fulfillment_service import create_initial_fulfillments, sync_fulfillments
 from app.services.payment_security_service import (
     MANUAL_PAYMENT_PENDING_MESSAGE,
@@ -571,6 +572,7 @@ def start_order_payment(
         raise ValidationDomainError("Order not found")
     if order.user_id != current_user.id and not _is_admin(current_user):
         raise UnauthorizedError("Unauthorized order access")
+    ensure_not_cancelled(order)
     if order.payment_status == "paid":
         return PaymentStartResponse(order_id=order.id, payment_status="paid", message="Paiement deja confirme.")
     if order.payment_mode != "amana":
@@ -619,6 +621,7 @@ def confirm_order_payment(
         raise ValidationDomainError("Order not found")
     if order.user_id != current_user.id and not _is_admin(current_user):
         raise UnauthorizedError("Unauthorized order access")
+    ensure_not_cancelled(order)
 
     if order.payment_status == "paid":
         return PaymentConfirmResponse(
@@ -732,6 +735,41 @@ def client_confirm_reception(
     sync_fulfillments(order)
     db.commit()
     db.refresh(order)
+    return _to_order_response(order)
+
+
+@router.post("/{order_id}/cancel", response_model=OrderResponse)
+def client_cancel_order(
+    order_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> OrderResponse:
+    """Le client annule une commande qu'il n'a pas encore payee."""
+    enforce_csrf(request)
+    enforce_rate_limit(request, key="order_cancel", limit=10, window_seconds=600)
+    order = db.scalar(
+        select(Order)
+        .options(selectinload(Order.items), selectinload(Order.fulfillments))
+        .where(Order.id == order_id)
+        .with_for_update()
+    )
+    if order is None or order.user_id != current_user.id:
+        raise ValidationDomainError("Commande introuvable")
+    cancel_order(db, order, by_admin=False)
+    append_audit_log(
+        db,
+        event_type="order_cancelled_by_customer",
+        actor=current_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="order",
+        entity_id=order.id,
+        details={"payment_status": order.payment_status},
+    )
+    db.commit()
+    db.refresh(order)
+    notify_order_cancelled(db, order, by_admin=False)
     return _to_order_response(order)
 
 

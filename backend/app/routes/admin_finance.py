@@ -65,6 +65,7 @@ from app.schemas.finance import (
     WalletSummaryResponse,
 )
 from app.services.audit_log_service import append_audit_log
+from app.services.order_cancellation_service import cancel_order, ensure_not_cancelled, notify_order_cancelled
 from app.services.order_fulfillment_service import sync_fulfillments
 from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.seller_finance_service import (
@@ -843,6 +844,7 @@ def dispatch_order_to_delivery(
     order = db.get(Order, order_id)
     if order is None:
         raise ValidationDomainError("Order not found")
+    ensure_not_cancelled(order)
     order.status = payload.status
     sync_fulfillments(order)
     if payload.status == "livraison":
@@ -1130,6 +1132,50 @@ def update_user_role_admin(
     db.refresh(target)
     is_seller = db.scalar(select(SellerProfile.id).where(SellerProfile.user_id == target.id)) is not None
     return _build_admin_user_response(target, {target.id} if is_seller else set())
+
+
+@router.post("/orders/{order_id}/cancel", response_model=AdminOrderTrackingResponse)
+def cancel_order_admin(
+    order_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminOrderTrackingResponse:
+    """Annule une commande non livree ; le stock est remis si elle etait payee."""
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    order = db.get(Order, order_id)
+    if order is None:
+        raise ValidationDomainError("Order not found")
+    was_paid = order.payment_status == "paid"
+    restocked = cancel_order(db, order, by_admin=True)
+    append_audit_log(
+        db,
+        event_type="admin_order_cancelled",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="order",
+        entity_id=order.id,
+        details={
+            "was_paid": was_paid,
+            "restocked": restocked,
+            # Aucun remboursement automatique n'existe : il se fait hors plateforme.
+            "refund_to_handle_manually": was_paid,
+        },
+    )
+    db.commit()
+    db.refresh(order)
+    notify_order_cancelled(db, order, by_admin=True)
+    return AdminOrderTrackingResponse(
+        id=order.id,
+        customer_name=order.user.full_name if order.user else "Client AMAZER",
+        status=order.status,
+        payment_mode=order.payment_mode,
+        total_amount=order.total_amount,
+        tracking_code=order.tracking_code,
+        created_at=order.created_at.isoformat(),
+    )
 
 
 @router.get("/sellers", response_model=list[AdminSellerResponse])

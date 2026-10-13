@@ -20,6 +20,7 @@ import { notifyLocalOrderEvent } from "@/services/notification-service";
 import {
   createAdminTransfer,
   decideAdminSellerSubscriptionPayment,
+  cancelAdminOrder,
   dispatchAdminOrder,
   getAdminFinanceSummary,
   listAdminOrders,
@@ -129,6 +130,16 @@ export default function AdminFinancePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       setTransferStatus("Statut client mis a jour.");
+    },
+  });
+  const cancelOrderMutation = useMutation({
+    mutationFn: (orderId: string) => cancelAdminOrder(orderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      setTransferStatus("Commande annulee. Si elle etait payee, le stock est remis et le remboursement reste a faire.");
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      setTransferStatus(error.response?.data?.detail ?? "Annulation impossible.");
     },
   });
   const sellerPaymentDecisionMutation = useMutation({
@@ -570,17 +581,20 @@ export default function AdminFinancePage() {
         <div className="mt-4 space-y-2">
           {(adminOrders ?? []).slice(0, 12).map((order) => {
             const label =
-              order.status === "recu" || order.status === "CLAIMED"
+              order.status === "annulee"
+                ? "Annulee"
+                : order.status === "recu" || order.status === "CLAIMED"
                 ? "Livree"
                 : order.status === "livraison"
                   ? "En livraison"
                   : order.status === "preparation"
                     ? "En preparation"
                     : "Nouvelle";
+            const isClosed = order.status === "recu" || order.status === "CLAIMED" || order.status === "annulee";
             const nextAction =
               order.status === "livraison"
                 ? { label: "Marquer livree", to: "recu" as const }
-                : order.status === "recu" || order.status === "CLAIMED"
+                : isClosed
                   ? null
                   : { label: "Envoyer en livraison", to: "livraison" as const };
             return (
@@ -602,6 +616,21 @@ export default function AdminFinancePage() {
                       className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
                     >
                       {nextAction.label}
+                    </Button>
+                  ) : null}
+                  {!isClosed ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={cancelOrderMutation.isPending}
+                      onClick={() => {
+                        if (window.confirm("Annuler cette commande ? Si elle est payee, le remboursement se fait hors plateforme.")) {
+                          cancelOrderMutation.mutate(order.id);
+                        }
+                      }}
+                    >
+                      Annuler
                     </Button>
                   ) : null}
                 </div>

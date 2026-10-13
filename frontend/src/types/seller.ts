@@ -157,7 +157,7 @@ export type SellerShopOrderItem = {
 export type SellerShopOrder = {
   id: string;
   customer_name: string;
-  status: "payment_pending" | "commande" | "preparation" | "livraison" | "recu" | "CLAIMED";
+  status: "payment_pending" | "commande" | "preparation" | "livraison" | "recu" | "CLAIMED" | "annulee";
   payment_mode: "nita" | "amana";
   payment_status: "pending" | "paid";
   delivery_type: "standard" | "express_niamey";

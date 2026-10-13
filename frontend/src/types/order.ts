@@ -15,7 +15,7 @@ export type OrderFulfillment = {
 
 export type Order = {
   id: string;
-  status: "payment_pending" | "commande" | "preparation" | "livraison" | "recu" | "CLAIMED";
+  status: "payment_pending" | "commande" | "preparation" | "livraison" | "recu" | "CLAIMED" | "annulee";
   payment_mode: "nita" | "amana";
   delivery_type: "standard" | "express_niamey";
   payment_reference: string | null;

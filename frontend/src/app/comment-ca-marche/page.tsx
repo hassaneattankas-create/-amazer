@@ -111,6 +111,14 @@ const SECTIONS: Section[] = [
         ],
       },
       {
+        id: "annuler",
+        question: "Comment annuler une commande ?",
+        steps: [
+          "Tant que la commande n'est pas payée et pas encore en préparation, cliquez « Annuler la commande » dans votre tableau de bord.",
+          "Une commande déjà payée ne s'annule pas en ligne : contactez le support avec le numéro de la commande.",
+        ],
+      },
+      {
         id: "contacter",
         question: "Comment contacter un vendeur ?",
         steps: [

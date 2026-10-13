@@ -794,9 +794,9 @@ export default function SellerDashboardPage() {
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600">
-                          {order.status === "commande" ? "Nouvelle" : order.status === "payment_pending" ? "Paiement en attente" : order.status === "preparation" ? "En preparation" : order.status === "livraison" ? "En livraison" : "Livree"}
+                          {order.status === "commande" ? "Nouvelle" : order.status === "payment_pending" ? "Paiement en attente" : order.status === "annulee" ? "Annulee" : order.status === "preparation" ? "En preparation" : order.status === "livraison" ? "En livraison" : "Livree"}
                         </span>
-                        {next && order.payment_status === "paid" ? (
+                        {next && order.payment_status === "paid" && order.status !== "annulee" ? (
                           <Button size="sm" className="primary-glow-btn bg-[#FF4D00] text-white" onClick={() => shopOrderStatusMutation.mutate({ orderId: order.id, status: next.next })}>
                             {next.label}
                           </Button>

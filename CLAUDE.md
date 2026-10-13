@@ -91,7 +91,7 @@ Explications détaillées réservées aux problèmes qui en demandent vraiment.
 
 ## Dettes connues
 
-État global = **Zustand** (Redux est installé mais mort, 0 import) · `components/ui`
+État global = **Zustand** (Redux retiré) · `components/ui`
 à 3 primitives · classes héritées `.premium-card`/`.luxury-title`/`.primary-glow-btn`
 dépréciées · couverture de tests minimale (panier seulement) · dark mode tokenisé mais
 écrans non vérifiés.

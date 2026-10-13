@@ -155,6 +155,13 @@ export async function dispatchAdminOrder(
   });
 }
 
+export async function cancelAdminOrder(orderId: string): Promise<AdminOrderTracking> {
+  return adminProxyRequest<AdminOrderTracking>({
+    url: `/admin/finance/orders/${orderId}/cancel`,
+    method: "POST",
+  });
+}
+
 export async function listAdminDistrictFees(): Promise<DistrictFeeItem[]> {
   return adminProxyRequest<DistrictFeeItem[]>({
     url: "/admin/finance/district-fees",

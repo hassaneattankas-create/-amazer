@@ -89,6 +89,11 @@ export async function startAmanaPayment(orderId: string): Promise<PaymentConfirm
   return response.data;
 }
 
+export async function cancelOrder(orderId: string): Promise<Order> {
+  const response = await api.post<Order>(`/api/v1/orders/${orderId}/cancel`);
+  return response.data;
+}
+
 export async function confirmOrderReception(orderId: string): Promise<Order> {
   const response = await api.post<Order>(`/api/v1/orders/${orderId}/confirm-reception`);
   return response.data;
