@@ -6,7 +6,7 @@ import { Suspense, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 
-import { ProductCard } from "@/components/ProductCard";
+import { PRODUCT_GRID_CLASS, ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { resolveCategoryQuery } from "@/lib/categories";
@@ -54,13 +54,13 @@ function CategoryPageContent() {
       </header>
 
       {isPending ? (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className={PRODUCT_GRID_CLASS}>
           {Array.from({ length: 6 }).map((_, index) => (
             <ProductCardSkeleton key={`category-skeleton-${index}`} />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className={PRODUCT_GRID_CLASS}>
           {items.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

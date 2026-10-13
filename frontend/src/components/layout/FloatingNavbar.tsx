@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Bell, ChevronDown, ShoppingCart, User } from "lucide-react";
+import { Bell, ChevronDown, Menu, ShoppingCart, User } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
@@ -349,189 +349,151 @@ export function FloatingNavbar() {
     }
   }
 
+  const menuLinkClass =
+    "flex min-h-11 items-center rounded-field px-3 text-sm font-medium text-ink-800 hover:bg-surface-1 hover:text-brand-700";
+
   return (
     <header
       ref={menuRef}
-      className="pointer-events-auto fixed left-1/2 top-3 z-50 w-[min(1160px,calc(100%-1rem))] -translate-x-1/2 rounded-3xl border border-white/20 bg-white/70 shadow-[0_20px_50px_rgba(255,77,0,0.15)] backdrop-blur-xl"
+      className="sticky top-0 z-sticky w-full border-b border-border bg-background/95 backdrop-blur"
     >
-      <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
-        <Link href="/" className="inline-flex shrink-0 items-center gap-2">
-          <span className="luxury-title text-lg font-semibold tracking-tight">AMAZER</span>
+      <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-gutter sm:h-16 sm:gap-3">
+        <Link href="/" className="mr-auto inline-flex shrink-0 items-center md:mr-2" aria-label="AMAZER, accueil">
+          <span className="text-xl font-extrabold tracking-display text-brand-600">AMAZER</span>
         </Link>
 
-        <div className="relative hidden md:block">
+        <div className="relative">
           <button
             type="button"
             onClick={() => setIsMenuOpen((open) => !open)}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
+            aria-expanded={isMenuOpen}
+            aria-controls="main-menu"
+            aria-label="Menu"
+            className="inline-flex min-h-11 items-center gap-1 rounded-field px-3 text-sm font-medium text-ink-800 hover:bg-surface-1"
           >
-            Rubriques
+            <Menu className="h-5 w-5 md:hidden" aria-hidden="true" />
+            <span className="hidden md:inline">Rubriques</span>
             <ChevronDown
-              className={`h-4 w-4 transition ${isMenuOpen ? "rotate-180 text-[#FF4D00]" : ""}`}
+              className={`hidden h-4 w-4 transition-transform duration-fast md:block ${isMenuOpen ? "rotate-180" : ""}`}
+              aria-hidden="true"
             />
           </button>
 
           {isMenuOpen ? (
-            <div className="absolute left-0 top-[calc(100%+0.75rem)] z-50 w-64 overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.18)] backdrop-blur-xl">
-              <div className="max-h-80 overflow-y-auto p-3">
+            <div
+              id="main-menu"
+              className="absolute right-0 top-full z-dropdown mt-2 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-card border border-border bg-card shadow-floating md:left-0 md:right-auto"
+            >
+              <nav aria-label="Menu principal" className="max-h-96 overflow-y-auto p-2">
                 {groupedNavItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setIsMenuOpen(false)}
-                    className="mb-2 flex items-center rounded-2xl border border-transparent bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-[#FF4D00]/20 hover:bg-orange-50 hover:text-[#FF4D00]"
-                  >
+                  <Link key={item.href} href={item.href} onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>
                     {item.label}
                   </Link>
                 ))}
-              </div>
+                <div className="md:hidden">
+                  <div className="my-2 border-t border-border" />
+                  {!isAuthenticated ? (
+                    <>
+                      <Link href="/login" onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>
+                        Se connecter
+                      </Link>
+                      <Link href="/register" onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>
+                        Créer un compte
+                      </Link>
+                    </>
+                  ) : null}
+                  {showSellerLink ? null : (
+                    <Link href="/vendre" onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>
+                      Devenir vendeur
+                    </Link>
+                  )}
+                  {showAdminLink ? (
+                    <Link href="/admin" onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>
+                      Espace Admin
+                    </Link>
+                  ) : null}
+                  {isAuthenticated ? (
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      className={`${menuLinkClass} w-full text-left disabled:opacity-60`}
+                    >
+                      {isLoggingOut ? "Déconnexion…" : "Se déconnecter"}
+                    </button>
+                  ) : null}
+                </div>
+              </nav>
             </div>
           ) : null}
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative md:hidden">
-            <button
-              type="button"
-              onClick={() => setIsMenuOpen((open) => !open)}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/70 px-3 py-2 text-xs font-medium text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
-            >
-              Rubriques
-              <ChevronDown
-                className={`h-3.5 w-3.5 transition ${isMenuOpen ? "rotate-180 text-[#FF4D00]" : ""}`}
-              />
-            </button>
-
-            {isMenuOpen ? (
-              <div className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(18rem,calc(100vw-1.5rem))] overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.18)] backdrop-blur-xl">
-                <div className="max-h-72 overflow-y-auto p-3">
-                  {groupedNavItems.map((item) => (
-                    <Link
-                      key={`mobile-header-${item.href}`}
-                      href={item.href}
-                      onClick={() => setIsMenuOpen(false)}
-                      className="mb-2 flex rounded-2xl border border-transparent bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-[#FF4D00]/20 hover:bg-orange-50 hover:text-[#FF4D00]"
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
+        <div className="ml-auto hidden items-center gap-1 md:flex">
           {showSellerLink ? null : (
-            <Link
-              href="/vendre"
-              className="hidden items-center gap-2 rounded-md border border-white/20 bg-white/70 px-3 py-2 text-sm text-slate-700 backdrop-blur-xl hover:bg-white sm:inline-flex"
-            >
+            <Link href="/vendre" className="inline-flex min-h-11 items-center rounded-field px-3 text-sm text-ink-700 hover:bg-surface-1">
               Devenir vendeur
             </Link>
           )}
           {showAdminLink ? (
-            <Link
-              href="/admin"
-              className="hidden items-center gap-2 rounded-md border border-[#FF4D00]/35 bg-[#FF4D00]/10 px-3 py-2 text-sm text-[#FF4D00] hover:bg-[#FF4D00]/15 sm:inline-flex"
-            >
+            <Link href="/admin" className="inline-flex min-h-11 items-center rounded-field px-3 text-sm font-medium text-brand-700 hover:bg-surface-1">
               Espace Admin
             </Link>
           ) : null}
           {!isAuthenticated ? (
-            <>
-              <Link
-                href="/register"
-                className="hidden items-center gap-2 rounded-md border border-white/20 bg-white/70 px-3 py-2 text-sm text-slate-700 backdrop-blur-xl hover:bg-white sm:inline-flex"
-              >
-                Inscription client
-              </Link>
-              <Link
-                href="/login"
-                className="hidden items-center gap-2 rounded-md border border-[#FF4D00]/35 bg-[#FF4D00]/10 px-4 py-2.5 text-sm font-medium text-[#FF4D00] shadow-sm hover:bg-[#FF4D00]/15 sm:inline-flex"
-              >
-                <User className="h-4 w-4" />
-                Connexion
-              </Link>
-            </>
+            <Link
+              href="/login"
+              className="inline-flex min-h-11 items-center gap-2 rounded-field px-3 text-sm font-medium text-ink-800 hover:bg-surface-1"
+            >
+              <User className="h-5 w-5" aria-hidden="true" />
+              Se connecter
+            </Link>
           ) : (
             <button
               type="button"
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="hidden items-center gap-2 rounded-md border border-white/20 bg-white/70 px-3 py-2 text-sm text-slate-700 backdrop-blur-xl hover:bg-white disabled:cursor-not-allowed disabled:opacity-70 sm:inline-flex"
+              className="inline-flex min-h-11 items-center rounded-field px-3 text-sm text-ink-700 hover:bg-surface-1 disabled:opacity-60"
             >
-              {isLoggingOut ? "Déconnexion..." : "Déconnexion"}
+              {isLoggingOut ? "Déconnexion…" : "Se déconnecter"}
             </button>
           )}
-          <Link
-            href="/notifications"
-            className="relative inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/70 px-3 py-2 text-sm text-slate-700 backdrop-blur-xl hover:bg-white"
-          >
-            <Bell className="h-4 w-4" />
-            <span className="hidden sm:inline">Notifications</span>
-            {unreadNotifications > 0 ? (
-              <Badge className="absolute -right-2 -top-2 bg-[#FF4D00] text-white hover:bg-[#FF4D00]">
-                {unreadNotifications}
-              </Badge>
-            ) : null}
-          </Link>
-          <Link
-            href="/cart"
-            className="primary-glow-btn shine-btn relative inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-white"
-          >
-            <ShoppingCart className="h-4 w-4" />
-            <span className="hidden sm:inline">Panier</span>
-            {cartCount > 0 ? (
-              <Badge className="absolute -right-2 -top-2 bg-white text-[#FF4D00] hover:bg-white">
-                {cartCount}
-              </Badge>
-            ) : null}
-          </Link>
         </div>
-      </div>
 
-      <nav className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-3 py-2 md:hidden">
         {!isAuthenticated ? (
-          <>
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-1 whitespace-nowrap rounded-xl border border-[#FF4D00]/35 bg-[#FF4D00]/10 px-3 py-1.5 text-xs font-medium text-[#FF4D00] hover:bg-[#FF4D00]/15"
-            >
-              <User className="h-3.5 w-3.5" />
-              Connexion
-            </Link>
-            <Link
-              href="/register"
-              className="whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
-            >
-              Inscription client
-            </Link>
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00] disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {isLoggingOut ? "Déconnexion..." : "Déconnexion"}
-          </button>
-        )}
-        {showSellerLink ? null : (
           <Link
-            href="/vendre"
-            className="whitespace-nowrap rounded-xl border border-white/20 bg-white/70 px-3 py-1.5 text-xs text-slate-700 backdrop-blur-xl hover:border-[#FF4D00]/40 hover:text-[#FF4D00]"
+            href="/login"
+            aria-label="Se connecter"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-field text-ink-800 hover:bg-surface-1 md:hidden"
           >
-            Devenir vendeur
-          </Link>
-        )}
-        {showAdminLink ? (
-          <Link
-            href="/admin"
-            className="whitespace-nowrap rounded-xl border border-[#FF4D00]/35 bg-[#FF4D00]/10 px-3 py-1.5 text-xs text-[#FF4D00] hover:bg-[#FF4D00]/15"
-          >
-            Espace Admin
+            <User className="h-5 w-5" aria-hidden="true" />
           </Link>
         ) : null}
-      </nav>
+        <Link
+          href="/notifications"
+          aria-label={unreadNotifications > 0 ? `Notifications, ${unreadNotifications} non lues` : "Notifications"}
+          className="relative inline-flex h-11 w-11 items-center justify-center rounded-field text-ink-800 hover:bg-surface-1"
+        >
+          <Bell className="h-5 w-5" aria-hidden="true" />
+          {unreadNotifications > 0 ? (
+            <Badge className="absolute right-1 top-1 h-5 min-w-5 justify-center rounded-pill bg-brand-600 px-1 text-2xs text-white hover:bg-brand-600">
+              {unreadNotifications}
+            </Badge>
+          ) : null}
+        </Link>
+        <Link
+          href="/cart"
+          aria-label={cartCount > 0 ? `Panier, ${cartCount} article(s)` : "Panier"}
+          className="relative inline-flex h-11 items-center justify-center gap-2 rounded-field bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+        >
+          <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+          <span className="hidden sm:inline">Panier</span>
+          {cartCount > 0 ? (
+            <Badge className="absolute -right-1.5 -top-1.5 h-5 min-w-5 justify-center rounded-pill bg-ink-900 px-1 text-2xs text-white hover:bg-ink-900">
+              {cartCount}
+            </Badge>
+          ) : null}
+        </Link>
+      </div>
     </header>
   );
 }

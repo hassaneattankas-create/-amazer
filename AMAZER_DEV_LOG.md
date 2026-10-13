@@ -293,6 +293,21 @@ Recommandé, non fait : **déplacer la base Neon en Europe (Francfort)**, à cô
 - **Mesure du cache en production** : la requête « boutiques » prend environ 1,9 s de traitement serveur hors cache, contre environ 0,4 s quand elle est en cache.
 - **Études** (`docs/ETUDES_STRATEGIQUES.md`) : livraison et partenaires (aucune API de suivi identifiée), fournisseurs internationaux (scénarios A à D, évolution minimale « sur commande » proposée), WhatsApp (procédure d'activation Meta, tarif à vérifier), paiements futurs (pistes non vérifiées, Nita conservé), coûts et dépendances (**Vercel Hobby non commercial** : décision à prendre avant le lancement ; base à déplacer en Europe).
 
+## 4 unvicies. Refonte de l'interface aux standards des grandes places de marché — 2026-10-13
+
+Références : bonnes pratiques Baymard (étude de plus de 150 grands sites d'e-commerce) et organisation d'Amazon, eBay, Shopify, Jumia et Etsy, sans reprendre leur identité visuelle.
+Constats de départ (captures du site réel) : recherche enfouie sous un grand bandeau (aucun produit visible sans défiler sur mobile), cartes géantes (1 par ligne sur mobile, 3 sur ordinateur), une seule longue liste, en-tête fixe sur deux lignes qui recouvrait le contenu sur mobile, emojis en guise d'icônes, fiche produit avec une miniature de 112 px.
+
+| Étape | Changement |
+|---|---|
+| 1. Accueil et cartes | Recherche en premier ; catégories en pastilles avec icônes ; bande de confiance (boutiques vérifiées, paiement contrôlé, livraison à Niamey : seulement des promesses tenues) ; « Nouveautés » avec nombre d'articles ; **grille 2 / 3 / 4 / 5 colonnes** ; bouton « Voir plus » (24 articles par page) ; encart « Devenir vendeur ». Carte produit compacte et entièrement cliquable : image carrée, **prix en premier**, nom, marque, boutique avec badge vérifié, pastille de promotion, mention « Rupture ». |
+| 2. En-tête | **Collant** (`sticky`) au lieu de fixe : il ne recouvre plus rien. Une seule ligne : logo, menu, compte, notifications et panier avec compteur. Sur mobile, les liens de compte passent dans le menu. Zones tactiles de 44 px minimum. |
+| 3. Page boutique | Catalogue sur la grille dense, bouton principal distinct, squelette de chargement adapté, icône neutre quand il n'y a pas de photo. |
+| 4. Fiche produit | Vue commune `ProductDetailView`, utilisée par `/product/[id]` et `/product?id=` (application mobile). Fil d'Ariane, **grande photo avec miniatures**, prix et stock (« Plus que N en stock »), bloc vendeur (voir la boutique, écrire à la boutique), boutons « Ajouter au panier » et « Acheter maintenant », points de confiance, sections repliables (description, offres, évolution du prix), produits similaires. |
+| 5. Pied de page | Quatre colonnes : marque et support, Acheter, Vendre, Aide et légal. |
+
+Toutes les couleurs, rayons et espacements viennent des tokens du design system (aucune valeur arbitraire ajoutée).
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).

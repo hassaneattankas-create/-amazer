@@ -87,7 +87,7 @@ export default function RootLayout({
           <AndroidBackButtonHandler />
           <AuthPreferenceBootstrap />
           <FloatingNavbar />
-          <main className="min-h-screen pt-24">{children}</main>
+          <main className="min-h-screen">{children}</main>
           <AppFooter />
           <ChatWidget />
         </QueryProvider>

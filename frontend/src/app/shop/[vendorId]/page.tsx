@@ -5,14 +5,16 @@ import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BedDouble, Flame, Hotel, Images, Search, ShieldCheck, Store, UtensilsCrossed } from "lucide-react";
+import { BedDouble, Flame, Hotel, Images, Package, Search, ShieldCheck, Store, UtensilsCrossed } from "lucide-react";
 
+import { PRODUCT_GRID_CLASS } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
+import { getProductRoute } from "@/lib/mobile-routes";
 import { resolveImageUrl } from "@/lib/image";
 import { computeRestaurantOrderSummary } from "@/lib/restaurant-order-pricing";
 import { getRestaurantOrderPayRoute, getRestaurantOrderReceiptRoute } from "@/lib/mobile-routes";
@@ -423,8 +425,12 @@ export default function VendorShopPage() {
   if (isPending) {
     return (
       <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
-        <ProductCardSkeleton />
-        <ProductCardSkeleton />
+        <div className="h-48 animate-pulse rounded-card bg-surface-2 sm:h-64" aria-hidden="true" />
+        <div className={PRODUCT_GRID_CLASS} aria-busy="true" aria-label="Chargement de la boutique">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <ProductCardSkeleton key={`shop-skeleton-${index}`} variant="tile" />
+          ))}
+        </div>
       </section>
     );
   }
@@ -987,61 +993,59 @@ function RetailShopContent({
 
   return (
     <article className="space-y-4">
-      <header className="flex items-center justify-between gap-2">
-        <h2 className="luxury-title text-xl font-semibold">Catalogue de la boutique</h2>
-        <p className="text-xs text-slate-500">{products.length} article(s)</p>
+      <header className="flex items-baseline justify-between gap-2">
+        <h2 className="text-lg font-semibold text-ink-900">Catalogue de la boutique</h2>
+        <p className="text-sm text-ink-600">
+          {products.length} article{products.length > 1 ? "s" : ""}
+        </p>
       </header>
-      {cartMessage ? <p className="text-xs text-emerald-600">{cartMessage}</p> : null}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+      {cartMessage ? (
+        <p className="text-sm text-success" role="status">
+          {cartMessage}
+        </p>
+      ) : null}
+      <div className={PRODUCT_GRID_CLASS}>
         {products.map((item) => (
-          <div
-            key={item.price_id}
-            className="premium-card hover-lift-glow overflow-hidden border border-white/20 bg-white/80 p-0"
-          >
-            <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100">
-              {item.main_image_url ? (
-                <Image
-                  src={resolveImageUrl(item.main_image_url) ?? "/images/placeholders/default.svg"}
-                  alt={item.name}
-                  width={560}
-                  height={420}
-                  loading="lazy"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 384px"
-                  quality={82}
-                  unoptimized
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-slate-400">
-                  <Flame className="h-8 w-8" />
-                </div>
-              )}
-            </div>
-            <div className="space-y-2 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">{item.brand}</p>
-              <h3 className="line-clamp-2 text-sm font-semibold text-slate-900">{item.name}</h3>
-              {item.description ? (
-                <p className="line-clamp-2 text-xs text-slate-600">{item.description}</p>
-              ) : null}
-              <p className="text-base font-semibold text-[#FF4D00]">{formatXOF(item.amount)}</p>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  onClick={() => onAddToCart(item.product_id)}
-                  disabled={isAdding || !item.product_id}
-                  className="border border-[#FF4D00]/30 bg-[#FF4D00]/10 text-[#FF4D00] hover:bg-[#FF4D00]/15"
-                >
-                  Ajouter au panier
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => onBuyNow(item.product_id)}
-                  disabled={isAdding || !item.product_id}
-                  className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
-                >
-                  Acheter
-                </Button>
+          <div key={item.price_id} className="flex flex-col overflow-hidden rounded-card border border-border bg-card">
+            <Link href={item.product_id ? getProductRoute(item.product_id) : "#"} className="group block">
+              <div className="aspect-square w-full overflow-hidden bg-surface-1">
+                {item.main_image_url ? (
+                  <Image
+                    src={resolveImageUrl(item.main_image_url) ?? "/images/placeholders/default.svg"}
+                    alt={item.name}
+                    width={400}
+                    height={400}
+                    loading="lazy"
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
+                    quality={75}
+                    unoptimized
+                    className="h-full w-full object-cover transition-transform duration-slow ease-out-quint group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-ink-400" aria-hidden="true">
+                    <Package className="h-8 w-8" />
+                  </div>
+                )}
               </div>
+              <div className="space-y-1 p-3 pb-2">
+                <p className="text-base font-bold text-ink-900">{formatXOF(item.amount)}</p>
+                <h3 className="line-clamp-2 text-sm text-ink-800 group-hover:text-brand-700">{item.name}</h3>
+                {item.brand ? <p className="truncate text-xs uppercase tracking-label text-ink-500">{item.brand}</p> : null}
+              </div>
+            </Link>
+            <div className="mt-auto grid gap-2 p-3 pt-0">
+              <Button type="button" size="sm" onClick={() => onAddToCart(item.product_id)} disabled={isAdding || !item.product_id}>
+                Ajouter au panier
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => onBuyNow(item.product_id)}
+                disabled={isAdding || !item.product_id}
+              >
+                Acheter
+              </Button>
             </div>
           </div>
         ))}
