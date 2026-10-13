@@ -131,6 +131,7 @@ const nextConfig = {
           { protocol: "https", hostname: "placehold.co", pathname: "/**" },
           { protocol: "https", hostname: "images.pexels.com", pathname: "/**" },
           { protocol: "https", hostname: "cdn.pixabay.com", pathname: "/**" },
+          { protocol: "https", hostname: "f003.backblazeb2.com", pathname: "/file/amazer-media/**" },
         ],
   },
   async rewrites() {

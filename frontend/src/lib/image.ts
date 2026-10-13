@@ -16,6 +16,8 @@ const NO_PROXY_HOSTS = new Set([
   "placehold.co",
   "images.pexels.com",
   "cdn.pixabay.com",
+  // Stockage des images AMAZER (Backblaze B2, region eu-central-003).
+  "f003.backblazeb2.com",
 ]);
 
 function toHttpsIfPossible(url: URL): string {

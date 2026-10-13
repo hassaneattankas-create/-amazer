@@ -213,7 +213,15 @@ support reste le recours.
 - Procédure de restauration : `docs/RESTAURATION_BASE.md` (toujours sur une nouvelle branche Neon, jamais directement sur la production).
 - **Activation : il faut ajouter le secret GitHub `NEON_DATABASE_URL`.** Le jeton GitHub disponible est révoqué (401), je ne peux pas le faire moi-même. Tant que le secret manque, le workflow échoue avec un message explicite.
 
-⚠️ **Quota GitHub Actions** : le ping Render toutes les 14 minutes représente environ 3 100 exécutions par mois. Sur un dépôt privé, chacune compte au minimum 1 minute, ce qui dépasse les 2 000 minutes gratuites par mois. Si le quota est épuisé, les déploiements Vercel par GitHub Actions s'arrêtent aussi. Solution envisagée : déplacer ce ping vers un service externe gratuit (cron-job.org ou UptimeRobot).
+**GitHub Actions** (vérifié avec le jeton le 2026-10-13) : le dépôt est **public**, donc les minutes sont illimitées et il n'y a aucun problème de quota. En revanche, GitHub avait **désactivé automatiquement** les tâches planifiées après 60 jours sans activité (`disabled_inactivity` depuis le 16/08). Le ping Render ne tournait plus, d'où les démarrages à froid de 60 s. **« Keep Backend Alive » a été réactivé.** « Maintenance quotidienne » reste désactivée : elle dépend d'un secret `CRON_SECRET` qui n'est configuré nulle part et elle échouait déjà en août. « Auto-commit » reste désactivé : il était inutile.
+⚠️ GitHub coupera de nouveau ces tâches après 60 jours sans commit. Il faudra les réactiver (Actions → workflow → « Enable workflow »).
+
+## 4 duodecies. Images sur Backblaze B2 — en cours (2026-10-13)
+
+- Bucket `amazer-media` (région `eu-central-003`) et clé applicative limitée à ce bucket. Le test d'envoi depuis le module `S3MediaStorage` d'AMAZER fonctionne.
+- Frontend : l'hôte `f003.backblazeb2.com/file/amazer-media` est ajouté aux images optimisées directement par Next.js.
+- **Bloquant** : le bucket est privé (`allPrivate`). Le propriétaire doit le passer en **Public**, sinon les images ne s'affichent pas. Ensuite : variables Render `MEDIA_STORAGE_PROVIDER=s3` et `S3_*`, redéploiement.
+- Les images déjà stockées dans la base restent servies depuis la base. Seuls les nouveaux envois iront sur B2, ce qui arrête la croissance de la base. Leur migration se fera plus tard.
 
 ## 5. Décisions et vérifications en attente
 
