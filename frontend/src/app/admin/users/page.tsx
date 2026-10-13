@@ -18,7 +18,9 @@ import {
   listAdminUsers,
   removeAdminUser,
   restoreAdminUser,
+  updateAdminUserRole,
   verifyAdminFinancePin,
+  type AdminUserRole,
 } from "@/services/finance-service";
 
 export default function AdminUsersPage() {
@@ -115,7 +117,18 @@ export default function AdminUsersPage() {
     },
   });
 
-  const isBusy = removeMutation.isPending || restoreMutation.isPending;
+  const roleMutation = useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: AdminUserRole }) => updateAdminUserRole(userId, role),
+    onSuccess: (updated) => {
+      setActionStatus(updated.is_admin ? "Droits administrateur accordes." : "Droits administrateur retires.");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (error) => {
+      setActionStatus(buildAdminActionMessage(error, "Impossible de modifier le role de cet utilisateur."));
+    },
+  });
+
+  const isBusy = removeMutation.isPending || restoreMutation.isPending || roleMutation.isPending;
   const rows = useMemo(() => {
     const list = users ?? [];
     if (showInactive) {
@@ -334,17 +347,39 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="px-3 py-2">
                     {user.is_admin ? (
-                      <span className="text-xs text-slate-500">Compte protege</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-slate-500">Compte protege</span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={isBusy}
+                          onClick={() => roleMutation.mutate({ userId: user.id, role: "user" })}
+                        >
+                          Retirer admin
+                        </Button>
+                      </div>
                     ) : user.is_active ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="bg-rose-600 text-white hover:bg-rose-500"
-                        disabled={isBusy}
-                        onClick={() => removeMutation.mutate(user.id)}
-                      >
-                        Retirer
-                      </Button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="bg-rose-600 text-white hover:bg-rose-500"
+                          disabled={isBusy}
+                          onClick={() => removeMutation.mutate(user.id)}
+                        >
+                          Retirer
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={isBusy}
+                          onClick={() => roleMutation.mutate({ userId: user.id, role: "admin" })}
+                        >
+                          Nommer admin
+                        </Button>
+                      </div>
                     ) : (
                       <Button
                         type="button"

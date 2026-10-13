@@ -14,6 +14,7 @@ from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.config import get_settings
+from app.core.permissions import is_admin, is_principal_admin
 from app.core.cache import cache_delete_prefixes
 from app.core.crypto import decrypt_payment_code, decrypt_phone_value, encrypt_payment_code
 from app.core.csrf import enforce_csrf
@@ -45,6 +46,7 @@ from app.schemas.finance import (
     AdminSellerPricingUpdateRequest,
     AdminSellerTypeUpdateRequest,
     AdminUserResponse,
+    AdminUserRoleUpdateRequest,
     AdminUserStatsResponse,
     AdminOrderStatusUpdateRequest,
     AdminOrderTrackingResponse,
@@ -286,12 +288,6 @@ def _normalize_day(value: object) -> date | None:
     return None
 
 
-def _is_admin_email(email: str | None) -> bool:
-    if not email:
-        return False
-    return email.lower() == settings.admin_email.lower()
-
-
 def _build_admin_user_response(user: User, seller_user_ids: set[str]) -> AdminUserResponse:
     return AdminUserResponse(
         id=user.id,
@@ -299,7 +295,7 @@ def _build_admin_user_response(user: User, seller_user_ids: set[str]) -> AdminUs
         full_name=user.full_name,
         whatsapp_phone=user.whatsapp_phone,
         is_active=bool(user.is_active),
-        is_admin=_is_admin_email(user.email),
+        is_admin=is_admin(user),
         is_seller=user.id in seller_user_ids,
         created_at=user.created_at.isoformat(),
     )
@@ -1036,7 +1032,7 @@ def deactivate_user_admin(
     target = db.get(User, user_id)
     if target is None:
         return
-    if _is_admin_email(target.email):
+    if is_admin(target):
         raise ValidationDomainError("Admin account cannot be removed")
     target.is_active = False
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == target.id))
@@ -1093,6 +1089,44 @@ def restore_user_admin(
     _invalidate_public_marketplace_cache()
     seller_user_ids = {profile.user_id} if profile is not None else set()
     return _build_admin_user_response(target, seller_user_ids)
+
+
+@router.patch("/users/{user_id}/role", response_model=AdminUserResponse)
+def update_user_role_admin(
+    user_id: str,
+    payload: AdminUserRoleUpdateRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminUserResponse:
+    """Nomme ou retire un administrateur. Le compte principal (ADMIN_EMAIL) est intouchable."""
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    target = db.get(User, user_id)
+    if target is None:
+        raise ValidationDomainError("User not found")
+    if is_principal_admin(target):
+        raise ValidationDomainError("Le role du compte administrateur principal ne peut pas etre modifie.")
+    if target.id == admin_user.id:
+        raise ValidationDomainError("Vous ne pouvez pas modifier votre propre role.")
+    if not target.is_active:
+        raise ValidationDomainError("Reactivez le compte avant de modifier son role.")
+    previous_role = target.role
+    target.role = payload.role
+    append_audit_log(
+        db,
+        event_type="admin_user_role_changed",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="user",
+        entity_id=target.id,
+        details={"email": target.email, "from": previous_role, "to": payload.role},
+    )
+    db.commit()
+    db.refresh(target)
+    is_seller = db.scalar(select(SellerProfile.id).where(SellerProfile.user_id == target.id)) is not None
+    return _build_admin_user_response(target, {target.id} if is_seller else set())
 
 
 @router.get("/sellers", response_model=list[AdminSellerResponse])
@@ -1174,7 +1208,7 @@ def permanently_delete_seller(
     if profile is None:
         raise ValidationDomainError("Profil vendeur introuvable")
     user = db.get(User, profile.user_id)
-    if user is not None and user.email and user.email.lower() == settings.admin_email.lower():
+    if user is not None and is_admin(user):
         raise ValidationDomainError("Le compte administrateur ne peut pas etre supprime.")
 
     vendor = db.get(Vendor, profile.vendor_id)

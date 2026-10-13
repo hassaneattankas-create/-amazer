@@ -22,6 +22,7 @@ class User(Base):
     whatsapp_phone: Mapped[str | None] = mapped_column(String(24), unique=True, index=True, nullable=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    role: Mapped[str] = mapped_column(String(20), nullable=False, default="user", server_default="user")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

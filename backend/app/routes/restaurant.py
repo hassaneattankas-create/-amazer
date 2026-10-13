@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.config import get_settings
+from app.core.permissions import is_admin
 from app.core.cache import cache_delete_prefixes
 from app.core.checkout_fees import platform_commission_and_service_fee
 from app.core.crypto import decrypt_payment_code, decrypt_phone_value, encrypt_payment_code, payment_code_hash
@@ -65,9 +66,7 @@ _INTERNAL_DELIVERY_DISTANCE_KM = 3.0
 
 
 def _is_admin(user: User | None) -> bool:
-    if user is None:
-        return False
-    return user.email.lower() == _settings.admin_email.lower()
+    return is_admin(user)
 
 
 def _mask_transaction_code(raw_code: str | None) -> str | None:

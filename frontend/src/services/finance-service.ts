@@ -290,6 +290,16 @@ export async function removeAdminUser(userId: string): Promise<void> {
   });
 }
 
+export type AdminUserRole = "user" | "admin";
+
+export async function updateAdminUserRole(userId: string, role: AdminUserRole): Promise<AdminUser> {
+  return adminProxyRequest<AdminUser>({
+    url: `/admin/finance/users/${userId}/role`,
+    method: "PATCH",
+    data: { role },
+  });
+}
+
 export async function restoreAdminUser(userId: string): Promise<AdminUser> {
   return adminProxyRequest<AdminUser>({
     url: `/admin/finance/users/${userId}/restore`,

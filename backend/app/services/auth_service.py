@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
+from app.core.permissions import is_admin
 from app.core.exceptions import (
     ConflictError,
     ForbiddenError,
@@ -189,7 +190,7 @@ class AuthService:
 
     def close_account(self, user: User, password: str) -> None:
         settings = get_settings()
-        if user.email.lower() == settings.admin_email.lower():
+        if is_admin(user):
             raise ForbiddenError(
                 "Le compte administrateur ne peut pas etre supprime depuis l'application."
             )

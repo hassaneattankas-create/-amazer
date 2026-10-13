@@ -100,6 +100,7 @@ def _bootstrap_database_if_needed() -> None:
     # Keep auth schema compatible on existing databases.
     for statement in (
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_phone VARCHAR(24)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user'",
         (
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_whatsapp_phone "
             "ON users (whatsapp_phone) WHERE whatsapp_phone IS NOT NULL"
@@ -258,12 +259,14 @@ def _ensure_admin_account() -> None:
                 full_name="Admin Amazer",
                 hashed_password=hash_password(admin_password),
                 is_active=True,
+                role="admin",
             )
             db.add(admin_user)
             db.flush()
         else:
             admin_user.email = admin_email
             admin_user.is_active = True
+            admin_user.role = "admin"
             if settings.admin_sync_password_on_startup:
                 admin_user.hashed_password = hash_password(admin_password)
             if not admin_user.full_name.strip():

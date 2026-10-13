@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -216,6 +217,12 @@ class AdminUserStatsResponse(BaseModel):
     admin_accounts: int
     new_users_last_7_days: int
     new_users_last_30_days: int
+
+
+class AdminUserRoleUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["user", "admin"]
 
 
 class AdminUserResponse(BaseModel):

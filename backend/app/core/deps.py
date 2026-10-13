@@ -6,6 +6,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.permissions import is_admin
 from app.core.exceptions import DomainError, ForbiddenError, UnauthorizedError
 from app.config import get_settings
 from app.database import get_db
@@ -55,8 +56,7 @@ def get_current_user_optional(
 
 
 def _require_admin(current_user: User, db: Session) -> User:
-    settings = get_settings()
-    if current_user.email.lower() != settings.admin_email.lower():
+    if not is_admin(current_user):
         raise UnauthorizedError("Admin access required")
     return current_user
 
