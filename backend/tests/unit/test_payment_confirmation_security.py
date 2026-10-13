@@ -333,3 +333,16 @@ def test_already_paid_order_is_untouched(module, confirm) -> None:
     assert response.payment_status == "paid"
     assert order.status == "livraison"
     assert order.transaction_code_hash == original_hash
+
+
+# Le client sait a quel numero AMAZER envoyer un transfert Nita.
+def test_payment_intent_exposes_platform_wallet_and_real_payment_page(monkeypatch) -> None:
+    order = _order(payment_reference="PAY-ORDER1", currency="XOF")
+    monkeypatch.setattr(orders_route, "_resolve_order_for_receipt", lambda _db, _id: order)
+    monkeypatch.setattr(orders_route, "_resolve_platform_wallet_phone", lambda _db: "+22790000000")
+
+    intent = orders_route.get_payment_intent("order-1", Mock(), _user())
+
+    assert intent.platform_wallet_phone == "+22790000000"
+    assert intent.payment_url.endswith("/order/pay/order-1")
+    assert "pay.amazer.ne" not in intent.payment_url

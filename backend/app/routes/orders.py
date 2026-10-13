@@ -552,6 +552,7 @@ def get_payment_intent(
         payment_url=payment_url,
         qr_payload=payment_url,
         expires_in_seconds=15 * 60,
+        platform_wallet_phone=_resolve_platform_wallet_phone(db),
     )
 
 

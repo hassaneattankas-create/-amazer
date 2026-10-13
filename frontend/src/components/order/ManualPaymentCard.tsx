@@ -66,9 +66,24 @@ export function ManualPaymentCard({
               </>
             ) : (
               <>
+                <div className="rounded-field bg-surface-1 px-3 py-2 text-sm text-ink-700">
+                  {data.platform_wallet_phone ? (
+                    <p>
+                      Envoyez {formatXOF(data.amount)} par Nita au{" "}
+                      <span className="font-semibold text-ink-900">{data.platform_wallet_phone}</span>, en indiquant la
+                      reference {data.payment_reference}.
+                    </p>
+                  ) : (
+                    <p>Le numero de paiement Nita n&apos;est pas encore disponible : contactez le support avant de payer.</p>
+                  )}
+                  <p className="mt-1">
+                    Saisissez ensuite la reference de votre transaction. La commande sera confirmee apres verification
+                    par AMAZER.
+                  </p>
+                </div>
                 <Input value={providerReference} onChange={(event) => setProviderReference(event.target.value)} placeholder="Reference operateur ou numero de transaction (optionnel)" />
                 <Button onClick={() => onConfirm(providerReference)} className="w-full border border-slate-200 bg-white text-slate-800 hover:bg-slate-50" disabled={isConfirming}>
-                  J&apos;ai paye - confirmer
+                  J&apos;ai paye - envoyer la reference
                 </Button>
               </>
             )}

@@ -6,13 +6,16 @@ export function AppFooter() {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p>AMAZER - Support: amazer.niger2@gmail.com</p>
         <div className="flex flex-wrap items-center gap-4">
-          <Link href="/legal/privacy" className="hover:text-[#FF4D00] hover:underline">
+          <Link href="/comment-ca-marche" className="hover:text-brand-600 hover:underline">
+            Comment ça marche ?
+          </Link>
+          <Link href="/legal/privacy" className="hover:text-brand-600 hover:underline">
             Politique de confidentialite
           </Link>
-          <Link href="/legal/account-deletion" className="hover:text-[#FF4D00] hover:underline">
+          <Link href="/legal/account-deletion" className="hover:text-brand-600 hover:underline">
             Suppression de compte
           </Link>
-          <Link href="/legal/terms" className="hover:text-[#FF4D00] hover:underline">
+          <Link href="/legal/terms" className="hover:text-brand-600 hover:underline">
             Conditions d utilisation
           </Link>
         </div>

@@ -216,12 +216,21 @@ support reste le recours.
 **GitHub Actions** (vérifié avec le jeton le 2026-10-13) : le dépôt est **public**, donc les minutes sont illimitées et il n'y a aucun problème de quota. En revanche, GitHub avait **désactivé automatiquement** les tâches planifiées après 60 jours sans activité (`disabled_inactivity` depuis le 16/08). Le ping Render ne tournait plus, d'où les démarrages à froid de 60 s. **« Keep Backend Alive » a été réactivé.** « Maintenance quotidienne » reste désactivée : elle dépend d'un secret `CRON_SECRET` qui n'est configuré nulle part et elle échouait déjà en août. « Auto-commit » reste désactivé : il était inutile.
 ⚠️ GitHub coupera de nouveau ces tâches après 60 jours sans commit. Il faudra les réactiver (Actions → workflow → « Enable workflow »).
 
-## 4 duodecies. Images sur Backblaze B2 — en cours (2026-10-13)
+## 4 duodecies. Images sur Backblaze B2 — 2026-10-13
 
 - Bucket `amazer-media` (région `eu-central-003`) et clé applicative limitée à ce bucket. Le test d'envoi depuis le module `S3MediaStorage` d'AMAZER fonctionne.
 - Frontend : l'hôte `f003.backblazeb2.com/file/amazer-media` est ajouté aux images optimisées directement par Next.js.
-- **Bloquant** : le bucket est privé (`allPrivate`). Le propriétaire doit le passer en **Public**, sinon les images ne s'affichent pas. Ensuite : variables Render `MEDIA_STORAGE_PROVIDER=s3` et `S3_*`, redéploiement.
+- Bucket passé en **Public** par le propriétaire (Backblaze exige un paiement unique de 1 $, crédité sur le compte). Un fichier de test est accessible publiquement (200).
+- Variables Render configurées par l'API : `MEDIA_STORAGE_PROVIDER=s3`, `S3_BUCKET_NAME`, `S3_ENDPOINT_URL`, `S3_REGION=eu-central-003`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` et `MEDIA_PUBLIC_BASE_URL`.
+- Premier déploiement en échec : Render n'a pas détecté le port ouvert (« Port scan timeout »), alors que l'application avait démarré normalement. Les journaux montrent un incident côté Render. Le second déploiement est en ligne, et la version précédente était restée en service entre-temps.
+- Vérifié en production : les 6 images actuelles des boutiques sont toujours servies (200). Non vérifié en production : l'envoi d'une nouvelle image, qui nécessite un compte vendeur ou admin. Testé uniquement en local.
 - Les images déjà stockées dans la base restent servies depuis la base. Seuls les nouveaux envois iront sur B2, ce qui arrête la croissance de la base. Leur migration se fera plus tard.
+
+## 4 terdecies. Centre d'aide et paiement Nita — 2026-10-13
+
+- Nouvelle page **`/comment-ca-marche`** (Server Component, sans JavaScript ajouté, métadonnées SEO) : acheter, rechercher, commander, payer, suivre, réserver, ouvrir sa boutique, publier, gérer ses commandes, mot de passe oublié, signaler un problème. Chaque libellé cité a été vérifié dans l'interface réelle. La page indique que la messagerie n'existe pas encore. Lien ajouté dans le pied de page.
+- **Défaut corrigé** : la page de paiement Nita n'affichait **aucun numéro** de destination, le client ne savait pas où envoyer l'argent. La route `payment-intent` renvoie désormais `platform_wallet_phone` (paramètre admin « numéro du portefeuille plateforme »). La carte de paiement l'affiche avec la référence à indiquer, ou invite à contacter le support si le numéro n'est pas configuré. Le bouton devient « J'ai payé - envoyer la référence », puisqu'il ne confirme plus rien lui-même.
+- 1 test ajouté. Suite backend : 143/143.
 
 ## 5. Décisions et vérifications en attente
 

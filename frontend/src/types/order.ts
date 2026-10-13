@@ -104,6 +104,8 @@ export type PaymentIntent = {
   payment_url: string;
   qr_payload: string;
   expires_in_seconds: number;
+  /** Numero AMAZER qui recoit les transferts Nita, si configure par l'admin. */
+  platform_wallet_phone?: string | null;
 };
 
 export type PaymentConfirmPayload = {

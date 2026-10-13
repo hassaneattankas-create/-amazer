@@ -133,6 +133,8 @@ class PaymentIntentResponse(BaseModel):
     payment_url: str
     qr_payload: str
     expires_in_seconds: int
+    # Numero AMAZER qui recoit les transferts Nita (parametres admin).
+    platform_wallet_phone: str | None = None
 
 
 class PaymentConfirmRequest(BaseModel):
