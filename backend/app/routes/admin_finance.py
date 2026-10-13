@@ -65,6 +65,7 @@ from app.schemas.finance import (
     WalletSummaryResponse,
 )
 from app.services.audit_log_service import append_audit_log
+from app.services.order_fulfillment_service import sync_fulfillments
 from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.seller_finance_service import (
     build_effective_seller_finance_settings,
@@ -339,6 +340,7 @@ def _auto_finalize_order_without_qr(
         return False
 
     order.status = "recu"
+    sync_fulfillments(order)
     unique_vendor_ids = {item.vendor_id for item in order.items}
     vendor_id = next(iter(unique_vendor_ids)) if len(unique_vendor_ids) == 1 else None
     db.add(
@@ -842,6 +844,7 @@ def dispatch_order_to_delivery(
     if order is None:
         raise ValidationDomainError("Order not found")
     order.status = payload.status
+    sync_fulfillments(order)
     if payload.status == "livraison":
         db.add(
             ReceiptScan(

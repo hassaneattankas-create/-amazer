@@ -33,6 +33,14 @@ class OrderItemResponse(BaseModel):
     subtotal: float
 
 
+class OrderFulfillmentResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    vendor_id: str
+    vendor_name: str | None
+    status: str
+
+
 class OrderResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -50,6 +58,8 @@ class OrderResponse(BaseModel):
     currency: str
     created_at: datetime
     items: list[OrderItemResponse]
+    # Suivi par boutique, renseigne seulement pour une commande multi-vendeurs.
+    fulfillments: list[OrderFulfillmentResponse] = Field(default_factory=list)
 
 
 class ReceiptItemResponse(BaseModel):

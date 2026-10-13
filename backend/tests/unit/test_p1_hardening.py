@@ -138,6 +138,7 @@ def test_seller_cannot_advance_unpaid_order(monkeypatch, payment_status: str, al
         status="commande",
         payment_status=payment_status,
         items=[SimpleNamespace(vendor_id="vendor-1", product_id="p1")],
+        fulfillments=[],
     )
     db = Mock()
     db.scalar.side_effect = [SimpleNamespace(vendor_id="vendor-1"), order]

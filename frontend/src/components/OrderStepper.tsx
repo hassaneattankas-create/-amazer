@@ -73,6 +73,17 @@ export function OrderStepper({ order }: OrderStepperProps) {
         })}
       </div>
 
+      {order.fulfillments && order.fulfillments.length > 1 ? (
+        <ul className="mt-3 space-y-1 border-t border-border pt-3" aria-label="Suivi par boutique">
+          {order.fulfillments.map((part) => (
+            <li key={`${order.id}-${part.vendor_id}`} className="flex justify-between gap-2 text-xs text-ink-700">
+              <span className="truncate">{part.vendor_name ?? "Boutique"}</span>
+              <span className="shrink-0 font-medium">{STEP_LABELS[part.status] ?? part.status}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
       <p className="mt-3 inline-flex items-center gap-1 text-xs text-slate-500">
         <Truck className="h-3.5 w-3.5 text-[#FF4D00]" />
         Suivi: {order.tracking_code || "en cours"}

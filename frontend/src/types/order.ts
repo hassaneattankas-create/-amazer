@@ -7,6 +7,12 @@ export type OrderItem = {
   subtotal: number;
 };
 
+export type OrderFulfillment = {
+  vendor_id: string;
+  vendor_name: string | null;
+  status: "commande" | "preparation" | "livraison" | "recu";
+};
+
 export type Order = {
   id: string;
   status: "payment_pending" | "commande" | "preparation" | "livraison" | "recu" | "CLAIMED";
@@ -22,6 +28,8 @@ export type Order = {
   currency: string;
   created_at: string;
   items: OrderItem[];
+  /** Suivi par boutique, present seulement pour une commande multi-vendeurs. */
+  fulfillments?: OrderFulfillment[];
 };
 
 export type CheckoutPayload = {

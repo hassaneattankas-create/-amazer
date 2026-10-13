@@ -6,7 +6,7 @@ from app.models.price_history import PriceHistory
 from app.models.price_alert import PriceAlert
 from app.models.product import Price, Product, ProductImage
 from app.models.review import Review
-from app.models.order import Order, OrderItem
+from app.models.order import Order, OrderFulfillment, OrderItem
 from app.models.restaurant import RestaurantMenuItem, RestaurantOrder, RestaurantOrderItem
 from app.models.seller_profile import SellerProfile
 from app.models.seller_subscription_payment import SellerSubscriptionPayment
@@ -46,6 +46,7 @@ __all__ = [
     "Review",
     "Order",
     "OrderItem",
+    "OrderFulfillment",
     "RestaurantMenuItem",
     "RestaurantOrder",
     "RestaurantOrderItem",

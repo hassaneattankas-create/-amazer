@@ -55,6 +55,7 @@ from app.schemas.seller import (
 )
 from app.schemas.seller_lead import SellerLeadCreateRequest, SellerLeadResponse
 from app.services.audit_log_service import append_audit_log
+from app.services.order_fulfillment_service import set_vendor_status, vendor_status
 from app.services.listing_limit_service import (
     count_vendor_catalog_products,
     is_premium_profile,
@@ -358,7 +359,7 @@ def _seller_shop_order_response(
     return SellerShopOrderResponse(
         id=order.id,
         customer_name=order.user.full_name if order.user else "Client AMAZER",
-        status=order.status,
+        status=vendor_status(order, vendor_id),
         payment_mode=order.payment_mode,
         payment_status=order.payment_status,
         delivery_type=order.delivery_type,
@@ -1074,7 +1075,7 @@ def list_seller_orders(
         select(Order)
         .join(Order.items)
         .where(OrderItem.vendor_id == profile.vendor_id)
-        .options(selectinload(Order.user), selectinload(Order.items))
+        .options(selectinload(Order.user), selectinload(Order.items), selectinload(Order.fulfillments))
         .order_by(Order.created_at.desc())
         .limit(50)
     ).unique().all()
@@ -1105,7 +1106,7 @@ def export_seller_orders(
         select(Order)
         .join(Order.items)
         .where(OrderItem.vendor_id == profile.vendor_id)
-        .options(selectinload(Order.user), selectinload(Order.items))
+        .options(selectinload(Order.user), selectinload(Order.items), selectinload(Order.fulfillments))
         .order_by(Order.created_at.desc())
         .limit(5000)
     ).unique().all()
@@ -1164,7 +1165,7 @@ def update_seller_order_status(
     order = db.scalar(
         select(Order)
         .where(Order.id == order_id)
-        .options(selectinload(Order.user), selectinload(Order.items))
+        .options(selectinload(Order.user), selectinload(Order.items), selectinload(Order.fulfillments))
     )
     if order is None or not any(item.vendor_id == profile.vendor_id for item in order.items):
         raise NotFoundError("Order not found")
@@ -1173,7 +1174,7 @@ def update_seller_order_status(
             "Paiement non confirme : attendez la validation du paiement avant de traiter cette commande."
         )
 
-    order.status = payload.status
+    set_vendor_status(order, profile.vendor_id, payload.status)
     db.commit()
     db.refresh(order)
     product_ids = {item.product_id for item in order.items if item.vendor_id == profile.vendor_id}

@@ -167,12 +167,23 @@ et `SMTP_FROM` dans les variables Render. Tant que ce n'est pas fait, le code n'
 que par WhatsApp (si cette messagerie est configurée), sinon nulle part : le lien vers le
 support reste le recours.
 
+## 4 sexies. Sous-commandes par vendeur — 2026-10-13
+
+- Nouvelle table `order_fulfillments` (une ligne par commande et par vendeur), créée au démarrage par `create_all` : uniquement si elle n'existe pas, sans toucher aux tables existantes.
+- Chaque vendeur fait avancer sa propre préparation (`commande` → `preparation` → `livraison` → `recu`). Le statut global de la commande correspond au vendeur **le moins avancé**.
+- Les événements globaux (livraison lancée par l'admin, réception confirmée par le client, finalisation automatique, scan du reçu) s'appliquent à toutes les parts.
+- Une commande à un seul vendeur se comporte exactement comme avant. Pour les commandes antérieures, les parts sont créées au statut global lors de la première action d'un vendeur.
+- Le vendeur voit le statut de **sa** part. Le client voit le suivi boutique par boutique dans le suivi de commande (`OrderStepper`), uniquement pour une commande multi-vendeurs.
+- Les paiements et les frais ne changent pas : paiement unique par commande, frais de livraison par vendeur (comportement déjà existant). Une annulation partielle ou un remboursement par vendeur n'est pas géré (il n'existe pas d'annulation aujourd'hui).
+- 8 tests. Suite backend : 142/142.
+
 ## 5. Décisions et vérifications en attente
 
 - **Secrets exposés : non renouvelés, par décision du propriétaire (2026-10-12).** Ils restent utilisés. Ce risque est accepté et documenté.
 - Vérifier sur Render (Dashboard → base PostgreSQL) : le plan (une base gratuite expire), les sauvegardes et la restauration.
 - Vérifier sur Render que `ADMIN_PASSWORD` est défini (création du compte admin au démarrage).
-- Prochaines étapes de la feuille de route : rôle admin en base, e-mails, sous-commandes par vendeur, liens `pay.amazer.ne`.
+- Activer les e-mails : compte chez un fournisseur SMTP et variables Render (voir §4 quinquies).
+- Restant (P2) : liens `pay.amazer.ne` vers un domaine non vérifié ; montant Amana non recontrôlé à la confirmation ; annulation et remboursement par vendeur ; montants en `Float`.
 
 ## 6. Prochaine étape approuvée
 

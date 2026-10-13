@@ -21,13 +21,14 @@ from app.core.rate_limit import enforce_rate_limit
 from app.core.exceptions import UnauthorizedError, ValidationDomainError
 from app.database import get_db
 from app.models.global_settings import GlobalSettings
-from app.models.order import Order, OrderItem
+from app.models.order import Order, OrderFulfillment, OrderItem
 from app.models.product import Price, Product
 from app.models.receipt_scan import ReceiptScan
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.schemas.order import (
     CheckoutRequest,
+    OrderFulfillmentResponse,
     OrderItemResponse,
     OrderResponse,
     ReceiptItemResponse,
@@ -42,6 +43,7 @@ from app.schemas.order import (
 )
 from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.audit_log_service import append_audit_log
+from app.services.order_fulfillment_service import create_initial_fulfillments, sync_fulfillments
 from app.services.payment_security_service import (
     MANUAL_PAYMENT_PENDING_MESSAGE,
     resolve_manual_payment_code,
@@ -126,6 +128,16 @@ def _to_order_response(order: Order) -> OrderResponse:
             )
             for item in order.items
         ],
+        fulfillments=[
+            OrderFulfillmentResponse(
+                vendor_id=row.vendor_id,
+                vendor_name=row.vendor.name if row.vendor is not None else None,
+                status=row.status,
+            )
+            for row in order.fulfillments
+        ]
+        if len(order.fulfillments) > 1
+        else [],
     )
 
 
@@ -258,6 +270,7 @@ def _auto_finalize_order_without_qr(
     vendor_ids = {item.vendor_id for item in order.items}
     resolved_vendor_id = next(iter(vendor_ids)) if len(vendor_ids) == 1 else None
     order.status = "recu"
+    sync_fulfillments(order)
     db.add(
         ReceiptScan(
             order_id=order.id,
@@ -390,7 +403,10 @@ def list_my_orders(
     orders = db.scalars(
         select(Order)
         .where(Order.user_id == current_user.id)
-        .options(selectinload(Order.items))
+        .options(
+            selectinload(Order.items),
+            selectinload(Order.fulfillments).selectinload(OrderFulfillment.vendor),
+        )
         .order_by(Order.created_at.desc())
     ).all()
     has_auto_updates = False
@@ -498,6 +514,8 @@ def checkout(
                 unit_price=price.amount,
             )
         )
+
+    create_initial_fulfillments(order)
 
     db.add(order)
     db.flush()
@@ -716,6 +734,7 @@ def client_confirm_reception(
     if order.status not in {"livraison", "commande", "preparation"}:
         raise ValidationDomainError("Cette commande ne peut pas etre confirmee dans son etat actuel")
     order.status = "recu"
+    sync_fulfillments(order)
     db.commit()
     db.refresh(order)
     return _to_order_response(order)
@@ -848,6 +867,7 @@ def verify_receipt_scan(
         )
 
     order.status = "recu"
+    sync_fulfillments(order)
     scan.result = "accepted"
     db.add(scan)
     db.commit()

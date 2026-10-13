@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,6 +13,7 @@ from app.database import Base
 if TYPE_CHECKING:
     from app.models.receipt_scan import ReceiptScan
     from app.models.user import User
+    from app.models.vendor import Vendor
 
 
 class Order(Base):
@@ -59,6 +60,11 @@ class Order(Base):
         cascade="all, delete-orphan",
     )
     user: Mapped[User] = relationship("User")
+    fulfillments: Mapped[list["OrderFulfillment"]] = relationship(
+        "OrderFulfillment",
+        back_populates="order",
+        cascade="all, delete-orphan",
+    )
     receipt_scans: Mapped[list["ReceiptScan"]] = relationship(
         "ReceiptScan",
         back_populates="order",
@@ -90,3 +96,35 @@ class OrderItem(Base):
     unit_price: Mapped[float] = mapped_column(Float, nullable=False)
 
     order: Mapped[Order] = relationship("Order", back_populates="items")
+
+
+class OrderFulfillment(Base):
+    """Part d'une commande prise en charge par un vendeur (sous-commande).
+
+    Chaque vendeur fait avancer sa propre preparation ; le statut global de la
+    commande suit le vendeur le moins avance.
+    """
+
+    __tablename__ = "order_fulfillments"
+    __table_args__ = (UniqueConstraint("order_id", "vendor_id", name="uq_order_fulfillments_order_vendor"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    order_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("orders.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    vendor_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("vendors.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="commande")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    order: Mapped[Order] = relationship("Order", back_populates="fulfillments")
+    vendor: Mapped["Vendor"] = relationship("Vendor")
