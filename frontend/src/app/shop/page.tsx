@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
@@ -909,6 +910,12 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
         <div className="space-y-1 text-sm text-slate-600">
           {data.phone ? <p>Telephone: {data.phone}</p> : null}
           {data.whatsapp_contact ? <p>WhatsApp: {data.whatsapp_contact}</p> : null}
+          <Link
+            href={`/messages?vendor=${encodeURIComponent(data.vendor_id)}&name=${encodeURIComponent(data.business_name)}`}
+            className="mt-2 inline-flex min-h-11 items-center font-medium text-brand-600 hover:underline"
+          >
+            Écrire à la boutique
+          </Link>
           {data.contact_email ? <p>Email: {data.contact_email}</p> : null}
           {data.deposit_amount && data.activity_type === "restaurant" ? (
             <p>Frais de réservation de table : {formatXOF(data.deposit_amount)}</p>

@@ -232,6 +232,16 @@ support reste le recours.
 - **Défaut corrigé** : la page de paiement Nita n'affichait **aucun numéro** de destination, le client ne savait pas où envoyer l'argent. La route `payment-intent` renvoie désormais `platform_wallet_phone` (paramètre admin « numéro du portefeuille plateforme »). La carte de paiement l'affiche avec la référence à indiquer, ou invite à contacter le support si le numéro n'est pas configuré. Le bouton devient « J'ai payé - envoyer la référence », puisqu'il ne confirme plus rien lui-même.
 - 1 test ajouté. Suite backend : 143/143.
 
+## 4 quaterdecies. Messagerie client ↔ boutique — 2026-10-13
+
+- Tables `conversations` (une par paire client/boutique, avec un aperçu du dernier message) et `conversation_messages` (2 000 caractères maximum, date de lecture). Créées au démarrage par `create_all`, sans effet destructif.
+- API `/api/v1/conversations` : ouvrir une conversation, lister, lire (les messages de l'autre partie sont alors marqués comme lus), répondre, signaler.
+- **Contrôle d'accès côté serveur** : seuls le client et le vendeur de la boutique y ont accès. Tout autre utilisateur reçoit une 404, qui ne révèle pas l'existence de la conversation. Un vendeur ne peut pas écrire à sa propre boutique, et une boutique inactive ne peut pas être contactée.
+- Anti-abus : 10 nouvelles conversations par 10 min, 30 messages par 5 min, 5 signalements par heure. Un signalement est inscrit au journal d'audit et notifié aux administrateurs. L'admin **n'a pas accès** au contenu des conversations : c'est un choix de confidentialité, il dispose du motif et de l'identifiant de la conversation.
+- Notifications dans l'application à chaque message. Rafraîchissement automatique toutes les 15 s (conversation ouverte) et 30 s (liste) ; pas de temps réel (WebSocket), pour rester simple et gratuit.
+- Frontend : page `/messages` protégée (liste et fil, adaptée au mobile), bouton « Écrire à la boutique » sur les pages boutique, lien « Messages » dans la navigation, aide mise à jour.
+- 12 tests. Suite backend : 155/155.
+
 ## 5. Décisions et vérifications en attente
 
 - **Secrets exposés : non renouvelés, par décision du propriétaire (2026-10-12).** Ils restent utilisés. Ce risque est accepté et documenté.

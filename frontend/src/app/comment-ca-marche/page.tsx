@@ -114,8 +114,16 @@ const SECTIONS: Section[] = [
         id: "contacter",
         question: "Comment contacter un vendeur ?",
         steps: [
-          "Ouvrez la page de la boutique : son numéro WhatsApp et ses horaires y sont affichés lorsque le vendeur les a renseignés.",
-          "La messagerie intégrée entre clients et vendeurs n'est pas encore disponible.",
+          "Ouvrez la page de la boutique et cliquez « Écrire à la boutique ».",
+          <>
+            Retrouvez toutes vos conversations dans{" "}
+            <Link className={linkClass} href="/messages">
+              Messages
+            </Link>{" "}
+            : vous êtes averti par une notification quand la boutique répond.
+          </>,
+          "Vos échanges sont privés : seuls vous et la boutique les voyez.",
+          "En cas de propos abusifs, cliquez « Signaler » dans la conversation : l'équipe AMAZER est prévenue.",
         ],
       },
       {
@@ -178,6 +186,7 @@ const SECTIONS: Section[] = [
           "Une commande « Paiement en attente » ne peut pas encore être traitée : attendez la confirmation du paiement.",
           "Une fois payée, faites-la avancer : Préparation, puis En livraison.",
           "Dans une commande partagée avec d'autres boutiques, vous ne faites avancer que votre partie.",
+          "Les questions de vos clients arrivent dans Messages ; répondez depuis la même page.",
         ],
       },
     ],

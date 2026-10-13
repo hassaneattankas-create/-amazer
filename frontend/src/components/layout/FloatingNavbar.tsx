@@ -115,7 +115,7 @@ export function FloatingNavbar() {
   const isAuthenticated = Boolean(user?.id);
   const groupedNavItems = [
     ...clientNavItems,
-    ...(isAuthenticated ? [{ href: "/dashboard", label: "Dashboard" }] : []),
+    ...(isAuthenticated ? [{ href: "/dashboard", label: "Dashboard" }, { href: "/messages", label: "Messages" }] : []),
     ...(showSellerLink ? sellerNavigationItems : []),
     ...(showAdminLink ? [{ href: "/admin", label: "Espace Admin" }] : []),
   ].filter((item, index, array) => array.findIndex((entry) => entry.href === item.href) === index);

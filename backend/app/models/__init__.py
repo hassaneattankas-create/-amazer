@@ -6,6 +6,7 @@ from app.models.price_history import PriceHistory
 from app.models.price_alert import PriceAlert
 from app.models.product import Price, Product, ProductImage
 from app.models.review import Review
+from app.models.conversation import Conversation, ConversationMessage
 from app.models.order import Order, OrderFulfillment, OrderItem
 from app.models.restaurant import RestaurantMenuItem, RestaurantOrder, RestaurantOrderItem
 from app.models.seller_profile import SellerProfile
@@ -47,6 +48,8 @@ __all__ = [
     "Order",
     "OrderItem",
     "OrderFulfillment",
+    "Conversation",
+    "ConversationMessage",
     "RestaurantMenuItem",
     "RestaurantOrder",
     "RestaurantOrderItem",
