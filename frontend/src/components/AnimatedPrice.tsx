@@ -25,7 +25,8 @@ export function AnimatedPrice({ value, className, currency }: AnimatedPriceProps
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, delay: index * 0.015 }}
         >
-          {char}
+          {/* Dans un conteneur flex, une espace normale disparait : on la rend insecable. */}
+          {char === " " ? " " : char}
         </motion.span>
       ))}
     </span>

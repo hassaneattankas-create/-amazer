@@ -181,6 +181,18 @@ const SECTIONS: Section[] = [
         ],
       },
       {
+        id: "photos",
+        question: "Comment prendre de bonnes photos de mes produits ?",
+        steps: [
+          "Photographiez de jour, près d'une fenêtre ou dehors à l'ombre : la lumière naturelle donne les couleurs les plus fidèles.",
+          "Posez le produit sur un fond uni et clair (drap blanc, carton, mur) : il doit être la seule chose qu'on voit.",
+          "Tenez le téléphone droit, à hauteur du produit, et cadrez-le en entier avec un peu de marge autour.",
+          "Ajoutez 3 à 5 photos : face, dos, côtés, étiquette ou détail important (taille, capacité, date).",
+          "Évitez les photos floues, les mains dans le cadre, les reflets et les photos d'écran ou de catalogue d'un autre site.",
+        ],
+        note: "Les produits avec de belles photos nettes sont ceux que les clients ouvrent et achètent le plus.",
+      },
+      {
         id: "commandes-vendeur",
         question: "Comment gérer mes commandes ?",
         steps: [

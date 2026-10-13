@@ -108,7 +108,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
   };
 
   return (
-    <section className="mx-auto w-full max-w-7xl px-gutter pb-16 pt-4">
+    <section className="mx-auto w-full max-w-7xl px-gutter pb-32 pt-4 md:pb-16">
       <nav aria-label="Fil d'Ariane" className="mb-4 flex flex-wrap items-center gap-1 text-sm text-ink-600">
         <Link href="/" className="hover:text-brand-700 hover:underline">
           Accueil
@@ -275,6 +275,20 @@ export function ProductDetailView({ productId }: { productId: string }) {
 
       <div className="mt-8">
         <ReviewSystem productId={productId} />
+      </div>
+
+      {/* Barre d'achat toujours visible sur mobile (standard des grandes places de marche). */}
+      <div
+        className="fixed inset-x-0 bottom-0 z-sticky flex items-center gap-3 border-t border-border bg-card px-gutter pt-3 shadow-floating md:hidden"
+        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+      >
+        <div className="min-w-0 flex-1">
+          <p className="text-lg font-bold text-ink-900">{formatXOF(best.amount)}</p>
+          <p className={`text-xs ${inStock ? "text-success" : "text-danger"}`}>{inStock ? "En stock" : "Rupture de stock"}</p>
+        </div>
+        <Button type="button" size="lg" onClick={addToCart} disabled={!inStock} className="shrink-0">
+          {cartMessage ? "Ajouté ✓" : "Ajouter au panier"}
+        </Button>
       </div>
 
       {recommendations?.items?.length ? (

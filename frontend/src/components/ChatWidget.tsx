@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import { MessageCircle } from "lucide-react";
 
 import { AssistantMessage, sendAssistantMessage } from "@/services/assistant-service";
 
@@ -13,6 +15,9 @@ export function ChatWidget() {
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Sur la fiche produit mobile, une barre d'achat occupe le bas de l'ecran : on remonte le bouton.
+  const pathname = usePathname();
+  const liftedOnMobile = pathname?.startsWith("/product") ?? false;
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -49,9 +54,11 @@ export function ChatWidget() {
           type="button"
           aria-label="Ouvrir l'assistant AMAZER"
           onClick={() => setOpen(true)}
-          className="fixed bottom-5 right-5 z-[60] inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#FF4D00] text-2xl text-white shadow-[0_10px_30px_rgba(255,77,0,0.45)] transition hover:scale-105"
+          className={`fixed right-4 z-toast inline-flex h-12 w-12 items-center justify-center rounded-pill bg-ink-900 text-white shadow-floating transition-transform duration-fast hover:scale-105 md:bottom-5 md:right-5 ${
+            liftedOnMobile ? "bottom-24" : "bottom-4"
+          }`}
         >
-          <span aria-hidden>💬</span>
+          <MessageCircle className="h-5 w-5" aria-hidden="true" />
         </button>
       ) : (
         <div className="fixed bottom-5 right-5 z-[60] flex h-[min(70vh,520px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.28)]">

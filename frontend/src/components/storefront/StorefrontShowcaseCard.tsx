@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { BedDouble, ShieldCheck, Store, UtensilsCrossed } from "lucide-react";
+import { BadgeCheck, BedDouble, ChevronRight, MapPin, Store, UtensilsCrossed } from "lucide-react";
 
 import { formatXOF } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
@@ -18,28 +18,27 @@ const activityMeta = {
   transport: { label: "Transport", icon: Store },
 } as const;
 
-const COVER_GRADIENTS = [
-  "from-emerald-900 via-teal-800 to-slate-900",
-  "from-violet-900 via-purple-800 to-slate-900",
-  "from-orange-900 via-amber-800 to-slate-900",
-  "from-blue-900 via-indigo-800 to-slate-900",
-  "from-rose-900 via-pink-800 to-slate-900",
-  "from-cyan-900 via-sky-800 to-slate-900",
-];
-
-function getCoverGradient(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return COVER_GRADIENTS[Math.abs(hash) % COVER_GRADIENTS.length];
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
 }
 
-function getInitials(name: string): string {
-  return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+/** Resume d'activite : seuls les compteurs non nuls sont affiches. */
+function activitySummary(store: VendorStorefront): string {
+  const parts: string[] = [];
+  if (store.product_count) parts.push(`${store.product_count} produit${store.product_count > 1 ? "s" : ""}`);
+  if (store.service_count) parts.push(`${store.service_count} service${store.service_count > 1 ? "s" : ""}`);
+  if (store.room_type_count) parts.push(`${store.room_type_count} chambre${store.room_type_count > 1 ? "s" : ""}`);
+  return parts.join(" · ");
 }
 
 export function StorefrontShowcaseCard({
   store,
-  ctaLabel = "Ouvrir",
+  ctaLabel = "Voir la boutique",
 }: {
   store: VendorStorefront;
   ctaLabel?: string;
@@ -53,113 +52,88 @@ export function StorefrontShowcaseCard({
       : "shop";
   const meta = activityMeta[activityKey];
   const ActivityIcon = meta.icon;
-  const resolvedCoverUrl = resolveImageUrl(store.cover_image_url);
-  const resolvedLogoUrl = resolveImageUrl(store.logo_url);
+  const name = store.business_name || store.name;
   const [coverFailed, setCoverFailed] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
-  const imageUrl = coverFailed ? null : resolvedCoverUrl;
-  const logoUrl = logoFailed ? null : resolvedLogoUrl;
+  const coverUrl = coverFailed ? null : resolveImageUrl(store.cover_image_url);
+  const logoUrl = logoFailed ? null : resolveImageUrl(store.logo_url);
+  const summary = activitySummary(store);
 
   return (
-    <article className="premium-card hover-lift-glow overflow-hidden border border-white/20 bg-white/70 shadow-[0_24px_60px_rgba(255,77,0,0.24)]">
-      <div className={`relative h-48 w-full overflow-hidden bg-gradient-to-br ${getCoverGradient(store.business_name || store.name)}`}>
-        {imageUrl ? (
+    <Link
+      href={getShopRoute(store.id)}
+      className="group flex h-full flex-col overflow-hidden rounded-card border border-border bg-card transition-shadow duration-base ease-out-quint hover:shadow-raised focus-visible:shadow-focus"
+    >
+      <div className="relative aspect-video w-full overflow-hidden bg-surface-3">
+        {coverUrl ? (
           <Image
-            src={imageUrl}
-            alt={store.business_name || store.name}
+            src={coverUrl}
+            alt=""
             fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 400px"
-            quality={82}
-            className="object-cover opacity-90"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            quality={75}
+            className="object-cover transition-transform duration-slow ease-out-quint group-hover:scale-105"
             onError={() => setCoverFailed(true)}
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-6xl font-bold text-white/20 select-none">
-              {getInitials(store.business_name || store.name)}
-            </span>
+          <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
+            <span className="select-none text-5xl font-bold text-ink-300">{getInitials(name)}</span>
           </div>
         )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/25 to-transparent" />
-        <div className="absolute left-4 top-4 flex items-center gap-2">
-          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur">
-            {meta.label}
+        <span className="absolute left-3 top-3 rounded-pill bg-card/95 px-2.5 py-1 text-xs font-semibold text-ink-800">
+          {meta.label}
+        </span>
+        {store.badge_label ? (
+          <span className="absolute right-3 top-3 rounded-pill bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white">
+            {store.badge_label}
           </span>
-          {store.badge_label ? (
-            <span className="rounded-full border border-amber-300/70 bg-amber-100/95 px-3 py-1 text-[11px] font-semibold text-amber-800">
-              {store.badge_label}
-            </span>
-          ) : null}
-        </div>
-        <div className="absolute bottom-4 left-4 right-4">
-          <div className="flex items-center gap-2 text-white">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur">
-              {logoUrl ? (
-                <Image
-                  src={logoUrl}
-                  alt={`${store.business_name || store.name} logo`}
-                  width={44}
-                  height={44}
-                  sizes="44px"
-                  quality={85}
-                  className="h-full w-full rounded-2xl object-cover"
-                  onError={() => setLogoFailed(true)}
-                />
-              ) : (
-                <ActivityIcon className="h-5 w-5" />
-              )}
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="truncate text-lg font-semibold">{store.business_name || store.name}</h2>
-                {store.is_verified ? <ShieldCheck className="h-4 w-4 text-emerald-300" /> : null}
-              </div>
-              <p className="text-xs text-white/75">{store.city || "Niamey"}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-4 p-5">
-        {store.description ? (
-          <p className="line-clamp-3 text-sm leading-6 text-slate-600">{store.description}</p>
         ) : null}
+      </div>
 
-        <div className="flex flex-wrap gap-2">
-          {store.highlight_items.slice(0, 4).map((highlight) => (
-            <span
-              key={`${store.id}-${highlight}`}
-              className="rounded-full border border-[#FF4D00]/20 bg-[#FF4D00]/8 px-2.5 py-1 text-[11px] font-medium text-[#d45510]"
-            >
-              {highlight}
-            </span>
-          ))}
+      <div className="relative flex flex-1 flex-col gap-2 px-4 pb-4 pt-8">
+        <div className="absolute -top-7 left-4 flex h-14 w-14 items-center justify-center overflow-hidden rounded-card border-4 border-card bg-surface-1 shadow-resting">
+          {logoUrl ? (
+            <Image
+              src={logoUrl}
+              alt={`Logo ${name}`}
+              width={56}
+              height={56}
+              sizes="56px"
+              quality={80}
+              className="h-full w-full object-cover"
+              onError={() => setLogoFailed(true)}
+            />
+          ) : (
+            <ActivityIcon className="h-6 w-6 text-ink-500" aria-hidden="true" />
+          )}
         </div>
 
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            {store.starting_price ? (
-              <p className="text-xl font-semibold text-[#FF4D00]">
-                {formatXOF(store.starting_price)}
-                {store.price_suffix ? (
-                  <span className="ml-1 text-xs font-medium text-slate-500">/{store.price_suffix}</span>
-                ) : null}
-              </p>
-            ) : (
-              <p className="text-sm font-medium text-slate-500">Mini-site pret a explorer</p>
-            )}
-            <p className="mt-1 text-xs text-slate-500">
-              {store.product_count} produits / {store.service_count} services / {store.room_type_count} chambres
+        <h2 className="flex items-center gap-1 text-base font-semibold text-ink-900 group-hover:text-brand-700">
+          <span className="truncate">{name}</span>
+          {store.is_verified ? <BadgeCheck className="h-4 w-4 shrink-0 text-success" aria-label="Boutique vérifiée" /> : null}
+        </h2>
+        <p className="flex items-center gap-1 text-xs text-ink-600">
+          <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+          {store.city || "Niamey"}
+          {summary ? <span aria-hidden="true">·</span> : null}
+          {summary ? <span>{summary}</span> : null}
+        </p>
+        {store.description ? <p className="line-clamp-2 text-sm text-ink-700">{store.description}</p> : null}
+
+        <div className="mt-auto flex items-center justify-between gap-3 pt-2">
+          {store.starting_price ? (
+            <p className="text-sm text-ink-700">
+              À partir de <span className="font-bold text-ink-900">{formatXOF(store.starting_price)}</span>
             </p>
-          </div>
-          <Link
-            href={getShopRoute(store.id)}
-            className="primary-glow-btn inline-flex shrink-0 items-center rounded-xl px-4 py-2 text-sm font-semibold text-white"
-          >
+          ) : (
+            <span />
+          )}
+          <span className="inline-flex items-center gap-1 text-sm font-medium text-brand-700">
             {ctaLabel}
-          </Link>
+            <ChevronRight className="h-4 w-4 transition-transform duration-fast group-hover:translate-x-0.5" aria-hidden="true" />
+          </span>
         </div>
       </div>
-    </article>
+    </Link>
   );
 }

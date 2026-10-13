@@ -33,6 +33,12 @@ declare module "lucide-react" {
   export const Flame: LucideIcon;
   export const FolderTree: LucideIcon;
   export const Flag: LucideIcon;
+  export const MapPin: LucideIcon;
+  export const MessageCircle: LucideIcon;
+  export const Smartphone: LucideIcon;
+  export const SprayCan: LucideIcon;
+  export const Armchair: LucideIcon;
+  export const ArrowUpDown: LucideIcon;
   export const Menu: LucideIcon;
   export const ShoppingBasket: LucideIcon;
   export const ShoppingBag: LucideIcon;

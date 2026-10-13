@@ -372,7 +372,7 @@ export function FloatingNavbar() {
             className="inline-flex min-h-11 items-center gap-1 rounded-field px-3 text-sm font-medium text-ink-800 hover:bg-surface-1"
           >
             <Menu className="h-5 w-5 md:hidden" aria-hidden="true" />
-            <span className="hidden md:inline">Rubriques</span>
+            <span className="hidden md:inline">Menu</span>
             <ChevronDown
               className={`hidden h-4 w-4 transition-transform duration-fast md:block ${isMenuOpen ? "rotate-180" : ""}`}
               aria-hidden="true"

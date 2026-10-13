@@ -505,6 +505,11 @@ export default function SellerDashboardPage() {
               Ajouter un produit
             </h2>
             <p className="mt-2 text-sm text-slate-600">
+              <Link href="/comment-ca-marche#photos" className="font-medium text-brand-700 hover:underline">
+                Conseils pour des photos qui font vendre
+              </Link>
+            </p>
+            <p className="mt-2 text-sm text-slate-600">
               Cree un nouvel article directement depuis le dashboard.
             </p>
 

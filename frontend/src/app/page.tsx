@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  Armchair,
   BadgeCheck,
   LayoutGrid,
   Laptop,
@@ -10,33 +11,39 @@ import {
   ShieldCheck,
   ShoppingBag,
   ShoppingBasket,
+  Smartphone,
+  SprayCan,
   Store,
   Truck,
   UtensilsCrossed,
+  type LucideIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { BarcodeScannerDrawer } from "@/components/BarcodeScannerDrawer";
 import { PRODUCT_GRID_CLASS, ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
+import { SearchToolbar, type PriceFilter } from "@/components/search/SearchToolbar";
 import { Button } from "@/components/ui/button";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useProductSearch } from "@/hooks/use-product-search";
+import { listCatalogCategories } from "@/services/catalog-service";
+import type { SearchSort } from "@/types/product";
 
 const DEBOUNCE_MS = 250;
 const HOME_STATE_DRAFT_KEY = "amazer_home_state_draft";
 const PAGE_SIZE = 24;
 const MAX_ITEMS = 96;
 
-const SHELF_TABS = [
-  { slug: "all", label: "Tout", icon: LayoutGrid },
-  { slug: "alimentation", label: "Alimentation", icon: ShoppingBasket },
-  { slug: "restaurant", label: "Restaurant", icon: UtensilsCrossed },
-  { slug: "accessoires", label: "Accessoires", icon: ShoppingBag },
-  { slug: "technologie", label: "Technologie", icon: Laptop },
-] as const;
-
-type ShelfSlug = (typeof SHELF_TABS)[number]["slug"];
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  alimentation: ShoppingBasket,
+  accessoires: ShoppingBag,
+  electronique: Smartphone,
+  technologie: Laptop,
+  hygiene: SprayCan,
+  maison: Armchair,
+};
 
 // Uniquement des promesses tenues par la plateforme aujourd'hui.
 const TRUST_POINTS = [
@@ -45,34 +52,52 @@ const TRUST_POINTS = [
   { icon: Truck, title: "Livraison à Niamey", text: "Standard ou express" },
 ] as const;
 
+const chipClass = (active: boolean) =>
+  `inline-flex min-h-11 items-center gap-2 rounded-pill border px-4 text-sm font-medium transition-colors duration-fast ${
+    active ? "border-ink-900 bg-ink-900 text-white" : "border-border bg-card text-ink-700 hover:border-ink-400"
+  }`;
+
 export default function HomePage() {
   const [query, setQuery] = useState("");
   const [barcode, setBarcode] = useState("");
-  const [activeShelf, setActiveShelf] = useState<ShelfSlug>("all");
+  const [category, setCategory] = useState<string>("");
+  const [sort, setSort] = useState<SearchSort | undefined>(undefined);
+  const [price, setPrice] = useState<PriceFilter>({});
+  const [includeOutOfStock, setIncludeOutOfStock] = useState(false);
   const debouncedQuery = useDebouncedValue(query, DEBOUNCE_MS);
   const debouncedBarcode = useDebouncedValue(barcode, DEBOUNCE_MS);
-  // La pagination est rattachee a la recherche : une nouvelle recherche repart de la premiere page.
-  const searchKey = `${debouncedQuery}|${debouncedBarcode}`;
+
+  const hasTextQuery = debouncedQuery.trim().length >= 2 || debouncedBarcode.trim().length >= 3;
+  const effectiveSort: SearchSort = sort ?? (hasTextQuery ? "relevance" : "newest");
+
+  // La pagination est rattachee a la recherche et aux filtres : tout changement repart de la premiere page.
+  const searchKey = [debouncedQuery, debouncedBarcode, category, effectiveSort, price.min, price.max, includeOutOfStock].join("|");
   const [pagination, setPagination] = useState({ key: searchKey, limit: PAGE_SIZE });
   const limit = pagination.key === searchKey ? pagination.limit : PAGE_SIZE;
 
-  const hasActiveFilter = debouncedQuery.trim().length >= 2 || debouncedBarcode.trim().length >= 3;
+  const { data: categories = [] } = useQuery({
+    queryKey: ["catalog-categories"],
+    queryFn: listCatalogCategories,
+    staleTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
+  });
 
   const { data, isPending, isFetching, isError } = useProductSearch({
     query: debouncedBarcode ? "" : debouncedQuery,
     barcode: debouncedBarcode,
     limit,
+    categorySlug: category || undefined,
+    sort: effectiveSort,
+    minPrice: price.min,
+    maxPrice: price.max,
+    inStockOnly: !includeOutOfStock,
   });
 
-  const products = useMemo(() => data?.items ?? [], [data?.items]);
-  const displayResults = useMemo(
-    () => (activeShelf === "all" ? products : products.filter((entry) => entry.category?.slug === activeShelf)),
-    [activeShelf, products]
-  );
+  const products = data?.items ?? [];
   const canLoadMore = (data?.meta.returned ?? 0) >= limit && limit < MAX_ITEMS;
-
-  const showSkeletons = isPending || (isFetching && displayResults.length === 0);
-  const isEmptyState = !isPending && !isError && displayResults.length === 0;
+  const showSkeletons = isPending || (isFetching && products.length === 0);
+  const isEmptyState = !isPending && !isError && products.length === 0;
+  const hasAnyFilter = hasTextQuery || Boolean(category) || Boolean(price.min || price.max) || includeOutOfStock;
 
   const onBarcodeDetected = (value: string) => {
     setBarcode(value);
@@ -81,17 +106,26 @@ export default function HomePage() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(HOME_STATE_DRAFT_KEY, JSON.stringify({ query, barcode, activeShelf }));
+      window.localStorage.setItem(HOME_STATE_DRAFT_KEY, JSON.stringify({ query, barcode, category }));
     } catch {
       // Stockage indisponible (navigation privee) : sans consequence.
     }
-  }, [activeShelf, barcode, query]);
+  }, [barcode, category, query]);
 
-  const resetSearch = () => {
+  const resetAll = () => {
     setQuery("");
     setBarcode("");
-    setActiveShelf("all");
+    setCategory("");
+    setPrice({});
+    setIncludeOutOfStock(false);
+    setSort(undefined);
   };
+
+  const heading = hasTextQuery
+    ? `Résultats pour « ${debouncedBarcode || debouncedQuery} »`
+    : category
+      ? categories.find((item) => item.slug === category)?.name ?? "Catégorie"
+      : "Nouveautés";
 
   return (
     <section className="mx-auto w-full max-w-7xl px-gutter pb-16 pt-4">
@@ -112,38 +146,46 @@ export default function HomePage() {
           }}
           placeholder="Rechercher un produit, une marque…"
           autoComplete="off"
-          className="h-14 w-full rounded-pill border-2 border-ink-200 bg-background pl-12 pr-28 text-base text-ink-900 placeholder:text-ink-500 focus-visible:border-brand-500 focus-visible:outline-none"
+          className="h-14 w-full rounded-pill border-2 border-ink-200 bg-card pl-12 pr-28 text-base text-ink-900 placeholder:text-ink-500 focus-visible:border-brand-500 focus-visible:outline-none"
         />
         <BarcodeScannerDrawer onDetected={onBarcodeDetected} />
       </div>
 
       <nav aria-label="Catégories" className="-mx-gutter mt-4 overflow-x-auto px-gutter">
         <ul className="flex gap-2">
-          {SHELF_TABS.map((tab) => {
-            const Icon = tab.icon;
-            const active = activeShelf === tab.slug;
+          <li className="shrink-0">
+            <button type="button" aria-pressed={!category} onClick={() => setCategory("")} className={chipClass(!category)}>
+              <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+              Tout
+            </button>
+          </li>
+          {categories.map((item) => {
+            const Icon = CATEGORY_ICONS[item.slug] ?? LayoutGrid;
+            const active = category === item.slug;
             return (
-              <li key={tab.slug} className="shrink-0">
+              <li key={item.slug} className="shrink-0">
                 <button
                   type="button"
                   aria-pressed={active}
-                  onClick={() => setActiveShelf(tab.slug)}
-                  className={`inline-flex min-h-11 items-center gap-2 rounded-pill border px-4 text-sm font-medium transition-colors duration-fast ${
-                    active
-                      ? "border-ink-900 bg-ink-900 text-white"
-                      : "border-border bg-card text-ink-700 hover:border-ink-400"
-                  }`}
+                  onClick={() => setCategory(active ? "" : item.slug)}
+                  className={chipClass(active)}
                 >
                   <Icon className="h-4 w-4" aria-hidden="true" />
-                  {tab.label}
+                  {item.name}
                 </button>
               </li>
             );
           })}
+          <li className="shrink-0">
+            <Link href="/restaurant" className={chipClass(false)}>
+              <UtensilsCrossed className="h-4 w-4" aria-hidden="true" />
+              Restaurants
+            </Link>
+          </li>
         </ul>
       </nav>
 
-      {!hasActiveFilter ? (
+      {!hasAnyFilter ? (
         <ul className="mt-4 grid grid-cols-3 gap-2 rounded-card border border-border bg-card p-3 sm:gap-4 sm:p-4">
           {TRUST_POINTS.map((point) => {
             const Icon = point.icon;
@@ -160,19 +202,20 @@ export default function HomePage() {
         </ul>
       ) : null}
 
-      <div className="mt-6 flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold text-ink-900">
-          {hasActiveFilter ? `Résultats pour « ${debouncedBarcode || debouncedQuery} »` : "Nouveautés"}
-        </h2>
-        {!showSkeletons && !isError ? (
-          <p className="shrink-0 text-sm text-ink-600" aria-live="polite">
-            {displayResults.length} article{displayResults.length > 1 ? "s" : ""}
-            {isFetching && !isPending ? " · mise à jour…" : ""}
-          </p>
-        ) : null}
-      </div>
+      <h2 className="mt-6 text-lg font-semibold text-ink-900">{heading}</h2>
+      <SearchToolbar
+        resultCount={showSkeletons ? null : products.length}
+        isUpdating={isFetching && !isPending}
+        hasTextQuery={hasTextQuery}
+        sort={effectiveSort}
+        onSortChange={setSort}
+        price={price}
+        onPriceChange={setPrice}
+        includeOutOfStock={includeOutOfStock}
+        onIncludeOutOfStockChange={setIncludeOutOfStock}
+      />
 
-      <div className="mt-3">
+      <div className="mt-4">
         {showSkeletons ? (
           <div className={PRODUCT_GRID_CLASS} aria-busy="true" aria-label="Chargement des produits">
             {Array.from({ length: 10 }).map((_, index) => (
@@ -181,9 +224,9 @@ export default function HomePage() {
           </div>
         ) : null}
 
-        {!showSkeletons && displayResults.length > 0 ? (
+        {!showSkeletons && products.length > 0 ? (
           <div className={PRODUCT_GRID_CLASS}>
-            {displayResults.map((product, index) => (
+            {products.map((product, index) => (
               <ProductCard key={product.id} product={product} priority={index < 4} />
             ))}
           </div>
@@ -202,14 +245,14 @@ export default function HomePage() {
           <div className="rounded-card border border-border bg-card p-8 text-center">
             <SearchX className="mx-auto h-10 w-10 text-ink-400" aria-hidden="true" />
             <p className="mt-3 font-semibold text-ink-900">Aucun produit trouvé</p>
-            <p className="mt-1 text-sm text-ink-600">Essayez un autre mot ou une autre catégorie.</p>
-            <Button type="button" variant="outline" className="mt-4" onClick={resetSearch}>
-              Réinitialiser la recherche
+            <p className="mt-1 text-sm text-ink-600">Essayez un autre mot, une autre catégorie ou élargissez les filtres.</p>
+            <Button type="button" variant="outline" className="mt-4" onClick={resetAll}>
+              Tout réinitialiser
             </Button>
           </div>
         ) : null}
 
-        {!showSkeletons && canLoadMore && activeShelf === "all" ? (
+        {!showSkeletons && canLoadMore ? (
           <div className="mt-6 flex justify-center">
             <Button
               type="button"

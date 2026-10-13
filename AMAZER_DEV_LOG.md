@@ -308,6 +308,19 @@ Constats de départ (captures du site réel) : recherche enfouie sous un grand b
 
 Toutes les couleurs, rayons et espacements viennent des tokens du design system (aucune valeur arbitraire ajoutée).
 
+## 4 duovicies. Refonte, deuxième passe — 2026-10-13
+
+- **En-tête** : « Rubriques » devient **« Menu »**.
+- **Fond de page** : les halos orange laissent place à un fond neutre (`surface-2`). Les cartes blanches ressortent, et l'orange est réservé aux actions. Le bouton « Scan » devient sombre et sobre.
+- **Recherche, filtres et tri** (accueil) : tri (pertinence, nouveautés, prix croissant ou décroissant), prix minimum et maximum, option « inclure les ruptures », pastilles des filtres actifs, « Effacer les filtres ». **Tout est filtré côté serveur.** Avant, les catégories ne filtraient que les 24 produits déjà chargés.
+- **Catégories réelles** chargées depuis l'API (Accessoires, Alimentation, Électronique, Hygiène, Maison, Technologie). La fausse catégorie « Restaurant », qui renvoyait toujours zéro produit, devient un lien vers la page Restaurants.
+- **Fiche produit mobile** : barre d'achat fixée en bas (prix, stock, « Ajouter au panier » avec confirmation).
+- **Bulle d'assistance** : plus discrète (icône, 48 px, sombre), remontée sur la fiche produit pour ne rien recouvrir.
+- **Boutiques, Restaurants, Premium** : nouvelle carte (couverture 16:9, logo en chevauchement, badge vérifié, ville, compteurs non nuls seulement, « À partir de … »), grille de 1 à 4 colonnes, en-têtes harmonisés.
+- **Panier** : vrai état vide ; page en deux colonnes avec un récapitulatif collant (détail sous-total, livraison, frais, total, économies) et le bouton « Commander » ; choix de livraison et de paiement sobres, avec des explications exactes.
+- **Prix animés** : l'espace avant « XOF » disparaissait (« 96100XOF »). C'est corrigé partout.
+- **Guide photo vendeurs** dans le centre d'aide, avec un lien depuis le formulaire d'ajout de produit.
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).

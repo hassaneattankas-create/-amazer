@@ -97,7 +97,7 @@ export function BarcodeScannerDrawer({ onDetected }: BarcodeScannerDrawerProps) 
       <Drawer.Trigger asChild>
         <Button
           type="button"
-          className="primary-glow-btn shine-btn absolute right-2 top-1/2 h-10 -translate-y-1/2 px-3 text-white"
+          className="absolute right-2 top-1/2 h-10 -translate-y-1/2 rounded-pill bg-ink-900 px-4 text-white hover:bg-ink-800"
         >
           <ScanLine className="h-4 w-4" />
           Scan

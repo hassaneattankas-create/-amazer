@@ -26,16 +26,16 @@ export default function HotelsPage() {
   }, [premiumStores]);
 
   return (
-    <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
-      <header className="premium-card border border-white/20 bg-white/70 p-6">
+    <section className="mx-auto w-full max-w-7xl space-y-6 px-gutter pb-14 pt-4">
+      <header className="rounded-card border border-border bg-card p-5 sm:p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="luxury-title text-3xl font-semibold">Premium</h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-600">
+            <h1 className="text-2xl font-semibold text-ink-900 sm:text-3xl">Premium</h1>
+            <p className="mt-1 max-w-2xl text-sm text-ink-600">
               Boutiques premium conservees sur AMAZER: Amazer et Fragrance.
             </p>
           </div>
-          <Link href="/boutiques" className="text-sm font-medium text-[#FF4D00]">
+          <Link href="/boutiques" className="text-sm font-medium text-brand-700 hover:underline">
             Retour aux boutiques
           </Link>
         </div>
@@ -48,19 +48,19 @@ export default function HotelsPage() {
       </header>
 
       {isPending ? (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 3 }).map((_, index) => (
             <ProductCardSkeleton key={`hotel-skeleton-${index}`} />
           ))}
         </div>
       ) : visiblePremiumStores.length ? (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {visiblePremiumStores.map((store) => (
-            <StorefrontShowcaseCard key={store.id} store={store} ctaLabel="Voir le mini-site premium" />
+            <StorefrontShowcaseCard key={store.id} store={store} ctaLabel="Voir le site" />
           ))}
         </div>
       ) : (
-        <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        <article className="rounded-card border border-border bg-card p-6 text-sm text-ink-600">
           Aucune boutique premium ne correspond a cette recherche.
         </article>
       )}

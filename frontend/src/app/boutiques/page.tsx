@@ -46,16 +46,16 @@ export default function BoutiquesPage() {
   }, [stores]);
 
   return (
-    <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
-      <header className="premium-card border border-white/20 bg-white/70 p-6">
+    <section className="mx-auto w-full max-w-7xl space-y-6 px-gutter pb-14 pt-4">
+      <header className="rounded-card border border-border bg-card p-5 sm:p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="luxury-title text-3xl font-semibold">Boutiques</h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-600">
+            <h1 className="text-2xl font-semibold text-ink-900 sm:text-3xl">Boutiques</h1>
+            <p className="mt-1 max-w-2xl text-sm text-ink-600">
               Explorez les boutiques actives, avec priorite aux enseignes qui ont deja du stock visible.
             </p>
           </div>
-          <Link href="/hotels" className="text-sm font-medium text-[#FF4D00]">
+          <Link href="/hotels" className="text-sm font-medium text-brand-700 hover:underline">
             Voir aussi les premium
           </Link>
         </div>
@@ -68,23 +68,23 @@ export default function BoutiquesPage() {
       </header>
 
       {isPending ? (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 6 }).map((_, index) => (
             <ProductCardSkeleton key={`store-skeleton-${index}`} />
           ))}
         </div>
       ) : isError ? (
-        <article className="premium-card border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
+        <article className="rounded-card border border-border bg-card p-6 text-sm text-danger">
           {getApiErrorMessage(error, "Impossible de charger les boutiques pour le moment.")}
         </article>
       ) : visibleStores.length ? (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {visibleStores.map((store) => (
-            <StorefrontShowcaseCard key={store.id} store={store} ctaLabel="Entrer" />
+            <StorefrontShowcaseCard key={store.id} store={store} ctaLabel="Voir la boutique" />
           ))}
         </div>
       ) : (
-        <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        <article className="rounded-card border border-border bg-card p-6 text-sm text-ink-600">
           Aucune boutique ne correspond a cette recherche.
         </article>
       )}

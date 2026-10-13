@@ -9,6 +9,10 @@ type SearchProductsParams = {
   limit?: number;
   offset?: number;
   sort?: SearchSort;
+  minPrice?: number;
+  maxPrice?: number;
+  /** Par defaut l'API ne renvoie que les produits en stock. */
+  inStockOnly?: boolean;
 };
 
 export async function searchProducts({
@@ -18,8 +22,20 @@ export async function searchProducts({
   limit = 20,
   offset = 0,
   sort = "relevance",
+  minPrice,
+  maxPrice,
+  inStockOnly,
 }: SearchProductsParams): Promise<ProductSearchResult> {
-  const params: Record<string, string | number> = { limit, offset, sort };
+  const params: Record<string, string | number | boolean> = { limit, offset, sort };
+  if (typeof minPrice === "number" && minPrice > 0) {
+    params.min_price = minPrice;
+  }
+  if (typeof maxPrice === "number" && maxPrice > 0) {
+    params.max_price = maxPrice;
+  }
+  if (typeof inStockOnly === "boolean") {
+    params.in_stock_only = inStockOnly;
+  }
   if (query && query.trim().length > 0) {
     params.query = query.trim();
   }

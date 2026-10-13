@@ -29,10 +29,10 @@ export default function RestaurantPage() {
   }, [restaurants]);
 
   return (
-    <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
-      <header className="premium-card border border-white/20 bg-white/70 p-6">
-        <h1 className="luxury-title text-3xl font-semibold">Restaurants</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600">
+    <section className="mx-auto w-full max-w-7xl space-y-6 px-gutter pb-14 pt-4">
+      <header className="rounded-card border border-border bg-card p-5 sm:p-6">
+        <h1 className="text-2xl font-semibold text-ink-900 sm:text-3xl">Restaurants</h1>
+        <p className="mt-1 max-w-2xl text-sm text-ink-600">
           Commandez en ligne, payez par Nita ou Amana, livraison moto-coursier a Niamey.
         </p>
         <Input
@@ -44,23 +44,23 @@ export default function RestaurantPage() {
       </header>
 
       {isPending ? (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 3 }).map((_, index) => (
             <ProductCardSkeleton key={`restaurant-skeleton-${index}`} />
           ))}
         </div>
       ) : isError ? (
-        <article className="premium-card border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
+        <article className="rounded-card border border-border bg-card p-6 text-sm text-danger">
           {getApiErrorMessage(error, "Impossible de charger les restaurants.")}
         </article>
       ) : visibleRestaurants.length ? (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {visibleRestaurants.map((store) => (
-            <StorefrontShowcaseCard key={store.id} store={store} ctaLabel="Voir le menu & Commander" />
+            <StorefrontShowcaseCard key={store.id} store={store} ctaLabel="Voir le menu" />
           ))}
         </div>
       ) : (
-        <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        <article className="rounded-card border border-border bg-card p-6 text-sm text-ink-600">
           Aucun restaurant disponible pour le moment.
         </article>
       )}

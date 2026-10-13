@@ -31,14 +31,10 @@
   }
 
   body {
-    @apply bg-white text-slate-900;
+    /* Fond neutre : les cartes blanches ressortent, l'orange reste reserve aux actions. */
+    @apply bg-surface-2 text-ink-900;
     font-family: var(--font-geist-sans), "Inter", sans-serif;
     letter-spacing: -0.01em;
-    background-image:
-      radial-gradient(45% 35% at 15% 0%, rgba(255, 77, 0, 0.14), transparent),
-      radial-gradient(45% 32% at 100% 8%, rgba(255, 77, 0, 0.1), transparent),
-      linear-gradient(180deg, #ffffff 0%, #fff9f5 100%);
-    background-attachment: fixed;
   }
 }
 
