@@ -20,6 +20,7 @@ from app.core.checkout_fees import platform_commission_and_service_fee
 from app.core.rate_limit import enforce_rate_limit
 from app.core.exceptions import UnauthorizedError, ValidationDomainError
 from app.database import get_db
+from app.models.finance import FinanceDistrictFee
 from app.models.global_settings import GlobalSettings
 from app.models.order import Order, OrderFulfillment, OrderItem
 from app.models.product import Price, Product
@@ -330,7 +331,13 @@ def _consume_stock(db: Session, order: Order) -> None:
         price.stock_quantity = max(0, remaining)
 
 
-def _resolve_checkout_delivery_fee(db: Session, delivery_type: str) -> float:
+def _resolve_checkout_delivery_fee(db: Session, delivery_type: str, district: str | None = None) -> float:
+    if district and delivery_type == "standard":
+        zone_fee = db.scalar(
+            select(FinanceDistrictFee.delivery_fee).where(FinanceDistrictFee.district_name == district.strip())
+        )
+        if zone_fee is not None:
+            return float(zone_fee)
     settings_row = db.scalar(select(GlobalSettings).order_by(GlobalSettings.id.asc()))
     if settings_row is None:
         return 1500.0
@@ -467,7 +474,7 @@ def checkout(
     if order_currency and payload.currency.upper() != order_currency:
         raise ValidationDomainError("Devise invalide pour cette commande")
 
-    delivery_fee_per_vendor = _resolve_checkout_delivery_fee(db, payload.delivery_type)
+    delivery_fee_per_vendor = _resolve_checkout_delivery_fee(db, payload.delivery_type, payload.district)
     delivery_total = delivery_fee_per_vendor * len(vendor_ids)
     items_subtotal = total
     settings_row = get_or_create_global_settings(db)

@@ -57,6 +57,13 @@ export async function getPublicFinanceSettings(): Promise<FinanceSettings> {
   return response.data;
 }
 
+export type PublicDistrictFee = { district_name: string; delivery_fee: number };
+
+export async function getPublicDistrictFees(): Promise<PublicDistrictFee[]> {
+  const response = await api.get<PublicDistrictFee[]>("/api/v1/admin/finance/public-district-fees");
+  return response.data;
+}
+
 export async function getPublicContactInfo(): Promise<PublicContactInfo> {
   const response = await api.get<PublicContactInfo>("/api/v1/admin/finance/contact-info");
   return response.data;

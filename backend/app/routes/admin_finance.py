@@ -744,6 +744,13 @@ def get_public_finance_settings(
     return _to_response(settings)
 
 
+@router.get("/public-district-fees", response_model=list[DistrictFeeItem])
+def list_public_district_fees(db: Annotated[Session, Depends(get_db)]) -> list[DistrictFeeItem]:
+    """Tarifs de livraison par quartier, affiches au client avant la commande."""
+    rows = db.scalars(select(FinanceDistrictFee).order_by(FinanceDistrictFee.district_name.asc())).all()
+    return [DistrictFeeItem(district_name=row.district_name, delivery_fee=float(row.delivery_fee)) for row in rows]
+
+
 @router.get("/contact-info", response_model=PublicContactInfoResponse)
 def get_public_contact_info(
     db: Annotated[Session, Depends(get_db)],

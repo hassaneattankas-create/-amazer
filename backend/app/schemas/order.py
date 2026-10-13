@@ -20,6 +20,8 @@ class CheckoutRequest(BaseModel):
     delivery_type: str = Field(default="standard", pattern="^(standard|express_niamey)$")
     transaction_code: str | None = Field(default=None, max_length=120)
     currency: str = Field(default="XOF", min_length=3, max_length=3)
+    # Quartier de livraison : applique le tarif configure par l'admin pour cette zone.
+    district: str | None = Field(default=None, max_length=120)
 
 
 class OrderItemResponse(BaseModel):

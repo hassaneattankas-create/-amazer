@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { formatXOF } from "@/lib/currency";
 import { getOrderPayRoute, getOrderReceiptRoute, getOrderSuccessRoute } from "@/lib/mobile-routes";
 import { DEFAULT_SHIPPING_COST, optimizeCart } from "@/lib/optimize-cart";
-import { getPublicFinanceSettings } from "@/services/finance-service";
+import { getPublicDistrictFees, getPublicFinanceSettings } from "@/services/finance-service";
 import { notifyLocalOrderEvent } from "@/services/notification-service";
 import { checkout, getReceiptLink } from "@/services/order-service";
 import { useCartStore } from "@/store/cartStore";
@@ -42,10 +42,20 @@ export default function CartPage() {
     refetchOnWindowFocus: false,
   });
 
+  const { data: districtFees = [] } = useQuery({
+    queryKey: ["public-district-fees"],
+    queryFn: getPublicDistrictFees,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const [district, setDistrict] = useState("");
+  const districtFee = districtFees.find((row) => row.district_name === district)?.delivery_fee;
+
+  // Meme regle que le serveur : le tarif du quartier remplace le tarif standard.
   const selectedShippingFee =
     deliveryType === "express_niamey"
       ? (financeSettings?.urban_delivery_fee ?? financeSettings?.default_delivery_fee ?? DEFAULT_SHIPPING_COST)
-      : (financeSettings?.default_delivery_fee ?? DEFAULT_SHIPPING_COST);
+      : (districtFee ?? financeSettings?.default_delivery_fee ?? DEFAULT_SHIPPING_COST);
 
   const computeOptimization = () =>
     optimizeCart(items, {
@@ -115,6 +125,7 @@ export default function CartPage() {
         delivery_type: deliveryType,
         transaction_code: transactionCode || undefined,
         currency: "XOF",
+        district: deliveryType === "standard" && district ? district : undefined,
       });
       let receiptHref: string | undefined;
       try {
@@ -354,6 +365,27 @@ export default function CartPage() {
               Livraison Express Niamey
             </Button>
           </div>
+          {deliveryType === "standard" && districtFees.length ? (
+            <div className="mt-3">
+              <label htmlFor="delivery-district" className="text-sm font-medium text-ink-800">
+                Quartier de livraison
+              </label>
+              <select
+                id="delivery-district"
+                value={district}
+                onChange={(event) => setDistrict(event.target.value)}
+                className="mt-1 w-full rounded-field border border-input bg-background px-3 py-2 text-sm text-ink-900"
+              >
+                <option value="">Autre quartier (tarif standard)</option>
+                {districtFees.map((row) => (
+                  <option key={row.district_name} value={row.district_name}>
+                    {row.district_name} — {formatXOF(row.delivery_fee)}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-ink-600">Frais comptés par boutique, affichés avant la confirmation.</p>
+            </div>
+          ) : null}
         </div>
       </article>
 

@@ -43,6 +43,8 @@ export type CheckoutPayload = {
   delivery_type: "standard" | "express_niamey";
   transaction_code?: string;
   currency?: string;
+  /** Quartier de livraison (tarif fixe par l'admin), livraison standard uniquement. */
+  district?: string;
 };
 
 export type ReceiptLink = {

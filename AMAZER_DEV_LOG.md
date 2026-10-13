@@ -287,6 +287,12 @@ Recommandé, non fait : **déplacer la base Neon en Europe (Francfort)**, à cô
 - Workflow `.github/workflows/e2e-smoke.yml` : chaque jour à 07:15 UTC et à la demande. Un échec déclenche l'e-mail habituel de GitHub, ce qui fait office de surveillance gratuite du site.
 - Non couvert : les parcours qui écrivent des données (commande, paiement, message). Il faudrait un environnement de test séparé ou des comptes de test dédiés.
 
+## 4 vicies. Livraison par quartier et études — 2026-10-13
+
+- **Défaut corrigé** : l'admin pouvait régler des frais de livraison par quartier (`finance_district_fees`), mais la commande ne les appliquait jamais. Désormais, le client choisit son quartier dans le panier (livraison standard). Le serveur facture le tarif de ce quartier pour chaque boutique, avec la même règle dans le panier et sur la commande. Un quartier inconnu reprend le tarif standard, et le tarif express reste inchangé. Nouvelle route publique `GET /admin/finance/public-district-fees`. 4 tests (185/185).
+- **Mesure du cache en production** : la requête « boutiques » prend environ 1,9 s de traitement serveur hors cache, contre environ 0,4 s quand elle est en cache.
+- **Études** (`docs/ETUDES_STRATEGIQUES.md`) : livraison et partenaires (aucune API de suivi identifiée), fournisseurs internationaux (scénarios A à D, évolution minimale « sur commande » proposée), WhatsApp (procédure d'activation Meta, tarif à vérifier), paiements futurs (pistes non vérifiées, Nita conservé), coûts et dépendances (**Vercel Hobby non commercial** : décision à prendre avant le lancement ; base à déplacer en Europe).
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).
