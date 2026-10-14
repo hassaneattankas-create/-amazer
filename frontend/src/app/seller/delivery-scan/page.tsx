@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { BarcodeScannerDrawer } from "@/components/BarcodeScannerDrawer";
 import { Button } from "@/components/ui/button";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { getSellerProfile } from "@/services/seller-service";
 import { verifyReceipt } from "@/services/order-service";
@@ -25,7 +26,6 @@ function SellerDeliveryScanContent() {
   const searchParams = useSearchParams();
   const queryToken = searchParams.get("token") ?? "";
   const [token, setToken] = useState("");
-  const [gps, setGps] = useState("");
   const [result, setResult] = useState<ReceiptVerifyResult | null>(null);
   const tokenValue = token || queryToken;
   const { data: currentUser } = useCurrentUser();
@@ -36,88 +36,75 @@ function SellerDeliveryScanContent() {
     staleTime: 60_000,
   });
   const vendorId = sellerProfile?.vendor_id ?? "";
+  // Vendeur, livreur ou admin : le serveur verifie les droits sur la commande.
+  const canVerify = Boolean(vendorId) || currentUser?.role === "courier" || currentUser?.role === "admin";
 
   const mutation = useMutation({
     mutationFn: verifyReceipt,
-    onSuccess: (payload) => {
-      setResult(payload);
-    },
-    onError: () => {
+    onSuccess: (payload) => setResult(payload),
+    onError: (error) =>
       setResult({
-        order_id: "inconnu",
+        order_id: "",
         status: "blocked",
-        message: "Verification livraison impossible.",
+        message: getApiErrorMessage(error, "Vérification impossible. Réessayez."),
         scanned_at: null,
-      });
-    },
+      }),
   });
 
-  const onDetected = useCallback((raw: string) => {
-    const extracted = extractTokenFromScan(raw);
-    setToken(extracted);
-  }, []);
-
+  const onDetected = useCallback((raw: string) => setToken(extractTokenFromScan(raw)), []);
   const isBlocked = result?.status === "blocked";
 
   return (
-    <section className="mx-auto w-full max-w-4xl space-y-6 px-4 pb-14 sm:px-6">
-      <article className="premium-card border border-slate-200 bg-white p-6">
-        <h1 className="luxury-title text-3xl font-semibold">Validation Livraison QR</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Le livreur scanne le QR du client au moment de la remise pour confirmer qu il est bien en face.
-        </p>
+    <section className="mx-auto w-full max-w-xl space-y-4 px-gutter pb-14 pt-4">
+      <article className="rounded-card border border-border bg-card p-5">
+        <h1 className="text-2xl font-semibold text-ink-900">Confirmer une livraison</h1>
+        <p className="mt-1 text-sm text-ink-600">Scannez le QR code du reçu du client au moment de la remise.</p>
         {!currentUser ? (
-          <p className="mt-2 text-sm text-rose-600">Connectez-vous avec un compte vendeur/livreur.</p>
-        ) : null}
-        {!vendorId ? (
-          <p className="mt-2 text-sm text-amber-700">Aucun profil vendeur detecte sur ce compte.</p>
+          <p className="mt-2 text-sm text-danger">Connectez-vous avec un compte vendeur, livreur ou admin.</p>
+        ) : !canVerify ? (
+          <p className="mt-2 text-sm text-warning">Ce compte ne peut pas confirmer de livraison.</p>
         ) : null}
 
-        <div className="relative mt-5 flex flex-col gap-3">
+        <div className="mt-4 space-y-3">
+          <BarcodeScannerDrawer
+            mode="qr"
+            onDetected={onDetected}
+            triggerLabel="Scanner le QR code"
+            triggerClassName="min-h-11 w-full rounded-field bg-ink-900 px-4 text-sm font-semibold text-white hover:bg-ink-800"
+          />
+          <label className="block text-sm font-medium text-ink-800" htmlFor="receipt-token">
+            Ou collez le lien du reçu
+          </label>
           <input
+            id="receipt-token"
             value={tokenValue}
             onChange={(event) => setToken(event.target.value)}
-            placeholder="Token recu (ou URL scannee)"
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-          />
-          <BarcodeScannerDrawer onDetected={onDetected} />
-          <input
-            value={gps}
-            onChange={(event) => setGps(event.target.value)}
-            placeholder="GPS (optionnel)"
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="h-11 w-full rounded-field border border-border px-3 text-sm"
           />
           <Button
             type="button"
-            disabled={!tokenValue || !vendorId || mutation.isPending}
-            onClick={() =>
-              mutation.mutate({
-                token: tokenValue,
-                vendor_id: vendorId,
-                gps: gps || undefined,
-              })
-            }
-            className="primary-glow-btn w-full bg-[#FF4D00] text-white hover:bg-[#e74700]"
+            size="lg"
+            className="w-full"
+            disabled={!tokenValue || !canVerify || mutation.isPending}
+            onClick={() => mutation.mutate({ token: extractTokenFromScan(tokenValue), vendor_id: vendorId || undefined })}
           >
-            Confirmer la livraison
+            {mutation.isPending ? "Vérification…" : "Confirmer la livraison"}
           </Button>
         </div>
       </article>
 
       {result ? (
         <article
-          className={`premium-card p-6 ${
-            isBlocked
-              ? "animate-pulse border-2 border-rose-500 bg-rose-600 text-white"
-              : "border border-emerald-300 bg-emerald-50 text-emerald-900"
-          }`}
+          className={`rounded-card border p-5 ${isBlocked ? "border-danger bg-surface-1" : "border-success bg-surface-1"}`}
+          role="status"
         >
-          <h2 className="text-xl font-semibold">{isBlocked ? "Verification refusee" : "Livraison validee"}</h2>
-          <p className="mt-2 text-sm">{result.message}</p>
-          <p className="mt-1 text-xs opacity-90">Commande: {result.order_id}</p>
-          <p className="mt-1 text-xs opacity-90">
-            Horodatage scan: {result.scanned_at ? new Date(result.scanned_at).toLocaleString("fr-FR") : "-"}
-          </p>
+          <h2 className={`text-lg font-semibold ${isBlocked ? "text-danger" : "text-success"}`}>
+            {isBlocked ? "Vérification refusée" : "Livraison confirmée"}
+          </h2>
+          <p className="mt-1 text-sm text-ink-800">{result.message}</p>
+          {result.scanned_at ? (
+            <p className="mt-1 text-xs text-ink-600">{new Date(result.scanned_at).toLocaleString("fr-FR")}</p>
+          ) : null}
         </article>
       ) : null}
     </section>

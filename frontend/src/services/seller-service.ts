@@ -52,6 +52,7 @@ export async function updateSellerInventory(
     product_name?: string;
     brand?: string;
     category_id?: string;
+    barcode?: string;
     amount?: number;
     stock_quantity?: number;
     description?: string;

@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.config import get_settings
-from app.core.permissions import is_admin
+from app.core.permissions import is_admin, is_courier
 from app.core.crypto import decrypt_payment_code, encrypt_payment_code, payment_code_hash
 from app.core.csrf import enforce_csrf
 from app.core.deps import get_current_user, get_current_user_optional
@@ -842,8 +842,10 @@ def verify_receipt_scan(
     enforce_rate_limit(request, key="receipt_scan_verify", limit=20, window_seconds=60)
     is_admin = _is_admin(current_user)
     seller_profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
-    if not is_admin and seller_profile is None:
-        raise UnauthorizedError("Seller or admin access required")
+    # Le livreur scanne le recu du client a la remise du colis (uniquement pour ses livraisons).
+    is_courier_scan = not is_admin and seller_profile is None and is_courier(current_user)
+    if not is_admin and seller_profile is None and not is_courier_scan:
+        raise UnauthorizedError("Seller, courier or admin access required")
     try:
         claims = decode_receipt_access_token(payload.token)
     except ValueError as exc:
@@ -858,7 +860,11 @@ def verify_receipt_scan(
     if order is None:
         raise ValidationDomainError("Order not found")
     resolved_vendor_id = payload.vendor_id
-    if not is_admin:
+    if is_courier_scan:
+        if order.courier_user_id != current_user.id:
+            raise UnauthorizedError("Cette commande n'est pas dans vos livraisons.")
+        resolved_vendor_id = None
+    elif not is_admin:
         seller_vendor_id = seller_profile.vendor_id if seller_profile else None
         if not seller_vendor_id:
             raise UnauthorizedError("Seller profile not found")
@@ -910,6 +916,8 @@ def verify_receipt_scan(
         )
 
     order.status = "recu"
+    if order.delivered_at is None:
+        order.delivered_at = datetime.now(UTC)
     sync_fulfillments(order)
     scan.result = "accepted"
     db.add(scan)

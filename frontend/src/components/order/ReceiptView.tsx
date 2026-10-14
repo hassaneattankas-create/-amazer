@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,17 @@ type ReceiptViewProps = {
 };
 
 const FALLBACK_PAYMENT_PHONE = "+227 96953163";
+
+// Le QR pointe vers la page de verification : le livreur, le vendeur ou l'admin le scanne a la remise.
+function receiptScanUrl(verifyUrl: string): string | null {
+  try {
+    const token = new URL(verifyUrl).searchParams.get("token");
+    if (!token || typeof window === "undefined") return null;
+    return `${window.location.origin}/seller/delivery-scan?token=${encodeURIComponent(token)}`;
+  } catch {
+    return null;
+  }
+}
 
 export function ReceiptView({
   receipt,
@@ -166,6 +178,7 @@ export function ReceiptView({
   }
 
   const paymentPhone = receipt.platform_wallet_phone || FALLBACK_PAYMENT_PHONE;
+  const scanUrl = receipt.payment_status === "paid" ? receiptScanUrl(receipt.verify_url) : null;
 
   return (
     <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
@@ -266,6 +279,14 @@ export function ReceiptView({
             <p className="text-xl font-semibold text-[#FF4D00]">{formatXOF(receipt.total_amount)}</p>
           </div>
         </div>
+
+        {scanUrl ? (
+          <div className="mt-5 flex flex-col items-center gap-2 rounded-card border border-border bg-white p-4 text-center">
+            <QRCodeSVG value={scanUrl} size={168} level="M" marginSize={2} aria-label="QR code du reçu" />
+            <p className="text-sm font-semibold text-ink-900">Montrez ce QR code au livreur à la réception</p>
+            <p className="text-xs text-ink-600">Il le scanne pour confirmer la livraison. Valable une seule fois.</p>
+          </div>
+        ) : null}
 
         <div className="mt-5 space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
           <p className="text-sm font-semibold text-slate-900">Paiement mobile ({receipt.payment_mode.toUpperCase()})</p>

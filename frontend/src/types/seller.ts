@@ -124,6 +124,7 @@ export type SellerProductPayload = {
   description?: string;
   main_image_url?: string;
   category_id?: string;
+  barcode?: string;
   amount: number;
   currency: string;
   stock_quantity: number;

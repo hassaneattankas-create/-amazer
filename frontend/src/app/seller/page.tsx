@@ -18,6 +18,7 @@ import {
   roomRowsToPayload,
   type RoomRow,
 } from "@/components/seller/RoomTypesEditor";
+import { BarcodeScannerDrawer } from "@/components/BarcodeScannerDrawer";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -206,6 +207,7 @@ function SellerPageContent() {
       name: "",
       brand: "",
       category_id: "",
+      barcode: "",
       amount: "",
       stock_quantity: "1",
       description: "",
@@ -1126,6 +1128,23 @@ function SellerPageContent() {
                 </option>
               ))}
             </select>
+            <div className="relative">
+              <Input
+                placeholder="Code-barres (facultatif)"
+                inputMode="numeric"
+                value={productForm.barcode ?? ""}
+                onChange={(event) =>
+                  setProductForm((prev) => ({ ...prev, barcode: event.target.value.replace(/[^0-9A-Za-z-]/g, "") }))
+                }
+                className="pr-28"
+              />
+              <BarcodeScannerDrawer
+                onDetected={(value) =>
+                  setProductForm((prev) => ({ ...prev, barcode: value.replace(/[^0-9A-Za-z-]/g, "").slice(0, 80) }))
+                }
+                triggerClassName="absolute right-1 top-1/2 h-9 -translate-y-1/2 rounded-pill bg-ink-900 px-3 text-xs text-white hover:bg-ink-800"
+              />
+            </div>
             <Input
               placeholder="Prix XOF"
               type="number"
@@ -1177,6 +1196,7 @@ function SellerPageContent() {
                   description: productForm.description || undefined,
                   main_image_url: normalizeImageInput(productForm.main_image_url),
                   category_id: productForm.category_id || undefined,
+                  barcode: productForm.barcode || undefined,
                   currency: "XOF",
                 });
               })()

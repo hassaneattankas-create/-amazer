@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Camera, ScanLine } from "lucide-react";
 import { Drawer } from "vaul";
 import type { Html5Qrcode } from "html5-qrcode";
@@ -8,37 +8,60 @@ import type { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 
 type BarcodeScannerDrawerProps = {
-  onDetected: (barcode: string) => void;
+  onDetected: (value: string) => void;
+  /** "barcode" : code-barres produit (zone large) · "qr" : QR code d'un reçu (zone carrée). */
+  mode?: "barcode" | "qr";
+  triggerLabel?: string;
+  triggerClassName?: string;
 };
 
-export function BarcodeScannerDrawer({ onDetected }: BarcodeScannerDrawerProps) {
+const DEFAULT_TRIGGER =
+  "absolute right-2 top-1/2 h-10 -translate-y-1/2 rounded-pill bg-ink-900 px-4 text-white hover:bg-ink-800";
+
+// Le contenu du tiroir est monte par un portail : on attend que la zone video existe avant de demarrer
+// la camera (sinon html5-qrcode echoue avec « element introuvable » et le scan ne marche jamais).
+async function waitForElement(id: string, frames = 60): Promise<boolean> {
+  for (let i = 0; i < frames; i += 1) {
+    if (document.getElementById(id)) return true;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  }
+  return Boolean(document.getElementById(id));
+}
+
+export function BarcodeScannerDrawer({
+  onDetected,
+  mode = "barcode",
+  triggerLabel = "Scan",
+  triggerClassName = DEFAULT_TRIGGER,
+}: BarcodeScannerDrawerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  // Ref : un nouveau callback du parent ne doit pas redemarrer la camera pendant le scan.
+  const onDetectedRef = useRef(onDetected);
+  useEffect(() => {
+    onDetectedRef.current = onDetected;
+  }, [onDetected]);
   const isScanningRef = useRef(false);
   const [open, setOpen] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
-  const [status, setStatus] = useState("Pret a scanner");
-  const scannerId = useMemo(() => "barcode-scanner-region", []);
+  const [status, setStatus] = useState("Prêt à scanner");
+  const scannerId = `scanner-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const title = mode === "qr" ? "Scanner le QR code du reçu" : "Scanner un code-barres";
 
   const disposeScanner = useCallback(async () => {
     const scanner = scannerRef.current;
-    if (!scanner) {
-      isScanningRef.current = false;
-      return;
-    }
-
-    try {
-      await scanner.stop();
-    } catch {
-      // ignore scanner stop race
-    }
-
-    try {
-      await scanner.clear();
-    } catch {
-      // ignore scanner clear race
-    }
-
     scannerRef.current = null;
+    if (scanner) {
+      try {
+        await scanner.stop();
+      } catch {
+        // deja arrete
+      }
+      try {
+        scanner.clear();
+      } catch {
+        // deja nettoye
+      }
+    }
     isScanningRef.current = false;
   }, []);
 
@@ -50,13 +73,11 @@ export function BarcodeScannerDrawer({ onDetected }: BarcodeScannerDrawerProps) 
 
     const start = async () => {
       setIsStarting(true);
-      setStatus("Activation camera...");
-
+      setStatus("Activation de la caméra…");
       try {
-        const { Html5Qrcode } = await import("html5-qrcode");
-        if (cancelled || isScanningRef.current) {
-          return;
-        }
+        const [{ Html5Qrcode }, ready] = await Promise.all([import("html5-qrcode"), waitForElement(scannerId)]);
+        if (cancelled || isScanningRef.current) return;
+        if (!ready) throw new Error("zone de scan absente");
 
         const scanner = new Html5Qrcode(scannerId);
         scannerRef.current = scanner;
@@ -64,20 +85,24 @@ export function BarcodeScannerDrawer({ onDetected }: BarcodeScannerDrawerProps) 
 
         await scanner.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 220, height: 140 } },
+          {
+            fps: 10,
+            qrbox: (width: number, height: number) =>
+              mode === "qr"
+                ? { width: Math.floor(Math.min(width, height) * 0.7), height: Math.floor(Math.min(width, height) * 0.7) }
+                : { width: Math.floor(width * 0.85), height: Math.floor(Math.min(height * 0.5, 160)) },
+          },
           (decodedText: string) => {
-            if (navigator.vibrate) {
-              navigator.vibrate(35);
-            }
-            onDetected(decodedText);
-            setStatus(`Code detecte: ${decodedText}`);
+            if (navigator.vibrate) navigator.vibrate(35);
+            onDetectedRef.current(decodedText);
+            setStatus("Code détecté.");
             void disposeScanner().then(() => setOpen(false));
           },
           undefined
         );
-        setStatus("Scanne un code-barres");
+        setStatus(mode === "qr" ? "Placez le QR code dans le cadre." : "Placez le code-barres dans le cadre.");
       } catch {
-        setStatus("Caméra indisponible. Vérifie les permissions.");
+        setStatus("Caméra indisponible. Autorisez l'accès à la caméra puis réessayez.");
         await disposeScanner();
       } finally {
         setIsStarting(false);
@@ -90,38 +115,35 @@ export function BarcodeScannerDrawer({ onDetected }: BarcodeScannerDrawerProps) 
       cancelled = true;
       void disposeScanner();
     };
-  }, [disposeScanner, onDetected, open, scannerId]);
+  }, [disposeScanner, mode, open, scannerId]);
 
   return (
     <Drawer.Root open={open} onOpenChange={setOpen}>
       <Drawer.Trigger asChild>
-        <Button
-          type="button"
-          className="absolute right-2 top-1/2 h-10 -translate-y-1/2 rounded-pill bg-ink-900 px-4 text-white hover:bg-ink-800"
-        >
-          <ScanLine className="h-4 w-4" />
-          Scan
+        <Button type="button" className={triggerClassName}>
+          <ScanLine className="h-4 w-4" aria-hidden="true" />
+          {triggerLabel}
         </Button>
       </Drawer.Trigger>
       <Drawer.Portal>
-        <Drawer.Overlay className="pointer-events-none fixed inset-0 bg-black/30" />
-        <Drawer.Content className="fixed bottom-0 left-0 right-0 rounded-t-2xl bg-white p-4 shadow-xl">
-          <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200" />
-          <div className="mt-4 flex items-center gap-2">
-            <Camera className="h-5 w-5 text-[#FF4D00]" />
-            <p className="text-sm font-medium text-slate-900">Scanner code-barres</p>
+        <Drawer.Overlay className="fixed inset-0 z-overlay bg-black/30" />
+        <Drawer.Content className="fixed bottom-0 left-0 right-0 z-modal rounded-t-sheet bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-overlay">
+          <div className="mx-auto h-1.5 w-12 rounded-pill bg-surface-3" aria-hidden="true" />
+          <div className="mx-auto max-w-md">
+            <div className="mt-4 flex items-center gap-2">
+              <Camera className="h-5 w-5 text-brand-600" aria-hidden="true" />
+              <Drawer.Title className="text-sm font-semibold text-ink-900">{title}</Drawer.Title>
+            </div>
+            <Drawer.Description className="mt-1 text-xs text-ink-600" role="status">
+              {status}
+            </Drawer.Description>
+            <div id={scannerId} className="mt-3 min-h-56 overflow-hidden rounded-card border border-border bg-surface-1" />
+            {!isStarting ? (
+              <Button type="button" variant="outline" className="mt-3 w-full" onClick={() => setOpen(false)}>
+                Fermer
+              </Button>
+            ) : null}
           </div>
-          <p className="mt-1 text-xs text-slate-500">{status}</p>
-          <div id={scannerId} className="mt-3 min-h-56 rounded-xl border border-slate-200 bg-slate-50" />
-          {!isStarting ? (
-            <Button
-              type="button"
-              className="mt-3 w-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-              onClick={() => setOpen(false)}
-            >
-              Fermer
-            </Button>
-          ) : null}
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>

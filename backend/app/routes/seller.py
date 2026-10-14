@@ -674,7 +674,8 @@ def create_product_listing(
         main_image_url=payload.main_image_url,
         # Sans choix du vendeur, on range le produit automatiquement (sinon il n'apparait dans aucun filtre).
         category_id=payload.category_id or guess_category_id(db, payload.name, payload.description),
-        specs={},
+        # Code-barres : permet au client de retrouver le produit en le scannant depuis l'accueil.
+        specs={"barcode": payload.barcode} if payload.barcode else {},
     )
     db.add(product)
     db.flush()
@@ -1216,6 +1217,11 @@ def update_inventory_item(
         price.product.brand = payload.brand.strip()
     if payload.category_id is not None:
         price.product.category_id = payload.category_id or None
+    if payload.barcode is not None:
+        if payload.barcode:
+            specs["barcode"] = payload.barcode
+        else:
+            specs.pop("barcode", None)
     if payload.description is not None:
         price.product.description = payload.description.strip() or None
     if payload.main_image_url is not None:

@@ -2,6 +2,7 @@
 
 import { MapPin, Package, Phone, Store, Zap } from "lucide-react";
 
+import { BarcodeScannerDrawer } from "@/components/BarcodeScannerDrawer";
 import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 import { Button } from "@/components/ui/button";
 import { formatXOF } from "@/lib/currency";
@@ -13,6 +14,8 @@ type DeliveryCardProps = {
   onTake?: () => void;
   onDelivered?: () => void;
   onRelease?: () => void;
+  /** Valeur lue dans le QR code du reçu client (URL ou jeton). */
+  onReceiptScanned?: (raw: string) => void;
 };
 
 function mapsLink(address: string, district: string | null): string {
@@ -20,7 +23,7 @@ function mapsLink(address: string, district: string | null): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
-export function DeliveryCard({ order, busy, onTake, onDelivered, onRelease }: DeliveryCardProps) {
+export function DeliveryCard({ order, busy, onTake, onDelivered, onRelease, onReceiptScanned }: DeliveryCardProps) {
   const delivered = order.status === "recu";
   const inProgress = order.assigned_to_me && order.status === "livraison";
 
@@ -140,9 +143,17 @@ export function DeliveryCard({ order, busy, onTake, onDelivered, onRelease }: De
             Je ne peux pas la livrer
           </Button>
         ) : null}
+        {inProgress && onReceiptScanned ? (
+          <BarcodeScannerDrawer
+            mode="qr"
+            onDetected={onReceiptScanned}
+            triggerLabel="Scanner le reçu du client"
+            triggerClassName="min-h-11 rounded-field bg-ink-900 px-4 text-sm font-semibold text-white hover:bg-ink-800"
+          />
+        ) : null}
         {inProgress && onDelivered ? (
-          <Button type="button" size="lg" disabled={busy} onClick={onDelivered}>
-            Marquer livrée
+          <Button type="button" variant="outline" size="lg" disabled={busy} onClick={onDelivered}>
+            Marquer livrée sans scan
           </Button>
         ) : null}
       </div>

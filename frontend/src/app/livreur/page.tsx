@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Truck } from "lucide-react";
 
@@ -12,6 +12,7 @@ import {
   listAvailableDeliveries,
   listMyDeliveries,
   markDelivered,
+  scanDeliveryReceipt,
   releaseDelivery,
   takeDelivery,
 } from "@/services/courier-service";
@@ -61,6 +62,17 @@ export default function CourierPage() {
       refresh();
     },
   });
+
+  const scan = useMutation({
+    mutationFn: scanDeliveryReceipt,
+    onSuccess: (result) => {
+      setMessage(result.status === "claimed" ? "Reçu valide : livraison confirmée. Merci !" : result.message);
+      refresh();
+    },
+    onError: (error) => setMessage(getApiErrorMessage(error, "QR code non reconnu. Réessayez.")),
+  });
+  const { mutate: scanMutate } = scan;
+  const onReceiptScanned = useCallback((raw: string) => scanMutate(raw), [scanMutate]);
 
   if (userPending) {
     return <section className="mx-auto max-w-3xl px-gutter py-8" aria-busy="true" />;
@@ -131,10 +143,11 @@ export default function CourierPage() {
             <DeliveryCard
               key={order.id}
               order={order}
-              busy={action.isPending}
+              busy={action.isPending || scan.isPending}
               onTake={tab === "available" ? () => action.mutate({ kind: "take", id: order.id }) : undefined}
               onDelivered={() => action.mutate({ kind: "delivered", id: order.id })}
               onRelease={() => action.mutate({ kind: "release", id: order.id })}
+              onReceiptScanned={onReceiptScanned}
             />
           ))
         )}
