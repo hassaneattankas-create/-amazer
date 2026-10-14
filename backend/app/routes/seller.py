@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, object_session, selectinload
 
 from app.config import get_settings
-from app.core.cache import cache_delete_prefixes
+from app.core.cache import build_cache_key, cache_delete_prefixes, cache_get_json, cache_set_json
 from app.core.deps import get_admin_user, get_current_user, get_seller_user
 from app.core.crypto import decrypt_phone_value, encrypt_phone_value
 from app.core.csrf import enforce_csrf
@@ -549,6 +549,17 @@ def get_storefront(
     vendor_id: str,
     db: Annotated[Session, Depends(get_db)],
 ) -> SellerStorefrontResponse:
+    # Vitrine publique : cache court (60 s), vide a chaque modification vendeur (prefixe « catalog: »).
+    cache_key = build_cache_key("catalog:storefront", vendor_id=vendor_id)
+    cached = cache_get_json(cache_key)
+    if isinstance(cached, dict):
+        return SellerStorefrontResponse.model_validate(cached)
+    response = _build_public_storefront(vendor_id, db)
+    cache_set_json(cache_key, response.model_dump(mode="json"), ttl_seconds=60)
+    return response
+
+
+def _build_public_storefront(vendor_id: str, db: Session) -> SellerStorefrontResponse:
     vendor = db.get(Vendor, vendor_id)
     profile = db.scalar(
         select(SellerProfile).where(SellerProfile.vendor_id == vendor_id).options(selectinload(SellerProfile.user))

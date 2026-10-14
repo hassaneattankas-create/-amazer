@@ -16,17 +16,18 @@ export default function BoutiquesPage() {
   const debouncedQuery = useDebouncedValue(query, 250);
   const { data: stores = [], isPending, isError, error } = useQuery({
     queryKey: ["catalog-storefronts-boutiques", debouncedQuery],
-    queryFn: () =>
-      listStorefronts({
-        query: debouncedQuery,
-        activityType: "shop",
-      }),
+    // Toutes les boutiques qui vendent des produits (commerces et entreprises), pas seulement le type « shop ».
+    queryFn: () => listStorefronts({ query: debouncedQuery }),
     staleTime: 60_000,
     gcTime: 10 * 60_000,
     refetchOnWindowFocus: false,
   });
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
   const visibleStores = useMemo(() => {
-    const copy = [...stores];
+    const copy = stores.filter(
+      (store) =>
+        !["restaurant", "hotel", "transport"].includes(store.activity_type ?? "") && (!verifiedOnly || store.is_verified)
+    );
     copy.sort((a, b) => {
       const byProducts = b.product_count - a.product_count;
       if (byProducts !== 0) {
@@ -43,7 +44,7 @@ export default function BoutiquesPage() {
       return (a.business_name || a.name).localeCompare(b.business_name || b.name);
     });
     return copy;
-  }, [stores]);
+  }, [stores, verifiedOnly]);
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-gutter pb-14 pt-4">
@@ -52,7 +53,7 @@ export default function BoutiquesPage() {
           <div>
             <h1 className="text-2xl font-semibold text-ink-900 sm:text-3xl">Boutiques</h1>
             <p className="mt-1 max-w-2xl text-sm text-ink-600">
-              Les commerces de Niamey, au même endroit.
+              Toutes les boutiques AMAZER, les plus fournies d&apos;abord.
             </p>
           </div>
           <Link href="/hotels" className="text-sm font-medium text-brand-700 hover:underline">
@@ -62,9 +63,18 @@ export default function BoutiquesPage() {
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Rechercher une boutique."
+          placeholder="Rechercher une boutique…"
           className="mt-5"
         />
+        <label className="mt-3 inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink-800">
+          <input
+            type="checkbox"
+            checked={verifiedOnly}
+            onChange={(event) => setVerifiedOnly(event.target.checked)}
+            className="h-4 w-4 accent-brand-600"
+          />
+          Boutiques vérifiées uniquement
+        </label>
       </header>
 
       {isPending ? (
@@ -85,7 +95,7 @@ export default function BoutiquesPage() {
         </div>
       ) : (
         <article className="rounded-card border border-border bg-card p-6 text-sm text-ink-600">
-          Aucune boutique ne correspond a cette recherche.
+          Aucune boutique ne correspond à cette recherche.
         </article>
       )}
     </section>
