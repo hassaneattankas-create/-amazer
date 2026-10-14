@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BadgeCheck, ChevronRight, Package, ShieldCheck, Store, Truck } from "lucide-react";
+import { BadgeCheck, ChevronRight, Package, Phone, ShieldCheck, Store, Truck } from "lucide-react";
 
 import { PRODUCT_GRID_CLASS, ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
@@ -210,6 +210,26 @@ export function ProductDetailView({ productId }: { productId: string }) {
                 Écrire à la boutique
               </Link>
             </div>
+            {best.vendor.whatsapp_contact ? (
+              <div className="mt-3 border-t border-border pt-3">
+                <p className="text-sm text-ink-600">Une question sur ce produit ? Contactez le vendeur.</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <a
+                    href={`tel:${best.vendor.whatsapp_contact.replace(/\s/g, "")}`}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-field border border-border px-4 text-sm font-semibold text-ink-900 hover:bg-surface-1"
+                  >
+                    <Phone className="h-4 w-4" aria-hidden="true" />
+                    Appeler
+                  </a>
+                  <WhatsAppButton
+                    phone={best.vendor.whatsapp_contact}
+                    variant="outline"
+                    label="WhatsApp"
+                    message={`Bonjour, j'ai vu votre produit sur AMAZER : ${product.name}`}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2">
@@ -229,12 +249,6 @@ export function ProductDetailView({ productId }: { productId: string }) {
             </p>
           ) : null}
 
-          <WhatsAppButton
-            variant="link"
-            label="Une question sur ce produit ? Écrivez-nous"
-            message={`Bonjour AMAZER, j'ai une question sur : ${product.name}`}
-          />
-
           <ul className="space-y-2 text-sm text-ink-700">
             <li className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
@@ -243,6 +257,12 @@ export function ProductDetailView({ productId }: { productId: string }) {
             <li className="flex items-center gap-2">
               <Truck className="h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
               Livraison à Niamey, frais affichés avant la commande
+            </li>
+            <li className="text-xs text-ink-600">
+              Protégé seulement si vous payez sur AMAZER et êtes livré par un livreur AMAZER.{" "}
+              <Link href="/legal/terms" className="font-medium underline">
+                Conditions
+              </Link>
             </li>
           </ul>
         </div>

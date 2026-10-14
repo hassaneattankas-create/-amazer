@@ -73,10 +73,11 @@ def test_only_couriers_and_admins_access(user) -> None:
     assert route.get_courier_user(COURIER) is COURIER
 
 
-def test_available_order_hides_customer_contact_until_taken() -> None:
+def test_available_order_shows_phone_but_hides_address_until_taken() -> None:
     item = route._build(_db(_order()), _order(), COURIER)
     assert item.customer_name == "Awa"  # prenom seulement
-    assert item.customer_phone is None and item.delivery_address is None
+    assert item.customer_phone == "+22796000000"
+    assert item.delivery_address is None
     assert item.district == "Plateau"
     assert item.pickups[0].shop_name == "Boutique Une"
     assert item.pickups[0].items == ["2 × Riz 5 kg"]

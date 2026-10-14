@@ -22,6 +22,7 @@ class VendorResponse(BaseModel):
     slug: str
     is_active: bool
     is_verified: bool = False
+    whatsapp_contact: str | None = None
 
 
 class ProductImageResponse(BaseModel):

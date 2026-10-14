@@ -12,6 +12,7 @@ export type Vendor = {
   slug: string;
   is_active: boolean;
   is_verified: boolean;
+  whatsapp_contact?: string | null;
 };
 
 export type RankingBreakdown = {

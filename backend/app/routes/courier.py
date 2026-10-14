@@ -1,8 +1,8 @@
 """Espace livreur : commandes a livrer, prise en charge et confirmation de livraison.
 
 Acces reserve aux livreurs (role `courier`) et aux administrateurs, verifie cote serveur.
-Confidentialite : le telephone et l'adresse exacte du client ne sont visibles que par le
-livreur qui a pris la commande en charge ; avant, seul le quartier est affiche.
+Le telephone du client est visible par tous les livreurs (pour l'appeler avant de prendre
+la commande) ; l'adresse exacte n'apparait qu'au livreur qui a pris la commande.
 """
 
 import logging
@@ -118,7 +118,7 @@ def _build(db: Session, order: Order, courier: User) -> CourierOrder:
         item_count=sum(int(item.quantity) for item in order.items),
         pickups=pickups,
         customer_name=(customer.full_name if mine and customer else _first_name(customer.full_name if customer else None)),
-        customer_phone=(order.delivery_phone or (customer.whatsapp_phone if customer else None)) if mine else None,
+        customer_phone=order.delivery_phone or (customer.whatsapp_phone if customer else None),
         delivery_address=order.delivery_address if mine else None,
         assigned_to_me=mine,
         courier_assigned_at=order.courier_assigned_at,

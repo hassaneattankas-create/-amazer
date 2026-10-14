@@ -256,6 +256,9 @@ class ProductService:
                 is_verified=bool(
                     getattr(getattr(offer.row.price.vendor, "seller_profile", None), "is_verified", False)
                 ),
+                whatsapp_contact=getattr(
+                    getattr(offer.row.price.vendor, "seller_profile", None), "whatsapp_contact", None
+                ),
             ),
             currency=offer.row.price.currency,
             amount=offer.row.price.amount,

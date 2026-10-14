@@ -80,8 +80,19 @@ export function DeliveryCard({ order, busy, onTake, onDelivered, onRelease }: De
         {order.assigned_to_me && order.delivery_address ? (
           <p className="mt-0.5 text-sm text-ink-700">{order.delivery_address}</p>
         ) : null}
-        {!order.assigned_to_me ? (
-          <p className="mt-0.5 text-xs text-ink-600">Adresse et téléphone visibles après la prise en charge.</p>
+        {!order.assigned_to_me && !delivered ? (
+          <>
+            {order.customer_phone ? (
+              <a
+                href={`tel:${order.customer_phone.replace(/\s/g, "")}`}
+                className="mt-1 inline-flex min-h-9 items-center gap-1 text-sm font-medium text-brand-700"
+              >
+                <Phone className="h-4 w-4" aria-hidden="true" />
+                {order.customer_phone}
+              </a>
+            ) : null}
+            <p className="mt-0.5 text-xs text-ink-600">Adresse exacte visible après la prise en charge.</p>
+          </>
         ) : null}
       </section>
 
