@@ -58,9 +58,9 @@ function PayoutNotice({
       <p className="mt-1">
         1. Envoie {amount && amount > 0 ? <span className="font-semibold">{formatXOF(amount)}</span> : "le montant"}{" "}
         via <span className="font-semibold uppercase">{method}</span> au numero{" "}
-        <span className="font-semibold text-[#FF4D00]">{payoutPhone}</span>.
+        <span className="font-semibold text-brand-600">{payoutPhone}</span>.
       </p>
-      <p className="mt-1">2. Reviens ici et valide ci-dessous (la reference est facultative).</p>
+      <p className="mt-1">2. Reviens ici et valide ci-dessous (la référence est facultative).</p>
     </div>
   );
 }
@@ -163,13 +163,13 @@ function VendorShopPageContent() {
   const orderMutation = useMutation({
     mutationFn: createRestaurantOrder,
     onSuccess: async (order) => {
-      setOrderStatus(`Commande creee chez ${order.vendor_name}.`);
+      setOrderStatus(`Commande créée chez ${order.vendor_name}.`);
       setSelectedItems([]);
       notifyLocalOrderEvent({
         title: "Commande restaurant",
         body:
           order.payment_status === "paid"
-            ? "Paiement deja confirme avec code transaction."
+            ? "Paiement déjà confirme avec code transaction."
             : "Finalise le paiement sur la page securisee.",
         tag: `restaurant-order-${order.id}`,
         href:
@@ -406,7 +406,7 @@ function VendorShopPageContent() {
       return;
     }
     if (!customerName.trim() || !customerPhone.trim() || !deliveryAddress.trim()) {
-      setOrderStatus("Renseigne ton nom, ton telephone et l'adresse de livraison.");
+      setOrderStatus("Renseigne ton nom, ton téléphone et l'adresse de livraison.");
       return;
     }
     orderMutation.mutate({
@@ -456,7 +456,7 @@ function VendorShopPageContent() {
 
       <article className="premium-card border border-slate-200 bg-white p-4">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#FF4D00]" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-600" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -469,7 +469,7 @@ function VendorShopPageContent() {
       {data.gallery_images.length ? (
         <article className="premium-card border border-slate-200 bg-white p-5">
           <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-            <Images className="h-5 w-5 text-[#FF4D00]" />
+            <Images className="h-5 w-5 text-brand-600" />
             Galerie
           </h2>
           <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -588,7 +588,7 @@ function VendorShopPageContent() {
                       <option value="amana">Amana</option>
                     </select>
                     <Input
-                      placeholder="Reference de paiement"
+                      placeholder="Référence de paiement"
                       value={reservationForm.transaction_reference}
                       onChange={(event) =>
                         setReservationForm((prev) => ({
@@ -601,7 +601,7 @@ function VendorShopPageContent() {
                 ) : null}
               </div>
               <Button
-                className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
+                className="primary-glow-btn mt-4 bg-brand-600 text-white hover:bg-brand-700"
                 onClick={() => {
                   if (!requireSession()) return;
                   reservationMutation.mutate();
@@ -781,7 +781,7 @@ function VendorShopPageContent() {
                   <option value="amana">Amana</option>
                 </select>
                 <Input
-                  placeholder="Reference transaction"
+                  placeholder="Référence transaction"
                   value={hotelForm.transaction_reference}
                   onChange={(event) =>
                     setHotelForm((prev) => ({ ...prev, transaction_reference: event.target.value }))
@@ -872,7 +872,7 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/35 to-transparent" />
         <div className="absolute bottom-5 left-5 right-5 flex flex-wrap items-end justify-between gap-4">
           <div className="flex items-end gap-4">
-            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl border border-white/25 bg-white/10 backdrop-blur">
+            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-card border border-white/25 bg-white/10 backdrop-blur">
               {data.logo_url ? (
                 <Image
                   src={resolveImageUrl(data.logo_url) ?? "/images/placeholders/default.svg"}
@@ -1053,7 +1053,7 @@ function RestaurantMenuSection({
     <article className="space-y-4">
       <header className="flex items-center justify-between gap-2">
         <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-          <UtensilsCrossed className="h-5 w-5 text-[#FF4D00]" />
+          <UtensilsCrossed className="h-5 w-5 text-brand-600" />
           Menu digital
         </h2>
         <p className="text-xs text-slate-500">{menu.length} plat(s)</p>
@@ -1089,14 +1089,14 @@ function RestaurantMenuSection({
               <div className="flex items-start justify-between gap-2">
                 <h3 className="line-clamp-2 text-sm font-semibold text-slate-900">{dish.name}</h3>
                 {selectedItem ? (
-                  <span className="rounded-full border border-[#FF4D00]/30 bg-white px-2 py-0.5 text-[10px] font-semibold text-[#FF4D00]">
+                  <span className="rounded-full border border-brand-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-brand-600">
                     x{selectedItem.quantity}
                   </span>
                 ) : null}
               </div>
               {dish.description ? <p className="line-clamp-3 text-sm text-slate-600">{dish.description}</p> : null}
               {dish.tags?.length ? <p className="text-xs text-slate-500">{dish.tags.join(" - ")}</p> : null}
-              <p className="text-base font-semibold text-[#FF4D00]">{formatXOF(dish.base_price)}</p>
+              <p className="text-base font-semibold text-brand-600">{formatXOF(dish.base_price)}</p>
               {dish.options.length ? (
                 <div className="rounded-xl border border-orange-100 bg-white/70 p-2">
                   <p className="text-xs font-medium text-slate-700">Options</p>
@@ -1110,7 +1110,7 @@ function RestaurantMenuSection({
                           onClick={() => onToggleOption(dish.id, option)}
                           className={
                             isSelected
-                              ? "rounded-full border border-[#FF4D00]/40 bg-[#FF4D00]/10 px-2 py-1 text-xs text-[#FF4D00]"
+                              ? "rounded-full border border-brand-300 bg-brand-600/10 px-2 py-1 text-xs text-brand-600"
                               : "rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
                           }
                         >
@@ -1124,7 +1124,7 @@ function RestaurantMenuSection({
               <Button
                 type="button"
                 onClick={() => onAddDish(dish)}
-                className="primary-glow-btn w-full bg-[#FF4D00] text-white hover:bg-[#e74700]"
+                className="primary-glow-btn w-full bg-brand-600 text-white hover:bg-brand-700"
               >
                 Ajouter au panier repas
               </Button>
@@ -1204,7 +1204,7 @@ function RestaurantOrderPanel({
               onClick={() => onPaymentModeChange(entry.value as "nita" | "amana")}
               className={
                 paymentMode === entry.value
-                  ? "border border-[#FF4D00]/35 bg-[#FF4D00]/10 text-[#FF4D00]"
+                  ? "border border-brand-300 bg-brand-600/10 text-brand-600"
                   : "border border-slate-200 bg-white text-slate-700"
               }
             >
@@ -1231,7 +1231,7 @@ function RestaurantOrderPanel({
                 <p className="text-sm font-semibold text-slate-900">
                   {item.name} x{item.quantity}
                 </p>
-                <p className="text-sm font-semibold text-[#FF4D00]">{formatXOF(item.base_price * item.quantity)}</p>
+                <p className="text-sm font-semibold text-brand-600">{formatXOF(item.base_price * item.quantity)}</p>
               </div>
               <textarea
                 value={item.customer_note}
@@ -1250,7 +1250,7 @@ function RestaurantOrderPanel({
         type="button"
         disabled={isSubmitting || !selectedItems.length}
         onClick={onSubmit}
-        className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
+        className="primary-glow-btn mt-4 bg-brand-600 text-white hover:bg-brand-700"
       >
         {isSubmitting ? "Envoi en cours..." : "Valider et payer"}
       </Button>
@@ -1280,7 +1280,7 @@ function HotelRoomSection({ rooms }: { rooms: HotelRoomType[] }) {
       </header>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {rooms.map((room) => (
-          <div key={room.id || room.name} className="rounded-3xl border border-sky-200 bg-white p-4">
+          <div key={room.id || room.name} className="rounded-card border border-sky-200 bg-white p-4">
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-base font-semibold text-slate-900">{room.name}</h3>
               <span className="text-sm font-semibold text-sky-700">{formatXOF(room.night_price)}/nuit</span>

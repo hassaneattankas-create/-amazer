@@ -177,7 +177,7 @@ export default function SellerDashboardPage() {
       void queryClient.invalidateQueries({ queryKey: ["seller-inventory"] });
       setStatus("Stock mis a jour.");
     },
-    onError: () => setStatus("Erreur mise a jour stock."),
+    onError: () => setStatus("Erreur mise à jour stock."),
   });
 
   const deleteInventoryMutation = useMutation({
@@ -196,7 +196,7 @@ export default function SellerDashboardPage() {
       const errs = result.errors.length ? ` (${result.errors.length} ligne(s) ignoree(s))` : "";
       setStatus(`${result.created} produit(s) importe(s)${errs}.`);
     },
-    onError: () => setStatus("Import impossible. Verifie le format du fichier CSV."),
+    onError: () => setStatus("Import impossible. Vérifié le format du fichier CSV."),
   });
 
   const importPhotosMutation = useMutation({
@@ -218,7 +218,7 @@ export default function SellerDashboardPage() {
       void queryClient.invalidateQueries({ queryKey: ["seller-inventory"] });
       const errs = result.errors.length ? ` (${result.errors.length} ignoree(s))` : "";
       setStatus(
-        `${result.created} produit(s) cree(s) depuis tes photos${errs}. ` +
+        `${result.created} produit(s) créé(s) depuis tes photos${errs}. ` +
           "Complete le nom et le prix de chaque article puis active-le.",
       );
     },
@@ -236,9 +236,9 @@ export default function SellerDashboardPage() {
     }) => updateSellerOrderStatus(orderId, status),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["seller-shop-orders"] });
-      setStatus("Commande boutique mise a jour.");
+      setStatus("Commande boutique mise à jour.");
     },
-    onError: () => setStatus("Erreur lors de la mise a jour de la commande boutique."),
+    onError: () => setStatus("Erreur lors de la mise à jour de la commande boutique."),
   });
 
   const productMutation = useMutation({
@@ -273,9 +273,9 @@ export default function SellerDashboardPage() {
       updateSellerRestaurantMenuAvailability(menuItemId, isAvailable),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["seller-restaurant-menu-dashboard"] });
-      setStatus("Disponibilite du plat mise a jour.");
+      setStatus("Disponibilite du plat mise à jour.");
     },
-    onError: () => setStatus("Erreur lors de la mise a jour du menu."),
+    onError: () => setStatus("Erreur lors de la mise à jour du menu."),
   });
 
   const orderStatusMutation = useMutation({
@@ -288,7 +288,7 @@ export default function SellerDashboardPage() {
     }) => updateSellerRestaurantOrderStatus(orderId, status),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["seller-restaurant-orders"] });
-      setStatus("Commande restaurant mise a jour.");
+      setStatus("Commande restaurant mise à jour.");
     },
   });
 
@@ -302,7 +302,7 @@ export default function SellerDashboardPage() {
     }) => updateSellerRestaurantReservationStatus(reservationId, status),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["seller-restaurant-reservations"] });
-      setStatus("Reservation restaurant mise a jour.");
+      setStatus("Reservation restaurant mise à jour.");
     },
   });
 
@@ -316,7 +316,7 @@ export default function SellerDashboardPage() {
     }) => updateSellerHotelBookingStatus(bookingId, status),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["seller-hotel-bookings"] });
-      setStatus("Reservation hotel mise a jour.");
+      setStatus("Reservation hotel mise à jour.");
     },
   });
 
@@ -501,7 +501,7 @@ export default function SellerDashboardPage() {
         {showProductTools ? (
           <article className="premium-card border border-slate-200 bg-white p-6">
             <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-              <PlusCircle className="h-5 w-5 text-[#FF4D00]" />
+              <PlusCircle className="h-5 w-5 text-brand-600" />
               Ajouter un produit
             </h2>
             <p className="mt-2 text-sm text-slate-600">
@@ -514,7 +514,7 @@ export default function SellerDashboardPage() {
             </p>
 
             {profile?.storefront_tier === "premium" ? (
-              <div className="mt-4 rounded-xl border border-dashed border-[#FF4D00]/40 bg-orange-50/60 p-4">
+              <div className="mt-4 rounded-xl border border-dashed border-brand-300 bg-orange-50/60 p-4">
                 <p className="text-sm font-medium text-slate-900">
                   Import rapide par photos
                   <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
@@ -527,7 +527,7 @@ export default function SellerDashboardPage() {
                   public). Tu completes ensuite le nom et le prix de chaque article, puis tu
                   l&apos;actives.
                 </p>
-                <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-md border border-[#FF4D00]/50 bg-white px-3 py-1.5 text-sm font-medium text-[#FF4D00] hover:bg-orange-50">
+                <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-md border border-brand-300 bg-white px-3 py-1.5 text-sm font-medium text-brand-600 hover:bg-orange-50">
                   {importPhotosMutation.isPending ? "Envoi des photos..." : "Choisir des photos"}
                   <input
                     type="file"
@@ -565,7 +565,7 @@ export default function SellerDashboardPage() {
                   setProductForm((prev) => ({ ...prev, category_id: event.target.value }))
                 }
               >
-                <option value="">Categorie (optionnel)</option>
+                <option value="">Catégorie (optionnel)</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
@@ -602,7 +602,7 @@ export default function SellerDashboardPage() {
             </div>
             <Button
               type="button"
-              className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
+              className="primary-glow-btn mt-4 bg-brand-600 text-white hover:bg-brand-700"
               onClick={() =>
                 productMutation.mutate({
                   name: productForm.name,
@@ -624,7 +624,7 @@ export default function SellerDashboardPage() {
         {showRestaurantTools ? (
           <article className="premium-card border border-slate-200 bg-white p-6">
             <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-              <UtensilsCrossed className="h-5 w-5 text-[#FF4D00]" />
+              <UtensilsCrossed className="h-5 w-5 text-brand-600" />
               Ajouter un plat ou une boisson
             </h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -670,7 +670,7 @@ export default function SellerDashboardPage() {
             </div>
             <Button
               type="button"
-              className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
+              className="primary-glow-btn mt-4 bg-brand-600 text-white hover:bg-brand-700"
               onClick={() =>
                 dishMutation.mutate({
                   name: dishForm.name,
@@ -695,7 +695,7 @@ export default function SellerDashboardPage() {
         {showRestaurantTools ? (
           <article className="premium-card border border-slate-200 bg-white p-6">
             <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-              <UtensilsCrossed className="h-5 w-5 text-[#FF4D00]" />
+              <UtensilsCrossed className="h-5 w-5 text-brand-600" />
               Menu publie
             </h2>
             <div className="mt-4 space-y-3">
@@ -737,7 +737,7 @@ export default function SellerDashboardPage() {
         {showRestaurantTools ? (
           <article className="premium-card border border-slate-200 bg-white p-6">
             <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-              <Clock3 className="h-5 w-5 text-[#FF4D00]" />
+              <Clock3 className="h-5 w-5 text-brand-600" />
               Commandes restaurant en temps reel
             </h2>
             <div className="mt-4 space-y-3">
@@ -750,14 +750,14 @@ export default function SellerDashboardPage() {
                         <p className="text-sm font-semibold text-slate-900">{order.customer_name} — {order.customer_phone}</p>
                         <p className="mt-0.5 text-xs text-slate-500">{order.items.map((it) => `${it.dish_name} x${it.quantity}`).join(", ")}</p>
                         <p className="mt-0.5 text-xs text-slate-500">{order.delivery_address} | {order.payment_mode?.toUpperCase()}</p>
-                        <AnimatedPrice value={order.total_amount} className="mt-1 text-sm font-semibold text-[#FF4D00]" />
+                        <AnimatedPrice value={order.total_amount} className="mt-1 text-sm font-semibold text-brand-600" />
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600">
                           {order.status === "commande" ? "Nouvelle" : order.status === "payment_pending" ? "Paiement en attente" : order.status === "preparation" ? "En preparation" : order.status === "livraison" ? "En livraison" : "Livree"}
                         </span>
                         {next && order.payment_status === "paid" ? (
-                          <Button size="sm" className="primary-glow-btn bg-[#FF4D00] text-white" onClick={() => orderStatusMutation.mutate({ orderId: order.id, status: next.next })}>
+                          <Button size="sm" className="primary-glow-btn bg-brand-600 text-white" onClick={() => orderStatusMutation.mutate({ orderId: order.id, status: next.next })}>
                             {next.label}
                           </Button>
                         ) : null}
@@ -776,7 +776,7 @@ export default function SellerDashboardPage() {
         {showProductTools ? (
           <article className="premium-card border border-slate-200 bg-white p-6">
             <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-              <Clock3 className="h-5 w-5 text-[#FF4D00]" />
+              <Clock3 className="h-5 w-5 text-brand-600" />
               Commandes boutique en temps reel
             </h2>
             <div className="mt-4 space-y-3">
@@ -795,14 +795,14 @@ export default function SellerDashboardPage() {
                         <p className="mt-0.5 text-xs text-slate-500">
                           {order.payment_mode?.toUpperCase()} | {new Date(order.created_at).toLocaleDateString("fr-FR")}
                         </p>
-                        <p className="mt-1 text-sm font-semibold text-[#FF4D00]">{formatXOF(order.total_amount)}</p>
+                        <p className="mt-1 text-sm font-semibold text-brand-600">{formatXOF(order.total_amount)}</p>
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600">
                           {order.status === "commande" ? "Nouvelle" : order.status === "payment_pending" ? "Paiement en attente" : order.status === "annulee" ? "Annulee" : order.status === "preparation" ? "En preparation" : order.status === "livraison" ? "En livraison" : "Livree"}
                         </span>
                         {next && order.payment_status === "paid" && order.status !== "annulee" ? (
-                          <Button size="sm" className="primary-glow-btn bg-[#FF4D00] text-white" onClick={() => shopOrderStatusMutation.mutate({ orderId: order.id, status: next.next })}>
+                          <Button size="sm" className="primary-glow-btn bg-brand-600 text-white" onClick={() => shopOrderStatusMutation.mutate({ orderId: order.id, status: next.next })}>
                             {next.label}
                           </Button>
                         ) : null}
@@ -821,7 +821,7 @@ export default function SellerDashboardPage() {
         {showRestaurantReservationTools ? (
           <article className="premium-card border border-slate-200 bg-white p-6">
             <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-              <CalendarClock className="h-5 w-5 text-[#FF4D00]" />
+              <CalendarClock className="h-5 w-5 text-brand-600" />
               Reservations restaurant
             </h2>
             <div className="mt-4 space-y-3">
@@ -865,7 +865,7 @@ export default function SellerDashboardPage() {
         {showHotelBookingTools ? (
           <article className="premium-card border border-slate-200 bg-white p-6">
             <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-              <Hotel className="h-5 w-5 text-[#FF4D00]" />
+              <Hotel className="h-5 w-5 text-brand-600" />
               {isTransport ? "Reservations de trajets" : "Reservations hotel"}
             </h2>
             <div className="mt-4 space-y-3">
@@ -913,7 +913,7 @@ export default function SellerDashboardPage() {
           <div className="space-y-3">
             <article className="premium-card border border-slate-200 bg-white p-6">
               <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-                <Boxes className="h-5 w-5 text-[#FF4D00]" />
+                <Boxes className="h-5 w-5 text-brand-600" />
 Catalogue produits
               </h2>
               <p className="mt-2 text-sm text-slate-600">
@@ -939,7 +939,7 @@ Catalogue produits
                       <button
                         type="button"
                         onClick={() => { setEditingImagePriceId(item.price_id); setEditImageUrl(""); }}
-                        className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-[10px] text-slate-400 hover:border-[#FF4D00]/50"
+                        className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-[10px] text-slate-400 hover:border-brand-300"
                       >
                         + Photo
                       </button>
@@ -948,7 +948,7 @@ Catalogue produits
                       <button
                         type="button"
                         onClick={() => { setEditingImagePriceId(item.price_id); setEditImageUrl(item.main_image_url ?? ""); }}
-                        className="mt-1 w-full text-center text-[10px] text-slate-400 hover:text-[#FF4D00]"
+                        className="mt-1 w-full text-center text-[10px] text-slate-400 hover:text-brand-600"
                       >
                         Changer
                       </button>
@@ -966,7 +966,7 @@ Catalogue produits
                       <Input type="number" min={0} defaultValue={item.amount} placeholder="Prix XOF" className="h-9 w-28 text-sm" id={`amount-${item.price_id}`} />
                       <Input type="number" min={0} defaultValue={item.stock_quantity} placeholder="Stock" className="h-9 w-20 text-sm" id={`stock-${item.price_id}`} />
                       <Input type="number" min={0} defaultValue={item.promo_price ?? ""} placeholder="Promo" className="h-9 w-24 text-sm" id={`promo-${item.price_id}`} />
-                      {item.promo_price ? <span className="text-xs text-[#FF4D00]">Promo: {item.promo_price.toFixed(0)} XOF</span> : null}
+                      {item.promo_price ? <span className="text-xs text-brand-600">Promo: {item.promo_price.toFixed(0)} XOF</span> : null}
                     </div>
                   </div>
 
@@ -974,7 +974,7 @@ Catalogue produits
                   <div className="flex flex-col gap-2 shrink-0">
                     <Button
                       size="sm"
-                      className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
+                      className="primary-glow-btn bg-brand-600 text-white hover:bg-brand-700"
                       disabled={inventoryMutation.isPending}
                       onClick={() => {
                         const get = (id: string) => (document.getElementById(id) as HTMLInputElement | null)?.value ?? "";
@@ -1020,7 +1020,7 @@ Catalogue produits
                     <div className="flex-1">
                       <SingleMediaField label="" value={editImageUrl} onChange={setEditImageUrl} emptyMessage="Choisis ou uploade une photo" />
                     </div>
-                    <Button size="sm" className="bg-[#FF4D00] text-white" onClick={() => {
+                    <Button size="sm" className="bg-brand-600 text-white" onClick={() => {
                       inventoryMutation.mutate({ priceId: item.price_id, amount: item.amount, stock: item.stock_quantity, main_image_url: normalizeImageInputForApi(editImageUrl) ?? "" });
                       setEditingImagePriceId(null); setEditImageUrl("");
                     }}>

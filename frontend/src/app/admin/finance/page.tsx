@@ -103,7 +103,7 @@ export default function AdminFinancePage() {
     mutationFn: verifyAdminFinancePin,
     onSuccess: () => {
       setPinVerified(true);
-      setPinStatus("Verification admin valide. Acces autorise.");
+      setPinStatus("Vérification admin valide. Acces autorise.");
       setPin("");
       setBirthDate("");
     },
@@ -136,7 +136,7 @@ export default function AdminFinancePage() {
     mutationFn: (orderId: string) => cancelAdminOrder(orderId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-      setTransferStatus("Commande annulee. Si elle etait payee, le stock est remis et le remboursement reste a faire.");
+      setTransferStatus("Commande annulée. Si elle etait payee, le stock est remis et le remboursement reste a faire.");
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       setTransferStatus(error.response?.data?.detail ?? "Annulation impossible.");
@@ -174,7 +174,7 @@ export default function AdminFinancePage() {
       setResetStatus("Compteurs remis a zero. Les nouveaux calculs partent de maintenant.");
     },
     onError: (error) => {
-      setResetStatus(getApiErrorMessage(error, "Impossible de reinitialiser les compteurs."));
+      setResetStatus(getApiErrorMessage(error, "Impossible de réinitialiser les compteurs."));
     },
   });
 
@@ -262,7 +262,7 @@ export default function AdminFinancePage() {
     return (
       <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
         <article className="premium-card border border-slate-200 bg-white p-6">
-          <h1 className="luxury-title text-2xl font-semibold">Dashboard Tresorerie Admin</h1>
+          <h1 className="luxury-title text-2xl font-semibold">Dashboard Trésorerie Admin</h1>
           <p className="mt-2 text-sm text-slate-600">
             Acces prive: saisissez le secret admin et la cle secondaire pour consulter les fonds.
           </p>
@@ -289,7 +289,7 @@ export default function AdminFinancePage() {
               type="button"
               onClick={() => pinMutation.mutate(buildAdminFinanceVerifyPayload(pin, birthDate))}
               disabled={!pin || !birthDate || pinMutation.isPending}
-              className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
+              className="primary-glow-btn bg-brand-600 text-white hover:bg-brand-700"
             >
               Verifier
             </Button>
@@ -360,15 +360,15 @@ export default function AdminFinancePage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <article className="premium-card border border-slate-200 bg-white p-5">
           <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Flux Nita</p>
-          <p className="mt-2 text-3xl font-semibold text-[#FF4D00]">{formatXOF(wallet.total_nita)}</p>
+          <p className="mt-2 text-3xl font-semibold text-brand-600">{formatXOF(wallet.total_nita)}</p>
         </article>
         <article className="premium-card border border-slate-200 bg-white p-5">
           <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Flux Amana</p>
-          <p className="mt-2 text-3xl font-semibold text-[#FF4D00]">{formatXOF(wallet.total_amana)}</p>
+          <p className="mt-2 text-3xl font-semibold text-brand-600">{formatXOF(wallet.total_amana)}</p>
         </article>
         <article className="premium-card border border-slate-200 bg-white p-5">
           <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Flux Total Collecte</p>
-          <p className="mt-2 text-3xl font-semibold text-[#FF4D00]">{formatXOF(wallet.total_all)}</p>
+          <p className="mt-2 text-3xl font-semibold text-brand-600">{formatXOF(wallet.total_all)}</p>
         </article>
       </div>
 
@@ -376,17 +376,17 @@ export default function AdminFinancePage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <article className="premium-card border border-slate-200 bg-white p-5">
           <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Commission AMAZER</p>
-          <p className="mt-2 text-3xl font-semibold text-[#FF4D00]">
+          <p className="mt-2 text-3xl font-semibold text-brand-600">
             {formatXOF(wallet.amazer_commission_total)}
           </p>
         </article>
         <article className="premium-card border border-slate-200 bg-white p-5">
           <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Frais de Service</p>
-          <p className="mt-2 text-3xl font-semibold text-[#FF4D00]">{formatXOF(wallet.service_fee_total)}</p>
+          <p className="mt-2 text-3xl font-semibold text-brand-600">{formatXOF(wallet.service_fee_total)}</p>
         </article>
         <article className="premium-card border border-slate-200 bg-white p-5">
           <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Disponible a Virer</p>
-          <p className="mt-2 text-3xl font-semibold text-[#FF4D00]">{formatXOF(availableForTransfer)}</p>
+          <p className="mt-2 text-3xl font-semibold text-brand-600">{formatXOF(availableForTransfer)}</p>
         </article>
       </div>
 
@@ -397,17 +397,17 @@ export default function AdminFinancePage() {
           </p>
           <AnimatedPrice
             value={summary?.total_commissions_collected ?? 0}
-            className="mt-2 text-3xl font-semibold text-[#FF4D00]"
+            className="mt-2 text-3xl font-semibold text-brand-600"
           />
         </article>
         <article className="premium-card border border-slate-200 bg-white p-5">
           <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Nombre de Vendeurs Actifs</p>
-          <p className="mt-2 text-3xl font-semibold text-[#FF4D00]">{summary?.active_sellers ?? 0}</p>
+          <p className="mt-2 text-3xl font-semibold text-brand-600">{summary?.active_sellers ?? 0}</p>
         </article>
       </div>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
-        <h2 className="luxury-title text-lg font-semibold">Reinitialisation des compteurs</h2>
+        <h2 className="luxury-title text-lg font-semibold">Réinitialisation des compteurs</h2>
         <p className="mt-2 text-sm text-slate-600">
           Remet a zero les compteurs finances et clics pub sans supprimer l&apos;historique des commandes.
         </p>
@@ -452,7 +452,7 @@ export default function AdminFinancePage() {
                 amount: Number(transferAmount),
               })
             }
-            className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
+            className="primary-glow-btn bg-brand-600 text-white hover:bg-brand-700"
           >
             Virement
           </Button>
@@ -479,7 +479,7 @@ export default function AdminFinancePage() {
                   <p className="text-sm font-medium text-slate-900">
                     {row.business_name} ({row.seller_email || "email inconnu"})
                   </p>
-                  <p className="text-sm text-[#FF4D00]">{formatXOF(row.amount_claimed)}</p>
+                  <p className="text-sm text-brand-600">{formatXOF(row.amount_claimed)}</p>
                 </div>
                 <p className="mt-1 text-xs text-slate-600">
                   Ref: {row.transaction_reference} | {row.payment_mode.toUpperCase()} | {row.months} mois
@@ -532,7 +532,7 @@ export default function AdminFinancePage() {
       </article>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
-        <h2 className="luxury-title text-lg font-semibold">Historique Securise des Transactions</h2>
+        <h2 className="luxury-title text-lg font-semibold">Historique Sécurisé des Transactions</h2>
         <p className="mt-2 text-sm text-slate-600">
           Les codes sont stockes chiffres en base. Vue reservee a l admin.
         </p>
@@ -576,7 +576,7 @@ export default function AdminFinancePage() {
 
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="luxury-title text-lg font-semibold">Suivi des commandes</h2>
-        <p className="mt-2 text-sm text-slate-600">Un seul bouton fait avancer chaque commande a l&apos;etape suivante.</p>
+        <p className="mt-2 text-sm text-slate-600">Un seul bouton fait avancer chaque commande a l&apos;étape suivante.</p>
         {isOrdersError ? <p className="mt-4 text-sm text-amber-700">{getAdminFinanceDataError(ordersError)}</p> : null}
         <div className="mt-4 space-y-2">
           {(adminOrders ?? []).slice(0, 12).map((order) => {
@@ -603,7 +603,7 @@ export default function AdminFinancePage() {
                   <p className="text-sm font-medium text-slate-900">
                     {order.customer_name} <span className="text-xs text-slate-400">#{order.id.slice(0, 8)}</span>
                   </p>
-                  <p className="mt-0.5 text-sm font-semibold text-[#FF4D00]">{formatXOF(order.total_amount)}</p>
+                  <p className="mt-0.5 text-sm font-semibold text-brand-600">{formatXOF(order.total_amount)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600">{label}</span>
@@ -613,7 +613,7 @@ export default function AdminFinancePage() {
                       size="sm"
                       disabled={dispatchMutation.isPending}
                       onClick={() => dispatchMutation.mutate({ orderId: order.id, status: nextAction.to })}
-                      className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
+                      className="primary-glow-btn bg-brand-600 text-white hover:bg-brand-700"
                     >
                       {nextAction.label}
                     </Button>

@@ -77,8 +77,8 @@ export function PriceAlertButton({ productId, currentPrice }: PriceAlertButtonPr
         transition={{ duration: 0.45, ease: "easeInOut" }}
         className={`inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-sm transition ${
           isOpen
-            ? "border-[#FF4D00]/55 bg-[#FF4D00]/10 text-[#FF4D00] shadow-[0_0_24px_rgba(255,77,0,0.45)]"
-            : "border-slate-200 bg-white text-slate-700 hover:border-[#FF4D00]/40"
+            ? "border-brand-300 bg-brand-600/10 text-brand-600 "
+            : "border-slate-200 bg-white text-slate-700 hover:border-brand-300"
         }`}
       >
         <Bell className="h-4 w-4" />
@@ -101,7 +101,7 @@ export function PriceAlertButton({ productId, currentPrice }: PriceAlertButtonPr
             type="button"
             disabled={isSubmitting}
             onClick={submitAlert}
-            className="primary-glow-btn mt-3 w-full bg-[#FF4D00] text-white hover:bg-[#e74700]"
+            className="primary-glow-btn mt-3 w-full bg-brand-600 text-white hover:bg-brand-700"
           >
             {isSubmitting ? "Création..." : "Créer l'alerte"}
           </Button>

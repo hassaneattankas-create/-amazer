@@ -30,10 +30,10 @@ function CustomPriceTooltip({ active, payload, label }: CustomTooltipProps) {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-lg border border-[#FF4D00]/35 bg-white px-3 py-2 text-xs text-slate-800 shadow-xl"
+      className="rounded-lg border border-brand-300 bg-white px-3 py-2 text-xs text-slate-800 shadow-xl"
     >
       <p className="text-slate-500">{label}</p>
-      <AnimatedPrice value={Number(payload[0].value)} className="mt-1 font-semibold text-[#FF4D00]" />
+      <AnimatedPrice value={Number(payload[0].value)} className="mt-1 font-semibold text-brand-600" />
     </motion.div>
   );
 }

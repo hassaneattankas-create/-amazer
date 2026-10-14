@@ -30,7 +30,7 @@ export default function AdminSectionsPage() {
     mutationFn: createAdminSection,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-sections"] });
-      setStatus("Section creee.");
+      setStatus("Section créée.");
       setTitle("");
       setSlug("");
     },
@@ -47,9 +47,9 @@ export default function AdminSectionsPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-sections"] });
-      setStatus("Section mise a jour.");
+      setStatus("Section mise à jour.");
     },
-    onError: () => setStatus("Erreur mise a jour section."),
+    onError: () => setStatus("Erreur mise à jour section."),
   });
 
   const replaceItemsMutation = useMutation({
@@ -142,7 +142,7 @@ export default function AdminSectionsPage() {
             })
           }
           disabled={!title || !slug || createMutation.isPending}
-          className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
+          className="primary-glow-btn mt-4 bg-brand-600 text-white hover:bg-brand-700"
         >
           Creer
         </Button>
@@ -198,7 +198,7 @@ export default function AdminSectionsPage() {
           <Button
             type="button"
             onClick={() => replaceItemsMutation.mutate({ sectionId: selectedSection.id, raw: itemsText })}
-            className="primary-glow-btn mt-3 bg-[#FF4D00] text-white hover:bg-[#e74700]"
+            className="primary-glow-btn mt-3 bg-brand-600 text-white hover:bg-brand-700"
           >
             Enregistrer les items
           </Button>

@@ -220,7 +220,7 @@ function RegisterPageContent() {
       await login({ identifier: identifier.trim(), password });
       window.location.assign(next.startsWith("/") ? next : "/");
     } catch (error) {
-      setStatus(getApiErrorMessage(error, "Verification impossible. Verifiez le code."));
+      setStatus(getApiErrorMessage(error, "Vérification impossible. Vérifiez le code."));
     } finally {
       setIsLoading(false);
     }
@@ -256,7 +256,7 @@ function RegisterPageContent() {
             sans connexion, des que votre compte sera pret. Vous pourrez alors vous connecter
             avec <span className="font-medium text-slate-700">{identifier}</span>.
           </p>
-          <Link href="/" className="inline-block mt-2 text-sm font-medium text-[#FF4D00] hover:underline">
+          <Link href="/" className="inline-block mt-2 text-sm font-medium text-brand-600 hover:underline">
             Retour a l accueil
           </Link>
         </article>
@@ -317,7 +317,7 @@ function RegisterPageContent() {
             </Button>
             <button
               type="button"
-              className="text-sm text-[#FF4D00] hover:underline"
+              className="text-sm text-brand-600 hover:underline"
               onClick={() => {
                 setPendingVerification(null);
                 setVerifyCode("");
@@ -352,14 +352,14 @@ function RegisterPageContent() {
                   onClick={() => setSellerType(option.value)}
                   className={`rounded-2xl border p-4 text-left transition ${
                     isActive
-                      ? "border-[#FF4D00]/45 bg-orange-50 shadow-[0_8px_30px_rgba(255,77,0,0.12)]"
-                      : "border-slate-200 bg-white hover:border-[#FF4D00]/30"
+                      ? "border-brand-300 bg-orange-50 "
+                      : "border-slate-200 bg-white hover:border-brand-300"
                   }`}
                 >
-                  <Icon className="h-5 w-5 text-[#FF4D00]" />
+                  <Icon className="h-5 w-5 text-brand-600" />
                   <p className="mt-3 font-semibold text-slate-900">{option.title}</p>
                   {sellerPricing ? (
-                    <p className="mt-1 text-sm font-semibold text-[#FF4D00]">
+                    <p className="mt-1 text-sm font-semibold text-brand-600">
                       {formatXOF(sellerSubscriptionFee(sellerPricing, option.value))}
                       <span className="font-normal text-slate-500"> / mois</span>
                     </p>
@@ -518,7 +518,7 @@ function RegisterPageContent() {
                 {totalAmount !== null
                   ? `Deposez ${formatXOF(totalAmount)} (${subscriptionMonths} mois × ${formatXOF(monthlyFee!)})`
                   : "Deposez le montant de votre abonnement"}{" "}
-                sur le <span className="text-[#FF4D00]">+227 96 95 31 63</span> via Nita ou Amana,
+                sur le <span className="text-brand-600">+227 96 95 31 63</span> via Nita ou Amana,
                 puis saisissez la reference de transaction ci-dessous.
                 Les informations fournies serviront a verifier votre paiement.
                 Votre compte et votre boutique seront crees uniquement apres confirmation du paiement.
@@ -544,7 +544,7 @@ function RegisterPageContent() {
                 />
                 <input
                   type="text"
-                  placeholder="Reference transaction"
+                  placeholder="Référence transaction"
                   value={transactionRef}
                   onChange={(e) => setTransactionRef(e.target.value)}
                   className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
@@ -562,11 +562,11 @@ function RegisterPageContent() {
             />
             <span>
               J&apos;accepte la{" "}
-              <Link href="/legal/privacy" className="font-medium text-[#FF4D00] hover:underline">
+              <Link href="/legal/privacy" className="font-medium text-brand-600 hover:underline">
                 politique de confidentialité
               </Link>{" "}
               et les{" "}
-              <Link href="/legal/terms" className="font-medium text-[#FF4D00] hover:underline">
+              <Link href="/legal/terms" className="font-medium text-brand-600 hover:underline">
                 conditions d&apos;utilisation
               </Link>
             </span>
@@ -586,7 +586,7 @@ function RegisterPageContent() {
           Déjà inscrit ?{" "}
           <Link
             href={isSellerFlow ? "/login?next=/seller" : "/login"}
-            className="font-medium text-[#FF4D00] hover:underline"
+            className="font-medium text-brand-600 hover:underline"
           >
             Se connecter
           </Link>

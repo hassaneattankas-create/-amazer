@@ -69,7 +69,7 @@ export function ChatWidget() {
           <MessageCircle className="h-5 w-5" aria-hidden="true" />
         </button>
       ) : (
-        <div className="fixed bottom-5 right-5 z-toast flex h-[min(70vh,520px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-overlay">
+        <div className="fixed bottom-5 right-5 z-toast flex h-[min(70vh,520px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-card border border-slate-200 bg-white shadow-overlay">
           <div className="flex items-center justify-between bg-ink-900 px-4 py-3 text-white">
             <div className="flex items-center gap-2">
               <Image src="/logo-amazer-mark-128.png" alt="" width={28} height={28} className="h-7 w-7" />

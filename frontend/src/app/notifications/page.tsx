@@ -132,7 +132,7 @@ export default function NotificationsPage() {
               <div
                 className={`rounded-2xl border p-4 transition ${
                   item.unread
-                    ? "border-[#FF4D00]/30 bg-orange-50"
+                    ? "border-brand-300 bg-orange-50"
                     : "border-slate-200 bg-slate-50"
                 }`}
               >
@@ -144,7 +144,7 @@ export default function NotificationsPage() {
                 {item.unread ? (
                   <button
                     type="button"
-                    className="mt-3 text-xs font-medium text-[#FF4D00] hover:underline"
+                    className="mt-3 text-xs font-medium text-brand-600 hover:underline"
                     onClick={() => void handleMarkAsRead(item.id)}
                   >
                     Marquer comme lu

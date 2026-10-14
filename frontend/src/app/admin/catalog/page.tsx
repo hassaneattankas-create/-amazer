@@ -37,17 +37,17 @@ export default function AdminCatalogPage() {
     mutationFn: createAdminCategory,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
-      setStatus("Categorie creee.");
+      setStatus("Catégorie créée.");
       setForm({ name: "", slug: "", parent_id: "", is_active: true });
     },
-    onError: () => setStatus("Creation categorie impossible."),
+    onError: () => setStatus("Creation catégorie impossible."),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) => {
       const entry = categories.find((item) => item.id === id);
       if (!entry) {
-        throw new Error("Categorie introuvable");
+        throw new Error("Catégorie introuvable");
       }
       return updateAdminCategory(id, {
         name: entry.name,
@@ -58,9 +58,9 @@ export default function AdminCatalogPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
-      setStatus("Categorie mise a jour.");
+      setStatus("Catégorie mise à jour.");
     },
-    onError: () => setStatus("Mise a jour categorie impossible."),
+    onError: () => setStatus("Mise à jour catégorie impossible."),
   });
 
   if (isPending) {
@@ -74,7 +74,7 @@ export default function AdminCatalogPage() {
   return (
     <section className="mx-auto w-full max-w-5xl space-y-6 px-4 pb-14 sm:px-6">
       <header className="premium-card border border-slate-200 bg-white p-6">
-        <h1 className="luxury-title text-3xl font-semibold">Admin Rubriques & Categories</h1>
+        <h1 className="luxury-title text-3xl font-semibold">Admin Rubriques & Catégories</h1>
         <p className="mt-2 text-sm text-slate-600">
           Creez vos categories ici, et gerez les rubriques dynamiques depuis les sections.
         </p>
@@ -84,7 +84,7 @@ export default function AdminCatalogPage() {
       </header>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
-        <h2 className="text-lg font-semibold text-slate-900">Nouvelle categorie</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Nouvelle catégorie</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <input
             value={form.name}
@@ -103,7 +103,7 @@ export default function AdminCatalogPage() {
             onChange={(event) => setForm((prev) => ({ ...prev, parent_id: event.target.value }))}
             className="rounded-md border border-slate-300 px-3 py-2 text-sm"
           >
-            <option value="">Aucune categorie parent</option>
+            <option value="">Aucune catégorie parent</option>
             {categories.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
@@ -120,7 +120,7 @@ export default function AdminCatalogPage() {
           </label>
         </div>
         <Button
-          className="mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
+          className="mt-4 bg-brand-600 text-white hover:bg-brand-700"
           onClick={() =>
             createMutation.mutate({
               name: form.name,
@@ -136,7 +136,7 @@ export default function AdminCatalogPage() {
       </article>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
-        <h2 className="text-lg font-semibold text-slate-900">Categories existantes</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Catégories existantes</h2>
         <div className="mt-3 space-y-2">
           {categories.map((item) => (
             <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3">

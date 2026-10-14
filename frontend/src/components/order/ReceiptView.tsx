@@ -123,7 +123,7 @@ export function ReceiptView({
       }
 
       downloadBlob(blob, file.name);
-      setStatus("Partage direct non disponible. Le PDF a ete telecharge.");
+      setStatus("Partage direct non disponible. Le PDF a été telecharge.");
     } catch {
       setStatus("Erreur lors du partage PDF.");
     }
@@ -138,7 +138,7 @@ export function ReceiptView({
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
           title: `Recu AMAZER ${receipt.order_id}`,
-          text: "Enregistrer le recu comme image.",
+          text: "Enregistrer le reçu comme image.",
           files: [file],
         });
         setStatus("Image ouverte pour partage ou enregistrement.");
@@ -165,7 +165,7 @@ export function ReceiptView({
     return (
       <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
         <article className="premium-card border border-rose-200 bg-rose-50 p-6">
-          <h1 className="text-xl font-semibold text-rose-700">Acces refuse ou recu invalide</h1>
+          <h1 className="text-xl font-semibold text-rose-700">Acces refusé ou recu invalide</h1>
           <p className="mt-2 text-sm text-rose-700">
             Le lien est peut-etre expire, modifie ou non autorise.
           </p>
@@ -184,7 +184,7 @@ export function ReceiptView({
     <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
       <article
         ref={receiptRef}
-        className="premium-card overflow-hidden border border-orange-200 bg-gradient-to-br from-white via-orange-50/40 to-amber-50/60 p-6 shadow-[0_20px_60px_rgba(255,77,0,0.16)]"
+        className="premium-card overflow-hidden border border-orange-200 bg-gradient-to-br from-white via-orange-50/40 to-amber-50/60 p-6 "
       >
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -194,7 +194,7 @@ export function ReceiptView({
             <p className="mt-1 text-sm text-slate-600">Commande #{receipt.order_id}</p>
           </div>
           <div className="text-right">
-            <p className="luxury-title text-xl font-semibold text-[#FF4D00]">AMAZER</p>
+            <p className="luxury-title text-xl font-semibold text-brand-600">AMAZER</p>
             <p
               className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                 receipt.payment_status === "paid"
@@ -223,7 +223,7 @@ export function ReceiptView({
             {new Date(receipt.created_at).toLocaleTimeString("fr-FR", { hour12: false })}
           </p>
           <p>
-            <span className="font-semibold text-slate-900">Reference:</span> {receipt.payment_reference ?? "-"}
+            <span className="font-semibold text-slate-900">Référence:</span> {receipt.payment_reference ?? "-"}
           </p>
           <p>
             <span className="font-semibold text-slate-900">Code transaction:</span>{" "}
@@ -276,7 +276,7 @@ export function ReceiptView({
           </div>
           <div className="mt-3 flex items-center justify-between gap-3 border-t border-orange-200 pt-3">
             <p className="text-sm font-semibold text-slate-900">Total</p>
-            <p className="text-xl font-semibold text-[#FF4D00]">{formatXOF(receipt.total_amount)}</p>
+            <p className="text-xl font-semibold text-brand-600">{formatXOF(receipt.total_amount)}</p>
           </div>
         </div>
 
@@ -295,29 +295,29 @@ export function ReceiptView({
             effectue.
           </p>
           <p className="text-sm text-slate-800">
-            <span className="font-semibold">Numero AMAZER:</span> {paymentPhone}
+            <span className="font-semibold">Numéro AMAZER:</span> {paymentPhone}
           </p>
           <p className="text-sm text-slate-800">
             <span className="font-semibold">Montant a verser:</span> {formatXOF(receipt.total_amount)}
           </p>
           <p className="text-sm text-slate-800">
-            <span className="font-semibold">Reference a garder:</span> {receipt.payment_reference ?? "-"}
+            <span className="font-semibold">Référence a garder:</span> {receipt.payment_reference ?? "-"}
           </p>
         </div>
       </article>
 
       <article className="premium-card border border-emerald-200 bg-emerald-50 p-5">
-        <h2 className="text-base font-semibold text-emerald-800">Conseils de Securite AMAZER</h2>
+        <h2 className="text-base font-semibold text-emerald-800">Conseils de Sécurité AMAZER</h2>
         <ul className="mt-3 space-y-2 text-sm text-emerald-900">
           <li>Ne communique jamais ton code secret Nita ou Amana par message ou appel.</li>
           <li>Vérifie que le montant, les frais et la référence correspondent avant de valider.</li>
-          <li>Conserve ce recu comme preuve; le vendeur peut verifier la commande dans son espace.</li>
+          <li>Conserve ce recu comme preuve; le vendeur peut vérifier la commande dans son espace.</li>
           <li>AMAZER ne te demandera jamais ton code secret par SMS ou appel.</li>
         </ul>
       </article>
 
       <div className="flex flex-wrap gap-2">
-        <Button onClick={downloadPdf} className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]">
+        <Button onClick={downloadPdf} className="primary-glow-btn bg-brand-600 text-white hover:bg-brand-700">
           Telecharger le recu (PDF)
         </Button>
         <Button onClick={saveAsImage} className="border border-slate-200 bg-white text-slate-800 hover:bg-slate-50">

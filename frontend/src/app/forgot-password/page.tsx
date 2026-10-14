@@ -36,7 +36,7 @@ export default function ForgotPasswordPage() {
       setInfo(result.code_preview ? `${result.message} (code de test : ${result.code_preview})` : result.message);
       setStep("reset");
     } catch (requestError) {
-      setError(getApiErrorMessage(requestError, "Impossible d'envoyer le code. Reessayez dans quelques minutes."));
+      setError(getApiErrorMessage(requestError, "Impossible d'envoyer le code. Réessayez dans quelques minutes."));
     } finally {
       setIsLoading(false);
     }
@@ -50,7 +50,7 @@ export default function ForgotPasswordPage() {
       await resetPassword({ identifier: identifier.trim(), code: code.trim(), new_password: newPassword });
       router.push("/login?reset=1");
     } catch (resetError) {
-      setError(getApiErrorMessage(resetError, "Code invalide ou expire. Verifiez le code ou demandez-en un nouveau."));
+      setError(getApiErrorMessage(resetError, "Code invalide ou expiré. Vérifiez le code ou demandez-en un nouveau."));
     } finally {
       setIsLoading(false);
     }
@@ -59,11 +59,11 @@ export default function ForgotPasswordPage() {
   return (
     <section className="mx-auto max-w-xl px-gutter py-10">
       <article className="rounded-card border border-border bg-card p-6 shadow-resting">
-        <h1 className="text-2xl font-semibold text-ink-900">Mot de passe oublie</h1>
+        <h1 className="text-2xl font-semibold text-ink-900">Mot de passe oublié</h1>
         <p className="mt-2 text-sm text-ink-600">
           {step === "request"
-            ? "Indiquez l'e-mail ou le numero WhatsApp de votre compte : nous vous envoyons un code a 6 chiffres."
-            : "Saisissez le code recu et choisissez un nouveau mot de passe."}
+            ? "Indiquez l'e-mail ou le numéro WhatsApp de votre compte : nous vous envoyons un code a 6 chiffres."
+            : "Saisissez le code reçu et choisissez un nouveau mot de passe."}
         </p>
 
         {step === "request" ? (

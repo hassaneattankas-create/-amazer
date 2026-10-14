@@ -13,11 +13,11 @@ type VendorOfferProps = {
 
 export function VendorOffer({ offer }: VendorOfferProps) {
   return (
-    <article className="premium-card border border-slate-200 bg-white p-4 transition hover:border-[#FF4D00]/40">
+    <article className="premium-card border border-slate-200 bg-white p-4 transition hover:border-brand-300">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="inline-flex items-center gap-2 text-sm text-slate-700">
-            <Store className="h-4 w-4 text-[#FF4D00]" />
+            <Store className="h-4 w-4 text-brand-600" />
             {offer.vendor.name}
           </p>
           <p className="mt-1 text-xs text-slate-500">
@@ -26,11 +26,11 @@ export function VendorOffer({ offer }: VendorOfferProps) {
         </div>
 
         <div className="text-right">
-          <AnimatedPrice value={offer.amount} className="text-lg font-semibold text-[#FF4D00]" />
+          <AnimatedPrice value={offer.amount} className="text-lg font-semibold text-brand-600" />
           <Button
             asChild
             size="sm"
-            className="mt-2 border border-[#FF4D00]/25 bg-[#FF4D00]/10 text-[#FF4D00] hover:bg-[#FF4D00]/15"
+            className="mt-2 border border-brand-300 bg-brand-600/10 text-brand-600 hover:bg-brand-600/15"
           >
             <Link href={`/shop/${offer.vendor.id}`}>Voir l&apos;offre</Link>
           </Button>

@@ -39,56 +39,34 @@
 }
 
 @layer components {
+  /* Classes heritees, realignees sur le design system (2026-10-14) : un seul style
+     sobre partout, sans degrade ni lueur. Les nouveaux ecrans utilisent directement les tokens. */
   .luxury-title {
-    @apply tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-400;
+    @apply tracking-display text-ink-900;
   }
 
   .premium-card {
-    @apply rounded-[24px] border border-white/20 bg-white/70 shadow-[0_20px_50px_rgba(255,77,0,0.15)] backdrop-blur-xl;
+    @apply rounded-card border border-border bg-card shadow-hairline;
   }
 
   .primary-glow-btn {
-    @apply relative overflow-hidden border-0 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-400 text-white shadow-[0_20px_50px_rgba(255,77,0,0.25)];
+    @apply border-0 bg-brand-600 text-white shadow-none hover:bg-brand-700;
   }
 
   .shine-btn::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    transform: translateX(-130%) skewX(-18deg);
-    background: linear-gradient(
-      115deg,
-      rgba(255, 255, 255, 0) 20%,
-      rgba(255, 255, 255, 0.35) 50%,
-      rgba(255, 255, 255, 0) 80%
-    );
-    animation: amazer-shine 5s linear infinite;
-    pointer-events: none;
+    content: none;
   }
 
   .hover-lift-glow {
-    @apply transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-[0_28px_60px_rgba(255,77,0,0.28)];
-  }
-}
-
-@keyframes amazer-shine {
-  0% {
-    transform: translateX(-130%) skewX(-18deg);
-  }
-  12% {
-    transform: translateX(130%) skewX(-18deg);
-  }
-  100% {
-    transform: translateX(130%) skewX(-18deg);
+    @apply transition-colors duration-fast hover:border-ink-400;
   }
 }
 
 /* ============================================================================
    AMAZER DESIGN TOKENS — couche ajoutee le 2026-10-04
    ----------------------------------------------------------------------------
-   Regle : cette couche n'ecrase RIEN de ce qui precede. Les classes heritees
-   (.luxury-title, .premium-card, .primary-glow-btn, .shine-btn, .hover-lift-glow)
-   restent inchangees — elles sont utilisees 328 fois dans src/.
+   Les classes heritees (.luxury-title, .premium-card, .primary-glow-btn, .shine-btn,
+   .hover-lift-glow) sont realignees sur ces tokens (voir plus haut).
    Les nouveaux ecrans utilisent les tokens ci-dessous et les composants de
    src/components/ui/. Voir le Skill `amazer-design-system` pour la table de
    migration.
@@ -253,5 +231,23 @@
     outline: 2px solid hsl(var(--brand-500));
     outline-offset: 2px;
     border-radius: var(--radius-xs);
+  }
+}
+
+/* Entree de page : leger glissement, jamais de contenu masque (pas d'opacite a 0). */
+@keyframes amazer-page-in {
+  from {
+    transform: translateY(6px);
+  }
+  to {
+    transform: none;
+  }
+}
+.animate-page-in {
+  animation: amazer-page-in 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-in {
+    animation: none;
   }
 }

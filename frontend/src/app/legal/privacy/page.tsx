@@ -5,7 +5,7 @@ export default function PrivacyPolicyPage() {
         <h1 className="luxury-title text-3xl font-semibold text-slate-900">
           Politique de confidentialite AMAZER
         </h1>
-        <p className="mt-3 text-sm text-slate-600">Derniere mise a jour: 25/03/2026</p>
+        <p className="mt-3 text-sm text-slate-600">Dernière mise à jour: 25/03/2026</p>
 
         <div className="mt-6 space-y-4 text-sm text-slate-700">
           <p>

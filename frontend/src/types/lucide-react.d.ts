@@ -12,6 +12,7 @@ declare module "lucide-react" {
   export type { LucideProps, LucideIcon };
 
   export const ArrowLeft: LucideIcon;
+  export const Clock: LucideIcon;
   export const Send: LucideIcon;
   export const UserRound: LucideIcon;
   export const Settings: LucideIcon;

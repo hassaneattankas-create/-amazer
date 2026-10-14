@@ -44,13 +44,13 @@ function OrderPayPageContent() {
       isStarting={startMutation.isPending}
       status={
         startMutation.isSuccess
-          ? "Paiement initialise. Validez dans AmanaTa, puis cliquez sur Verifier le paiement."
+          ? "Paiement initialise. Validez dans AmanaTa, puis cliquez sur Vérifier le paiement."
           : mutation.isSuccess
           ? mutation.data.payment_status === "paid"
             ? "Paiement confirme. Redirection..."
             : mutation.data.message
           : mutation.isError
-            ? "Confirmation impossible. Reessayez."
+            ? "Confirmation impossible. Réessayez."
             : ""
       }
       onConfirm={(providerReference) => mutation.mutate(providerReference)}

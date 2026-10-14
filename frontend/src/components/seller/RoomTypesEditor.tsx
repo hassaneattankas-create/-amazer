@@ -193,7 +193,7 @@ export function RoomTypesEditor({
       <Button
         type="button"
         onClick={add}
-        className="border border-[#FF4D00]/30 bg-orange-50 text-[#FF4D00] hover:bg-orange-100"
+        className="border border-brand-300 bg-orange-50 text-brand-600 hover:bg-orange-100"
       >
         + Ajouter un {itemLabel}
       </Button>

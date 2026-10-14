@@ -69,7 +69,7 @@ export function ReviewSystem({ productId }: ReviewSystemProps) {
           type="button"
           disabled={!comment.trim() || mutation.isPending}
           onClick={() => mutation.mutate()}
-          className="primary-glow-btn mt-3 bg-[#FF4D00] text-white hover:bg-[#e74700]"
+          className="primary-glow-btn mt-3 bg-brand-600 text-white hover:bg-brand-700"
         >
           {mutation.isPending ? "Publication..." : "Publier mon avis"}
         </Button>
@@ -89,7 +89,7 @@ export function ReviewSystem({ productId }: ReviewSystemProps) {
             </div>
             <p className="mt-2 text-sm text-slate-700">{review.comment}</p>
             {review.photo_url ? (
-              <a className="mt-2 inline-block text-xs text-[#FF4D00] underline" href={review.photo_url} target="_blank" rel="noreferrer">
+              <a className="mt-2 inline-block text-xs text-brand-600 underline" href={review.photo_url} target="_blank" rel="noreferrer">
                 Voir la photo
               </a>
             ) : null}

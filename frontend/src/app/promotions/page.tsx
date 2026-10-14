@@ -59,7 +59,7 @@ export default function PromotionsPage() {
                 <p className="mt-1 text-xs text-slate-500">Vendeur: {item.vendor.name}</p>
                 <div className="mt-2 flex items-center gap-2">
                   <p className="text-sm text-slate-400 line-through">{Math.round(item.original_amount)} XOF</p>
-                  <p className="text-lg font-semibold text-[#FF4D00]">{Math.round(item.promo_amount)} XOF</p>
+                  <p className="text-lg font-semibold text-brand-600">{Math.round(item.promo_amount)} XOF</p>
                 </div>
                 <p className="text-xs text-slate-500">
                   {item.promo_until ? `Valable jusqu'au ${new Date(item.promo_until).toLocaleString("fr-FR")}` : "Promo active"}

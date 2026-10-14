@@ -109,17 +109,17 @@ function LoginPageContent() {
           <Button
             type="submit"
             disabled={isLoading || !identifier.trim() || !password}
-            className="primary-glow-btn w-full bg-[#FF4D00] text-white hover:bg-[#e74700]"
+            className="primary-glow-btn w-full bg-brand-600 text-white hover:bg-brand-700"
           >
             {isLoading ? "Connexion..." : "Se connecter"}
           </Button>
           <p className="text-sm text-slate-600">
             Pas encore de compte ?{" "}
-            <Link href="/register" className="font-medium text-[#FF4D00] hover:underline">
+            <Link href="/register" className="font-medium text-brand-600 hover:underline">
               Creer un compte client
             </Link>
             {" "}ou{" "}
-            <Link href={sellerRegisterHref} className="font-medium text-[#FF4D00] hover:underline">
+            <Link href={sellerRegisterHref} className="font-medium text-brand-600 hover:underline">
               devenir vendeur
             </Link>
             .

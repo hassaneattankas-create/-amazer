@@ -7,7 +7,7 @@ export default function AccountDeletionPage() {
         <h1 className="luxury-title text-3xl font-semibold text-slate-900">
           Suppression De Compte AMAZER
         </h1>
-        <p className="mt-3 text-sm text-slate-600">Derniere mise a jour: 25/03/2026</p>
+        <p className="mt-3 text-sm text-slate-600">Dernière mise à jour: 25/03/2026</p>
 
         <div className="mt-6 space-y-4 text-sm text-slate-700">
           <p>
@@ -22,15 +22,15 @@ export default function AccountDeletionPage() {
           <p>
             Si vous ne pouvez plus acceder a l application, envoyez une demande depuis l adresse
             email ou le numero WhatsApp associe au compte a{" "}
-            <a className="font-medium text-[#FF4D00] hover:underline" href="mailto:amazer.niger2@gmail.com">
+            <a className="font-medium text-brand-600 hover:underline" href="mailto:amazer.niger2@gmail.com">
               amazer.niger2@gmail.com
             </a>{" "}
             en indiquant:
           </p>
           <ul className="list-disc space-y-2 pl-5 text-sm text-slate-700">
-            <li>votre identifiant de compte (email ou numero WhatsApp),</li>
+            <li>votre identifiant de compte (email ou numéro WhatsApp),</li>
             <li>la mention explicite que vous demandez la suppression du compte AMAZER,</li>
-            <li>toute information utile pour verifier votre identite.</li>
+            <li>toute information utile pour vérifier votre identité.</li>
           </ul>
           <p>
             Effet de la suppression: le compte est desactive, les sessions sont revoquees, les
@@ -43,7 +43,7 @@ export default function AccountDeletionPage() {
           </p>
           <p>
             Pour plus d informations, consultez la{" "}
-            <Link className="font-medium text-[#FF4D00] hover:underline" href="/legal/privacy">
+            <Link className="font-medium text-brand-600 hover:underline" href="/legal/privacy">
               politique de confidentialite
             </Link>
             .

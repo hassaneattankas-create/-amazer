@@ -61,7 +61,7 @@ export default function AdminUsersPage() {
     mutationFn: verifyAdminFinancePin,
     onSuccess: () => {
       setPinVerified(true);
-      setPinStatus("Verification admin valide. Gestion utilisateurs activee.");
+      setPinStatus("Vérification admin valide. Gestion utilisateurs activee.");
       setPin("");
       setBirthDate("");
     },
@@ -97,7 +97,7 @@ export default function AdminUsersPage() {
   const removeMutation = useMutation({
     mutationFn: removeAdminUser,
     onSuccess: () => {
-      setActionStatus("Compte retire de l'application (desactive).");
+      setActionStatus("Compte retiré de l'application (désactivé).");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: ["admin-user-stats"] });
     },
@@ -199,7 +199,7 @@ export default function AdminUsersPage() {
               type="button"
               onClick={() => pinMutation.mutate(buildAdminFinanceVerifyPayload(pin, birthDate))}
               disabled={!pin || !birthDate || pinMutation.isPending}
-              className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
+              className="primary-glow-btn bg-brand-600 text-white hover:bg-brand-700"
             >
               Verifier
             </Button>
@@ -274,7 +274,7 @@ export default function AdminUsersPage() {
         </article>
         <article className="premium-card border border-slate-200 bg-white p-4">
           <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Nouveaux 7 Jours</p>
-          <p className="mt-2 text-2xl font-semibold text-[#FF4D00]">{stats.new_users_last_7_days}</p>
+          <p className="mt-2 text-2xl font-semibold text-brand-600">{stats.new_users_last_7_days}</p>
         </article>
         <article className="premium-card border border-slate-200 bg-white p-4">
           <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Comptes Vendeurs</p>
@@ -326,7 +326,7 @@ export default function AdminUsersPage() {
                 <th className="px-3 py-2 text-left font-medium text-slate-600">Email / WhatsApp</th>
                 <th className="px-3 py-2 text-left font-medium text-slate-600">Type</th>
                 <th className="px-3 py-2 text-left font-medium text-slate-600">Inscription</th>
-                <th className="px-3 py-2 text-left font-medium text-slate-600">Etat</th>
+                <th className="px-3 py-2 text-left font-medium text-slate-600">État</th>
                 <th className="px-3 py-2 text-left font-medium text-slate-600">Actions</th>
               </tr>
             </thead>

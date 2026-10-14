@@ -94,7 +94,7 @@ export function OrderStepper({ order }: OrderStepperProps) {
             <div key={`${order.id}-${step}`} className="space-y-1">
               <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full border border-slate-200">
                 {done ? (
-                  <CheckCircle2 className="h-5 w-5 text-[#FF4D00]" />
+                  <CheckCircle2 className="h-5 w-5 text-brand-600" />
                 ) : (
                   <Circle className="h-5 w-5 text-slate-300" />
                 )}
@@ -119,7 +119,7 @@ export function OrderStepper({ order }: OrderStepperProps) {
       ) : null}
 
       <p className="mt-3 inline-flex items-center gap-1 text-xs text-slate-500">
-        <Truck className="h-3.5 w-3.5 text-[#FF4D00]" />
+        <Truck className="h-3.5 w-3.5 text-brand-600" />
         Suivi: {order.tracking_code || "en cours"}
       </p>
     </div>

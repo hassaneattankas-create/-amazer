@@ -85,8 +85,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 href={item.href}
                 className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
                   active
-                    ? "border-[#FF4D00]/45 bg-[#FF4D00]/10 text-[#FF4D00]"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-[#FF4D00]/30"
+                    ? "border-brand-300 bg-brand-600/10 text-brand-600"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-brand-300"
                 }`}
               >
                 <Icon className="h-4 w-4" />

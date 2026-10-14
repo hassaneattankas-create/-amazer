@@ -374,7 +374,7 @@ function SellerPageContent() {
       // Met à jour la home + les listes de boutiques (elles sont basées sur /catalog/storefronts).
       queryClient.invalidateQueries({ queryKey: ["home-storefronts"] });
       queryClient.invalidateQueries({ queryKey: ["catalog-storefronts-boutiques"] });
-      setStatus("Profil vendeur enregistre.");
+      setStatus("Profil vendeur enregistré.");
     },
     onError: (error) =>
       setStatus(getApiErrorMessage(error, "Erreur lors de l'enregistrement du profil.")),
@@ -413,7 +413,7 @@ function SellerPageContent() {
       queryClient.invalidateQueries({ queryKey: ["seller-subscription-status"] });
       queryClient.invalidateQueries({ queryKey: ["seller-subscription-payment-requests"] });
       setSubscriptionForm((prev) => ({ ...prev, transaction_reference: "" }));
-      setStatus("Demande envoyee. Tu recevras une notification des que le paiement est accepte ou refuse.");
+      setStatus("Demande envoyee. Tu recevras une notification des que le paiement est accepte ou refusé.");
     },
     onError: (error) => setStatus(getApiErrorMessage(error, "Paiement vendeur impossible.")),
   });
@@ -530,10 +530,10 @@ function SellerPageContent() {
           ) : (
             <div className="mt-4 space-y-3">
               <div className="rounded-2xl border border-sky-300 bg-white p-4 text-sm text-slate-800">
-                <p className="font-semibold text-slate-900">Numero de versement AMAZER</p>
+                <p className="font-semibold text-slate-900">Numéro de versement AMAZER</p>
                 <p className="mt-2">
-                  <span className="font-semibold text-[#FF4D00]">
-                    {paymentDestination || "Numero non renseigne pour le moment"}
+                  <span className="font-semibold text-brand-600">
+                    {paymentDestination || "Numéro non renseigne pour le moment"}
                   </span>
                 </p>
               </div>
@@ -562,7 +562,7 @@ function SellerPageContent() {
                   }
                 />
                 <Input
-                  placeholder="Reference de transaction"
+                  placeholder="Référence de transaction"
                   value={subscriptionForm.transaction_reference}
                   onChange={(event) =>
                     setSubscriptionForm((prev) => ({
@@ -632,7 +632,7 @@ function SellerPageContent() {
           ) : null}
           {latestSubscriptionPayment ? (
             <div className="mt-4 rounded-2xl border border-amber-300 bg-amber-100/70 p-4 text-sm text-amber-950">
-              <p className="font-semibold">Derniere demande de paiement</p>
+              <p className="font-semibold">Dernière demande de paiement</p>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 <p>Statut : {latestPaymentStatusLabel}</p>
                 <p>Mode : {latestSubscriptionPayment.payment_mode === "nita" ? "Nita" : "Amana"}</p>
@@ -649,11 +649,11 @@ function SellerPageContent() {
           {hasProfile ? (
             <div className="mt-4 space-y-4">
               <div className="rounded-2xl border border-amber-300 bg-white p-4 text-sm text-slate-800">
-                <p className="font-semibold text-slate-900">Numero de versement</p>
+                <p className="font-semibold text-slate-900">Numéro de versement</p>
                 <p className="mt-2">
                   AMAZER :{" "}
-                  <span className="font-semibold text-[#FF4D00]">
-                    {paymentDestination || "Numero non renseigne pour le moment"}
+                  <span className="font-semibold text-brand-600">
+                    {paymentDestination || "Numéro non renseigne pour le moment"}
                   </span>
                 </p>
               </div>
@@ -682,7 +682,7 @@ function SellerPageContent() {
                   }
                 />
                 <Input
-                  placeholder="Reference de transaction"
+                  placeholder="Référence de transaction"
                   value={subscriptionForm.transaction_reference}
                   onChange={(event) =>
                     setSubscriptionForm((prev) => ({
@@ -708,7 +708,7 @@ function SellerPageContent() {
                   hasUnsavedPlanChange ||
                   Boolean(subscriptionStatus?.has_pending_payment_request)
                 }
-                className="primary-glow-btn bg-[#FF4D00] text-white hover:bg-[#e74700]"
+                className="primary-glow-btn bg-brand-600 text-white hover:bg-brand-700"
                 onClick={() =>
                   subscriptionMutation.mutate({
                     payment_mode: subscriptionForm.payment_mode,
@@ -758,7 +758,7 @@ function SellerPageContent() {
       ) : (
         <article className="premium-card border border-slate-200 bg-white p-6">
           <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
-            <Building2 className="h-5 w-5 text-[#FF4D00]" />
+            <Building2 className="h-5 w-5 text-brand-600" />
             Profil vendeur
           </h2>
           {profile ? (
@@ -806,7 +806,7 @@ function SellerPageContent() {
                 onClick={() => setShowProfileEditor((value) => !value)}
               >
                 <PenSquare className="h-3.5 w-3.5" />
-                {showProfileEditor ? "Masquer les details" : "Modifier ou completer mon profil"}
+                {showProfileEditor ? "Masquer les détails" : "Modifier ou completer mon profil"}
               </button>
             </div>
           ) : null}
@@ -903,7 +903,7 @@ function SellerPageContent() {
             />
             {isPremium || profileForm.activity_type === "restaurant" ? (
               <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-slate-700 sm:col-span-2">
-                <p className="font-medium text-slate-900">Numero de versement (Nita / Amana)</p>
+                <p className="font-medium text-slate-900">Numéro de versement (Nita / Amana)</p>
                 <p className="mt-1 text-xs text-slate-500">
                   Numero sur lequel tes clients t&apos;envoient l&apos;argent (reservations, trajets, commandes).
                   Il s&apos;affiche au client au moment de payer.
@@ -1043,7 +1043,7 @@ function SellerPageContent() {
             ) : null}
           </div>
             <Button
-              className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
+              className="primary-glow-btn mt-4 bg-brand-600 text-white hover:bg-brand-700"
               onClick={() =>
               profileMutation.mutate({
                 business_name: profileForm.business_name,
@@ -1092,7 +1092,7 @@ function SellerPageContent() {
       {false && showProductSection && !sellerPaymentRequired ? (
         <article className="premium-card border border-slate-200 bg-white p-6">
           <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
-            <PlusCircle className="h-5 w-5 text-[#FF4D00]" />
+            <PlusCircle className="h-5 w-5 text-brand-600" />
             Boutique produits
           </h2>
           <p className="mt-2 text-sm text-slate-600">
@@ -1174,7 +1174,7 @@ function SellerPageContent() {
             />
           </div>
           <Button
-            className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
+            className="primary-glow-btn mt-4 bg-brand-600 text-white hover:bg-brand-700"
             onClick={() =>
               (() => {
                 if (shopListingLimitReached) {
@@ -1210,7 +1210,7 @@ function SellerPageContent() {
       {false && showRestaurantSection && !sellerPaymentRequired ? (
         <article className="premium-card border border-slate-200 bg-white p-6">
           <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
-            <UtensilsCrossed className="h-5 w-5 text-[#FF4D00]" />
+            <UtensilsCrossed className="h-5 w-5 text-brand-600" />
             Menu restaurant
           </h2>
           <p className="mt-2 text-sm text-slate-600">
@@ -1277,7 +1277,7 @@ function SellerPageContent() {
           </label>
 
           <Button
-            className="primary-glow-btn mt-4 bg-[#FF4D00] text-white hover:bg-[#e74700]"
+            className="primary-glow-btn mt-4 bg-brand-600 text-white hover:bg-brand-700"
             onClick={() => {
               if (menuListingLimitReached) {
                 setStatus(
@@ -1305,7 +1305,7 @@ function SellerPageContent() {
           </Button>
 
           <div className="mt-5 space-y-2">
-            <p className="text-sm font-medium text-slate-800">Articles deja publies</p>
+            <p className="text-sm font-medium text-slate-800">Articles déjà publies</p>
             {restaurantItems.length ? (
               restaurantItems.slice(0, 8).map((item) => (
                 <div
@@ -1316,7 +1316,7 @@ function SellerPageContent() {
                     <p className="font-medium text-slate-900">{item.name}</p>
                     <p className="text-xs text-slate-500">{item.tags.join(" - ") || "Sans tag"}</p>
                   </div>
-                  <p className="font-semibold text-[#FF4D00]">{formatXOF(item.base_price)}</p>
+                  <p className="font-semibold text-brand-600">{formatXOF(item.base_price)}</p>
                 </div>
               ))
             ) : (

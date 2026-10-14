@@ -106,7 +106,7 @@ export default function AdminTarifsPage() {
     mutationFn: verifyAdminFinancePin,
     onSuccess: () => {
       setPinVerified(true);
-      setStatus("Verification admin valide. Acces tarifs autorise.");
+      setStatus("Vérification admin valide. Acces tarifs autorise.");
       setPin("");
       setBirthDate("");
     },
@@ -182,7 +182,7 @@ export default function AdminTarifsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
       queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
-      setStatus("Vendeur retire (desactive). Tu peux le remettre en ligne a tout moment.");
+      setStatus("Vendeur retiré (désactivé). Tu peux le remettre en ligne a tout moment.");
     },
     onError: (error) => setStatus(getApiErrorMessage(error, "Retrait du vendeur impossible.")),
   });
@@ -214,7 +214,7 @@ export default function AdminTarifsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
       queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
-      setStatus("Vendeur supprime definitivement. Son email est de nouveau disponible.");
+      setStatus("Vendeur supprime définitivement. Son email est de nouveau disponible.");
     },
     onError: (error) => setStatus(getApiErrorMessage(error, "Suppression definitive impossible.")),
   });
@@ -227,7 +227,7 @@ export default function AdminTarifsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
       setStatus("Statut vendeur mis a jour.");
     },
-    onError: () => setStatus("Verification vendeur impossible."),
+    onError: () => setStatus("Vérification vendeur impossible."),
   });
   const grantSubscriptionMutation = useMutation({
     mutationFn: ({ profileId, months }: { profileId: string; months: number }) =>
@@ -290,7 +290,7 @@ export default function AdminTarifsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
       queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
-      setStatus("Tarification boutique mise a jour.");
+      setStatus("Tarification boutique mise à jour.");
     },
     onError: () => setStatus("Impossible de sauvegarder la tarification boutique."),
   });
@@ -442,7 +442,7 @@ export default function AdminTarifsPage() {
         <p className="mt-2 text-sm text-slate-600">Commission, frais, abonnements, vendeurs et inscriptions.</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <a href="#tarifs" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Tarifs & Frais</a>
-          <a href="#inscriptions" className="rounded-md border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs text-[#FF4D00] font-medium hover:bg-orange-100">
+          <a href="#inscriptions" className="rounded-md border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs text-brand-600 font-medium hover:bg-orange-100">
             Inscriptions en attente {pendingSellers?.length ? `(${pendingSellers.length})` : ""}
           </a>
           <a href="#vendeurs" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">
@@ -450,7 +450,7 @@ export default function AdminTarifsPage() {
           </a>
           <a href="#quartiers" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Frais quartiers</a>
           <a href="#audit" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Historique</a>
-          <Link href="/admin/catalog" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Categories</Link>
+          <Link href="/admin/catalog" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Catégories</Link>
           <Link href="/admin/sections" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Sections</Link>
         </div>
         <Button
@@ -511,7 +511,7 @@ export default function AdminTarifsPage() {
               }
             />
             <AdminNumberField
-              label="Livraison peripherique"
+              label="Livraison périphérique"
               value={effective.peripheral_delivery_fee}
               suffix="XOF"
               onChange={(value) =>
@@ -614,7 +614,7 @@ export default function AdminTarifsPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-1">
             <div>
-              <p className="text-sm font-medium text-slate-800">Numero wallet AMAZER (Nita / Amana)</p>
+              <p className="text-sm font-medium text-slate-800">Numéro wallet AMAZER (Nita / Amana)</p>
               <p className="text-xs text-slate-500">
                 Affiche sur les recus clients comme destination des versements plateforme (prioritaire sur le telephone
                 support si renseigne).
@@ -641,7 +641,7 @@ export default function AdminTarifsPage() {
               />
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-800">Telephone support</p>
+              <p className="text-sm font-medium text-slate-800">Téléphone support</p>
               <input
                 value={effective.support_phone ?? ""}
                 onChange={(event) => setDraft({ ...effective, support_phone: event.target.value || null })}
@@ -662,7 +662,7 @@ export default function AdminTarifsPage() {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button onClick={() => saveMutation.mutate(effective)} className="bg-[#FF4D00] text-white hover:bg-[#e74700]">
+          <Button onClick={() => saveMutation.mutate(effective)} className="bg-brand-600 text-white hover:bg-brand-700">
             Enregistrer
           </Button>
           <Button
@@ -701,7 +701,7 @@ export default function AdminTarifsPage() {
         <article id="inscriptions" className="premium-card border border-orange-200 bg-orange-50 p-6">
           <h2 className="text-lg font-semibold text-slate-900">
             Inscriptions en attente{" "}
-            <span className="ml-1 rounded-full bg-[#FF4D00] px-2 py-0.5 text-xs text-white">
+            <span className="ml-1 rounded-full bg-brand-600 px-2 py-0.5 text-xs text-white">
               {pendingSellers!.length}
             </span>
           </h2>
@@ -725,7 +725,7 @@ export default function AdminTarifsPage() {
                         Ref : {reg.transaction_reference}
                       </p>
                     ) : (
-                      <p className="mt-0.5 text-xs text-amber-600">Aucune reference fournie</p>
+                      <p className="mt-0.5 text-xs text-amber-600">Aucune référence fournie</p>
                     )}
                     <p className="mt-0.5 text-xs text-slate-400">
                       {new Date(reg.submitted_at).toLocaleString("fr-FR")}
@@ -787,8 +787,8 @@ export default function AdminTarifsPage() {
                     {seller.effective_service_fee} XOF | Abonnement {seller.effective_seller_subscription_fee} XOF
                   </p>
                   <p className="mt-0.5 text-xs font-medium text-slate-600">
-                    Type: <span className="text-[#FF4D00]">{seller.activity_type}</span> | Tier:{" "}
-                    <span className="text-[#FF4D00]">{seller.storefront_tier}</span>
+                    Type: <span className="text-brand-600">{seller.activity_type}</span> | Tier:{" "}
+                    <span className="text-brand-600">{seller.storefront_tier}</span>
                     {seller.is_enterprise ? (
                       <span className="ml-1 rounded-full border border-indigo-300 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">
                         Entreprise
@@ -885,8 +885,8 @@ export default function AdminTarifsPage() {
                     </Button>
                   )}
                   <select
-                    aria-label="Type d'activite du vendeur"
-                    title="Type d'activite"
+                    aria-label="Type d'activité du vendeur"
+                    title="Type d'activité"
                     value={seller.activity_type}
                     onChange={(event) =>
                       sellerTypeMutation.mutate({
@@ -927,7 +927,7 @@ export default function AdminTarifsPage() {
                         onClick={() => {
                           if (
                             window.confirm(
-                              `Supprimer DEFINITIVEMENT "${seller.business_name}" ?\n\nLe compte sera anonymise et son email libere. L'historique des commandes est conserve. Action irreversible.`,
+                              `Supprimer DEFINITIVEMENT "${seller.business_name}" ?\n\nLe compte sera anonymise et son email libere. L'historique des commandes est conserve. Action irréversible.`,
                             )
                           ) {
                             permanentDeleteSellerMutation.mutate(seller.profile_id);

@@ -62,7 +62,7 @@ function UploadTrigger({ label, multiple = false, onUploaded }: UploadTriggerPro
         htmlFor={inputId}
         className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700"
       >
-        <ImageUp className="h-3.5 w-3.5 text-[#FF4D00]" />
+        <ImageUp className="h-3.5 w-3.5 text-brand-600" />
         {isUploading ? "Upload..." : label}
       </label>
       <input
@@ -223,7 +223,7 @@ export function GalleryMediaField({
           })}
         </div>
       ) : (
-        <p className="text-xs text-slate-500">Ajoute les photos depuis la galerie du telephone.</p>
+        <p className="text-xs text-slate-500">Ajoute les photos depuis la galerie du téléphone.</p>
       )}
       <UploadTrigger
         label={label}

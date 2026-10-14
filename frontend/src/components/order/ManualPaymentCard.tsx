@@ -47,18 +47,18 @@ export function ManualPaymentCard({
         {data ? (
           <div className="mt-5 space-y-4">
             <div className="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-4">
-              <p className="text-xs text-slate-500">Reference paiement</p>
-              <p className="mt-1 text-2xl font-semibold tracking-wide text-[#FF4D00]">{data.payment_reference}</p>
+              <p className="text-xs text-slate-500">Référence paiement</p>
+              <p className="mt-1 text-2xl font-semibold tracking-wide text-brand-600">{data.payment_reference}</p>
               <p className="mt-2 text-sm text-slate-700">Montant: {formatXOF(data.amount)}</p>
             </div>
 
             {data.payment_mode === "amana" ? (
               <>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-semibold text-slate-900">Paiement Amana securise</p>
+                  <p className="text-sm font-semibold text-slate-900">Paiement Amana sécurisé</p>
                   <p className="mt-2 text-sm text-slate-700">Validez exactement {formatXOF(data.amount)} dans AmanaTa.</p>
                 </div>
-                <Button onClick={onStart} className="w-full bg-[#FF4D00] hover:bg-[#E64500]" disabled={isStarting || isConfirming}>
+                <Button onClick={onStart} className="w-full bg-brand-600 hover:bg-[#E64500]" disabled={isStarting || isConfirming}>
                   Demarrer le paiement Amana
                 </Button>
                 <Button onClick={() => onConfirm("")} className="w-full border border-slate-200 bg-white text-slate-800 hover:bg-slate-50" disabled={isConfirming}>
@@ -75,14 +75,14 @@ export function ManualPaymentCard({
                       reference {data.payment_reference}.
                     </p>
                   ) : (
-                    <p>Le numero de paiement Nita n&apos;est pas encore disponible : contactez le support avant de payer.</p>
+                    <p>Le numéro de paiement Nita n&apos;est pas encore disponible : contactez le support avant de payer.</p>
                   )}
                   <p className="mt-1">
                     Saisissez ensuite la reference de votre transaction. La commande sera confirmee apres verification
                     par AMAZER.
                   </p>
                 </div>
-                <Input value={providerReference} onChange={(event) => setProviderReference(event.target.value)} placeholder="Reference operateur ou numero de transaction (optionnel)" />
+                <Input value={providerReference} onChange={(event) => setProviderReference(event.target.value)} placeholder="Référence operateur ou numéro de transaction (optionnel)" />
                 <Button onClick={() => onConfirm(providerReference)} className="w-full border border-slate-200 bg-white text-slate-800 hover:bg-slate-50" disabled={isConfirming}>
                   J&apos;ai paye - envoyer la reference
                 </Button>
