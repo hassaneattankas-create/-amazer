@@ -1,70 +1,47 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import Link from "next/link";
+import { FormEvent, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Package, Settings, UserRound } from "lucide-react";
 
-import { AnimatedPrice } from "@/components/AnimatedPrice";
+import { NotificationSettings } from "@/components/account/NotificationSettings";
+import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
+import { MobileBuildStamp } from "@/components/MobileBuildStamp";
 import { OrderStepper } from "@/components/OrderStepper";
 import { PasswordInput } from "@/components/PasswordInput";
-import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { listActiveAlerts } from "@/services/alert-service";
+import { CURRENCIES, LANGUAGES, countryName } from "@/lib/locale";
 import { deleteMyAccount } from "@/services/auth-service";
+import { isNotificationSoundEnabled, setNotificationSoundEnabled } from "@/services/notification-service";
 import { listMyOrders } from "@/services/order-service";
-import { useCartStore } from "@/store/cartStore";
-import { MobileBuildStamp } from "@/components/MobileBuildStamp";
-import {
-  isNotificationSoundEnabled,
-  setNotificationSoundEnabled,
-} from "@/services/notification-service";
+import { useLocaleStore } from "@/store/locale-store";
 
-function AnimatedCounter({ value }: { value: number }) {
-  return (
-    <motion.span
-      key={value}
-      initial={{ opacity: 0.2, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-    >
-      {value.toLocaleString("fr-FR")}
-    </motion.span>
-  );
-}
+const cardClass = "rounded-card border border-border bg-card p-5";
 
 export default function DashboardPage() {
-  const savingsHistory = useCartStore((state) => state.savingsHistory);
   const { data: user } = useCurrentUser();
+  const { country, region, currency, language } = useLocaleStore();
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteStatus, setDeleteStatus] = useState("");
   const [soundEnabled, setSoundEnabled] = useState(() => isNotificationSoundEnabled());
-  const { data: alerts, isPending } = useQuery({
-    queryKey: ["alerts-active"],
-    queryFn: listActiveAlerts,
-    retry: false,
-  });
-  const { data: orders = [] } = useQuery({
+
+  const { data: orders = [], isPending: ordersPending } = useQuery({
     queryKey: ["orders-me"],
     queryFn: listMyOrders,
     retry: false,
   });
+
   const deleteAccountMutation = useMutation({
     mutationFn: deleteMyAccount,
     onSuccess: () => {
-      setDeleteStatus("Compte supprime avec succes. Redirection...");
+      setDeleteStatus("Compte supprimé. Redirection…");
       window.location.assign("/login");
     },
-    onError: (error) => {
-      setDeleteStatus(
-        getApiErrorMessage(
-          error,
-          "Suppression impossible. Vérifie ton mot de passe ou reconnecte-toi.",
-        ),
-      );
-    },
+    onError: (error) =>
+      setDeleteStatus(getApiErrorMessage(error, "Suppression impossible. Vérifiez votre mot de passe.")),
   });
 
   function onDeleteAccount(event: FormEvent<HTMLFormElement>) {
@@ -73,210 +50,120 @@ export default function DashboardPage() {
     deleteAccountMutation.mutate({ password: deletePassword });
   }
 
-  const totalSaved = useMemo(
-    () => savingsHistory.reduce((sum, record) => sum + record.savings, 0),
-    [savingsHistory]
-  );
-
-  const bestDealMonth = useMemo(() => {
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-    const monthRecords = savingsHistory.filter((entry) => {
-      const date = new Date(entry.createdAt);
-      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-    });
-    if (!monthRecords.length) {
-      return 0;
-    }
-    return Math.max(...monthRecords.map((record) => record.savings));
-  }, [savingsHistory]);
-
-  const chartData = useMemo(() => {
-    return [...savingsHistory]
-      .slice(0, 10)
-      .reverse()
-      .map((entry) => ({
-        day: new Date(entry.createdAt).toLocaleDateString("fr-FR", {
-          day: "2-digit",
-          month: "short",
-        }),
-        savings: Number(entry.savings.toFixed(2)),
-      }));
-  }, [savingsHistory]);
+  const memberSince = user?.created_at
+    ? new Date(user.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : null;
 
   return (
-    <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
-      <header className="premium-card rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
-        <h1 className="luxury-title text-2xl font-semibold sm:text-3xl">
-          Tableau de Bord Economies
-        </h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Visualise les gains de tes optimisations et tes alertes actives.
-        </p>
+    <section className="mx-auto w-full max-w-4xl space-y-4 px-gutter pb-14 pt-4">
+      <header className="flex items-center gap-3">
+        <span className="flex h-12 w-12 items-center justify-center rounded-pill bg-ink-900 text-white">
+          <UserRound className="h-6 w-6" aria-hidden="true" />
+        </span>
+        <div>
+          <h1 className="text-2xl font-semibold text-ink-900">Bonjour {user?.full_name?.split(" ")[0] ?? ""}</h1>
+          {memberSince ? <p className="text-sm text-ink-600">Membre depuis le {memberSince}</p> : null}
+        </div>
       </header>
 
-      {isPending ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <ProductCardSkeleton key={index} />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <article className="premium-card rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Total Economise</p>
-            <AnimatedPrice value={totalSaved} className="mt-2 text-3xl font-semibold text-[#FF4D00]" />
-          </article>
-          <article className="premium-card rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Alertes Actives</p>
-            <p className="mt-2 text-3xl font-semibold text-[#FF4D00]">
-              <AnimatedCounter value={alerts?.length ?? 0} />
-            </p>
-            {!alerts?.length ? (
-              <p className="mt-2 text-xs text-slate-500">
-                Aucune alerte active. Cree une alerte depuis une fiche produit.
-              </p>
-            ) : null}
-          </article>
-          <article className="premium-card rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <p className="text-xs uppercase tracking-[0.15em] text-slate-500">
-              Meilleure Affaire du Mois
-            </p>
-            <AnimatedPrice value={bestDealMonth} className="mt-2 text-3xl font-semibold text-[#FF4D00]" />
-          </article>
-        </div>
-      )}
-
-      <article className="premium-card rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
-        <h2 className="luxury-title text-lg font-semibold">Profil &amp; Preferences</h2>
-        <p className="mt-1 text-sm text-slate-500">Informations du compte et devise.</p>
-        <div className="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
-          <div>
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Nom</p>
-            <p className="mt-1 font-medium text-slate-900">{user?.full_name || "Compte client"}</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Email</p>
-            <p className="mt-1 font-medium text-slate-900">{user?.email || "Non renseigné"}</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">WhatsApp</p>
-            <p className="mt-1 font-medium text-slate-900">{user?.whatsapp_phone || "Non renseigné"}</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Devise</p>
-            <p className="mt-1 font-medium text-slate-900">Franc CFA (XOF)</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Son notifications</p>
-            <button
-              type="button"
-              onClick={() => {
-                const next = !soundEnabled;
-                setSoundEnabled(next);
-                setNotificationSoundEnabled(next);
-              }}
-              className={`mt-1 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium transition ${
-                soundEnabled
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-slate-100 text-slate-500"
-              }`}
-            >
-              <span
-                className={`inline-block h-2 w-2 rounded-full ${soundEnabled ? "bg-emerald-500" : "bg-slate-400"}`}
-              />
-              {soundEnabled ? "Activé" : "Désactivé"}
-            </button>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Membre depuis</p>
-            <p className="mt-1 font-medium text-slate-900">
-              {user?.created_at
-                ? new Date(user.created_at).toLocaleDateString("fr-FR", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })
-                : "Non renseigné"}
-            </p>
-          </div>
-        </div>
-      </article>
-
-      <article className="premium-card rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
-        <h2 className="luxury-title text-lg font-semibold">Evolution des economies</h2>
-        <p className="mt-1 text-sm text-slate-500">Historique recent de tes optimisations.</p>
-        <div className="mt-5 h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="savingsFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#FF4D00" stopOpacity={0.32} />
-                  <stop offset="100%" stopColor="#FF4D00" stopOpacity={0.03} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "#64748b" }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: "#64748b" }} />
-              <Tooltip
-                formatter={(value) => [new Intl.NumberFormat("fr-NE", { style: "currency", currency: "XOF", maximumFractionDigits: 0 }).format(Number(value)), "Economies"]}
-                labelFormatter={(label) => `Date: ${label}`}
-              />
-              <Area
-                type="monotone"
-                dataKey="savings"
-                stroke="#FF4D00"
-                strokeWidth={1.5}
-                fill="url(#savingsFill)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </article>
-
-      <article className="premium-card rounded-3xl border border-slate-200 bg-gradient-to-br from-white to-amber-50 p-6 shadow-2xl">
-        <h2 className="luxury-title text-lg font-semibold">Suivi de commande</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Etapes: Commande -&gt; Preparation -&gt; Livraison -&gt; Recu
-        </p>
+      <article className={cardClass}>
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-ink-900">
+          <Package className="h-5 w-5 text-brand-600" aria-hidden="true" />
+          Mes commandes
+        </h2>
         <div className="mt-4 space-y-4">
-          {orders.slice(0, 2).map((order) => (
-            <OrderStepper key={order.id} order={order} />
-          ))}
-          {!orders.length ? (
-            <p className="text-sm text-slate-500">
-              Aucune commande pour le moment. Ajoute un produit au panier pour demarrer.
-            </p>
-          ) : null}
+          {ordersPending ? (
+            <div className="h-24 animate-pulse rounded-card bg-surface-3" aria-busy="true" />
+          ) : orders.length ? (
+            orders.slice(0, 5).map((order) => <OrderStepper key={order.id} order={order} />)
+          ) : (
+            <div className="text-sm text-ink-600">
+              Aucune commande pour le moment.{" "}
+              <Link href="/" className="font-medium text-brand-700 hover:underline">
+                Découvrir les produits
+              </Link>
+            </div>
+          )}
         </div>
       </article>
 
-      <article className="premium-card rounded-3xl border border-rose-200 bg-rose-50 p-6 shadow-2xl">
-        <h2 className="luxury-title text-lg font-semibold text-rose-700">Suppression Du Compte</h2>
-        <p className="mt-1 text-sm text-rose-700/80">
-          Action irreversible: votre compte sera desactive et vos donnees personnelles anonymisees.
-        </p>
-        <p className="mt-2 text-xs text-rose-700/70">
-          Ceci concerne uniquement <strong>votre</strong> compte connecté. Pour retirer un autre utilisateur (compte test,
-          etc.), connectez-vous en admin et ouvrez <strong>Admin → Utilisateurs</strong>.
+      <NotificationSettings />
+
+      <article className={cardClass}>
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-ink-900">
+          <Settings className="h-5 w-5 text-brand-600" aria-hidden="true" />
+          Préférences
+        </h2>
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-ink-600">Pays et région</dt>
+            <dd className="font-medium text-ink-900">
+              {countryName(country, language)}
+              {region ? ` · ${region}` : ""}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-ink-600">Devise d&apos;affichage</dt>
+            <dd className="font-medium text-ink-900">
+              {CURRENCIES.find((item) => item.code === currency)?.label ?? currency} (paiement en XOF)
+            </dd>
+          </div>
+          <div>
+            <dt className="text-ink-600">Langue</dt>
+            <dd className="font-medium text-ink-900">{LANGUAGES.find((item) => item.code === language)?.label}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <dt className="text-ink-600">Son des notifications</dt>
+            <dd>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={soundEnabled}
+                onClick={() => {
+                  const next = !soundEnabled;
+                  setSoundEnabled(next);
+                  setNotificationSoundEnabled(next);
+                }}
+                className="min-h-11 rounded-field border border-border px-3 text-sm font-medium text-ink-900 hover:bg-surface-1"
+              >
+                {soundEnabled ? "Activé" : "Désactivé"}
+              </button>
+            </dd>
+          </div>
+        </dl>
+        <div className="mt-3 flex items-center gap-2 text-sm text-ink-700">
+          Modifier :
+          <LocaleSwitcher />
+        </div>
+      </article>
+
+      <article className="rounded-card border border-danger bg-card p-5">
+        <h2 className="text-lg font-semibold text-danger">Supprimer mon compte</h2>
+        <p className="mt-1 text-sm text-ink-700">
+          Action définitive : vos données personnelles sont effacées. L&apos;historique des commandes est conservé.
         </p>
         <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center" onSubmit={onDeleteAccount}>
           <PasswordInput
             value={deletePassword}
             onChange={(event) => setDeletePassword(event.target.value)}
             placeholder="Mot de passe actuel"
-            className="border-rose-300"
             required
             wrapperClassName="w-full sm:flex-1"
           />
           <Button
             type="submit"
+            variant="outline"
             disabled={deleteAccountMutation.isPending || !deletePassword}
-            className="bg-rose-600 text-white hover:bg-rose-500"
+            className="border-danger text-danger"
           >
-            {deleteAccountMutation.isPending ? "Suppression..." : "Supprimer Mon Compte"}
+            {deleteAccountMutation.isPending ? "Suppression…" : "Supprimer mon compte"}
           </Button>
         </form>
-        {deleteStatus ? <p className="mt-2 text-sm text-rose-800">{deleteStatus}</p> : null}
+        {deleteStatus ? (
+          <p className="mt-2 text-sm text-danger" role="alert">
+            {deleteStatus}
+          </p>
+        ) : null}
       </article>
 
       <MobileBuildStamp />

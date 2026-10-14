@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { ContactReminder } from "@/components/account/ContactReminder";
 import { Button } from "@/components/ui/button";
 import {
   clearAllNotifications,
@@ -103,8 +104,11 @@ export default function NotificationsPage() {
       <header className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="luxury-title text-3xl font-semibold">Notifications</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Historique des alertes internes : commandes, activités vendeur et suivi admin.
+          Commandes, paiements, messages et livraisons. Elles partent aussi par e-mail et WhatsApp.
         </p>
+        <div className="mt-3">
+          <ContactReminder />
+        </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <Button type="button" variant="outline" onClick={handleMarkAllAsRead} disabled={isBusy}>
             Tout marquer comme lu

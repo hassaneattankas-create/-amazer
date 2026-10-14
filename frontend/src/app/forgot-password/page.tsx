@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
           <form onSubmit={onRequest} className="mt-6 space-y-4">
             <div>
               <label className="text-sm font-medium text-ink-800" htmlFor="identifier">
-                E-mail ou WhatsApp (+227)
+                E-mail ou numéro WhatsApp
               </label>
               <input
                 id="identifier"
@@ -80,7 +80,7 @@ export default function ForgotPasswordPage() {
                 value={identifier}
                 onChange={(event) => setIdentifier(event.target.value)}
                 className={fieldClass}
-                placeholder="email@domaine.com ou +22790000000"
+                placeholder="nom@exemple.com ou +227 90 00 00 00"
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>

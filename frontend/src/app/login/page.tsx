@@ -79,7 +79,7 @@ function LoginPageContent() {
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div>
             <label className="text-sm font-medium text-slate-800" htmlFor="identifier">
-              E-mail ou WhatsApp (+227)
+              E-mail ou numéro WhatsApp
             </label>
             <input
               id="identifier"
@@ -88,7 +88,7 @@ function LoginPageContent() {
               value={identifier}
               onChange={(event) => setIdentifier(event.target.value)}
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="email@domaine.com ou +22790000000"
+              placeholder="nom@exemple.com ou +227 90 00 00 00"
             />
           </div>
 

@@ -8,8 +8,8 @@ import { Building2, Store, UtensilsCrossed } from "lucide-react";
 
 import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
-import { Button } from "@/components/ui/button";
-import { COUNTRIES, findCountry } from "@/lib/locale";
+import { Button } from "@/components/ui/button";
+import { COUNTRIES, findCountry } from "@/lib/locale";
 import { useLocaleStore } from "@/store/locale-store";
 import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
@@ -19,7 +19,14 @@ import { getPublicFinanceSettings } from "@/services/finance-service";
 import type { FinanceSettings } from "@/types/finance";
 import type { SellerActivityType, StorefrontTier } from "@/types/seller";
 
-const PASSWORD_MIN_LENGTH = 8;
+const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+// Memes regles que le serveur, affichees en direct (pas de refus surprise a l'envoi).
+const PASSWORD_RULES: { label: string; test: (value: string) => boolean }[] = [
+  { label: "8 caractères minimum", test: (v) => v.length >= 8 },
+  { label: "Une minuscule et une majuscule", test: (v) => /[a-z]/.test(v) && /[A-Z]/.test(v) },
+  { label: "Un chiffre", test: (v) => /\d/.test(v) },
+  { label: "Un caractère spécial (ex. ! ? @ #)", test: (v) => /[^A-Za-z0-9]/.test(v) },
+];
 
 type SellerRegistrationType = "shop" | "restaurant" | "enterprise";
 
@@ -77,12 +84,28 @@ function buildSellerProfilePayload(
 function RegisterPageContent() {
   const searchParams = useSearchParams();
   const [fullName, setFullName] = useState("");
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
+  const [phoneLocal, setPhoneLocal] = useState("");
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [password, setPassword] = useState("");
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const localePrefs = useLocaleStore();
   const [countryCode, setCountryCode] = useState(localePrefs.country);
   const [region, setRegion] = useState(localePrefs.region);
+  // Numero complet : l'indicatif suit le pays choisi (sauf si le numero commence deja par +).
+  const dialCode = findCountry(countryCode).dial;
+  const phoneDigits = phoneLocal.replace(/[^\d+]/g, "");
+  const fullPhone = !phoneDigits
+    ? ""
+    : phoneDigits.startsWith("+")
+      ? phoneDigits
+      : `${dialCode}${phoneDigits.replace(/^0+/, "")}`;
+  const emailValid = !email.trim() || EMAIL_PATTERN.test(email.trim());
+  const phoneValid = !phoneDigits || /^\+\d{8,15}$/.test(fullPhone);
+  // Connexion avec l'un ou l'autre ; les deux permettent de recevoir les notifications partout.
+  const identifier = email.trim() || fullPhone;
+  const passwordRules = PASSWORD_RULES.map((rule) => ({ label: rule.label, ok: rule.test(password) }));
+  const passwordValid = passwordRules.every((rule) => rule.ok);
   const [businessName, setBusinessName] = useState("");
   // Formule choisie sur la page « Vendre » (?type=shop|restaurant|enterprise).
   const [sellerType, setSellerType] = useState<SellerRegistrationType>(() => {
@@ -155,6 +178,8 @@ function RegisterPageContent() {
         identifier: identifier.trim(),
         full_name: fullName.trim(),
         password,
+        email: email.trim() || undefined,
+        whatsapp_phone: fullPhone || undefined,
         country_code: country.code,
         region: region.trim(),
         preferred_currency: currency,
@@ -180,7 +205,7 @@ function RegisterPageContent() {
       const target = next.startsWith("/") ? next : "/";
       window.location.assign(target);
     } catch (error) {
-      setStatus(getApiErrorMessage(error, "Inscription impossible. Verifiez les informations saisies."));
+      setStatus(getApiErrorMessage(error, "Inscription impossible. Vérifiez les informations saisies."));
     } finally {
       setIsLoading(false);
     }
@@ -206,8 +231,10 @@ function RegisterPageContent() {
 
   const canSubmit =
     fullName.trim().length >= 2 &&
-    identifier.trim().length >= 6 &&
-    password.length >= PASSWORD_MIN_LENGTH &&
+    identifier.length >= 6 &&
+    emailValid &&
+    phoneValid &&
+    passwordValid &&
     acceptedLegal &&
     (!isSellerFlow || (businessName.trim().length >= 2 || fullName.trim().length >= 2));
 
@@ -241,7 +268,7 @@ function RegisterPageContent() {
     return (
       <section className="mx-auto max-w-3xl px-4 py-10">
         <article className="premium-card border border-slate-200 bg-white p-6">
-          <h1 className="luxury-title text-3xl font-semibold">Verifier votre compte</h1>
+          <h1 className="text-2xl font-semibold text-ink-900">Vérifier votre compte</h1>
           <p className="mt-2 text-sm text-slate-600">
             {pendingVerification.channel === "retry" ? (
               <>
@@ -307,10 +334,10 @@ function RegisterPageContent() {
   }
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-10">
+    <section className="mx-auto max-w-xl px-gutter py-6">
       <article className="premium-card border border-slate-200 bg-white p-6">
-        <h1 className="luxury-title text-3xl font-semibold">
-          {isSellerFlow ? "Compte vendeur" : "Creer un compte"}
+        <h1 className="text-2xl font-semibold text-ink-900">
+          {isSellerFlow ? "Compte vendeur" : "Créer un compte"}
         </h1>
 
         {isSellerFlow ? (
@@ -371,21 +398,6 @@ function RegisterPageContent() {
             />
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-slate-800" htmlFor="identifier">
-              E-mail ou WhatsApp
-            </label>
-            <input
-              id="identifier"
-              type="text"
-              required
-              value={identifier}
-              onChange={(event) => setIdentifier(event.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder={`${findCountry(countryCode).dial}90000000 ou email@domaine.com`}
-            />
-          </div>
-
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="text-sm font-medium text-slate-800" htmlFor="country">
@@ -421,6 +433,64 @@ function RegisterPageContent() {
             </div>
           </div>
 
+          <fieldset className="space-y-3">
+            <legend className="text-sm font-medium text-slate-800">Comment vous joindre</legend>
+            <p className="text-xs text-slate-600">
+              Indiquez au moins l&apos;un des deux. Avec les deux, vous recevez vos notifications par e-mail et WhatsApp.
+            </p>
+            <div>
+              <label className="text-sm font-medium text-slate-800" htmlFor="email">
+                E-mail
+              </label>
+              <input
+                id="email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
+                aria-invalid={touched.email && !emailValid}
+                aria-describedby={touched.email && !emailValid ? "email-error" : undefined}
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                placeholder="nom@exemple.com"
+              />
+              {touched.email && !emailValid ? (
+                <p id="email-error" className="mt-1 text-xs text-danger">
+                  Adresse e-mail invalide (exemple : nom@exemple.com).
+                </p>
+              ) : null}
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-800" htmlFor="whatsapp">
+                Numéro WhatsApp
+              </label>
+              <div className="mt-1 flex">
+                <span className="inline-flex items-center rounded-l-md border border-r-0 border-slate-300 bg-surface-1 px-3 text-sm text-ink-700">
+                  {dialCode}
+                </span>
+                <input
+                  id="whatsapp"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel-national"
+                  value={phoneLocal}
+                  onChange={(event) => setPhoneLocal(event.target.value)}
+                  onBlur={() => setTouched((prev) => ({ ...prev, phone: true }))}
+                  aria-invalid={touched.phone && !phoneValid}
+                  aria-describedby={touched.phone && !phoneValid ? "whatsapp-error" : undefined}
+                  className="w-full rounded-r-md border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="90 00 00 00"
+                />
+              </div>
+              {touched.phone && !phoneValid ? (
+                <p id="whatsapp-error" className="mt-1 text-xs text-danger">
+                  Numéro invalide. Vérifiez le pays et le nombre de chiffres.
+                </p>
+              ) : null}
+            </div>
+          </fieldset>
+
           <div>
             <PasswordInput
               id="password"
@@ -429,7 +499,17 @@ function RegisterPageContent() {
               minLength={8}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              aria-describedby="password-rules"
             />
+            <ul id="password-rules" className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
+              {passwordRules.map((rule) => (
+                <li key={rule.label} className={`flex items-center gap-1.5 ${rule.ok ? "text-success" : "text-ink-600"}`}>
+                  <span aria-hidden="true">{rule.ok ? "✓" : "•"}</span>
+                  {rule.label}
+                  <span className="sr-only">{rule.ok ? " : respecté" : " : à faire"}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
           {isSellerFlow ? (
@@ -483,7 +563,7 @@ function RegisterPageContent() {
             <span>
               J&apos;accepte la{" "}
               <Link href="/legal/privacy" className="font-medium text-[#FF4D00] hover:underline">
-                politique de confidentialite
+                politique de confidentialité
               </Link>{" "}
               et les{" "}
               <Link href="/legal/terms" className="font-medium text-[#FF4D00] hover:underline">
@@ -494,15 +574,16 @@ function RegisterPageContent() {
 
           <Button
             type="submit"
+            size="lg"
             disabled={isLoading || !canSubmit}
-            className="primary-glow-btn w-full text-white"
+            className="w-full"
           >
-            {isLoading ? "Traitement..." : "Creer mon compte"}
+            {isLoading ? "Création…" : "Créer mon compte"}
           </Button>
         </form>
 
         <p className="mt-4 text-sm text-slate-600">
-          Deja inscrit ?{" "}
+          Déjà inscrit ?{" "}
           <Link
             href={isSellerFlow ? "/login?next=/seller" : "/login"}
             className="font-medium text-[#FF4D00] hover:underline"
