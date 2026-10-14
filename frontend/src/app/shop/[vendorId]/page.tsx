@@ -26,6 +26,7 @@ import { createHotelBooking, getSellerStorefront } from "@/services/seller-servi
 import { useCartStore } from "@/store/cartStore";
 import type { HotelRoomType, SellerStorefront, SellerStorefrontProduct } from "@/types/seller";
 import type { RestaurantMenuItem, RestaurantMenuOption } from "@/types/restaurant";
+import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 
 const activityLabels = {
   shop: "Boutique",
@@ -951,7 +952,14 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
         >
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Contact</p>
           {data.phone ? <p>Téléphone : {data.phone}</p> : null}
-          {data.whatsapp_contact ? <p>WhatsApp : {data.whatsapp_contact}</p> : null}
+          {data.whatsapp_contact ? (
+            <WhatsAppButton
+              phone={data.whatsapp_contact}
+              variant="link"
+              label="Écrire sur WhatsApp"
+              message={`Bonjour ${data.business_name}, je vous contacte depuis AMAZER.`}
+            />
+          ) : null}
           <Link
             href={`/messages?vendor=${encodeURIComponent(data.vendor_id)}&name=${encodeURIComponent(data.business_name)}`}
             className="mt-2 inline-flex min-h-11 items-center font-medium text-brand-600 hover:underline"

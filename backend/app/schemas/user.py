@@ -11,4 +11,5 @@ class UserResponse(BaseModel):
     full_name: str
     whatsapp_phone: str | None
     is_active: bool
+    role: str = "user"
     created_at: datetime

@@ -106,6 +106,21 @@ await check("Messages : redirection vers la connexion si deconnecte", async () =
   assert(page.url().includes("/login"), `URL ${page.url()}`);
 });
 
+await check("Pied de page : bouton WhatsApp vers AMAZER", async () => {
+  await visit("/comment-ca-marche");
+  // Le numero est charge apres l'affichage : on attend le lien.
+  const link = await page.waitForSelector('footer a[href^="https://wa.me/"]', { timeout: 30_000 }).catch(() => null);
+  const href = link ? await link.evaluate((node) => node.getAttribute("href")) : null;
+  assert(href && /^https:\/\/wa\.me\/\d{10,15}/.test(href), `lien WhatsApp absent ou invalide : ${href}`);
+});
+
+await check("Espace livreur : reserve aux personnes connectees", async () => {
+  await visit("/livreur");
+  assert(page.url().includes("/login"), `URL ${page.url()}`);
+  const { status } = await getJson("/api/v1/courier/orders/available");
+  assert(status === 401, `API livreur sans connexion -> ${status} (401 attendu)`);
+});
+
 await check("Aucune erreur JavaScript sur les pages visitees", async () => {
   assert(pageErrors.length === 0, pageErrors.slice(0, 3).join(" | "));
 });

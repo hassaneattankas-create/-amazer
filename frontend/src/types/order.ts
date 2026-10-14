@@ -45,6 +45,8 @@ export type CheckoutPayload = {
   currency?: string;
   /** Quartier de livraison (tarif fixe par l'admin), livraison standard uniquement. */
   district?: string;
+  delivery_address?: string;
+  delivery_phone?: string;
 };
 
 export type ReceiptLink = {

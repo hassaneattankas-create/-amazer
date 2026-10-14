@@ -506,6 +506,9 @@ def checkout(
         fee_breakdown=fee_breakdown,
         estimated_minutes=estimated_minutes,
         status=order_status,
+        delivery_address=payload.delivery_address,
+        delivery_phone=payload.delivery_phone,
+        delivery_district=payload.district,
     )
     for price, quantity in validated_items:
         order.items.append(

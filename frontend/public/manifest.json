@@ -11,12 +11,6 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/icon-amazer-titan.svg",
-      "sizes": "1024x1024",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",

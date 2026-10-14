@@ -52,6 +52,15 @@ class Order(Base):
     total_amount: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="XOF")
     fee_breakdown: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    # Livraison : ou livrer, et quel livreur s'en charge.
+    delivery_address: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    delivery_phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    delivery_district: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    courier_user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    courier_assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     items: Mapped[list[OrderItem]] = relationship(
@@ -59,7 +68,8 @@ class Order(Base):
         back_populates="order",
         cascade="all, delete-orphan",
     )
-    user: Mapped[User] = relationship("User")
+    # Deux cles vers users (client et livreur) : on precise celle du client.
+    user: Mapped[User] = relationship("User", foreign_keys=[user_id])
     fulfillments: Mapped[list["OrderFulfillment"]] = relationship(
         "OrderFulfillment",
         back_populates="order",

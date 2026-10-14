@@ -227,7 +227,7 @@ class AdminUserStatsResponse(BaseModel):
 class AdminUserRoleUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    role: Literal["user", "admin"]
+    role: Literal["user", "admin", "courier"]
 
 
 class AdminUserResponse(BaseModel):
@@ -240,6 +240,7 @@ class AdminUserResponse(BaseModel):
     is_active: bool
     is_admin: bool
     is_seller: bool
+    role: str = "user"
     created_at: str
 
 

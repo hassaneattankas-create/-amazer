@@ -73,7 +73,7 @@ function LoginPageContent() {
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="luxury-title text-3xl font-semibold">Connexion</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Connectez-vous avec votre compte pour acceder aux pages protegees.
+          Accédez à vos commandes et à vos messages.
         </p>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">

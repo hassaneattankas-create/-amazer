@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ADMIN_EMAIL } from "@/lib/admin";
+import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 
 export const metadata: Metadata = {
   title: "Comment ça marche ? | AMAZER",
@@ -262,6 +263,9 @@ export default function HowItWorksPage() {
         <p className="mt-3 text-base text-ink-600">
           Tout ce qu&apos;il faut savoir pour acheter, payer, suivre une commande ou vendre sur AMAZER, étape par étape.
         </p>
+        <div className="mt-4">
+          <WhatsAppButton label="Poser une question sur WhatsApp" message="Bonjour AMAZER, j'ai besoin d'aide." />
+        </div>
         <nav aria-label="Rubriques" className="mt-6 flex flex-wrap gap-2">
           {SECTIONS.map((section) => (
             <a

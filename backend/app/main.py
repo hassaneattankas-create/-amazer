@@ -41,6 +41,7 @@ from app.routes.feedback import router as feedback_router, admin_router as admin
 from app.routes.notifications import router as notifications_router
 from app.routes.conversations import router as conversations_router
 from app.routes.admin_moderation import router as admin_moderation_router
+from app.routes.courier import router as courier_router
 from app.routes.assistant import router as assistant_router
 from app.routes.maintenance import router as maintenance_router
 from app.services.security_log_service import log_security_event
@@ -158,6 +159,13 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS delivery_fee DOUBLE PRECISION DEFAULT 0",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS fee_breakdown JSONB",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS gateway_payment_reference VARCHAR(120)",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_address VARCHAR(255)",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_phone VARCHAR(40)",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_district VARCHAR(120)",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier_user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier_assigned_at TIMESTAMPTZ",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ",
+        "CREATE INDEX IF NOT EXISTS ix_orders_courier_user_id ON orders (courier_user_id)",
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_gateway_payment_reference ON orders (gateway_payment_reference) WHERE gateway_payment_reference IS NOT NULL",
         "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(40)",
         "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS gateway_payment_reference VARCHAR(120)",
@@ -436,6 +444,7 @@ app.include_router(admin_feedback_router, prefix=settings.api_prefix)
 app.include_router(notifications_router, prefix=settings.api_prefix)
 app.include_router(conversations_router, prefix=settings.api_prefix)
 app.include_router(admin_moderation_router, prefix=settings.api_prefix)
+app.include_router(courier_router, prefix=settings.api_prefix)
 app.include_router(assistant_router, prefix=settings.api_prefix)
 app.include_router(maintenance_router, prefix=settings.api_prefix)
 

@@ -6,7 +6,8 @@ from app.config import get_settings
 
 ROLE_USER = "user"
 ROLE_ADMIN = "admin"
-ROLES = (ROLE_USER, ROLE_ADMIN)
+ROLE_COURIER = "courier"
+ROLES = (ROLE_USER, ROLE_ADMIN, ROLE_COURIER)
 
 
 class _UserLike(Protocol):
@@ -18,6 +19,11 @@ def is_principal_admin(user: _UserLike | None) -> bool:
     if user is None or not user.email:
         return False
     return user.email.strip().lower() == get_settings().admin_email.strip().lower()
+
+
+def is_courier(user: _UserLike | None) -> bool:
+    """Livreur AMAZER : voit et prend en charge les commandes a livrer."""
+    return user is not None and getattr(user, "role", ROLE_USER) == ROLE_COURIER
 
 
 def is_admin(user: _UserLike | None) -> bool:

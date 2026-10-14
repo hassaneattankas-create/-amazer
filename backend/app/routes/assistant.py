@@ -1,100 +1,104 @@
-"""Assistant de chat AMAZER (infos & guidage).
+"""Assistant de chat AMAZER (informations, guidage et recherche dans le catalogue).
 
-Module 100% additif et isole : aucune route existante n'est modifiee.
-- Sans cle IA configuree -> repond via une FAQ integree (gratuit, marche toujours).
-- Avec ASSISTANT_API_KEY (cle gratuite Google Gemini) -> repond en IA conversationnelle.
-En cas d'erreur IA, on retombe automatiquement sur la FAQ : l'app n'est jamais bloquee.
+- A chaque question, on cherche dans le VRAI catalogue : l'assistant ne recommande que des
+  produits existants, avec leur prix reel (jamais invente).
+- Avec ASSISTANT_API_KEY (Google Gemini, offre gratuite) : reponse conversationnelle.
+- Sans cle ou en cas d'erreur IA : FAQ integree + produits trouves. L'app n'est jamais bloquee.
 """
+
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import unicodedata
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.orm import Session
 
 from app.core.rate_limit import enforce_rate_limit
+from app.database import get_db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
 
 SYSTEM_PROMPT = (
-    "Tu es l'assistant virtuel d'AMAZER, une marketplace au Niger. Ton role: INFORMER et GUIDER "
-    "les utilisateurs (acheteurs et vendeurs), de facon courte, claire et chaleureuse, en "
-    "francais (ou dans la langue du client). Reste bref (2 a 5 phrases).\n"
+    "Tu es l'assistant d'AMAZER, la plateforme du commerce au Niger (Niamey). "
+    "Reponds en francais simple (ou dans la langue du client), en 1 a 4 phrases courtes. "
+    "Pas de jargon, pas de longues explications.\n"
     "\n"
-    "CE QUE PROPOSE AMAZER (tu peux tout expliquer et guider la-dessus):\n"
-    "- Acheter: parcourir les boutiques, restaurants, hotels, offres premium et services de "
-    "transport; rechercher, filtrer par categorie, consulter les promotions; ajouter au panier; "
-    "commander et payer par Nita ou Amana; recevoir un recu et suivre sa commande; se faire "
-    "livrer; laisser un avis. Le client gere son profil, son compte et ses notifications.\n"
-    "- Reservations: tables de restaurant, chambres d'hotel, offres premium et trajets/billets de "
-    "transport. Un acompte peut etre demande: la reservation n'est validee qu'une fois l'acompte "
-    "paye (avec une reference de transaction si elle est demandee).\n"
-    "- Devenir vendeur: s'inscrire, choisir une formule (Boutique, Restaurant ou Premium/"
-    "Entreprise), payer l'abonnement; l'equipe AMAZER valide le paiement avant l'activation.\n"
-    "- Espace vendeur: tableau de bord, gestion des produits et du stock, import de produits en "
-    "masse (plusieurs formats acceptes), import par photos (reserve a la formule Premium), export "
-    "des ventes, scan des livraisons.\n"
-    "- Abonnement: a l'echeance, la boutique est suspendue et masquee du public, puis reactivee "
-    "des le reabonnement. AMAZER est aussi disponible en application mobile Android.\n"
+    "CE QUE PERMET AMAZER AUJOURD'HUI :\n"
+    "- Acheter : rechercher (filtres prix, categorie, tri), ajouter au panier, indiquer adresse et "
+    "telephone de livraison, commander.\n"
+    "- Payer : Nita (transfert au numero AMAZER puis saisie de la reference ; l'equipe verifie avant "
+    "confirmation) ou Amana (validation dans l'application AmanaTa).\n"
+    "- Livraison a Niamey (standard ou express) par un livreur AMAZER ; frais par boutique, affiches "
+    "avant la commande. Suivi dans le tableau de bord ; le client peut annuler une commande non payee.\n"
+    "- Ecrire a une boutique (bouton « Ecrire a la boutique », page Messages).\n"
+    "- Reserver une table ou une chambre ; l'acompte est verifie par le commercant.\n"
+    "- Mot de passe oublie : page « Mot de passe oublie », code envoye par e-mail ou WhatsApp.\n"
+    "- Vendre : page « Devenir vendeur », choisir une formule, publier ses produits.\n"
+    "- Aide complete : page « Comment ca marche ? ».\n"
     "\n"
-    "REGLES IMPORTANTES:\n"
-    "- Tu n'as AUCUN acces aux comptes, commandes, paiements, donnees ni au systeme: ne pretends "
-    "jamais y acceder ni donner d'informations precises propres a un utilisateur.\n"
-    "- Ne jamais inventer de prix exacts, de delais precis ni de niveaux de stock.\n"
-    "- ADMINISTRATION STRICTEMENT INTERDITE: tu ne dois jamais expliquer le fonctionnement "
-    "interne, ni aider a utiliser, ni donner acces aux fonctions d'administration d'AMAZER "
-    "(validation des paiements/abonnements, finance et comptabilite, gestion des utilisateurs, "
-    "catalogue admin, tarifs, sections, scan de recus admin, panneau /admin). Si on te le "
-    "demande, refuse poliment: ces outils sont reserves a l'equipe AMAZER et tu n'y as aucun "
-    "acces. Reoriente vers ce que l'utilisateur peut faire lui-meme.\n"
-    "- Pour un cas particulier (litige, paiement bloque, remboursement, bug), invite poliment a "
-    "contacter le support humain d'AMAZER."
+    "REGLES :\n"
+    "- Tu n'as acces a aucun compte, commande ni paiement : ne pretends jamais le contraire.\n"
+    "- Ne recommande QUE les produits listes dans « CATALOGUE » ci-dessous, avec leur prix exact. "
+    "Si la liste est vide ou ne correspond pas, dis-le simplement et propose de reformuler. "
+    "N'invente jamais de produit, de prix, de stock ni de delai.\n"
+    "- Refuse poliment toute question sur l'administration interne d'AMAZER.\n"
+    "- Pour un litige, un paiement bloque ou un remboursement : oriente vers le support humain "
+    "(WhatsApp ci-dessous)."
 )
 
 _DEFAULT_REPLY = (
-    "Bonjour et bienvenue sur AMAZER ! Je peux t'aider sur : passer une commande, les moyens de "
-    "paiement (Nita/Amana), la livraison, devenir vendeur, les reservations et les promotions. "
-    "Quelle est ta question ?"
+    "Bonjour ! Je peux vous aider à trouver un produit, commander, payer, suivre une livraison "
+    "ou ouvrir votre boutique. Que cherchez-vous ?"
 )
 
 _FAQ = [
-    (("admin", "administrateur", "administration", "back office", "backoffice",
-      "gestion des utilisateurs", "valider un paiement", "valider les paiements",
-      "panneau admin", "tableau admin", "comptabilite", "finance amazer"),
-     "Desole, les fonctions d'administration sont reservees a l'equipe AMAZER et je n'y ai aucun "
-     "acces. Je peux t'aider sur l'achat, le paiement, la livraison, les reservations, les "
-     "promotions ou pour devenir vendeur."),
-    (("commander", "acheter", "commande", "panier"),
-     "Pour commander : ouvre une boutique ou un restaurant, ajoute les articles au panier, puis "
-     "paie par Nita ou Amana. Tu seras ensuite livre. Tu peux suivre l'etat de ta commande dans "
-     "ton espace."),
-    (("vendeur", "vendre", "boutique", "ouvrir", "magasin", "restaurateur"),
-     "Pour devenir vendeur : inscris-toi, choisis ta formule (Boutique, Restaurant ou Premium), "
-     "puis paie l'abonnement. L'administration valide le paiement et ta boutique est activee."),
+    (("admin", "administrateur", "administration", "back office", "backoffice", "panneau admin", "comptabilite"),
+     "Désolé, l'administration est réservée à l'équipe AMAZER. Je peux vous aider à acheter, payer ou vendre."),
+    (("mot de passe", "password", "connexion impossible", "oublie"),
+     "Ouvrez la page « Mot de passe oublié », saisissez votre e-mail ou WhatsApp, puis le code reçu."),
+    (("annuler", "annulation"),
+     "Une commande non payée s'annule depuis votre tableau de bord. Une commande payée : contactez le support."),
+    (("livreur", "livraison", "livrer", "delai", "expedition"),
+     "Un livreur AMAZER livre à Niamey (standard ou express). Les frais s'affichent avant la commande. "
+     "Suivez votre commande dans le tableau de bord."),
     (("paiement", "payer", "nita", "amana", "argent", "mobile money"),
-     "Les paiements se font par Nita ou Amana. Au moment de payer, indique le mode choisi ; pour "
-     "certaines operations une reference de transaction peut etre demandee."),
-    (("livraison", "livrer", "livreur", "delai", "expedition"),
-     "La livraison est assuree apres le paiement de ta commande. Le suivi se fait depuis ton "
-     "espace client."),
-    (("promo", "promotion", "reduction", "solde", "offre"),
-     "Les promotions du moment sont regroupees sur la page Promotions du site."),
-    (("abonnement", "renouveler", "renouvellement", "expire"),
-     "Les vendeurs paient un abonnement valide par l'administration. A l'echeance, la boutique "
-     "est suspendue puis reactivee des le reabonnement."),
-    (("reservation", "reserver", "table", "chambre", "hotel", "trajet", "billet", "acompte"),
-     "Tu peux reserver une table de restaurant ou une offre premium/transport. Si un acompte est "
-     "demande, la reservation est validee une fois l'acompte paye."),
-    (("contact", "aide", "support", "probleme", "litige", "rembours", "humain", "service client"),
-     "Pour un cas particulier (paiement bloque, litige, remboursement), contacte le support "
-     "humain d'AMAZER qui prendra le relais."),
-    (("bonjour", "salut", "bonsoir", "coucou", "hello", "merci"),
-     _DEFAULT_REPLY),
+     "Deux moyens : Nita (transfert au numéro AMAZER, puis la référence) ou Amana (validation dans AmanaTa). "
+     "La commande est confirmée après vérification du paiement."),
+    (("commander", "acheter", "commande", "panier"),
+     "Ajoutez les produits au panier, indiquez adresse et téléphone, choisissez le paiement puis « Commander »."),
+    (("vendeur", "vendre", "ouvrir une boutique", "ma boutique", "restaurateur"),
+     "Ouvrez la page « Devenir vendeur », choisissez votre formule, puis publiez vos produits."),
+    (("message", "contacter la boutique", "ecrire"),
+     "Sur la page d'une boutique, cliquez « Écrire à la boutique ». Vos échanges sont dans « Messages »."),
+    (("promo", "promotion", "reduction", "solde"),
+     "Les promotions du moment sont sur la page Promotions."),
+    (("abonnement", "renouveler", "expire"),
+     "L'abonnement vendeur se règle depuis l'espace vendeur ; la boutique reste visible tant qu'il est actif."),
+    (("reservation", "reserver", "table", "chambre", "hotel", "acompte"),
+     "Réservez depuis la page du restaurant ou de l'hôtel. L'acompte éventuel est vérifié par le commerçant."),
+    (("contact", "aide", "support", "probleme", "litige", "rembours", "humain", "whatsapp"),
+     "Pour un cas particulier, écrivez au support AMAZER sur WhatsApp : il vous répondra."),
+    (("bonjour", "salut", "bonsoir", "coucou", "hello", "merci"), _DEFAULT_REPLY),
 ]
+
+# Mots trop courants pour une recherche de produit.
+_STOPWORDS = {
+    "avez", "vous", "est", "ce", "que", "qui", "les", "des", "une", "un", "pour", "avec", "dans", "sur",
+    "mon", "mes", "ton", "vos", "votre", "nos", "notre", "cherche", "cherchez", "recherche", "veux",
+    "voudrais", "besoin", "acheter", "achat", "trouver", "prix", "combien", "coute", "coutent", "bonjour",
+    "salut", "merci", "svp", "stp", "quel", "quelle", "quels", "quelles", "ou", "pas", "plus", "moins",
+    "cher", "chere", "bon", "bonne", "amazer", "il", "elle", "ils", "nous", "je", "tu", "me", "moi",
+    "aussi", "comment", "faire", "peut", "peux", "pouvez", "disponible", "dispo", "y", "a", "en", "de",
+    "du", "la", "le", "et", "au", "aux", "c", "d", "l", "j", "s", "t", "n", "qu",
+}
 
 
 def _norm(text: str) -> str:
@@ -110,7 +114,79 @@ def faq_reply(message: str) -> str:
     return _DEFAULT_REPLY
 
 
-def _gemini_reply(history: list[dict], model: str, api_key: str) -> str | None:
+def _keywords(message: str) -> list[str]:
+    words = re.findall(r"[a-z0-9]+", _norm(message))
+    return [word for word in words if len(word) >= 3 and word not in _STOPWORDS][:6]
+
+
+class AssistantProduct(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    price: float
+    shop: str
+    image_url: str | None
+
+
+def catalog_matches(db: Session, message: str, limit: int = 4) -> list[AssistantProduct]:
+    """Produits reels correspondant a la question (recherche plein texte, en stock uniquement)."""
+    keywords = _keywords(message)
+    if not keywords:
+        return []
+    from app.services.product_service import ProductService
+
+    service = ProductService(db)
+    # D'abord la phrase complete, puis chaque mot (le plus long d'abord).
+    attempts = [" ".join(keywords), *sorted(set(keywords), key=len, reverse=True)][:4]
+    for query in attempts:
+        try:
+            result = service.search_products(
+                query=query, barcode=None, brand=None, category_id=None, category_slug=None,
+                spec_key=None, spec_value=None, min_price=None, max_price=None,
+                in_stock_only=True, sort="relevance", limit=limit, offset=0,
+            )
+        except Exception:  # pragma: no cover - la recherche ne doit jamais casser le chat
+            logger.exception("Recherche catalogue de l'assistant en echec")
+            return []
+        if result.items:
+            return [
+                AssistantProduct(
+                    id=item.id,
+                    name=item.name,
+                    price=float(item.best_offer.amount),
+                    shop=item.best_offer.vendor.name,
+                    image_url=item.main_image_url,
+                )
+                for item in result.items[:limit]
+            ]
+    return []
+
+
+def _support_whatsapp(db: Session) -> str | None:
+    try:
+        from app.services.seller_finance_service import get_or_create_global_settings
+
+        row = get_or_create_global_settings(db)
+        value = getattr(row, "support_whatsapp", None) or getattr(row, "support_phone", None)
+        return value if isinstance(value, str) and value.strip() else None
+    except Exception:  # pragma: no cover
+        return None
+
+
+def build_system_prompt(products: list[AssistantProduct], support_whatsapp: str | None) -> str:
+    lines = [SYSTEM_PROMPT, "", "CATALOGUE (resultats reels pour la derniere question) :"]
+    if products:
+        lines += [f"- {p.name} — {int(round(p.price)):,} XOF — boutique {p.shop}".replace(",", " ") for p in products]
+        lines.append("Les fiches de ces produits s'affichent sous ta reponse : inutile de recopier les liens.")
+    else:
+        lines.append("- (aucun produit trouve)")
+    if support_whatsapp:
+        lines += ["", f"SUPPORT HUMAIN : WhatsApp {support_whatsapp}."]
+    return "\n".join(lines)
+
+
+def _gemini_reply(history: list[dict], model: str, api_key: str, system_prompt: str = SYSTEM_PROMPT) -> str | None:
     """Appel Gemini via stdlib urllib (aucune dependance ajoutee). None si echec."""
     import urllib.error
     import urllib.request
@@ -120,13 +196,11 @@ def _gemini_reply(history: list[dict], model: str, api_key: str) -> str | None:
         for m in history
     ]
     payload = {
-        "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+        "system_instruction": {"parts": [{"text": system_prompt}]},
         "contents": contents,
-        "generationConfig": {"maxOutputTokens": 500, "temperature": 0.4},
+        "generationConfig": {"maxOutputTokens": 400, "temperature": 0.3},
     }
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-    )
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     req = urllib.request.Request(
         url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"}
     )
@@ -154,11 +228,11 @@ class ChatResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     reply: str
     mode: Literal["ai", "faq"]
+    # Produits reels proposes (affiches en fiches cliquables sous la reponse).
+    products: list[AssistantProduct] = Field(default_factory=list)
 
 
-# Chaine de modeles gratuits essayes dans l'ordre. Un seul modele est trop
-# fragile (429 quota / 503 surcharge intermittents cote Google) : on bascule
-# automatiquement sur le suivant, et seulement en dernier recours sur la FAQ.
+# Chaine de modeles gratuits essayes dans l'ordre (429 / 503 intermittents cote Google).
 _DEFAULT_MODELS = [
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
@@ -168,9 +242,6 @@ _DEFAULT_MODELS = [
 
 
 def _models_from_env() -> list[str]:
-    """Liste de modeles depuis ASSISTANT_MODEL (separes par des virgules), sinon defauts.
-    On ajoute toujours les defauts en repli pour rester robuste meme si une seule
-    valeur (eventuellement saturee) est configuree."""
     raw = (os.getenv("ASSISTANT_MODEL") or "").strip()
     configured = [m.strip() for m in raw.split(",") if m.strip()]
     ordered: list[str] = []
@@ -181,16 +252,22 @@ def _models_from_env() -> list[str]:
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat(payload: ChatRequest, request: Request) -> ChatResponse:
+def chat(payload: ChatRequest, request: Request, db: Annotated[Session, Depends(get_db)]) -> ChatResponse:
     enforce_rate_limit(request, key="assistant_chat", limit=20, window_seconds=60)
     history = [{"role": m.role, "content": m.content} for m in payload.messages][-12:]
     last_user = next((m["content"] for m in reversed(history) if m["role"] == "user"), "")
 
+    products = catalog_matches(db, last_user)
     api_key = (os.getenv("ASSISTANT_API_KEY") or "").strip()
     if api_key:
+        system_prompt = build_system_prompt(products, _support_whatsapp(db))
         for model in _models_from_env():
-            ai = _gemini_reply(history, model, api_key)
+            ai = _gemini_reply(history, model, api_key, system_prompt)
             if ai:
-                return ChatResponse(reply=ai, mode="ai")
-    # Repli FAQ (gratuit, toujours disponible)
-    return ChatResponse(reply=faq_reply(last_user), mode="faq")
+                return ChatResponse(reply=ai, mode="ai", products=products)
+
+    # Repli sans IA : FAQ, ou les produits trouves.
+    faq = faq_reply(last_user)
+    if products and faq == _DEFAULT_REPLY:
+        faq = "Voici ce que j'ai trouvé sur AMAZER :"
+    return ChatResponse(reply=faq, mode="faq", products=products)

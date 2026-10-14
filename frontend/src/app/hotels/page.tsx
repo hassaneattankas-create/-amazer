@@ -32,7 +32,7 @@ export default function HotelsPage() {
           <div>
             <h1 className="text-2xl font-semibold text-ink-900 sm:text-3xl">Premium</h1>
             <p className="mt-1 max-w-2xl text-sm text-ink-600">
-              Boutiques premium conservees sur AMAZER: Amazer et Fragrance.
+              Les boutiques premium d&apos;AMAZER.
             </p>
           </div>
           <Link href="/boutiques" className="text-sm font-medium text-brand-700 hover:underline">

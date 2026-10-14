@@ -33,6 +33,10 @@ export default function CartPage() {
   const [paymentMode, setPaymentMode] = useState<"nita" | "amana">("nita");
   const [deliveryType, setDeliveryType] = useState<"standard" | "express_niamey">("standard");
   const [transactionCode, setTransactionCode] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryPhone, setDeliveryPhone] = useState("");
+  // Sans adresse ni telephone, le livreur ne peut pas livrer : on les exige avant la commande.
+  const deliveryReady = deliveryAddress.trim().length >= 3 && deliveryPhone.replace(/\D/g, "").length >= 8;
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const { data: financeSettings } = useQuery({
     queryKey: ["public-finance-settings"],
@@ -126,6 +130,8 @@ export default function CartPage() {
         transaction_code: transactionCode || undefined,
         currency: "XOF",
         district: deliveryType === "standard" && district ? district : undefined,
+        delivery_address: deliveryAddress.trim(),
+        delivery_phone: deliveryPhone.trim(),
       });
       let receiptHref: string | undefined;
       try {
@@ -312,6 +318,35 @@ export default function CartPage() {
                 </select>
               </div>
             ) : null}
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label htmlFor="delivery-address" className="text-sm font-medium text-ink-800">
+                  Adresse de livraison
+                </label>
+                <Input
+                  id="delivery-address"
+                  value={deliveryAddress}
+                  onChange={(event) => setDeliveryAddress(event.target.value)}
+                  placeholder="Quartier, rue, repère (ex. près de la pharmacie)"
+                  autoComplete="street-address"
+                  className="mt-1 h-11"
+                />
+              </div>
+              <div>
+                <label htmlFor="delivery-phone" className="text-sm font-medium text-ink-800">
+                  Téléphone pour le livreur
+                </label>
+                <Input
+                  id="delivery-phone"
+                  value={deliveryPhone}
+                  onChange={(event) => setDeliveryPhone(event.target.value)}
+                  placeholder="+227 90 00 00 00"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  className="mt-1 h-11"
+                />
+              </div>
+            </div>
             <p className="mt-3 text-xs text-ink-600">
               Frais de livraison : {formatXOF(selectedShippingFee)} par boutique, payés par le client.
             </p>
@@ -411,9 +446,18 @@ export default function CartPage() {
                     Vous économisez {formatXOF(result.savings)} en combinant les boutiques
                   </p>
                 ) : null}
-                <Button type="button" size="lg" className="mt-4 w-full" onClick={() => void placeOrder()} disabled={isSubmittingOrder}>
+                <Button
+                  type="button"
+                  size="lg"
+                  className="mt-4 w-full"
+                  onClick={() => void placeOrder()}
+                  disabled={isSubmittingOrder || !deliveryReady}
+                >
                   {isSubmittingOrder ? "Validation…" : "Commander"}
                 </Button>
+                {!deliveryReady ? (
+                  <p className="mt-2 text-center text-xs text-ink-600">Indiquez l&apos;adresse et le téléphone de livraison.</p>
+                ) : null}
                 <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
                   <button type="button" onClick={downloadReceipt} className="inline-flex min-h-10 items-center gap-1 text-ink-600 hover:text-ink-900 hover:underline">
                     <Download className="h-4 w-4" aria-hidden="true" />

@@ -304,7 +304,7 @@ export async function removeAdminUser(userId: string): Promise<void> {
   });
 }
 
-export type AdminUserRole = "user" | "admin";
+export type AdminUserRole = "user" | "admin" | "courier";
 
 export async function updateAdminUserRole(userId: string, role: AdminUserRole): Promise<AdminUser> {
   return adminProxyRequest<AdminUser>({

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, Menu, ShoppingCart, User } from "lucide-react";
@@ -117,6 +118,7 @@ export function FloatingNavbar() {
     ...clientNavItems,
     ...(isAuthenticated ? [{ href: "/dashboard", label: "Dashboard" }, { href: "/messages", label: "Messages" }] : []),
     ...(showSellerLink ? sellerNavigationItems : []),
+    ...(user?.role === "courier" || showAdminLink ? [{ href: "/livreur", label: "Espace livreur" }] : []),
     ...(showAdminLink ? [{ href: "/admin", label: "Espace Admin" }] : []),
   ].filter((item, index, array) => array.findIndex((entry) => entry.href === item.href) === index);
 
@@ -358,8 +360,9 @@ export function FloatingNavbar() {
       className="sticky top-0 z-sticky w-full border-b border-border bg-background/95 backdrop-blur"
     >
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-gutter sm:h-16 sm:gap-3">
-        <Link href="/" className="mr-auto inline-flex shrink-0 items-center md:mr-2" aria-label="AMAZER, accueil">
-          <span className="text-xl font-extrabold tracking-display text-brand-600">AMAZER</span>
+        <Link href="/" className="mr-auto inline-flex shrink-0 items-center gap-2 md:mr-2" aria-label="AMAZER, accueil">
+          <Image src="/logo-amazer-mark-128.png" alt="" width={36} height={36} priority className="h-9 w-9" />
+          <span className="text-xl font-extrabold tracking-display text-ink-900">AMAZER</span>
         </Link>
 
         <div className="relative">

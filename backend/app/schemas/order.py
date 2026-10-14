@@ -22,6 +22,9 @@ class CheckoutRequest(BaseModel):
     currency: str = Field(default="XOF", min_length=3, max_length=3)
     # Quartier de livraison : applique le tarif configure par l'admin pour cette zone.
     district: str | None = Field(default=None, max_length=120)
+    # Ou et a qui livrer (indispensable au livreur).
+    delivery_address: str | None = Field(default=None, min_length=3, max_length=255)
+    delivery_phone: str | None = Field(default=None, min_length=8, max_length=40)
 
 
 class OrderItemResponse(BaseModel):

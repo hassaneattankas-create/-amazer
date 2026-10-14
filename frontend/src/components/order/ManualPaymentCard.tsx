@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatXOF } from "@/lib/currency";
 import type { PaymentIntent } from "@/types/order";
+import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 
 type ManualPaymentCardProps = {
   orderId: string;
@@ -91,6 +92,12 @@ export function ManualPaymentCard({
         ) : null}
 
         <p className="mt-4 text-xs text-slate-500">Commande: {orderId}</p>
+        <WhatsAppButton
+          variant="link"
+          label="Besoin d'aide pour payer ?"
+          message={`Bonjour AMAZER, j'ai besoin d'aide pour payer la commande ${orderId}.`}
+          className="mt-3"
+        />
         {status ? <p className="mt-3 text-sm text-slate-700">{status}</p> : null}
       </article>
     </section>

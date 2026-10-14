@@ -321,6 +321,29 @@ Toutes les couleurs, rayons et espacements viennent des tokens du design system 
 - **Prix animés** : l'espace avant « XOF » disparaissait (« 96100XOF »). C'est corrigé partout.
 - **Guide photo vendeurs** dans le centre d'aide, avec un lien depuis le formulaire d'ajout de produit.
 
+## 4 trevicies. Logo, WhatsApp, livreurs, assistant IA — 2026-10-13
+
+- **Logo officiel** intégré : version détourée sans fond (`logo-amazer-mark*.png`, fond noir retiré par propagation depuis les bords, trou de l'anse compris, sans abîmer le bleu marine) pour l'en-tête, le pied de page et l'assistant ; version sur fond noir pour les icônes d'application, l'icône d'onglet (48 px) et l'icône Apple. Le manifeste ne référence plus l'ancien SVG.
+- **Boutons WhatsApp cliquables** (`wa.me`, gratuit, sans API) : composant `WhatsAppButton` et utilitaire `whatsappLink` (numéros nigériens normalisés, 7 tests Vitest). Placés dans le pied de page, l'aide, la fiche produit (« Une question sur ce produit ? »), la page de paiement (« Besoin d'aide pour payer ? »), l'assistant (« Besoin d'une personne ? ») et les pages boutiques (WhatsApp du vendeur, avec message pré-rempli). Numéro du support : réglage admin `support_whatsapp`.
+- **Textes raccourcis** sur les pages Boutiques, Restaurants, Premium, Devenir vendeur et Connexion.
+- **Espace livreurs** (`/livreur`, API `/courier`) :
+  - rôle `courier` attribué par l'admin (« Nommer livreur ») ;
+  - liste des commandes payées à prendre, avec les points de retrait (boutique, adresse, articles) et le quartier ;
+  - « Prendre en charge » : un seul livreur par commande, verrou en base ;
+  - ensuite : appeler le client, lui écrire sur WhatsApp, ouvrir l'itinéraire ;
+  - « Marquer livrée », ou « Je ne peux pas la livrer » (la commande redevient disponible) ;
+  - le client est notifié à chaque étape.
+  - **Confidentialité** : le téléphone et l'adresse exacte du client ne sont visibles que par le livreur chargé de la commande.
+  - Chaque action est inscrite au journal d'audit. 10 tests.
+- **Adresse et téléphone de livraison** : nouveaux champs de commande (`delivery_address`, `delivery_phone`, `delivery_district`, `courier_user_id`, `courier_assigned_at`, `delivered_at`), ajoutés au démarrage sans effet destructif. Ils sont obligatoires dans le panier avant de commander.
+  - ⚠️ Correction critique avant mise en ligne : la seconde clé vers `users` rendait la relation `Order.user` ambiguë, ce qui faisait échouer 33 tests et aurait cassé les commandes en production. Clé précisée (`foreign_keys=[user_id]`).
+- **Assistant IA renforcé** :
+  - à chaque question, recherche dans le **vrai catalogue** (en stock) ; les produits trouvés, avec leur prix exact, sont donnés à l'IA, qui ne peut recommander qu'eux ; ils s'affichent en fiches cliquables dans la conversation ;
+  - consignes réécrites (fonctions actuelles, réponses courtes, numéro WhatsApp du support) ;
+  - FAQ de secours à jour (mot de passe, annulation, livreur, messagerie) ;
+  - 9 tests. Suite backend : 204/204.
+- Limite : l'espace livreur couvre les commandes boutique ; les commandes restaurant gardent leur circuit actuel.
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).

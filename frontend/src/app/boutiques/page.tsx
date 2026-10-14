@@ -52,7 +52,7 @@ export default function BoutiquesPage() {
           <div>
             <h1 className="text-2xl font-semibold text-ink-900 sm:text-3xl">Boutiques</h1>
             <p className="mt-1 max-w-2xl text-sm text-ink-600">
-              Explorez les boutiques actives, avec priorite aux enseignes qui ont deja du stock visible.
+              Les commerces de Niamey, au même endroit.
             </p>
           </div>
           <Link href="/hotels" className="text-sm font-medium text-brand-700 hover:underline">

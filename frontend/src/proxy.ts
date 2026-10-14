@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PROTECTED_PATHS = ["/seller", "/admin", "/dashboard", "/profile", "/messages"];
+const PROTECTED_PATHS = ["/seller", "/admin", "/dashboard", "/profile", "/messages", "/livreur"];
 const PRIMARY_HOSTNAME = "amazer.store";
 const WWW_HOSTNAME = `www.${PRIMARY_HOSTNAME}`;
 const HISTORICAL_HOSTNAMES = new Set([

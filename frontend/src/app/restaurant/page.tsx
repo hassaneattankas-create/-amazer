@@ -33,7 +33,7 @@ export default function RestaurantPage() {
       <header className="rounded-card border border-border bg-card p-5 sm:p-6">
         <h1 className="text-2xl font-semibold text-ink-900 sm:text-3xl">Restaurants</h1>
         <p className="mt-1 max-w-2xl text-sm text-ink-600">
-          Commandez en ligne, payez par Nita ou Amana, livraison moto-coursier a Niamey.
+          Commandez en ligne, livré par moto à Niamey.
         </p>
         <Input
           value={query}

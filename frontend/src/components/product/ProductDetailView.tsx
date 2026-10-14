@@ -18,6 +18,7 @@ import { getCategoryRoute, getShopRoute } from "@/lib/mobile-routes";
 import { resolveProductImageUrl } from "@/lib/product-image";
 import { getProductDetailById, getProductRecommendations } from "@/services/product-service";
 import { useCartStore } from "@/store/cartStore";
+import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 
 const ProductPriceHistoryChart = dynamic(
   () => import("@/components/product/ProductPriceHistoryChart").then((mod) => mod.ProductPriceHistoryChart),
@@ -227,6 +228,12 @@ export function ProductDetailView({ productId }: { productId: string }) {
               </Link>
             </p>
           ) : null}
+
+          <WhatsAppButton
+            variant="link"
+            label="Une question sur ce produit ? Écrivez-nous"
+            message={`Bonjour AMAZER, j'ai une question sur : ${product.name}`}
+          />
 
           <ul className="space-y-2 text-sm text-ink-700">
             <li className="flex items-center gap-2">

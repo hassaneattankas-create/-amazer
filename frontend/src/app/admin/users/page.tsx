@@ -120,7 +120,9 @@ export default function AdminUsersPage() {
   const roleMutation = useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: AdminUserRole }) => updateAdminUserRole(userId, role),
     onSuccess: (updated) => {
-      setActionStatus(updated.is_admin ? "Droits administrateur accordes." : "Droits administrateur retires.");
+      setActionStatus(
+        updated.is_admin ? "Rôle : administrateur." : updated.role === "courier" ? "Rôle : livreur." : "Rôle : client."
+      );
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
     onError: (error) => {
@@ -325,7 +327,7 @@ export default function AdminUsersPage() {
                     ) : null}
                   </td>
                   <td className="px-3 py-2 text-slate-700">
-                    {user.is_admin ? "Admin" : user.is_seller ? "Vendeur" : "Client"}
+                    {user.is_admin ? "Admin" : user.role === "courier" ? "Livreur" : user.is_seller ? "Vendeur" : "Client"}
                   </td>
                   <td className="px-3 py-2 text-xs text-slate-500">
                     {user.created_at
@@ -378,6 +380,17 @@ export default function AdminUsersPage() {
                           onClick={() => roleMutation.mutate({ userId: user.id, role: "admin" })}
                         >
                           Nommer admin
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={isBusy}
+                          onClick={() =>
+                            roleMutation.mutate({ userId: user.id, role: user.role === "courier" ? "user" : "courier" })
+                          }
+                        >
+                          {user.role === "courier" ? "Retirer livreur" : "Nommer livreur"}
                         </Button>
                       </div>
                     ) : (

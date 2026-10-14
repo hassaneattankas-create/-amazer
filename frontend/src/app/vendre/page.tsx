@@ -23,12 +23,12 @@ export default function VendrePage() {
           Devenir vendeur AMAZER
         </h1>
         <p className="mt-2 text-sm text-slate-600">
-          Cette rubrique est reservee aux vendeurs (boutique, restaurant ou premium entreprise).
+          Vendez en ligne à toute la ville, en trois étapes.
         </p>
         <ol className="mt-3 list-decimal space-y-1 pl-5 text-xs text-slate-600">
-          <li>Creer ou connecter votre compte client</li>
-          <li>Choisir votre profil (boutique, restaurant ou premium entreprise)</li>
-          <li>Publier vos offres depuis l&apos;espace vendeur</li>
+          <li>Créez votre compte</li>
+          <li>Choisissez votre type : boutique, restaurant ou premium</li>
+          <li>Publiez vos produits</li>
         </ol>
         <Button
           asChild

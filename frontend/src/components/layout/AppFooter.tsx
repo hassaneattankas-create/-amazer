@@ -1,6 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { ADMIN_EMAIL } from "@/lib/admin";
+import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 
 const COLUMNS = [
   {
@@ -18,6 +20,7 @@ const COLUMNS = [
       { href: "/vendre", label: "Devenir vendeur" },
       { href: "/seller", label: "Espace vendeur" },
       { href: "/comment-ca-marche#vendre", label: "Guide du vendeur" },
+      { href: "/livreur", label: "Devenir livreur" },
     ],
   },
   {
@@ -36,8 +39,17 @@ export function AppFooter() {
     <footer className="mt-12 border-t border-border bg-card">
       <div className="mx-auto grid w-full max-w-7xl gap-8 px-gutter py-10 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="text-xl font-extrabold tracking-display text-brand-600">AMAZER</p>
+          <p className="flex items-center gap-2 text-xl font-extrabold tracking-display text-ink-900">
+            <Image src="/logo-amazer-mark-128.png" alt="" width={36} height={36} className="h-9 w-9" />
+            AMAZER
+          </p>
           <p className="mt-2 text-sm text-ink-600">La plateforme du commerce nigérien : boutiques, restaurants et services près de chez vous.</p>
+          <WhatsAppButton
+            variant="outline"
+            label="Écrire à AMAZER"
+            message="Bonjour AMAZER, j'ai une question."
+            className="mt-4"
+          />
           <p className="mt-3 text-sm text-ink-700">
             Support :{" "}
             <a href={`mailto:${ADMIN_EMAIL}`} className="font-medium text-brand-700 hover:underline">

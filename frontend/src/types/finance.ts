@@ -151,6 +151,7 @@ export type AdminUser = {
   is_active: boolean;
   is_admin: boolean;
   is_seller: boolean;
+  role?: string;
   created_at: string;
 };
 

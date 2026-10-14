@@ -34,6 +34,8 @@ export type UserResponse = {
   full_name: string;
   whatsapp_phone: string | null;
   is_active: boolean;
+  /** "user", "admin" ou "courier" (livreur). */
+  role?: string;
   created_at: string;
 };
 

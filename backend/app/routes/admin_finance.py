@@ -301,6 +301,7 @@ def _build_admin_user_response(user: User, seller_user_ids: set[str]) -> AdminUs
         is_active=bool(user.is_active),
         is_admin=is_admin(user),
         is_seller=user.id in seller_user_ids,
+        role=getattr(user, "role", "user") or "user",
         created_at=user.created_at.isoformat(),
     )
 

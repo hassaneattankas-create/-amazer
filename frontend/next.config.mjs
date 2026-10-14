@@ -122,7 +122,8 @@ const nextConfig = {
     qualities: [75, 82, 85],
     // Le proxy valide l'URL amont ; son paramètre dynamique `url` doit être
     // accepté par Next/Image pour les images externes relayées localement.
-    localPatterns: [{ pathname: "/api/image-proxy" }],
+    // Le proxy d'images et les fichiers du logo (servis depuis /public) sont les seules sources locales.
+    localPatterns: [{ pathname: "/api/image-proxy" }, { pathname: "/logo-amazer-mark-128.png" }, { pathname: "/logo-amazer-mark.png" }],
     remotePatterns: isStaticExport
       ? []
       : [
