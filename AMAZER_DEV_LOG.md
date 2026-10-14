@@ -344,6 +344,20 @@ Toutes les couleurs, rayons et espacements viennent des tokens du design system 
   - 9 tests. Suite backend : 204/204.
 - Limite : l'espace livreur couvre les commandes boutique ; les commandes restaurant gardent leur circuit actuel.
 
+## 4 quattuorvicies. International, scans, notifications, admin — 2026-10-14
+
+- Livreurs : numéro du client visible dès « À prendre » ; adresse exacte après prise en charge.
+- Fiche produit : boutons Appeler / WhatsApp vers le vendeur (WhatsApp, sinon téléphone de la boutique).
+- Conditions : clause « paiement et livraison hors AMAZER » (aucune responsabilité d'AMAZER).
+- Admin : les suppressions bloquaient (proxy admin plantait sur les réponses 204) — corrigé ; suppression définitive d'un utilisateur (anonymisation, historique conservé).
+- Panier : plus de comparaison de prix ; le client achète l'offre qu'il a choisie.
+- Catégories : 99 % des produits n'avaient aucune catégorie → classement automatique par mots-clés (au démarrage et à la publication).
+- Scans : le reçu n'affichait aucun QR code → QR ajouté (commandes payées) ; scan par le livreur de sa livraison ; caméra fiabilisée (tiroir monté avant démarrage) ; champ code-barres vendeur (le scan produit de l'accueil ne trouvait jamais rien).
+- Notifications : chaque notification part aussi par e-mail (Brevo) ; WhatsApp prêt mais inactif tant qu'un modèle Meta approuvé n'est pas configuré (`WHATSAPP_NOTIFICATION_TEMPLATE`). Anti-rafale : 1 envoi par sujet / 10 min.
+- International : pays, région, devise, langue (inscription, sélecteur d'en-tête, préférences du compte) ; prix indicatifs convertis (parités CFA exactes, autres devises via open.er-api.com, cache 6 h) ; paiement toujours en XOF ; interface FR/EN sur l'en-tête, le pied de page et l'accueil.
+- Accueil refondu (bandeau, rayons, bonnes affaires, boutiques à la une) ; page Premium par métier (hôtels, transport, restaurants, entreprises) ; page Vendre en grille de formules.
+- Tests : backend 241 ; frontend 36 (alias vitest corrigé pour le chemin avec espace).
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).
