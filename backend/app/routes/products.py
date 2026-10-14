@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
+from app.core.cache import build_cache_key, cache_get_json, cache_set_json
 from app.database import get_db
 from app.schemas.product import ProductDetailResponse, ProductSearchResult, SearchSort
 from app.services.product_service import ProductService
@@ -29,8 +30,19 @@ def search_products(
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> ProductSearchResult:
+    # Cache court (60 s, vide a chaque modification vendeur via le prefixe « catalog: ») :
+    # la recherche coutait 6 a 10 s par appel (base distante), l'accueil la sollicite a chaque visite.
+    cache_key = build_cache_key(
+        "catalog:products-search",
+        query=query, barcode=barcode, brand=brand, category_id=category_id, category_slug=category_slug,
+        spec_key=spec_key, spec_value=spec_value, min_price=min_price, max_price=max_price,
+        in_stock_only=in_stock_only, sort=sort, limit=limit, offset=offset,
+    )
+    cached = cache_get_json(cache_key)
+    if isinstance(cached, dict):
+        return ProductSearchResult.model_validate(cached)
     service = ProductService(db)
-    return service.search_products(
+    result = service.search_products(
         query=query,
         barcode=barcode,
         brand=brand,
@@ -45,6 +57,8 @@ def search_products(
         limit=limit,
         offset=offset,
     )
+    cache_set_json(cache_key, result.model_dump(mode="json"), ttl_seconds=60)
+    return result
 
 
 @router.get("/{product_id}", response_model=ProductDetailResponse)
