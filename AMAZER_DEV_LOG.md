@@ -385,6 +385,15 @@ Toutes les couleurs, rayons et espacements viennent des tokens du design system 
 - /formations : mini-formation AMAZER (7 leçons) + ressources externes gratuites vérifiées (liens testés le 2026-10-14).
 - Tests : backend 272.
 
+## 4 octovicies. Revendeurs : abonnement + commission — 2026-10-14
+
+- Abonnement revendeur mensuel (défaut 500 XOF) et commission AMAZER sur la marge (défaut 10 %), réglables dans Admin → Tarifs ; 0 XOF = revente gratuite.
+- L'essai gratuit vendeur (s'il est activé) s'applique aussi au premier usage revendeur.
+- Paiement d'abonnement déclaré (Nita/Amana + référence unique), validé ou refusé dans Admin → Revendeurs ; prolongation de 30 jours par mois depuis la fin en cours ; notification automatique.
+- Sans abonnement actif : publication refusée, boutique publique masquée, et un achat via une ancienne annonce se fait au prix boutique (aucune marge).
+- `order_items.reseller_commission` figé à la commande ; gains revendeur = marge − commission.
+- Tests : backend 282.
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).

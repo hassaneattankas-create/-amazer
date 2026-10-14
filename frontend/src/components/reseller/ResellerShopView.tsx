@@ -90,6 +90,13 @@ export function ResellerShopView({ resellerId }: { resellerId: string }) {
               <ProductCardSkeleton key={index} variant="tile" />
             ))}
           </div>
+        ) : data && !data.active ? (
+          <p className="rounded-card border border-border bg-card p-6 text-center text-sm text-ink-600">
+            Cette boutique est momentanément indisponible.{" "}
+            <Link href="/" className="font-medium text-brand-700 hover:underline">
+              Découvrir AMAZER
+            </Link>
+          </p>
         ) : data?.items.length ? (
           <div className={PRODUCT_GRID_CLASS}>
             {data.items.map((item) => (

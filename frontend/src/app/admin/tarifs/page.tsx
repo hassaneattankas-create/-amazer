@@ -611,6 +611,34 @@ export default function AdminTarifsPage() {
               }
               helper="0 = pas de reduction. S'applique aux tarifs ci-dessus, jamais aux tarifs negocies par boutique."
             />
+            <AdminNumberField
+              label="Abonnement revendeur (revente sans stock)"
+              value={effective.reseller_subscription_fee ?? 500}
+              suffix="XOF / mois"
+              min={0}
+              step="50"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  reseller_subscription_fee: parseNonNegativeNumber(value, effective.reseller_subscription_fee ?? 500),
+                })
+              }
+              helper="0 = revente gratuite. L'essai gratuit vendeur s'applique aussi aux revendeurs."
+            />
+            <AdminNumberField
+              label="Commission AMAZER sur la marge des revendeurs"
+              value={effective.reseller_commission_percent ?? 10}
+              suffix="%"
+              min={0}
+              step="1"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  reseller_commission_percent: Math.min(90, parseNonNegativeNumber(value, effective.reseller_commission_percent ?? 10)),
+                })
+              }
+              helper="Prélevée sur chaque marge gagnée. Exemple : 10 % d'une marge de 1 500 XOF = 150 XOF pour AMAZER."
+            />
           </div>
           <div className="grid gap-3 sm:grid-cols-1">
             <div>

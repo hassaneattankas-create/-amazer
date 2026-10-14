@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, Copy, Link2, PackageOpen, Search, Share2, Trash2, Wallet } from "lucide-react";
 
 import { WhatsAppIcon } from "@/components/contact/WhatsAppButton";
+import { ResellerSubscriptionPanel } from "@/components/reseller/ResellerSubscriptionPanel";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -19,6 +20,7 @@ import { resolveProductImageUrl } from "@/lib/product-image";
 import {
   createResellerListing,
   deleteResellerListing,
+  getMyResellerAccount,
   getMyResellerEarnings,
   listMyResellerListings,
   updateResellerListing,
@@ -28,7 +30,7 @@ const STEPS = [
   { title: "Choisissez", text: "des produits AMAZER à revendre" },
   { title: "Fixez votre prix", text: "votre marge s'ajoute au prix de la boutique" },
   { title: "Partagez", text: "votre lien sur WhatsApp, Facebook, TikTok…" },
-  { title: "Encaissez", text: "votre marge après chaque livraison" },
+  { title: "Encaissez", text: "votre marge après chaque livraison (moins la commission AMAZER)" },
 ];
 
 /** Prix conseille : +15 % arrondi a 50 XOF (marge courante en revente sans stock). */
@@ -56,6 +58,9 @@ export default function RevendrePage() {
     enabled: loggedIn,
   });
   const { data: earnings } = useQuery({ queryKey: ["reseller-earnings"], queryFn: getMyResellerEarnings, enabled: loggedIn });
+  const { data: account } = useQuery({ queryKey: ["reseller-account"], queryFn: getMyResellerAccount, enabled: loggedIn });
+  // Part du revendeur apres la commission AMAZER sur la marge.
+  const keepRatio = 1 - (account?.commission_percent ?? 0) / 100;
   const { data: catalog, isFetching: catalogLoading, isPending: catalogPending } = useProductSearch({
     query: debounced,
     barcode: "",
@@ -71,7 +76,7 @@ export default function RevendrePage() {
   const create = useMutation({
     mutationFn: createResellerListing,
     onSuccess: (listing) => {
-      setMessage({ ok: true, text: `« ${listing.product_name} » ajouté à votre boutique. Marge : ${formatXOF(listing.margin)}.` });
+      setMessage({ ok: true, text: `« ${listing.product_name} » ajouté à votre boutique.` });
       refresh();
     },
     onError,
@@ -129,7 +134,7 @@ export default function RevendrePage() {
             <div className="rounded-card border border-border bg-card p-4">
               <p className="flex items-center gap-2 text-sm text-ink-600">
                 <Wallet className="h-4 w-4" aria-hidden="true" />
-                Gagné (commandes livrées)
+                Gagné net (commandes livrées)
               </p>
               <p className="mt-1 text-2xl font-bold text-ink-900">{formatXOF(earnings?.earned ?? 0)}</p>
             </div>
@@ -143,8 +148,10 @@ export default function RevendrePage() {
             </div>
           </div>
           <p className="text-xs text-ink-600">
-            AMAZER vous verse vos gains (Nita ou Amana) après livraison. Pour un versement, écrivez-nous sur WhatsApp.
+            Montants nets, après la commission AMAZER. Vos gains vous sont versés (Nita ou Amana) après livraison ; pour un
+            versement, écrivez-nous sur WhatsApp.
           </p>
+          {account ? <ResellerSubscriptionPanel account={account} /> : null}
 
           <div className="rounded-card border border-border bg-card p-4">
             <p className="flex items-center gap-2 text-sm font-semibold text-ink-900">
@@ -209,8 +216,9 @@ export default function RevendrePage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-ink-900">{item.product_name}</p>
                       <p className="text-xs text-ink-600">
-                        Prix boutique {formatXOF(item.supplier_amount)} · marge{" "}
-                        <span className="font-semibold text-success">{formatXOF(item.margin)}</span> · {item.sales_count} vendu
+                        Prix boutique {formatXOF(item.supplier_amount)} · vous gagnez{" "}
+                        <span className="font-semibold text-success">{formatXOF(Math.round(item.margin * keepRatio))}</span> ·{" "}
+                        {item.sales_count} vendu
                         {item.sales_count > 1 ? "s" : ""}
                         {!item.in_stock ? " · rupture" : ""}
                       </p>
@@ -303,7 +311,8 @@ export default function RevendrePage() {
                 <div className="min-w-0 flex-1 basis-48">
                   <p className="line-clamp-2 text-sm font-semibold text-ink-900">{product.name}</p>
                   <p className="text-xs text-ink-600">
-                    Boutique {formatXOF(offer.amount)} · marge <span className="font-semibold text-success">{formatXOF(margin)}</span>
+                    Boutique {formatXOF(offer.amount)} · vous gagnez{" "}
+                    <span className="font-semibold text-success">{formatXOF(Math.round(margin * keepRatio))}</span>
                   </p>
                 </div>
                 {already ? (

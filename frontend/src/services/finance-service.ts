@@ -325,6 +325,31 @@ export async function listResellerEarnings(): Promise<AdminResellerEarning[]> {
   return adminProxyRequest<AdminResellerEarning[]>({ url: "/admin/finance/reseller-earnings", method: "GET" });
 }
 
+export type AdminResellerPayment = {
+  id: string;
+  user_id: string;
+  full_name: string;
+  contact: string;
+  payment_mode: string;
+  transaction_reference: string;
+  months: number;
+  amount_claimed: number;
+  status: string;
+  created_at: string;
+};
+
+export async function listResellerPayments(): Promise<AdminResellerPayment[]> {
+  return adminProxyRequest<AdminResellerPayment[]>({ url: "/admin/finance/reseller-payments", method: "GET" });
+}
+
+export async function decideResellerPayment(id: string, decision: "approved" | "rejected"): Promise<AdminResellerPayment> {
+  return adminProxyRequest<AdminResellerPayment>({
+    url: `/admin/finance/reseller-payments/${id}/decision`,
+    method: "POST",
+    data: { decision },
+  });
+}
+
 export type AdminMessageAudience = "all" | "customers" | "sellers" | "couriers" | "user";
 
 /** Message de l'equipe : notification sur le site + e-mail automatique. */

@@ -24,7 +24,7 @@ export type ResellerPublicItem = {
   price: number;
 };
 
-export type ResellerShop = { reseller_id: string; reseller_name: string; items: ResellerPublicItem[] };
+export type ResellerShop = { reseller_id: string; reseller_name: string; active: boolean; items: ResellerPublicItem[] };
 export type ResellerEarnings = { earned: number; pending: number; orders_delivered: number; orders_pending: number };
 
 export async function createResellerListing(payload: { price_id: string; resale_amount: number }) {
@@ -49,4 +49,20 @@ export async function getMyResellerEarnings() {
 
 export async function getResellerShop(resellerId: string) {
   return (await api.get<ResellerShop>(`/api/v1/resellers/${resellerId}/shop`)).data;
+}
+
+export type ResellerAccount = {
+  active: boolean;
+  paid_until: string | null;
+  monthly_fee: number;
+  commission_percent: number;
+  pending_payment: boolean;
+};
+
+export async function getMyResellerAccount() {
+  return (await api.get<ResellerAccount>("/api/v1/resellers/account/me")).data;
+}
+
+export async function submitResellerPayment(payload: { payment_mode: "nita" | "amana"; transaction_reference: string; months: number }) {
+  return (await api.post<ResellerAccount>("/api/v1/resellers/account/payments", payload)).data;
 }

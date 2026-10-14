@@ -15,6 +15,9 @@ export type FinanceSettings = {
   support_whatsapp: string | null;
   /** Essai gratuit a l'inscription vendeur, en jours (0 = desactive). */
   seller_trial_days?: number;
+  /** Revente sans stock : abonnement mensuel du revendeur (XOF) et part AMAZER sur la marge (%). */
+  reseller_subscription_fee?: number;
+  reseller_commission_percent?: number;
   /** Reduction de lancement sur le tarif standard, en % (0 = desactivee). */
   seller_launch_discount_percent?: number;
 };

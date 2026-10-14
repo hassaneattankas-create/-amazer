@@ -13,7 +13,8 @@ const LESSONS: { title: string; points: string[] }[] = [
     points: [
       "Vous choisissez des produits déjà vendus sur AMAZER et fixez votre prix.",
       "Le client paie sur AMAZER : la boutique prépare, un livreur AMAZER livre.",
-      "Votre marge (votre prix − prix de la boutique) vous est versée après la livraison.",
+      "Votre marge (votre prix − prix de la boutique) vous est versée après la livraison, moins la commission AMAZER.",
+      "Un petit abonnement mensuel garde votre boutique en ligne (essai gratuit quand AMAZER en propose).",
       "Aucun stock, aucun local, aucune livraison à gérer.",
     ],
   },
@@ -60,7 +61,8 @@ const LESSONS: { title: string; points: string[] }[] = [
   {
     title: "7. Recevoir vos gains",
     points: [
-      "Vos gains s'affichent dans « Revendre » : « en attente » puis « gagné » une fois livré.",
+      "Vos gains nets (après la commission AMAZER) s'affichent dans « Revendre » : « en attente » puis « gagné » une fois livré.",
+      "Pensez à renouveler votre abonnement : sans lui, votre boutique est masquée.",
       "Demandez votre versement à AMAZER sur WhatsApp ; il est fait par Nita ou Amana.",
     ],
   },
