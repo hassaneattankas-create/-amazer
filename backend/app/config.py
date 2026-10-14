@@ -83,6 +83,9 @@ class Settings(BaseSettings):
     whatsapp_api_version: str = Field(default="v22.0")
     whatsapp_access_token: str | None = Field(default=None)
     whatsapp_phone_number_id: str | None = Field(default=None)
+    # Modele WhatsApp approuve par Meta pour les notifications (2 variables : titre, message + lien).
+    whatsapp_notification_template: str | None = Field(default=None)
+    whatsapp_notification_language: str = Field(default="fr")
     # E-mails transactionnels (SMTP). Inactifs tant que SMTP_HOST et SMTP_FROM ne sont pas definis.
     smtp_host: str | None = Field(default=None)
     smtp_port: int = Field(default=587, ge=1, le=65535)

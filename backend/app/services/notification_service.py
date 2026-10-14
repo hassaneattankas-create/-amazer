@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.models.app_notification import AppNotification
 from app.models.notification import NotificationToken
+from app.models.user import User
+from app.services.notification_relay_service import relay_notification
 from app.services.push_delivery_service import send_fcm_push
 
 
@@ -117,6 +119,18 @@ class NotificationService:
     if href is not None and not isinstance(href, str):
       href = None
     self.create_notification(user_id=user_id, payload=payload, tag=tag, href=href)
+    # Copie par e-mail / WhatsApp pour que l'utilisateur la recoive directement.
+    user = self.db.get(User, user_id)
+    if user is not None and getattr(user, "is_active", True):
+      relay_notification(
+        user_id=user_id,
+        email=getattr(user, "email", None),
+        phone=getattr(user, "whatsapp_phone", None),
+        title=payload.title,
+        body=payload.body,
+        href=href,
+        tag=tag,
+      )
     tokens = self.list_tokens_for_user(user_id)
     if not tokens:
       return
