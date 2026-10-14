@@ -27,6 +27,8 @@ class FinanceSettingsResponse(BaseModel):
     support_whatsapp: str | None = None
     seller_trial_days: int = 0
     seller_launch_discount_percent: float = 0
+    reseller_subscription_fee: float = 500
+    reseller_commission_percent: float = 10
 
 
 class FinanceSettingsUpdateRequest(BaseModel):
@@ -53,6 +55,9 @@ class FinanceSettingsUpdateRequest(BaseModel):
     # Essai gratuit a l'inscription vendeur (0 = desactive) et reduction de lancement en %.
     seller_trial_days: int = Field(default=0, ge=0, le=365)
     seller_launch_discount_percent: float = Field(default=0, ge=0, le=100)
+    # Revente sans stock : abonnement mensuel et part AMAZER sur la marge (%).
+    reseller_subscription_fee: float = Field(default=500, ge=0)
+    reseller_commission_percent: float = Field(default=10, ge=0, le=90)
 
 
 class PublicContactInfoResponse(BaseModel):

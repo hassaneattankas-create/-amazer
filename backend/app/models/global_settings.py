@@ -34,6 +34,9 @@ class GlobalSettings(Base):
     seller_trial_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     seller_launch_discount_percent: Mapped[float] = mapped_column(Float, nullable=False, default=0, server_default="0")
     ad_click_counters_reset_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Revente sans stock : abonnement mensuel du revendeur + commission AMAZER sur chaque marge.
+    reseller_subscription_fee: Mapped[float] = mapped_column(Float, nullable=False, default=500, server_default="500")
+    reseller_commission_percent: Mapped[float] = mapped_column(Float, nullable=False, default=10, server_default="10")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

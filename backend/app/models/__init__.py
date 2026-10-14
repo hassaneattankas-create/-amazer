@@ -3,7 +3,7 @@ from app.models.media_file import MediaFile
 from app.models.app_notification import AppNotification
 from app.models.category import Category
 from app.models.price_history import PriceHistory
-from app.models.reseller import ResellerListing
+from app.models.reseller import ResellerAccount, ResellerListing, ResellerSubscriptionPayment
 from app.models.price_alert import PriceAlert
 from app.models.product import Price, Product, ProductImage
 from app.models.review import Review

@@ -24,7 +24,8 @@ def test_resale_price_within_bounds_is_kept() -> None:
     assert route._validate_amount(PRICE, 11500) == 11500
 
 
-def test_checkout_uses_listing_only_when_it_matches_the_offer() -> None:
+def test_checkout_uses_listing_only_when_it_matches_the_offer(monkeypatch) -> None:
+    monkeypatch.setattr(orders_route, "subscription_active", lambda _db, _uid: True)
     listing = SimpleNamespace(id="l-1", price_id="price-1", is_active=True, resale_amount=11500, reseller_user_id="r-1")
     db = Mock()
     db.get.return_value = listing
@@ -52,6 +53,14 @@ def test_earnings_split_delivered_and_pending() -> None:
 def test_public_shop_never_exposes_shop_price_or_margin() -> None:
     fields = set(route.PublicListing.model_fields)
     assert "supplier_amount" not in fields and "margin" not in fields and "price" in fields
+
+
+def test_expired_reseller_subscription_falls_back_to_shop_price(monkeypatch) -> None:
+    monkeypatch.setattr(orders_route, "subscription_active", lambda _db, _uid: False)
+    listing = SimpleNamespace(id="l-1", price_id="price-1", is_active=True, resale_amount=11500, reseller_user_id="r-1")
+    db = Mock()
+    db.get.return_value = listing
+    assert orders_route._resolve_reseller_listing(db, "l-1", PRICE) is None
 
 
 def test_seller_cannot_resell_own_product(monkeypatch) -> None:

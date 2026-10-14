@@ -166,3 +166,27 @@ def test_admin_message_to_unknown_user_is_refused(_route) -> None:
             db,
             _principal(),
         )
+
+
+def test_approving_reseller_payment_extends_and_notifies(_route, monkeypatch) -> None:
+    notified: list[str] = []
+
+    class FakeNotifications:
+        def __init__(self, _db):
+            pass
+
+        def send_to_user(self, *, user_id, payload):
+            notified.append(payload.title)
+
+    extended: list[int] = []
+    monkeypatch.setattr(admin_route, "NotificationService", FakeNotifications)
+    monkeypatch.setattr(admin_route, "ensure_reseller_account", lambda _db, _uid: SimpleNamespace(paid_until=None))
+    monkeypatch.setattr(admin_route, "extend_reseller_subscription", lambda _account, months: extended.append(months))
+    payment = SimpleNamespace(id="pay-1", user_id="u-1", status="pending", months=3, amount_claimed=1500,
+                              payment_mode="nita", transaction_reference="REF123", created_at=None, reviewed_at=None)
+    db = Mock()
+    db.get.side_effect = lambda model, key: payment if key == "pay-1" else _user("u-1")
+    result = admin_route.decide_reseller_payment(
+        "pay-1", admin_route.AdminResellerPaymentDecision(decision="approved"), _request(), db, _principal()
+    )
+    assert result.status == "approved" and extended == [3] and notified == ["Abonnement revendeur actif"]

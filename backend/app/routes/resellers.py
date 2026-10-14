@@ -20,7 +20,8 @@ from app.core.rate_limit import enforce_rate_limit
 from app.database import get_db
 from app.models.order import Order, OrderItem
 from app.models.product import Price
-from app.models.reseller import ResellerListing
+from app.models.reseller import ResellerListing, ResellerSubscriptionPayment
+from app.services.reseller_account_service import ensure_account, reseller_terms, subscription_active
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 
@@ -75,10 +76,29 @@ class PublicListing(BaseModel):
 class ResellerShopResponse(BaseModel):
     reseller_id: str
     reseller_name: str
+    active: bool = True
     items: list[PublicListing]
 
 
+class AccountResponse(BaseModel):
+    active: bool
+    paid_until: str | None
+    monthly_fee: float
+    commission_percent: float
+    pending_payment: bool
+
+
+class SubscriptionPaymentRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    payment_mode: str = Field(pattern="^(nita|amana)$")
+    transaction_reference: str = Field(min_length=4, max_length=180)
+    months: int = Field(default=1, ge=1, le=12)
+
+
 class EarningsResponse(BaseModel):
+    """Montants nets pour le revendeur (marge moins la commission AMAZER)."""
+
     earned: float
     pending: float
     orders_delivered: int
@@ -117,6 +137,16 @@ def _to_response(listing: ResellerListing, price: Price, sales_count: int = 0) -
     )
 
 
+def _require_subscription(db: Session, user_id: str) -> None:
+    ensure_account(db, user_id)
+    if not subscription_active(db, user_id):
+        fee, _percent = reseller_terms(db)
+        db.commit()  # garde le compte cree (et l'essai eventuel)
+        raise ConflictError(
+            f"Abonnement revendeur requis ({int(fee)} XOF par mois). Payez-le dans « Revendre » pour publier."
+        )
+
+
 def _owned_listing(db: Session, listing_id: str, user: User) -> ResellerListing:
     listing = db.get(ResellerListing, listing_id)
     if listing is None or listing.reseller_user_id != user.id:
@@ -144,6 +174,7 @@ def create_listing(
         select(ResellerListing).where(ResellerListing.reseller_user_id == user.id, ResellerListing.price_id == price.id)
     )
     amount = _validate_amount(price, payload.resale_amount)
+    _require_subscription(db, user.id)
     if existing is not None:
         existing.resale_amount = amount
         existing.is_active = True
@@ -206,6 +237,8 @@ def update_listing(
     if payload.resale_amount is not None:
         listing.resale_amount = _validate_amount(price, payload.resale_amount)
     if payload.is_active is not None:
+        if payload.is_active:
+            _require_subscription(db, user.id)
         listing.is_active = payload.is_active
     db.commit()
     db.refresh(listing)
@@ -235,7 +268,7 @@ def my_earnings(
 def compute_earnings(db: Session, user_id: str) -> EarningsResponse:
     """Gagne = commandes payees et livrees ; en attente = payees, pas encore livrees."""
     rows = db.execute(
-        select(Order.id, Order.status, func.sum(OrderItem.reseller_margin))
+        select(Order.id, Order.status, func.sum(OrderItem.reseller_margin - OrderItem.reseller_commission))
         .join(OrderItem, OrderItem.order_id == Order.id)
         .where(OrderItem.reseller_user_id == user_id, Order.payment_status == "paid", Order.status != CANCELLED)
         .group_by(Order.id, Order.status)
@@ -256,6 +289,8 @@ def reseller_shop(reseller_id: str, db: Annotated[Session, Depends(get_db)]) -> 
     reseller = db.get(User, reseller_id)
     if reseller is None or not reseller.is_active:
         raise NotFoundError("Boutique introuvable")
+    if not subscription_active(db, reseller_id):
+        return ResellerShopResponse(reseller_id=reseller.id, reseller_name=_first_name(reseller.full_name), active=False, items=[])
     items = [
         PublicListing(
             id=listing.id,
@@ -271,4 +306,64 @@ def reseller_shop(reseller_id: str, db: Annotated[Session, Depends(get_db)]) -> 
     ]
     return ResellerShopResponse(reseller_id=reseller.id, reseller_name=_first_name(reseller.full_name), items=items)
 
+
+@router.get("/account/me", response_model=AccountResponse)
+def my_account(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+) -> AccountResponse:
+    account = ensure_account(db, user.id)
+    db.commit()
+    fee, percent = reseller_terms(db)
+    pending = db.scalar(
+        select(ResellerSubscriptionPayment.id).where(
+            ResellerSubscriptionPayment.user_id == user.id, ResellerSubscriptionPayment.status == "pending"
+        )
+    )
+    return AccountResponse(
+        active=subscription_active(db, user.id),
+        paid_until=account.paid_until.isoformat() if account.paid_until else None,
+        monthly_fee=fee,
+        commission_percent=percent,
+        pending_payment=pending is not None,
+    )
+
+
+@router.post("/account/payments", response_model=AccountResponse)
+def submit_subscription_payment(
+    payload: SubscriptionPaymentRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+) -> AccountResponse:
+    """Le revendeur declare son paiement (Nita / Amana) ; l'admin le valide avant activation."""
+    enforce_csrf(request)
+    enforce_rate_limit(request, key="reseller_subscription_payment", limit=5, window_seconds=600)
+    ensure_account(db, user.id)
+    already = db.scalar(
+        select(ResellerSubscriptionPayment.id).where(
+            ResellerSubscriptionPayment.user_id == user.id, ResellerSubscriptionPayment.status == "pending"
+        )
+    )
+    if already is not None:
+        raise ConflictError("Un paiement est déjà en cours de vérification.")
+    reused = db.scalar(
+        select(ResellerSubscriptionPayment.id).where(
+            func.lower(ResellerSubscriptionPayment.transaction_reference) == payload.transaction_reference.lower()
+        )
+    )
+    if reused is not None:
+        raise ConflictError("Cette référence de paiement a déjà été utilisée.")
+    fee, _percent = reseller_terms(db)
+    db.add(
+        ResellerSubscriptionPayment(
+            user_id=user.id,
+            payment_mode=payload.payment_mode,
+            transaction_reference=payload.transaction_reference,
+            months=payload.months,
+            amount_claimed=fee * payload.months,
+        )
+    )
+    db.commit()
+    return my_account(db, user)
 

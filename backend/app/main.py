@@ -198,6 +198,9 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE order_items ADD COLUMN IF NOT EXISTS reseller_listing_id VARCHAR(36)",
         "ALTER TABLE order_items ADD COLUMN IF NOT EXISTS reseller_user_id VARCHAR(36)",
         "ALTER TABLE order_items ADD COLUMN IF NOT EXISTS reseller_margin DOUBLE PRECISION NOT NULL DEFAULT 0",
+        "ALTER TABLE order_items ADD COLUMN IF NOT EXISTS reseller_commission DOUBLE PRECISION NOT NULL DEFAULT 0",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS reseller_subscription_fee DOUBLE PRECISION NOT NULL DEFAULT 500",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS reseller_commission_percent DOUBLE PRECISION NOT NULL DEFAULT 10",
         (
             "CREATE TABLE IF NOT EXISTS media_files ("
             "id VARCHAR(36) PRIMARY KEY, "

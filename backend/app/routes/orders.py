@@ -26,6 +26,7 @@ from app.models.order import Order, OrderFulfillment, OrderItem
 from app.models.product import Price, Product
 from app.models.receipt_scan import ReceiptScan
 from app.models.reseller import ResellerListing
+from app.services.reseller_account_service import reseller_terms, split_margin, subscription_active
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.schemas.order import (
@@ -198,6 +199,9 @@ def _resolve_reseller_listing(db: Session, listing_id: str | None, price: Price)
         return None
     listing = db.get(ResellerListing, listing_id)
     if listing is None or not listing.is_active or listing.price_id != price.id:
+        return None
+    # Abonnement revendeur expire : l'article est vendu au prix normal de la boutique.
+    if not subscription_active(db, listing.reseller_user_id):
         return None
     return listing
 
@@ -524,8 +528,10 @@ def checkout(
         delivery_phone=payload.delivery_phone,
         delivery_district=payload.district,
     )
+    reseller_percent = reseller_terms(db)[1] if any(row[2] for row in validated_items) else 0.0
     for price, quantity, listing in validated_items:
         margin = (max(float(listing.resale_amount), float(price.amount)) - float(price.amount)) * quantity if listing else 0.0
+        commission, _net = split_margin(margin, reseller_percent)
         order.items.append(
             OrderItem(
                 product_id=price.product_id,
@@ -535,6 +541,7 @@ def checkout(
                 reseller_listing_id=listing.id if listing else None,
                 reseller_user_id=listing.reseller_user_id if listing else None,
                 reseller_margin=round(margin, 2),
+                reseller_commission=commission,
             )
         )
 

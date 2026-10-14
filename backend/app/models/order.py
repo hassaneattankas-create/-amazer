@@ -108,6 +108,8 @@ class OrderItem(Base):
     reseller_listing_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     reseller_user_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     reseller_margin: Mapped[float] = mapped_column(Float, nullable=False, default=0, server_default="0")
+    # Part AMAZER prelevee sur la marge (pourcentage fixe au moment de la commande).
+    reseller_commission: Mapped[float] = mapped_column(Float, nullable=False, default=0, server_default="0")
 
     @property
     def customer_unit_price(self) -> float:

@@ -6,7 +6,7 @@ import logging
 import re
 import secrets
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import StreamingResponse
@@ -70,6 +70,9 @@ from app.schemas.finance import (
 )
 from app.services import order_event_notifications as order_events
 from app.routes.resellers import compute_earnings as compute_reseller_earnings
+from app.models.reseller import ResellerSubscriptionPayment
+from app.services.reseller_account_service import ensure_account as ensure_reseller_account
+from app.services.reseller_account_service import extend_subscription as extend_reseller_subscription
 from app.services.audit_log_service import append_audit_log
 from app.services.order_cancellation_service import cancel_order, ensure_not_cancelled, notify_order_cancelled
 from app.services.order_fulfillment_service import sync_fulfillments
@@ -160,6 +163,8 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
         platform_wallet_phone=settings.platform_wallet_phone,
         seller_trial_days=int(getattr(settings, "seller_trial_days", 0) or 0),
         seller_launch_discount_percent=float(getattr(settings, "seller_launch_discount_percent", 0) or 0),
+        reseller_subscription_fee=float(getattr(settings, "reseller_subscription_fee", 500) or 0),
+        reseller_commission_percent=float(getattr(settings, "reseller_commission_percent", 10) or 0),
         support_email=settings.support_email,
         support_phone=settings.support_phone,
         support_whatsapp=settings.support_whatsapp,
@@ -453,6 +458,8 @@ def update_finance_settings(
     settings_row.platform_wallet_phone = payload.platform_wallet_phone
     settings_row.seller_trial_days = payload.seller_trial_days
     settings_row.seller_launch_discount_percent = payload.seller_launch_discount_percent
+    settings_row.reseller_subscription_fee = payload.reseller_subscription_fee
+    settings_row.reseller_commission_percent = payload.reseller_commission_percent
     settings_row.support_email = payload.support_email
     settings_row.support_phone = payload.support_phone
     settings_row.support_whatsapp = payload.support_whatsapp
@@ -2095,4 +2102,105 @@ def list_reseller_earnings(
             )
         )
     return sorted(rows, key=lambda row: row.earned, reverse=True)
+
+
+class AdminResellerPayment(BaseModel):
+    id: str
+    user_id: str
+    full_name: str
+    contact: str
+    payment_mode: str
+    transaction_reference: str
+    months: int
+    amount_claimed: float
+    status: str
+    created_at: str
+
+
+class AdminResellerPaymentDecision(BaseModel):
+    decision: Literal["approved", "rejected"]
+
+
+@router.get("/reseller-payments", response_model=list[AdminResellerPayment])
+def list_reseller_payments(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+    status: Literal["pending", "approved", "rejected", "all"] = "pending",
+) -> list[AdminResellerPayment]:
+    _require_finance_pin(request)
+    stmt = select(ResellerSubscriptionPayment).order_by(desc(ResellerSubscriptionPayment.created_at)).limit(200)
+    if status != "all":
+        stmt = stmt.where(ResellerSubscriptionPayment.status == status)
+    rows: list[AdminResellerPayment] = []
+    for payment in db.scalars(stmt).all():
+        user = db.get(User, payment.user_id)
+        rows.append(
+            AdminResellerPayment(
+                id=payment.id,
+                user_id=payment.user_id,
+                full_name=(user.full_name if user else None) or "Revendeur",
+                contact=(user.whatsapp_phone or user.email) if user else "",
+                payment_mode=payment.payment_mode,
+                transaction_reference=payment.transaction_reference,
+                months=payment.months,
+                amount_claimed=float(payment.amount_claimed),
+                status=payment.status,
+                created_at=payment.created_at.isoformat() if payment.created_at else "",
+            )
+        )
+    return rows
+
+
+@router.post("/reseller-payments/{payment_id}/decision", response_model=AdminResellerPayment)
+def decide_reseller_payment(
+    payment_id: str,
+    payload: AdminResellerPaymentDecision,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminResellerPayment:
+    """Valide (prolonge l'abonnement) ou refuse un paiement d'abonnement revendeur."""
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    payment = db.get(ResellerSubscriptionPayment, payment_id)
+    if payment is None:
+        raise ValidationDomainError("Paiement introuvable")
+    if payment.status != "pending":
+        raise ValidationDomainError("Ce paiement a déjà été traité.")
+    payment.status = payload.decision
+    payment.reviewed_at = datetime.now(UTC)
+    if payload.decision == "approved":
+        extend_reseller_subscription(ensure_reseller_account(db, payment.user_id), payment.months)
+        title, body = "Abonnement revendeur actif", "Votre paiement est validé : vos produits sont en ligne."
+    else:
+        title, body = "Paiement revendeur refusé", "Votre paiement n'a pas pu être vérifié. Contactez AMAZER sur WhatsApp."
+    NotificationService(db).send_to_user(
+        user_id=payment.user_id,
+        payload=NotificationPayload(title=title, body=body, data={"tag": f"reseller-payment-{payment.id}", "href": "/revendre"}),
+    )
+    append_audit_log(
+        db,
+        event_type=f"admin_reseller_payment_{payload.decision}",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="reseller_subscription_payment",
+        entity_id=payment.id,
+        details={"user_id": payment.user_id, "months": payment.months, "amount": float(payment.amount_claimed)},
+    )
+    db.commit()
+    user = db.get(User, payment.user_id)
+    return AdminResellerPayment(
+        id=payment.id,
+        user_id=payment.user_id,
+        full_name=(user.full_name if user else None) or "Revendeur",
+        contact=(user.whatsapp_phone or user.email) if user else "",
+        payment_mode=payment.payment_mode,
+        transaction_reference=payment.transaction_reference,
+        months=payment.months,
+        amount_claimed=float(payment.amount_claimed),
+        status=payment.status,
+        created_at=payment.created_at.isoformat() if payment.created_at else "",
+    )
 
