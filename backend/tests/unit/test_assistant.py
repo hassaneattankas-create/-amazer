@@ -81,3 +81,25 @@ def test_ai_failure_falls_back_to_faq(monkeypatch) -> None:
 )
 def test_faq_answers_current_features(question, expected) -> None:
     assert expected in route.faq_reply(question)
+
+
+def test_duplicate_listings_are_shown_once(monkeypatch) -> None:
+    offer = SimpleNamespace(amount=95000, vendor=SimpleNamespace(name="Tout Taff Telecom"))
+    items = [
+        SimpleNamespace(id="a", name="Samsung A17", best_offer=offer, main_image_url=None),
+        SimpleNamespace(id="b", name="Samsung A17 ", best_offer=offer, main_image_url=None),
+        SimpleNamespace(id="c", name="Samsung A16", best_offer=offer, main_image_url=None),
+    ]
+
+    class FakeService:
+        def __init__(self, _db):
+            pass
+
+        def search_products(self, **_kwargs):
+            return SimpleNamespace(items=items)
+
+    import app.services.product_service as product_service
+
+    monkeypatch.setattr(product_service, "ProductService", FakeService)
+    products = route.catalog_matches(Mock(), "telephone samsung")
+    assert [p.id for p in products] == ["a", "c"]

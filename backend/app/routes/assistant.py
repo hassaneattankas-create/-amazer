@@ -150,16 +150,23 @@ def catalog_matches(db: Session, message: str, limit: int = 4) -> list[Assistant
             logger.exception("Recherche catalogue de l'assistant en echec")
             return []
         if result.items:
-            return [
-                AssistantProduct(
-                    id=item.id,
-                    name=item.name,
-                    price=float(item.best_offer.amount),
-                    shop=item.best_offer.vendor.name,
-                    image_url=item.main_image_url,
+            products: list[AssistantProduct] = []
+            seen: set[tuple[str, str, float]] = set()
+            for item in result.items:
+                key = (item.name.strip().lower(), item.best_offer.vendor.name, float(item.best_offer.amount))
+                if key in seen:  # annonce publiee en double par une boutique
+                    continue
+                seen.add(key)
+                products.append(
+                    AssistantProduct(
+                        id=item.id,
+                        name=item.name,
+                        price=float(item.best_offer.amount),
+                        shop=item.best_offer.vendor.name,
+                        image_url=item.main_image_url,
+                    )
                 )
-                for item in result.items[:limit]
-            ]
+            return products[:limit]
     return []
 
 
