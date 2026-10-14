@@ -1,7 +1,7 @@
 "use client";
 
-import { Download, Share2, ShoppingCart, Sparkles, Store, Zap } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Download, ShoppingCart, Store, Zap } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -25,10 +25,7 @@ export default function CartPage() {
   const removeItem = useCartStore((state) => state.removeItem);
   const setQuantity = useCartStore((state) => state.setQuantity);
   const clearCart = useCartStore((state) => state.clearCart);
-  const addSavingsRecord = useCartStore((state) => state.addSavingsRecord);
 
-  const [isOptimizing, setIsOptimizing] = useState(false);
-  const [result, setResult] = useState<OptimizeCartResult | null>(null);
   const [shareMessage, setShareMessage] = useState("");
   const [paymentMode, setPaymentMode] = useState<"nita" | "amana">("nita");
   const [deliveryType, setDeliveryType] = useState<"standard" | "express_niamey">("standard");
@@ -61,32 +58,18 @@ export default function CartPage() {
       ? (financeSettings?.urban_delivery_fee ?? financeSettings?.default_delivery_fee ?? DEFAULT_SHIPPING_COST)
       : (districtFee ?? financeSettings?.default_delivery_fee ?? DEFAULT_SHIPPING_COST);
 
-  const computeOptimization = () =>
-    optimizeCart(items, {
-      commissionRate: financeSettings?.commission_rate,
-      serviceFee: financeSettings?.service_fee,
-      defaultShippingFee: selectedShippingFee,
-    });
-
-  const startOptimization = () => {
-    if (!items.length) {
-      return;
-    }
-
-    setResult(null);
-    setIsOptimizing(true);
-    const optimized = computeOptimization();
-    setResult(optimized);
-    addSavingsRecord(optimized.savings);
-    setIsOptimizing(false);
-  };
-
-  useEffect(() => {
-    if (!result) {
-      return;
-    }
-    setResult(computeOptimization());
-  }, [deliveryType, items, selectedShippingFee, financeSettings?.commission_rate, financeSettings?.service_fee]);
+  // Total calcule directement sur les offres choisies par le client.
+  const result: OptimizeCartResult | null = useMemo(
+    () =>
+      items.length
+        ? optimizeCart(items, {
+            commissionRate: financeSettings?.commission_rate,
+            serviceFee: financeSettings?.service_fee,
+            defaultShippingFee: selectedShippingFee,
+          })
+        : null,
+    [items, financeSettings?.commission_rate, financeSettings?.service_fee, selectedShippingFee]
+  );
 
   const downloadReceipt = () => {
     if (!result) {
@@ -160,36 +143,6 @@ export default function CartPage() {
     }
   };
 
-  const shareOptimizedCart = async () => {
-    if (!result) {
-      return;
-    }
-
-    const text = result.savings
-      ? `Mon panier AMAZER optimise economise ${formatXOF(result.savings)}.`
-      : "Mon panier AMAZER est optimise au meilleur prix disponible.";
-
-    const payload = {
-      title: "Panier optimise AMAZER",
-      text,
-      url: typeof window !== "undefined" ? window.location.href : "",
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(payload);
-        setShareMessage("Partage envoye.");
-      } else {
-        await navigator.clipboard.writeText(`${payload.text} ${payload.url}`);
-        setShareMessage("Lien copie dans le presse-papiers.");
-      }
-    } catch {
-      setShareMessage("Partage annule.");
-    } finally {
-      window.setTimeout(() => setShareMessage(""), 2200);
-    }
-  };
-
   if (!hasHydrated) {
     return (
       <section className="mx-auto grid w-full max-w-7xl gap-6 px-gutter pb-14 pt-4 lg:grid-cols-3">
@@ -233,10 +186,11 @@ export default function CartPage() {
                 <li key={item.productId} className="flex flex-wrap items-center justify-between gap-3 p-4">
                   <div className="min-w-0">
                     <p className="font-medium text-ink-900">{item.name}</p>
-                    <p className="text-xs text-ink-600">
-                      {item.offersSnapshot.length} offre{item.offersSnapshot.length > 1 ? "s" : ""} comparée
-                      {item.offersSnapshot.length > 1 ? "s" : ""}
-                    </p>
+                    {item.offersSnapshot[0] ? (
+                      <p className="text-xs text-ink-600">
+                        {item.offersSnapshot[0].vendor.name} · {formatXOF(item.offersSnapshot[0].amount)}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="inline-flex items-center rounded-pill border border-border" role="group" aria-label={`Quantité de ${item.name}`}>
@@ -383,16 +337,7 @@ export default function CartPage() {
           <article className="rounded-card border border-border bg-card p-5">
             <h2 className="text-lg font-semibold text-ink-900">Récapitulatif</h2>
 
-            {!result ? (
-              <>
-                <p className="mt-2 text-sm text-ink-600">
-                  AMAZER compare les boutiques pour trouver le meilleur prix de chaque article.
-                </p>
-                <Button type="button" size="lg" className="mt-4 w-full" disabled={isOptimizing} onClick={startOptimization}>
-                  {isOptimizing ? "Calcul du meilleur prix…" : "Calculer le total"}
-                </Button>
-              </>
-            ) : result.status === "unavailable_item" ? (
+            {!result ? null : result.status === "unavailable_item" ? (
               <p className="mt-3 text-sm text-danger" role="alert">
                 {result.errorMessage}
               </p>
@@ -440,12 +385,6 @@ export default function CartPage() {
                     </dd>
                   </div>
                 </dl>
-                {result.savings > 0 ? (
-                  <p className="mt-3 inline-flex items-center gap-1 rounded-field bg-surface-1 px-3 py-2 text-sm text-success">
-                    <Sparkles className="h-4 w-4" aria-hidden="true" />
-                    Vous économisez {formatXOF(result.savings)} en combinant les boutiques
-                  </p>
-                ) : null}
                 <Button
                   type="button"
                   size="lg"
@@ -462,10 +401,6 @@ export default function CartPage() {
                   <button type="button" onClick={downloadReceipt} className="inline-flex min-h-10 items-center gap-1 text-ink-600 hover:text-ink-900 hover:underline">
                     <Download className="h-4 w-4" aria-hidden="true" />
                     Reçu provisoire
-                  </button>
-                  <button type="button" onClick={shareOptimizedCart} className="inline-flex min-h-10 items-center gap-1 text-ink-600 hover:text-ink-900 hover:underline">
-                    <Share2 className="h-4 w-4" aria-hidden="true" />
-                    Partager
                   </button>
                 </div>
               </>

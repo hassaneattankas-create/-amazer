@@ -15,12 +15,9 @@ function getShippingCost(offer: Offer, fallback: number): number {
   return offer.shipping_cost ?? fallback;
 }
 
-function pickCheapestValidOffer(offers: Offer[], quantity: number): Offer | null {
-  const valid = offers.filter((offer) => offer.stock_quantity >= quantity);
-  if (!valid.length) {
-    return null;
-  }
-  return valid.reduce((best, current) => (current.amount < best.amount ? current : best));
+// Le client achete l'offre qu'il a choisie (premiere du snapshot) : pas de substitution par une autre boutique.
+function pickChosenOffer(offers: Offer[], quantity: number): Offer | null {
+  return offers.find((offer) => offer.stock_quantity >= quantity) ?? null;
 }
 
 function formatPlanItem(item: CartItem, offer: Offer): OptimizedPlanItem {
@@ -44,7 +41,7 @@ export function optimizeCart(items: CartItem[], pricingConfig?: PricingConfig): 
   const splitVendors = new Map<string, number>();
 
   for (const item of items) {
-    const cheapest = pickCheapestValidOffer(item.offersSnapshot, item.quantity);
+    const cheapest = pickChosenOffer(item.offersSnapshot, item.quantity);
     if (!cheapest) {
       return {
         splitTotal: 0,

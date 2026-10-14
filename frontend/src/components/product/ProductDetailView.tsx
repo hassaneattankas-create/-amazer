@@ -99,12 +99,12 @@ export function ProductDetailView({ productId }: { productId: string }) {
   const currentImage = gallery[activeImage] ?? null;
 
   const addToCart = () => {
-    addItem({ productId: product.id, name: product.name, offersSnapshot: offers, quantity: 1 });
+    addItem({ productId: product.id, name: product.name, offersSnapshot: [best], quantity: 1 });
     setCartMessage("Ajouté au panier.");
     window.setTimeout(() => setCartMessage(""), 2400);
   };
   const buyNow = () => {
-    addItem({ productId: product.id, name: product.name, offersSnapshot: offers, quantity: 1 });
+    addItem({ productId: product.id, name: product.name, offersSnapshot: [best], quantity: 1 });
     router.push("/cart");
   };
 

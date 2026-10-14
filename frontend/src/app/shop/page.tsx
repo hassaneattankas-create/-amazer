@@ -246,10 +246,12 @@ function VendorShopPageContent() {
     }
     addProductMutation.mutate(productId, {
       onSuccess: (data) => {
+        // Le client achete chez cette boutique, pas chez une autre moins chere.
+        const chosen = data.offers.find((offer) => offer.vendor.id === vendorId) ?? data.offers[0];
         addItem({
           productId: data.product.id,
           name: data.product.name,
-          offersSnapshot: data.offers,
+          offersSnapshot: chosen ? [chosen] : [],
           quantity: 1,
         });
         if (redirectToCart) {
