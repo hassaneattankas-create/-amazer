@@ -4,13 +4,19 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { isCurrencyCode } from "@/lib/locale";
 import { getUserPreferences } from "@/services/auth-service";
-import { useAuthStore } from "@/store/auth-store";
+import { useLocaleStore } from "@/store/locale-store";
 
+/** Applique les preferences du compte (pays, region, devise, langue) et la langue du document. */
 export function AuthPreferenceBootstrap() {
   const { data: currentUser } = useCurrentUser();
-  const preferredCurrency = useAuthStore((state) => state.preferredCurrency);
-  const setPreferredCurrency = useAuthStore((state) => state.setPreferredCurrency);
+  const setPreferences = useLocaleStore((state) => state.setPreferences);
+  const language = useLocaleStore((state) => state.language);
+
+  useEffect(() => {
+    void useLocaleStore.persist.rehydrate();
+  }, []);
 
   const { data: preferences } = useQuery({
     queryKey: ["auth-preferences", currentUser?.id],
@@ -21,14 +27,21 @@ export function AuthPreferenceBootstrap() {
   });
 
   useEffect(() => {
-    if (!preferences?.preferred_currency) {
-      return;
-    }
-    if (preferences.preferred_currency !== preferredCurrency) {
-      setPreferredCurrency(preferences.preferred_currency);
-    }
-  }, [preferences?.preferred_currency, preferredCurrency, setPreferredCurrency]);
+    if (!preferences) return;
+    setPreferences(
+      {
+        country: preferences.country_code,
+        region: preferences.region ?? "",
+        currency: isCurrencyCode(preferences.preferred_currency) ? preferences.preferred_currency : "XOF",
+        language: preferences.preferred_language === "en" ? "en" : "fr",
+      },
+      { chosen: true }
+    );
+  }, [preferences, setPreferences]);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   return null;
 }
-

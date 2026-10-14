@@ -30,6 +30,8 @@ import {
   setPendingSellerPreReg,
   type PendingSellerPreReg,
 } from "@/lib/pending-seller";
+import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
+import { useT } from "@/lib/i18n";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cartStore";
 import { useNotificationStore } from "@/store/notification-store";
@@ -56,6 +58,7 @@ const SESSION_DRAFT_KEYS = [
 ];
 
 export function FloatingNavbar() {
+  const t = useT();
   const isClient = useClientMounted();
   const queryClient = useQueryClient();
   const items = useCartStore((state) => state.items);
@@ -116,7 +119,7 @@ export function FloatingNavbar() {
   const isAuthenticated = Boolean(user?.id);
   const groupedNavItems = [
     ...clientNavItems,
-    ...(isAuthenticated ? [{ href: "/dashboard", label: "Dashboard" }, { href: "/messages", label: "Messages" }] : []),
+    ...(isAuthenticated ? [{ href: "/dashboard", label: "Tableau de bord" }, { href: "/messages", label: "Messages" }] : []),
     ...(showSellerLink ? sellerNavigationItems : []),
     ...(user?.role === "courier" || showAdminLink ? [{ href: "/livreur", label: "Espace livreur" }] : []),
     ...(showAdminLink ? [{ href: "/admin", label: "Espace Admin" }] : []),
@@ -375,7 +378,7 @@ export function FloatingNavbar() {
             className="inline-flex min-h-11 items-center gap-1 rounded-field px-3 text-sm font-medium text-ink-800 hover:bg-surface-1"
           >
             <Menu className="h-5 w-5 md:hidden" aria-hidden="true" />
-            <span className="hidden md:inline">Menu</span>
+            <span className="hidden md:inline">{t("Menu")}</span>
             <ChevronDown
               className={`hidden h-4 w-4 transition-transform duration-fast md:block ${isMenuOpen ? "rotate-180" : ""}`}
               aria-hidden="true"
@@ -387,10 +390,10 @@ export function FloatingNavbar() {
               id="main-menu"
               className="absolute right-0 top-full z-dropdown mt-2 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-card border border-border bg-card shadow-floating md:left-0 md:right-auto"
             >
-              <nav aria-label="Menu principal" className="max-h-96 overflow-y-auto p-2">
+              <nav aria-label={t("Menu principal")} className="max-h-96 overflow-y-auto p-2">
                 {groupedNavItems.map((item) => (
                   <Link key={item.href} href={item.href} onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>
-                    {item.label}
+                    {t(item.label)}
                   </Link>
                 ))}
                 <div className="md:hidden">
@@ -398,21 +401,21 @@ export function FloatingNavbar() {
                   {!isAuthenticated ? (
                     <>
                       <Link href="/login" onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>
-                        Se connecter
+                        {t("Se connecter")}
                       </Link>
                       <Link href="/register" onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>
-                        Créer un compte
+                        {t("Créer un compte")}
                       </Link>
                     </>
                   ) : null}
                   {showSellerLink ? null : (
                     <Link href="/vendre" onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>
-                      Devenir vendeur
+                      {t("Devenir vendeur")}
                     </Link>
                   )}
                   {showAdminLink ? (
                     <Link href="/admin" onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>
-                      Espace Admin
+                      {t("Espace Admin")}
                     </Link>
                   ) : null}
                   {isAuthenticated ? (
@@ -422,7 +425,7 @@ export function FloatingNavbar() {
                       disabled={isLoggingOut}
                       className={`${menuLinkClass} w-full text-left disabled:opacity-60`}
                     >
-                      {isLoggingOut ? "Déconnexion…" : "Se déconnecter"}
+                      {isLoggingOut ? t("Déconnexion…") : t("Se déconnecter")}
                     </button>
                   ) : null}
                 </div>
@@ -434,12 +437,12 @@ export function FloatingNavbar() {
         <div className="ml-auto hidden items-center gap-1 md:flex">
           {showSellerLink ? null : (
             <Link href="/vendre" className="inline-flex min-h-11 items-center rounded-field px-3 text-sm text-ink-700 hover:bg-surface-1">
-              Devenir vendeur
+              {t("Devenir vendeur")}
             </Link>
           )}
           {showAdminLink ? (
             <Link href="/admin" className="inline-flex min-h-11 items-center rounded-field px-3 text-sm font-medium text-brand-700 hover:bg-surface-1">
-              Espace Admin
+              {t("Espace Admin")}
             </Link>
           ) : null}
           {!isAuthenticated ? (
@@ -448,7 +451,7 @@ export function FloatingNavbar() {
               className="inline-flex min-h-11 items-center gap-2 rounded-field px-3 text-sm font-medium text-ink-800 hover:bg-surface-1"
             >
               <User className="h-5 w-5" aria-hidden="true" />
-              Se connecter
+              {t("Se connecter")}
             </Link>
           ) : (
             <button
@@ -457,7 +460,7 @@ export function FloatingNavbar() {
               disabled={isLoggingOut}
               className="inline-flex min-h-11 items-center rounded-field px-3 text-sm text-ink-700 hover:bg-surface-1 disabled:opacity-60"
             >
-              {isLoggingOut ? "Déconnexion…" : "Se déconnecter"}
+              {isLoggingOut ? t("Déconnexion…") : t("Se déconnecter")}
             </button>
           )}
         </div>
@@ -471,6 +474,7 @@ export function FloatingNavbar() {
             <User className="h-5 w-5" aria-hidden="true" />
           </Link>
         ) : null}
+        <LocaleSwitcher />
         <Link
           href="/notifications"
           aria-label={unreadNotifications > 0 ? `Notifications, ${unreadNotifications} non lues` : "Notifications"}
@@ -489,7 +493,7 @@ export function FloatingNavbar() {
           className="relative inline-flex h-11 items-center justify-center gap-2 rounded-field bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
         >
           <ShoppingCart className="h-5 w-5" aria-hidden="true" />
-          <span className="hidden sm:inline">Panier</span>
+          <span className="hidden sm:inline">{t("Panier")}</span>
           {cartCount > 0 ? (
             <Badge className="absolute -right-1.5 -top-1.5 h-5 min-w-5 justify-center rounded-pill bg-ink-900 px-1 text-2xs text-white hover:bg-ink-900">
               {cartCount}

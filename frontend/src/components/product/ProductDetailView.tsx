@@ -19,6 +19,7 @@ import { resolveProductImageUrl } from "@/lib/product-image";
 import { getProductDetailById, getProductRecommendations } from "@/services/product-service";
 import { useCartStore } from "@/store/cartStore";
 import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
+import { ConvertedPrice } from "@/components/ConvertedPrice";
 
 const ProductPriceHistoryChart = dynamic(
   () => import("@/components/product/ProductPriceHistoryChart").then((mod) => mod.ProductPriceHistoryChart),
@@ -185,6 +186,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
                 <span className="text-base text-ink-500 line-through">{formatXOF(originalPrice)}</span>
               ) : null}
             </p>
+            <ConvertedPrice amount={best.amount} className="text-sm text-ink-600" />
             <p className={`mt-1 text-sm font-medium ${inStock ? "text-success" : "text-danger"}`}>
               {inStock ? (best.stock_quantity <= 3 ? `Plus que ${best.stock_quantity} en stock` : "En stock") : "Rupture de stock"}
             </p>

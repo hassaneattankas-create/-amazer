@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { ConvertedPrice } from "@/components/ConvertedPrice";
 import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -383,6 +384,9 @@ export default function CartPage() {
                     <dd>
                       <AnimatedPrice value={result.splitTotal} />
                     </dd>
+                  </div>
+                  <div className="text-right">
+                    <ConvertedPrice amount={result.splitTotal} />
                   </div>
                 </dl>
                 <Button

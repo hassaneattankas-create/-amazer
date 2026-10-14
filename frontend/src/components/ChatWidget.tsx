@@ -62,7 +62,7 @@ export function ChatWidget() {
           type="button"
           aria-label="Ouvrir l'assistant AMAZER"
           onClick={() => setOpen(true)}
-          className={`fixed right-4 z-toast inline-flex h-12 w-12 items-center justify-center rounded-pill bg-ink-900 text-white shadow-floating transition-transform duration-fast hover:scale-105 md:bottom-5 md:right-5 ${
+          className={`fixed right-4 z-dropdown inline-flex h-12 w-12 items-center justify-center rounded-pill bg-ink-900 text-white shadow-floating transition-transform duration-fast hover:scale-105 md:bottom-5 md:right-5 ${
             liftedOnMobile ? "bottom-24" : "bottom-4"
           }`}
         >

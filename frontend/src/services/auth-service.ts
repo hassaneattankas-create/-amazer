@@ -1,3 +1,4 @@
+import type { CurrencyCode, LanguageCode } from "@/lib/locale";
 import { api, clearAuthTokens, persistAuthTokens } from "@/lib/api";
 import type { SellerProfilePayload } from "@/types/seller";
 
@@ -11,6 +12,10 @@ type RegisterPayload = {
   full_name: string;
   password: string;
   seller_profile?: SellerProfilePayload;
+  country_code?: string;
+  region?: string;
+  preferred_currency?: CurrencyCode;
+  preferred_language?: LanguageCode;
 };
 
 type TokenPair = {
@@ -40,7 +45,10 @@ export type UserResponse = {
 };
 
 export type UserPreferencesResponse = {
-  preferred_currency: "XOF";
+  preferred_currency: CurrencyCode;
+  country_code: string;
+  region: string | null;
+  preferred_language: LanguageCode;
 };
 
 function normalizeEmail(email: string): string {
@@ -84,6 +92,10 @@ export async function register(payload: RegisterPayload) {
     full_name: payload.full_name,
     password: payload.password,
     seller_profile: payload.seller_profile,
+    country_code: payload.country_code,
+    region: payload.region || undefined,
+    preferred_currency: payload.preferred_currency,
+    preferred_language: payload.preferred_language,
   });
   return response.data;
 }
@@ -158,7 +170,7 @@ export async function getUserPreferences() {
   return response.data;
 }
 
-export async function updateUserPreferences(payload: UserPreferencesResponse) {
+export async function updateUserPreferences(payload: Partial<UserPreferencesResponse>) {
   const response = await api.put<UserPreferencesResponse>("/api/v1/auth/preferences", payload);
   return response.data;
 }

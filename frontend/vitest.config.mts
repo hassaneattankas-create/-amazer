@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -7,6 +8,7 @@ export default defineConfig({
     restoreMocks: true,
   },
   resolve: {
-    alias: { "@": new URL("./src", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1") },
+    // fileURLToPath : gere les espaces du chemin (« amazer savegarde ») que URL.pathname encode en %20.
+    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
 });

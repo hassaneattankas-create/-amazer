@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { ArrowUpDown, SlidersHorizontal, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n";
 import type { SearchSort } from "@/types/product";
 
 export type PriceFilter = { min?: number; max?: number };
@@ -45,6 +46,7 @@ export function SearchToolbar({
   includeOutOfStock,
   onIncludeOutOfStockChange,
 }: SearchToolbarProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [minDraft, setMinDraft] = useState(price.min ? String(price.min) : "");
   const [maxDraft, setMaxDraft] = useState(price.max ? String(price.max) : "");
@@ -75,7 +77,7 @@ export function SearchToolbar({
     <div className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-ink-600" aria-live="polite">
-          {resultCount === null ? "Chargement…" : `${resultCount} article${resultCount > 1 ? "s" : ""}`}
+          {resultCount === null ? t("Chargement…") : t(resultCount > 1 ? "{n} articles" : "{n} article", { n: resultCount })}
           {resultCount !== null && isUpdating ? " · mise à jour…" : ""}
         </p>
         <div className="flex items-center gap-2">
@@ -89,7 +91,7 @@ export function SearchToolbar({
             >
               {sortOptions.map((option) => (
                 <option key={option} value={option}>
-                  {SORT_LABELS[option]}
+                  {t(SORT_LABELS[option])}
                 </option>
               ))}
             </select>

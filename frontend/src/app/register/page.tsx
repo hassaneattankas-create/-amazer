@@ -8,7 +8,9 @@ import { Building2, Store, UtensilsCrossed } from "lucide-react";
 
 import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { COUNTRIES, findCountry } from "@/lib/locale";
+import { useLocaleStore } from "@/store/locale-store";
 import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import { login, preRegisterSeller, register, verifyAccount, type RegisterResponse } from "@/services/auth-service";
@@ -78,8 +80,15 @@ function RegisterPageContent() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const localePrefs = useLocaleStore();
+  const [countryCode, setCountryCode] = useState(localePrefs.country);
+  const [region, setRegion] = useState(localePrefs.region);
   const [businessName, setBusinessName] = useState("");
-  const [sellerType, setSellerType] = useState<SellerRegistrationType>("shop");
+  // Formule choisie sur la page « Vendre » (?type=shop|restaurant|enterprise).
+  const [sellerType, setSellerType] = useState<SellerRegistrationType>(() => {
+    const requested = searchParams.get("type");
+    return requested === "restaurant" || requested === "enterprise" ? requested : "shop";
+  });
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [pendingVerification, setPendingVerification] = useState<{
@@ -138,10 +147,18 @@ function RegisterPageContent() {
         setPreRegSubmitted(true);
         return;
       }
+      const country = findCountry(countryCode);
+      // La devise suit le pays choisi, sauf si le visiteur en a deja choisi une autre.
+      const currency = localePrefs.chosen ? localePrefs.currency : country.currency;
+      localePrefs.setPreferences({ country: country.code, region: region.trim(), currency }, { chosen: true });
       const reg: RegisterResponse = await register({
         identifier: identifier.trim(),
         full_name: fullName.trim(),
         password,
+        country_code: country.code,
+        region: region.trim(),
+        preferred_currency: currency,
+        preferred_language: localePrefs.language,
       });
       if (reg.verification_channel && reg.verification_channel !== "none") {
         setPendingVerification({
@@ -365,8 +382,43 @@ function RegisterPageContent() {
               value={identifier}
               onChange={(event) => setIdentifier(event.target.value)}
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="+22790000000 ou email@domaine.com"
+              placeholder={`${findCountry(countryCode).dial}90000000 ou email@domaine.com`}
             />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium text-slate-800" htmlFor="country">
+                Pays
+              </label>
+              <select
+                id="country"
+                value={countryCode}
+                onChange={(event) => setCountryCode(event.target.value)}
+                autoComplete="country"
+                className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
+              >
+                {COUNTRIES.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.fr} ({country.dial})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-800" htmlFor="region">
+                Région ou ville
+              </label>
+              <input
+                id="region"
+                value={region}
+                maxLength={120}
+                autoComplete="address-level1"
+                onChange={(event) => setRegion(event.target.value)}
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                placeholder="Ex. Niamey"
+              />
+            </div>
           </div>
 
           <div>

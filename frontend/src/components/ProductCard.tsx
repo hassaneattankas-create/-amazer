@@ -8,6 +8,8 @@ import { useMemo, useState } from "react";
 import { formatXOF } from "@/lib/currency";
 import { getProductRoute } from "@/lib/mobile-routes";
 import { productFallbackImage, resolveProductImageUrl } from "@/lib/product-image";
+import { ConvertedPrice } from "@/components/ConvertedPrice";
+import { useT } from "@/lib/i18n";
 import { ProductSearchItem } from "@/types/product";
 
 type ProductCardProps = {
@@ -21,6 +23,7 @@ type ProductCardProps = {
  * est cliquable ; la hierarchie est image > prix > nom > boutique.
  */
 export function ProductCard({ product, priority = false }: ProductCardProps) {
+  const t = useT();
   const [imageError, setImageError] = useState(false);
   const {
     name,
@@ -75,7 +78,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         ) : null}
         {!inStock ? (
           <span className="absolute inset-x-0 bottom-0 bg-ink-900/70 py-1 text-center text-xs font-medium text-white">
-            Rupture de stock
+            {t("Rupture de stock")}
           </span>
         ) : null}
       </div>
@@ -87,12 +90,13 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             <span className="text-xs text-ink-500 line-through">{formatXOF(originalPrice)}</span>
           ) : null}
         </p>
+        <ConvertedPrice amount={amount} />
         <h3 className="line-clamp-2 text-sm text-ink-800 group-hover:text-brand-700">{name}</h3>
         {brand ? <p className="truncate text-xs uppercase tracking-label text-ink-500">{brand}</p> : null}
         <p className="mt-auto flex items-center gap-1 pt-1 text-xs text-ink-600">
           <span className="truncate">{vendor.name}</span>
           {vendor.is_verified ? (
-            <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-success" aria-label="Boutique vérifiée" />
+            <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-success" aria-label={t("Boutique vérifiée")} />
           ) : null}
         </p>
       </div>

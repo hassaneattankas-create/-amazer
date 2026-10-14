@@ -1,8 +1,11 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 
 import { ADMIN_EMAIL } from "@/lib/admin";
 import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
+import { useT } from "@/lib/i18n";
 
 const COLUMNS = [
   {
@@ -35,6 +38,7 @@ const COLUMNS = [
 ] as const;
 
 export function AppFooter() {
+  const t = useT();
   return (
     <footer className="mt-12 border-t border-border bg-card">
       <div className="mx-auto grid w-full max-w-7xl gap-8 px-gutter py-10 sm:grid-cols-2 lg:grid-cols-4">
@@ -43,28 +47,30 @@ export function AppFooter() {
             <Image src="/logo-amazer-mark-128.png" alt="" width={36} height={36} className="h-9 w-9" />
             AMAZER
           </p>
-          <p className="mt-2 text-sm text-ink-600">La plateforme du commerce nigérien : boutiques, restaurants et services près de chez vous.</p>
+          <p className="mt-2 text-sm text-ink-600">
+            {t("La marketplace africaine : boutiques, restaurants et services, du Niger vers le monde.")}
+          </p>
           <WhatsAppButton
             variant="outline"
-            label="Écrire à AMAZER"
+            label={t("Écrire à AMAZER")}
             message="Bonjour AMAZER, j'ai une question."
             className="mt-4"
           />
           <p className="mt-3 text-sm text-ink-700">
-            Support :{" "}
+            {t("Support :")}{" "}
             <a href={`mailto:${ADMIN_EMAIL}`} className="font-medium text-brand-700 hover:underline">
               {ADMIN_EMAIL}
             </a>
           </p>
         </div>
         {COLUMNS.map((column) => (
-          <nav key={column.title} aria-label={column.title}>
-            <p className="text-sm font-semibold text-ink-900">{column.title}</p>
+          <nav key={column.title} aria-label={t(column.title)}>
+            <p className="text-sm font-semibold text-ink-900">{t(column.title)}</p>
             <ul className="mt-3 space-y-1">
               {column.links.map((link) => (
                 <li key={link.href}>
                   <Link href={link.href} className="inline-flex min-h-9 items-center text-sm text-ink-600 hover:text-brand-700 hover:underline">
-                    {link.label}
+                    {t(link.label)}
                   </Link>
                 </li>
               ))}
