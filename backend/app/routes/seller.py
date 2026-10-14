@@ -54,6 +54,7 @@ from app.schemas.seller import (
     SellerStorefrontResponse,
 )
 from app.schemas.seller_lead import SellerLeadCreateRequest, SellerLeadResponse
+from app.services import order_event_notifications as order_events
 from app.services.category_classifier import guess_category_id
 from app.services.audit_log_service import append_audit_log
 from app.services.order_cancellation_service import ensure_not_cancelled
@@ -1179,7 +1180,10 @@ def update_seller_order_status(
             "Paiement non confirme : attendez la validation du paiement avant de traiter cette commande."
         )
 
+    previous_status = order.status
     set_vendor_status(order, profile.vendor_id, payload.status)
+    if order.status != previous_status:
+        order_events.notify_order_status(db, order, order.status)
     db.commit()
     db.refresh(order)
     product_ids = {item.product_id for item in order.items if item.vendor_id == profile.vendor_id}

@@ -41,6 +41,7 @@ from app.schemas.restaurant import (
     RestaurantStorefrontListResponse,
     RestaurantStorefrontResponse,
 )
+from app.services import order_event_notifications as order_events
 from app.services.listing_limit_service import (
     count_vendor_menu_items,
     is_premium_profile,
@@ -698,6 +699,8 @@ def update_seller_restaurant_order_status(
     if order.payment_status != "paid":
         raise ValidationDomainError("Paiement non confirme: impossible de mettre a jour le statut.")
 
+    if order.status != payload.status:
+        order_events.notify_order_status(db, order, payload.status)
     order.status = payload.status
     db.commit()
     db.refresh(order)
@@ -874,6 +877,7 @@ def confirm_restaurant_order_payment(
     order.payment_confirmed_at = datetime.now(UTC)
     if order.status == "payment_pending":
         order.status = "commande"
+    order_events.notify_order_paid(db, order, couriers=False)
 
     db.commit()
     db.refresh(order)

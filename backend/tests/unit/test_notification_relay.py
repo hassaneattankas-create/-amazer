@@ -10,14 +10,7 @@ def _reset(monkeypatch):
     relay._recent.clear()
     sent: list[tuple] = []
 
-    class _InlineThread:
-        def __init__(self, target, **_kwargs):
-            self._target = target
-
-        def start(self):
-            self._target()
-
-    monkeypatch.setattr(relay.threading, "Thread", _InlineThread)
+    monkeypatch.setattr(relay, "_enqueue", lambda job: job())
     monkeypatch.setattr(relay, "_send_email", lambda *a: sent.append(("email", *a)))
     monkeypatch.setattr(relay, "_send_whatsapp", lambda *a: sent.append(("whatsapp", *a)))
     return sent

@@ -126,3 +126,43 @@ def test_permanent_delete_refuses_admin(_route) -> None:
     db.get.return_value = _user(role="admin")
     with pytest.raises(ValidationDomainError):
         admin_route.permanently_delete_user("u-1", _request(), db, _principal())
+
+
+def test_admin_message_reaches_every_recipient(_route, monkeypatch) -> None:
+    sent: list[str] = []
+
+    class FakeNotifications:
+        def __init__(self, _db):
+            pass
+
+        def send_to_user(self, *, user_id, payload):
+            sent.append(user_id)
+            assert payload.data["href"] == "/notifications"
+
+    monkeypatch.setattr(admin_route, "NotificationService", FakeNotifications)
+    db = Mock()
+    db.scalars.return_value.all.return_value = [_user("u-1"), _user("u-2")]
+    from app.schemas.finance import AdminBroadcastRequest
+
+    result = admin_route.send_admin_message(
+        AdminBroadcastRequest(audience="all", title="Nouveauté", body="La livraison express arrive."),
+        _request(),
+        db,
+        _principal(),
+    )
+    assert result.recipients == 2 and sent == ["u-1", "u-2"]
+    db.commit.assert_called_once()
+
+
+def test_admin_message_to_unknown_user_is_refused(_route) -> None:
+    db = Mock()
+    db.scalars.return_value.all.return_value = []
+    from app.schemas.finance import AdminBroadcastRequest
+
+    with pytest.raises(ValidationDomainError):
+        admin_route.send_admin_message(
+            AdminBroadcastRequest(audience="user", user_email="inconnu@example.test", title="Bonjour", body="Test message"),
+            _request(),
+            db,
+            _principal(),
+        )

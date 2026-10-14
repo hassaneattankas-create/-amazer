@@ -39,6 +39,8 @@ from app.models.user_preferences import UserPreferences
 from app.models.vendor import Vendor
 from app.core.security import hash_password
 from app.schemas.finance import (
+    AdminBroadcastRequest,
+    AdminBroadcastResponse,
     AdminPendingSellerDecisionRequest,
     AdminPendingSellerResponse,
     AdminSellerResponse,
@@ -65,6 +67,7 @@ from app.schemas.finance import (
     TreasuryTransactionResponse,
     WalletSummaryResponse,
 )
+from app.services import order_event_notifications as order_events
 from app.services.audit_log_service import append_audit_log
 from app.services.order_cancellation_service import cancel_order, ensure_not_cancelled, notify_order_cancelled
 from app.services.order_fulfillment_service import sync_fulfillments
@@ -858,8 +861,11 @@ def dispatch_order_to_delivery(
     if order is None:
         raise ValidationDomainError("Order not found")
     ensure_not_cancelled(order)
+    previous_status = order.status
     order.status = payload.status
     sync_fulfillments(order)
+    if payload.status != previous_status:
+        order_events.notify_order_status(db, order, payload.status)
     if payload.status == "livraison":
         db.add(
             ReceiptScan(
@@ -1996,3 +2002,52 @@ def decide_seller_pre_registration(
         admin_note=reg.admin_note,
         submitted_at=reg.submitted_at.isoformat(),
     )
+
+
+@router.post("/messages", response_model=AdminBroadcastResponse)
+def send_admin_message(
+    payload: AdminBroadcastRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminBroadcastResponse:
+    """Envoie un message de l'equipe : notification sur le site + e-mail automatique (file d'envoi)."""
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    stmt = select(User).where(User.is_active.is_(True), User.email.notlike("%@users.deleted.amazer.ne"))
+    if payload.audience == "user":
+        if not payload.user_email:
+            raise ValidationDomainError("Indiquez l'e-mail ou le numero du destinataire.")
+        needle = payload.user_email.strip().lower()
+        stmt = stmt.where(or_(func.lower(User.email) == needle, User.whatsapp_phone == payload.user_email.strip()))
+    elif payload.audience == "sellers":
+        stmt = stmt.where(User.id.in_(select(SellerProfile.user_id)))
+    elif payload.audience == "couriers":
+        stmt = stmt.where(User.role == "courier")
+    elif payload.audience == "customers":
+        stmt = stmt.where(User.id.not_in(select(SellerProfile.user_id)), User.role == "user")
+    recipients = db.scalars(stmt).all()
+    if payload.audience == "user" and not recipients:
+        raise ValidationDomainError("Aucun utilisateur actif avec cet e-mail ou ce numero.")
+    tag = f"admin-message-{uuid.uuid4().hex[:12]}"
+    service = NotificationService(db)
+    for recipient in recipients:
+        service.send_to_user(
+            user_id=recipient.id,
+            payload=NotificationPayload(
+                title=payload.title, body=payload.body, data={"tag": tag, "href": payload.href or "/notifications"}
+            ),
+        )
+    append_audit_log(
+        db,
+        event_type="admin_message_sent",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="notification",
+        entity_id=tag,
+        details={"audience": payload.audience, "recipients": len(recipients), "title": payload.title},
+    )
+    db.commit()
+    return AdminBroadcastResponse(recipients=len(recipients))
+

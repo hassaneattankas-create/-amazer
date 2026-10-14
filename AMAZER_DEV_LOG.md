@@ -358,6 +358,15 @@ Toutes les couleurs, rayons et espacements viennent des tokens du design system 
 - Accueil refondu (bandeau, rayons, bonnes affaires, boutiques à la une) ; page Premium par métier (hôtels, transport, restaurants, entreprises) ; page Vendre en grille de formules.
 - Tests : backend 241 ; frontend 36 (alias vitest corrigé pour le chemin avec espace).
 
+## 4 quinvicies. Inscription, notifications automatiques, messages admin — 2026-10-14
+
+- Inscription : e-mail ET WhatsApp (au moins un), numéros internationaux (E.164), règles du mot de passe en direct.
+- Les comptes « numéro seul » avaient une adresse interne (`@users.amazer.ne`) : plus aucun e-mail envoyé vers elle ; ajout du contact manquant dans « Mon compte » ; choix des canaux (e-mail / WhatsApp).
+- Notifications automatiques : commande reçue, paiement confirmé (+ alerte à tous les livreurs), préparation, en route, livrée, bienvenue. Jamais bloquantes (erreurs journalisées).
+- Admin → Messages : annonce à tous / clients / vendeurs / livreurs / une personne, sur le site + e-mail. Envois en file unique (1 connexion SMTP à la fois). Brevo gratuit ≈ 300 e-mails/jour.
+- WhatsApp automatique : payant chez Meta → non activé (décision du propriétaire), code prêt.
+- Recherche produits : cache 60 s (6–10 s → ~1,5 s).
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).

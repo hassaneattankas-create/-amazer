@@ -42,6 +42,7 @@ from app.schemas.order import (
     ReceiptVerifyRequest,
     ReceiptVerifyResponse,
 )
+from app.services import order_event_notifications as order_events
 from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.audit_log_service import append_audit_log
 from app.services.order_cancellation_service import cancel_order, ensure_not_cancelled, notify_order_cancelled
@@ -531,8 +532,10 @@ def checkout(
     db.commit()
     db.refresh(order)
 
-    # Notifier l'admin et les vendeurs concernes.
+    # Notifier l'admin et les vendeurs concernes, puis confirmer au client (site + e-mail).
     _notify_new_order(db, order=order, customer=current_user)
+    order_events.notify_order_placed(db, order)
+    db.commit()
 
     return _to_order_response(order)
 
@@ -693,6 +696,7 @@ def confirm_order_payment(
     if order.status == "payment_pending":
         order.status = "commande"
     _consume_stock(db, order)
+    order_events.notify_order_paid(db, order)
 
     db.commit()
     db.refresh(order)
@@ -921,6 +925,7 @@ def verify_receipt_scan(
     sync_fulfillments(order)
     scan.result = "accepted"
     db.add(scan)
+    order_events.notify_order_status(db, order, "recu")
     db.commit()
     db.refresh(scan)
     return ReceiptVerifyResponse(

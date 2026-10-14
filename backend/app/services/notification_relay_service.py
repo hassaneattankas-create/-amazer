@@ -14,9 +14,11 @@ from __future__ import annotations
 
 import json
 import logging
+import queue
 import re
 import threading
 import time
+from collections.abc import Callable
 from urllib import error, request
 
 from app.config import get_settings
@@ -139,5 +141,31 @@ def relay_notification(
         if number:
             _send_whatsapp(number, title, body, href)
 
-    threading.Thread(target=_run, name="notification-relay", daemon=True).start()
+    _enqueue(_run)
     return True
+
+
+# File unique traitee par un seul fil : les envois groupes (messages admin) partent un par un,
+# sans ouvrir des centaines de connexions SMTP en meme temps.
+_queue: "queue.Queue[Callable[[], None]]" = queue.Queue()
+_worker: threading.Thread | None = None
+
+
+def _drain() -> None:
+    while True:
+        job = _queue.get()
+        try:
+            job()
+        except Exception:  # noqa: BLE001 - un envoi rate ne doit pas arreter la file
+            logger.exception("Envoi de notification en echec.")
+        finally:
+            _queue.task_done()
+
+
+def _enqueue(job: Callable[[], None]) -> None:
+    global _worker
+    with _lock:
+        if _worker is None or not _worker.is_alive():
+            _worker = threading.Thread(target=_drain, name="notification-relay", daemon=True)
+            _worker.start()
+    _queue.put(job)

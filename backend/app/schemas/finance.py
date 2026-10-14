@@ -327,3 +327,19 @@ class AdminPendingSellerDecisionRequest(BaseModel):
 
     decision: str = Field(pattern="^(approved|rejected)$")
     admin_note: str | None = Field(default=None, max_length=500)
+
+
+class AdminBroadcastRequest(BaseModel):
+    """Message de l'equipe AMAZER : envoye sur le site et par e-mail, automatiquement."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    audience: Literal["all", "customers", "sellers", "couriers", "user"]
+    user_email: str | None = Field(default=None, max_length=320)
+    title: str = Field(min_length=3, max_length=80)
+    body: str = Field(min_length=3, max_length=600)
+    href: str | None = Field(default=None, max_length=300, pattern=r"^/[^\s]*$")
+
+
+class AdminBroadcastResponse(BaseModel):
+    recipients: int

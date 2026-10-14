@@ -311,6 +311,19 @@ export async function permanentlyDeleteAdminUser(userId: string): Promise<void> 
   });
 }
 
+export type AdminMessageAudience = "all" | "customers" | "sellers" | "couriers" | "user";
+
+/** Message de l'equipe : notification sur le site + e-mail automatique. */
+export async function sendAdminMessage(payload: {
+  audience: AdminMessageAudience;
+  user_email?: string;
+  title: string;
+  body: string;
+  href?: string;
+}): Promise<{ recipients: number }> {
+  return adminProxyRequest<{ recipients: number }>({ url: "/admin/finance/messages", method: "POST", data: payload });
+}
+
 export type AdminUserRole = "user" | "admin" | "courier";
 
 export async function updateAdminUserRole(userId: string, role: AdminUserRole): Promise<AdminUser> {
