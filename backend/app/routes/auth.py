@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy import select
 
+from app.core.locale import DEFAULT_COUNTRY, DEFAULT_CURRENCY, DEFAULT_LANGUAGE, SUPPORTED_CURRENCIES
 from app.core.deps import get_auth_service, get_current_user
 from app.core.cache import cache_delete_prefixes
 from app.core.csrf import enforce_csrf, generate_csrf_token
@@ -134,6 +135,18 @@ def register(
                 "seller": bool(payload.seller_profile),
             },
         )
+        user_id = result.get("user_id")
+        if isinstance(user_id, str):
+            prefs = auth_service.db.scalar(select(UserPreferences).where(UserPreferences.user_id == user_id))
+            if prefs is None:
+                prefs = UserPreferences(user_id=user_id, preferred_currency=DEFAULT_CURRENCY)
+                auth_service.db.add(prefs)
+            _apply_preferences(
+                prefs,
+                payload.model_dump(
+                    include={"country_code", "region", "preferred_currency", "preferred_language"}, exclude_none=True
+                ),
+            )
         if payload.seller_profile:
             _notify_admin_seller_registration(
                 auth_service,
@@ -315,17 +328,33 @@ def _get_or_create_preferences(auth_service: AuthService, user: User) -> UserPre
     return row
 
 
+def _apply_preferences(row: UserPreferences, values: dict) -> None:
+    if values.get("preferred_currency"):
+        row.preferred_currency = values["preferred_currency"]
+    if values.get("country_code"):
+        row.country_code = values["country_code"]
+    if "region" in values:
+        row.region = (values.get("region") or "").strip() or None
+    if values.get("preferred_language"):
+        row.preferred_language = values["preferred_language"]
+
+
+def _preferences_response(row: UserPreferences) -> UserPreferencesResponse:
+    currency = (row.preferred_currency or DEFAULT_CURRENCY).upper()
+    return UserPreferencesResponse(
+        preferred_currency=currency if currency in SUPPORTED_CURRENCIES else DEFAULT_CURRENCY,
+        country_code=row.country_code or DEFAULT_COUNTRY,
+        region=row.region,
+        preferred_language=row.preferred_language or DEFAULT_LANGUAGE,
+    )
+
+
 @router.get("/preferences", response_model=UserPreferencesResponse)
 def get_preferences(
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
     user: Annotated[User, Depends(get_current_user)],
 ) -> UserPreferencesResponse:
-    row = _get_or_create_preferences(auth_service, user)
-    if row.preferred_currency.upper() != "XOF":
-        row.preferred_currency = "XOF"
-        auth_service.db.commit()
-        auth_service.db.refresh(row)
-    return UserPreferencesResponse(preferred_currency=row.preferred_currency)
+    return _preferences_response(_get_or_create_preferences(auth_service, user))
 
 
 @router.post("/pre-register-seller", response_model=SellerPreRegisterResponse, status_code=status.HTTP_201_CREATED)
@@ -421,7 +450,7 @@ def update_preferences(
 ) -> UserPreferencesResponse:
     enforce_csrf(request)
     row = _get_or_create_preferences(auth_service, user)
-    row.preferred_currency = "XOF"
+    _apply_preferences(row, payload.model_dump(exclude_unset=True))
     auth_service.db.commit()
     auth_service.db.refresh(row)
-    return UserPreferencesResponse(preferred_currency=row.preferred_currency)
+    return _preferences_response(row)

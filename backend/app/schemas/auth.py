@@ -2,6 +2,7 @@ import re
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
+from app.core.locale import COUNTRY_PATTERN, CURRENCY_PATTERN, DEFAULT_COUNTRY, DEFAULT_LANGUAGE, LANGUAGE_PATTERN
 from app.schemas.seller import SellerProfileRequest
 
 WHATSAPP_REGEX = re.compile(r"^(?:\+?227)\d{8}$")
@@ -21,6 +22,11 @@ class RegisterRequest(BaseModel):
     full_name: str = Field(min_length=2, max_length=120)
     password: SecretStr = Field(min_length=8, max_length=72)
     seller_profile: SellerProfileRequest | None = None
+    # Preferences internationales (facultatives : Niger / XOF / francais par defaut).
+    country_code: str | None = Field(default=None, pattern=COUNTRY_PATTERN)
+    region: str | None = Field(default=None, max_length=120)
+    preferred_currency: str | None = Field(default=None, pattern=CURRENCY_PATTERN)
+    preferred_language: str | None = Field(default=None, pattern=LANGUAGE_PATTERN)
 
     @field_validator("password")
     @classmethod
@@ -157,13 +163,19 @@ class VerifyAccountResponse(BaseModel):
 
 
 class UserPreferencesResponse(BaseModel):
-    preferred_currency: str = Field(pattern="^(XOF)$")
+    preferred_currency: str = Field(pattern=CURRENCY_PATTERN)
+    country_code: str = DEFAULT_COUNTRY
+    region: str | None = None
+    preferred_language: str = DEFAULT_LANGUAGE
 
 
 class UserPreferencesUpdateRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    preferred_currency: str = Field(pattern="^(XOF)$")
+    preferred_currency: str | None = Field(default=None, pattern=CURRENCY_PATTERN)
+    country_code: str | None = Field(default=None, pattern=COUNTRY_PATTERN)
+    region: str | None = Field(default=None, max_length=120)
+    preferred_language: str | None = Field(default=None, pattern=LANGUAGE_PATTERN)
 
 
 class DeleteAccountRequest(BaseModel):
