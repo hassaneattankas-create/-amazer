@@ -104,6 +104,16 @@ class OrderItem(Base):
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     unit_price: Mapped[float] = mapped_column(Float, nullable=False)
+    # Revente sans stock : unit_price reste le prix de la boutique ; la marge du revendeur s'y ajoute pour le client.
+    reseller_listing_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    reseller_user_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    reseller_margin: Mapped[float] = mapped_column(Float, nullable=False, default=0, server_default="0")
+
+    @property
+    def customer_unit_price(self) -> float:
+        """Prix unitaire paye par le client (prix boutique + marge eventuelle du revendeur)."""
+        margin = float(self.reseller_margin or 0)
+        return float(self.unit_price) + (margin / self.quantity if self.quantity else 0)
 
     order: Mapped[Order] = relationship("Order", back_populates="items")
 

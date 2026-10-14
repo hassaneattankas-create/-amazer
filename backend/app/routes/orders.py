@@ -25,6 +25,7 @@ from app.models.global_settings import GlobalSettings
 from app.models.order import Order, OrderFulfillment, OrderItem
 from app.models.product import Price, Product
 from app.models.receipt_scan import ReceiptScan
+from app.models.reseller import ResellerListing
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.schemas.order import (
@@ -127,8 +128,8 @@ def _to_order_response(order: Order) -> OrderResponse:
                 product_id=item.product_id,
                 vendor_id=item.vendor_id,
                 quantity=item.quantity,
-                unit_price=item.unit_price,
-                subtotal=item.quantity * item.unit_price,
+                unit_price=item.customer_unit_price,
+                subtotal=item.quantity * item.customer_unit_price,
             )
             for item in order.items
         ],
@@ -191,6 +192,16 @@ def _marketplace_fee_snapshot(order: Order) -> dict[str, float]:
     }
 
 
+def _resolve_reseller_listing(db: Session, listing_id: str | None, price: Price) -> ResellerListing | None:
+    """Annonce de revente valide pour cette offre, sinon None (achat au prix normal)."""
+    if not listing_id:
+        return None
+    listing = db.get(ResellerListing, listing_id)
+    if listing is None or not listing.is_active or listing.price_id != price.id:
+        return None
+    return listing
+
+
 def _build_receipt_payload(
     order: Order,
     customer_name: str,
@@ -217,8 +228,8 @@ def _build_receipt_payload(
                 "product_id": item.product_id,
                 "product_name": product_name_by_id.get(item.product_id, f"Produit {item.product_id[:8]}"),
                 "quantity": item.quantity,
-                "unit_price": round(item.unit_price, 2),
-                "subtotal": round(item.quantity * item.unit_price, 2),
+                "unit_price": round(item.customer_unit_price, 2),
+                "subtotal": round(item.quantity * item.customer_unit_price, 2),
             }
             for item in sorted(order.items, key=lambda row: row.product_id)
         ],
@@ -385,8 +396,8 @@ def _to_receipt_response(
                 product_id=item.product_id,
                 product_name=product_name_by_id.get(item.product_id, f"Produit {item.product_id[:8]}"),
                 quantity=item.quantity,
-                unit_price=item.unit_price,
-                subtotal=item.quantity * item.unit_price,
+                unit_price=item.customer_unit_price,
+                subtotal=item.quantity * item.customer_unit_price,
             )
             for item in order.items
         ],
@@ -431,7 +442,7 @@ def checkout(
     enforce_csrf(request)
     enforce_rate_limit(request, key="payment_checkout", limit=10, window_seconds=60)
     estimated_minutes = 45 if payload.delivery_type == "express_niamey" else 180
-    validated_items: list[tuple[Price, int]] = []
+    validated_items: list[tuple[Price, int, ResellerListing | None]] = []
     total = 0.0
     order_currency: str | None = None
     vendor_ids: set[str] = set()
@@ -456,9 +467,11 @@ def checkout(
             order_currency = price.currency
         elif order_currency != price.currency:
             raise ValidationDomainError("Les devises multiples ne sont pas supportees")
-        line_total = float(price.amount) * item.quantity
+        listing = _resolve_reseller_listing(db, item.reseller_listing_id, price)
+        unit_amount = max(float(listing.resale_amount), float(price.amount)) if listing else float(price.amount)
+        line_total = unit_amount * item.quantity
         total += line_total
-        validated_items.append((price, item.quantity))
+        validated_items.append((price, item.quantity, listing))
         vendor_ids.add(price.vendor_id)
     encrypted_code: str | None = None
     code_hash: str | None = None
@@ -511,13 +524,17 @@ def checkout(
         delivery_phone=payload.delivery_phone,
         delivery_district=payload.district,
     )
-    for price, quantity in validated_items:
+    for price, quantity, listing in validated_items:
+        margin = (max(float(listing.resale_amount), float(price.amount)) - float(price.amount)) * quantity if listing else 0.0
         order.items.append(
             OrderItem(
                 product_id=price.product_id,
                 vendor_id=price.vendor_id,
                 quantity=quantity,
                 unit_price=price.amount,
+                reseller_listing_id=listing.id if listing else None,
+                reseller_user_id=listing.reseller_user_id if listing else None,
+                reseller_margin=round(margin, 2),
             )
         )
 

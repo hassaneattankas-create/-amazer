@@ -25,6 +25,7 @@ from app.models.user import User
 from app.models.user_preferences import UserPreferences
 from app.models.vendor import Vendor
 from app.routes.locale import router as locale_router
+from app.routes.resellers import router as resellers_router
 from app.routes.alerts import router as alerts_router
 from app.routes.auth import router as auth_router
 from app.routes.cart import router as cart_router
@@ -194,6 +195,9 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS preferred_language VARCHAR(5) NOT NULL DEFAULT 'fr'",
         "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS notify_email BOOLEAN NOT NULL DEFAULT TRUE",
         "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS notify_whatsapp BOOLEAN NOT NULL DEFAULT TRUE",
+        "ALTER TABLE order_items ADD COLUMN IF NOT EXISTS reseller_listing_id VARCHAR(36)",
+        "ALTER TABLE order_items ADD COLUMN IF NOT EXISTS reseller_user_id VARCHAR(36)",
+        "ALTER TABLE order_items ADD COLUMN IF NOT EXISTS reseller_margin DOUBLE PRECISION NOT NULL DEFAULT 0",
         (
             "CREATE TABLE IF NOT EXISTS media_files ("
             "id VARCHAR(36) PRIMARY KEY, "
@@ -469,6 +473,7 @@ app.include_router(conversations_router, prefix=settings.api_prefix)
 app.include_router(admin_moderation_router, prefix=settings.api_prefix)
 app.include_router(courier_router, prefix=settings.api_prefix)
 app.include_router(locale_router, prefix=settings.api_prefix)
+app.include_router(resellers_router, prefix=settings.api_prefix)
 app.include_router(assistant_router, prefix=settings.api_prefix)
 app.include_router(maintenance_router, prefix=settings.api_prefix)
 

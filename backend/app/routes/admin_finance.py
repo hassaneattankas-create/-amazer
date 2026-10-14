@@ -19,6 +19,7 @@ from app.core.permissions import is_admin, is_principal_admin
 from app.core.cache import cache_delete_prefixes
 from app.core.crypto import decrypt_payment_code, decrypt_phone_value, encrypt_payment_code
 from app.core.csrf import enforce_csrf
+from pydantic import BaseModel
 from app.core.deps import get_admin_user
 from app.core.exceptions import UnauthorizedError, ValidationDomainError
 from app.core.rate_limit import enforce_rate_limit
@@ -27,7 +28,7 @@ from app.models.audit_log import AuditLog
 from app.models.finance import FinanceDistrictFee
 from app.models.finance import FinanceTransfer
 from app.models.global_settings import GlobalSettings
-from app.models.order import Order
+from app.models.order import Order, OrderItem
 from app.models.product import Price
 from app.models.receipt_scan import ReceiptScan
 from app.models.restaurant import RestaurantOrder
@@ -68,6 +69,7 @@ from app.schemas.finance import (
     WalletSummaryResponse,
 )
 from app.services import order_event_notifications as order_events
+from app.routes.resellers import compute_earnings as compute_reseller_earnings
 from app.services.audit_log_service import append_audit_log
 from app.services.order_cancellation_service import cancel_order, ensure_not_cancelled, notify_order_cancelled
 from app.services.order_fulfillment_service import sync_fulfillments
@@ -2050,4 +2052,47 @@ def send_admin_message(
     )
     db.commit()
     return AdminBroadcastResponse(recipients=len(recipients))
+
+
+class AdminResellerEarning(BaseModel):
+    user_id: str
+    full_name: str
+    contact: str
+    whatsapp_phone: str | None
+    earned: float
+    pending: float
+    orders_delivered: int
+
+
+@router.get("/reseller-earnings", response_model=list[AdminResellerEarning])
+def list_reseller_earnings(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> list[AdminResellerEarning]:
+    """Marges des revendeurs a verser (commandes payees et livrees) et en attente de livraison."""
+    _require_finance_pin(request)
+    reseller_ids = db.scalars(
+        select(OrderItem.reseller_user_id).where(OrderItem.reseller_user_id.is_not(None)).distinct()
+    ).all()
+    rows: list[AdminResellerEarning] = []
+    for reseller_id in reseller_ids:
+        user = db.get(User, reseller_id)
+        if user is None:
+            continue
+        totals = compute_reseller_earnings(db, reseller_id)
+        if totals.earned == 0 and totals.pending == 0:
+            continue
+        rows.append(
+            AdminResellerEarning(
+                user_id=user.id,
+                full_name=user.full_name or "Revendeur",
+                contact=user.email,
+                whatsapp_phone=user.whatsapp_phone,
+                earned=totals.earned,
+                pending=totals.pending,
+                orders_delivered=totals.orders_delivered,
+            )
+        )
+    return sorted(rows, key=lambda row: row.earned, reverse=True)
 

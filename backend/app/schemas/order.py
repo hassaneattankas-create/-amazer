@@ -10,6 +10,8 @@ class CheckoutItemRequest(BaseModel):
     vendor_id: str = Field(min_length=1, max_length=36)
     quantity: int = Field(ge=1, le=100)
     unit_price: float = Field(gt=0)
+    # Achat via la boutique d'un revendeur (revente sans stock) : le prix est relu cote serveur.
+    reseller_listing_id: str | None = Field(default=None, max_length=36)
 
 
 class CheckoutRequest(BaseModel):
