@@ -192,6 +192,8 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS country_code VARCHAR(2) NOT NULL DEFAULT 'NE'",
         "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS region VARCHAR(120)",
         "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS preferred_language VARCHAR(5) NOT NULL DEFAULT 'fr'",
+        "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS notify_email BOOLEAN NOT NULL DEFAULT TRUE",
+        "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS notify_whatsapp BOOLEAN NOT NULL DEFAULT TRUE",
         (
             "CREATE TABLE IF NOT EXISTS media_files ("
             "id VARCHAR(36) PRIMARY KEY, "

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.models.app_notification import AppNotification
 from app.models.notification import NotificationToken
 from app.models.user import User
+from app.models.user_preferences import UserPreferences
 from app.services.notification_relay_service import relay_notification
 from app.services.push_delivery_service import send_fcm_push
 
@@ -122,10 +123,11 @@ class NotificationService:
     # Copie par e-mail / WhatsApp pour que l'utilisateur la recoive directement.
     user = self.db.get(User, user_id)
     if user is not None and getattr(user, "is_active", True):
+      prefs = self.db.get(UserPreferences, user_id)
       relay_notification(
         user_id=user_id,
-        email=getattr(user, "email", None),
-        phone=getattr(user, "whatsapp_phone", None),
+        email=getattr(user, "email", None) if getattr(prefs, "notify_email", True) is not False else None,
+        phone=getattr(user, "whatsapp_phone", None) if getattr(prefs, "notify_whatsapp", True) is not False else None,
         title=payload.title,
         body=payload.body,
         href=href,

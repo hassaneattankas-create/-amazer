@@ -58,12 +58,22 @@ def test_forgot_password_creates_dedicated_reset_code_and_sends_email(monkeypatc
     assert result["code_preview"] is not None and len(result["code_preview"]) == 6
 
 
-def test_forgot_password_uses_whatsapp_when_account_has_phone(monkeypatch) -> None:
+def test_forgot_password_uses_whatsapp_for_phone_only_account(monkeypatch) -> None:
     calls: list[str] = []
     monkeypatch.setattr(auth_module, "send_verification_code_via_whatsapp", lambda phone, _code: calls.append(phone) or True)
     monkeypatch.setattr(auth_module, "send_verification_code_email", lambda *a, **k: pytest.fail("pas d'e-mail"))
-    _service(_user(whatsapp_phone="+22790000000")).request_password_reset("+22790000000")
+    user = _user(whatsapp_phone="+22790000000", email="wa-22790000000@users.amazer.ne")
+    _service(user).request_password_reset("+22790000000")
     assert calls == ["+22790000000"]
+
+
+def test_forgot_password_prefers_real_email_then_falls_back_to_whatsapp(monkeypatch) -> None:
+    calls: list[str] = []
+    monkeypatch.setattr(auth_module, "send_verification_code_email", lambda to, *_a, **_k: calls.append(to) or False)
+    monkeypatch.setattr(auth_module, "send_verification_code_via_whatsapp", lambda phone, _code: calls.append(phone) or True)
+    user = _user(whatsapp_phone="+22790000000")
+    _service(user).request_password_reset("+22790000000")
+    assert calls == [user.email, "+22790000000"]
 
 
 # --- Reinitialisation -----------------------------------------------------------------

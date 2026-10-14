@@ -27,7 +27,12 @@ logger = logging.getLogger(__name__)
 THROTTLE_SECONDS = 600
 _recent: dict[tuple[str, str], float] = {}
 _lock = threading.Lock()
-DELETED_EMAIL_SUFFIX = "@users.deleted.amazer.ne"
+# Adresses internes (comptes crees avec un numero seul, comptes supprimes, demos) : jamais d'envoi.
+INTERNAL_EMAIL_SUFFIXES = ("@users.amazer.ne", "@users.deleted.amazer.ne", "@amazer.demo")
+
+
+def is_real_email(email: str | None) -> bool:
+    return bool(email) and "@" in email and not email.lower().endswith(INTERNAL_EMAIL_SUFFIXES)
 
 
 def _should_send(user_id: str, tag: str) -> bool:
@@ -121,7 +126,7 @@ def relay_notification(
     tag: str,
 ) -> bool:
     """Programme l'envoi e-mail / WhatsApp. Retourne True si au moins un canal est programme."""
-    send_mail = bool(email) and not email.endswith(DELETED_EMAIL_SUFFIX) and email_delivery_configured()
+    send_mail = is_real_email(email) and email_delivery_configured()
     number = whatsapp_number(phone) if whatsapp_notifications_configured() else None
     if not send_mail and not number:
         return False

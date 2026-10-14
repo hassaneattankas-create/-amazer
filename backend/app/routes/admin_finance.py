@@ -14,6 +14,7 @@ from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.config import get_settings
+from app.core.phone import normalize_phone
 from app.core.permissions import is_admin, is_principal_admin
 from app.core.cache import cache_delete_prefixes
 from app.core.crypto import decrypt_payment_code, decrypt_phone_value, encrypt_payment_code
@@ -1823,7 +1824,7 @@ def decide_seller_pre_registration(
             whatsapp_value: str | None = None
         else:
             _digits = "".join(ch for ch in identifier if ch.isdigit())
-            whatsapp_value = f"+{_digits}" if _digits.startswith("227") else f"+227{_digits[-8:]}"
+            whatsapp_value = normalize_phone(reg.identifier) or f"+{_digits}"
             _wdigits = "".join(ch for ch in whatsapp_value if ch.isdigit())
             email_value = f"wa-{_wdigits}@users.amazer.ne"
         existing_user = (

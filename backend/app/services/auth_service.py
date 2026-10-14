@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
+from app.core.phone import normalize_phone
 from app.core.permissions import is_admin
 from app.core.exceptions import (
     ConflictError,
@@ -42,6 +43,8 @@ logger = logging.getLogger(__name__)
 
 # Canal dedie : un code de reinitialisation ne peut jamais servir a verifier un compte, et inversement.
 RESET_CHANNEL = "reset"
+# Adresse interne des comptes crees avec un numero seul (la colonne email est obligatoire).
+SHADOW_EMAIL_DOMAIN = "@users.amazer.ne"
 
 
 class AuthService:
@@ -56,6 +59,8 @@ class AuthService:
         full_name: str,
         password: str,
         seller_profile: dict | None = None,
+        contact_email: str | None = None,
+        contact_phone: str | None = None,
     ) -> dict[str, str | bool | None]:
         settings = get_settings()
         if self._is_whatsapp_identifier(identifier):
@@ -66,6 +71,14 @@ class AuthService:
             whatsapp_phone = None
             email = identifier.strip().lower()
             existing = self.users.get_by_email(email)
+        # E-mail ET WhatsApp (comme les grandes plateformes) : connexion avec l'un ou l'autre,
+        # et notifications recues sur les deux canaux.
+        if contact_email and email.endswith(SHADOW_EMAIL_DOMAIN):
+            email = contact_email.strip().lower()
+            existing = existing or self.users.get_by_email(email)
+        if contact_phone and whatsapp_phone is None:
+            whatsapp_phone = self._canonicalize_whatsapp(contact_phone)
+            existing = existing or self.users.get_by_whatsapp_phone(whatsapp_phone)
         if settings.is_production() and email.strip().lower().endswith("@amazer.demo"):
             raise ConflictError(
                 "Les adresses @amazer.demo sont reservees aux comptes demonstration configures par la plateforme."
@@ -263,8 +276,9 @@ class AuthService:
     def _build_registration_verification(self, user: User) -> dict[str, str | None]:
         settings = get_settings()
         code = self._generate_verification_code()
-        channel = "whatsapp" if user.whatsapp_phone else "email"
-        destination = user.whatsapp_phone or user.email
+        # E-mail en priorite quand il est reel : c'est le canal configure (Brevo).
+        channel = "whatsapp" if user.whatsapp_phone and user.email.endswith(SHADOW_EMAIL_DOMAIN) else "email"
+        destination = user.whatsapp_phone if channel == "whatsapp" else user.email
         destination_masked = self._mask_destination(destination)
 
         self.db.execute(
@@ -311,7 +325,8 @@ class AuthService:
             return {"code_preview": None}
 
         code = self._generate_verification_code()
-        destination = user.whatsapp_phone or user.email
+        has_real_email = not user.email.endswith(SHADOW_EMAIL_DOMAIN)
+        destination = user.email if has_real_email else (user.whatsapp_phone or user.email)
         self.db.execute(
             delete(LoginVerificationCode).where(
                 LoginVerificationCode.user_id == user.id,
@@ -330,10 +345,10 @@ class AuthService:
         )
         self.db.commit()
 
-        if user.whatsapp_phone:
+        # E-mail reel d'abord (canal configure), WhatsApp en secours.
+        delivered = send_verification_code_email(user.email, code, purpose="reset") if has_real_email else False
+        if not delivered and user.whatsapp_phone:
             delivered = send_verification_code_via_whatsapp(user.whatsapp_phone, code)
-        else:
-            delivered = send_verification_code_email(user.email, code, purpose="reset")
         if not delivered:
             logger.warning("Code de reinitialisation non delivre (canal absent ou envoi en echec) pour %s", user.id)
         return {"code_preview": None if settings.is_production() else code}
@@ -377,14 +392,16 @@ class AuthService:
         return "@" not in identifier
 
     def _canonicalize_whatsapp(self, value: str) -> str:
-        digits = "".join(ch for ch in value if ch.isdigit())
-        if digits.startswith("227"):
-            return f"+{digits}"
-        return f"+227{digits[-8:]}"
+        # Numero international (E.164) ; 8 chiffres sans indicatif = Niger.
+        phone = normalize_phone(value)
+        if phone is None:
+            digits = "".join(ch for ch in value if ch.isdigit())
+            return f"+{digits}" if digits else value
+        return phone
 
     def _shadow_email_for_whatsapp(self, whatsapp_phone: str) -> str:
         digits = "".join(ch for ch in whatsapp_phone if ch.isdigit())
-        return f"wa-{digits}@users.amazer.ne"
+        return f"wa-{digits}{SHADOW_EMAIL_DOMAIN}"
 
     def _generate_verification_code(self) -> str:
         return f"{secrets.randbelow(1_000_000):06d}"

@@ -56,6 +56,7 @@ def test_bursts_are_throttled_and_deleted_accounts_skipped(monkeypatch, _reset) 
     assert _relay(tag="conversation-9") is True
     assert _relay(tag="conversation-9") is False  # meme sujet dans les 10 minutes
     assert _relay(email="deleted-x@users.deleted.amazer.ne", tag="autre") is False
+    assert _relay(email="wa-22790000000@users.amazer.ne", tag="autre2") is False
     assert len(_reset) == 1
 
 

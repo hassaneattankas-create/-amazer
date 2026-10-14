@@ -205,3 +205,36 @@ def test_get_current_user_rejects_wrong_token_type() -> None:
         service.get_current_user(refresh_token)
 
     assert exc.value.status_code == 401
+
+
+def test_register_with_email_and_whatsapp_stores_both() -> None:
+    service, _db = _build_service()
+    service.users.get_by_email.return_value = None
+    service.users.get_by_whatsapp_phone.return_value = None
+    service.users.create.return_value = SimpleNamespace(id="u2", email="awa@example.test")
+
+    service.register("awa@example.test", "Awa", "StrongP@ssw0rd!", contact_phone="+221 77 123 45 67")
+
+    kwargs = service.users.create.call_args.kwargs
+    assert kwargs["email"] == "awa@example.test"
+    assert kwargs["whatsapp_phone"] == "+221771234567"
+
+
+def test_register_with_phone_and_email_uses_real_email_not_internal_one() -> None:
+    service, _db = _build_service()
+    service.users.get_by_email.return_value = None
+    service.users.get_by_whatsapp_phone.return_value = None
+    service.users.create.return_value = SimpleNamespace(id="u3", email="awa@example.test")
+
+    service.register("+22790000000", "Awa", "StrongP@ssw0rd!", contact_email="awa@example.test")
+
+    kwargs = service.users.create.call_args.kwargs
+    assert kwargs["email"] == "awa@example.test" and kwargs["whatsapp_phone"] == "+22790000000"
+
+
+def test_register_refuses_whatsapp_already_used_by_another_account() -> None:
+    service, _db = _build_service()
+    service.users.get_by_email.return_value = None
+    service.users.get_by_whatsapp_phone.return_value = SimpleNamespace(id="other")
+    with pytest.raises(ConflictError):
+        service.register("awa@example.test", "Awa", "StrongP@ssw0rd!", contact_phone="+22790000000")

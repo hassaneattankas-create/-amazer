@@ -2,10 +2,10 @@ import re
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
+from app.core.phone import normalize_phone
 from app.core.locale import COUNTRY_PATTERN, CURRENCY_PATTERN, DEFAULT_COUNTRY, DEFAULT_LANGUAGE, LANGUAGE_PATTERN
 from app.schemas.seller import SellerProfileRequest
 
-WHATSAPP_REGEX = re.compile(r"^(?:\+?227)\d{8}$")
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 # Au moins une minuscule, une majuscule, un chiffre et un caractère non alphanumerique (longueur min via Field).
 REGISTER_PASSWORD_STRENGTH = re.compile(
@@ -46,12 +46,10 @@ class RegisterRequest(BaseModel):
         normalized = value.strip()
         if EMAIL_REGEX.match(normalized):
             return normalized.lower()
-        compact = normalized.replace(" ", "")
-        if WHATSAPP_REGEX.match(compact):
-            digits = "".join(ch for ch in compact if ch.isdigit())
-            if digits.startswith("227"):
-                return f"+{digits}"
-        raise ValueError("identifier must be an email or a WhatsApp number starting with +227")
+        phone = normalize_phone(normalized)
+        if phone:
+            return phone
+        raise ValueError("Saisissez un e-mail valide ou un numéro WhatsApp avec l'indicatif du pays (ex. +227…).")
 
     @field_validator("email")
     @classmethod
@@ -68,11 +66,10 @@ class RegisterRequest(BaseModel):
     def validate_whatsapp_alias(cls, value: str | None) -> str | None:
         if value is None:
             return None
-        compact = value.strip().replace(" ", "")
-        if not WHATSAPP_REGEX.match(compact):
-            raise ValueError("whatsapp_phone must start with +227 and contain 8 local digits")
-        digits = "".join(ch for ch in compact if ch.isdigit())
-        return f"+{digits}"
+        phone = normalize_phone(value)
+        if not phone:
+            raise ValueError("Numéro WhatsApp invalide : ajoutez l'indicatif du pays (ex. +227…, +33…).")
+        return phone
 
     @model_validator(mode="after")
     def ensure_identifier(self) -> "RegisterRequest":
@@ -102,12 +99,10 @@ class LoginRequest(BaseModel):
         normalized = value.strip()
         if EMAIL_REGEX.match(normalized):
             return normalized.lower()
-        compact = normalized.replace(" ", "")
-        if WHATSAPP_REGEX.match(compact):
-            digits = "".join(ch for ch in compact if ch.isdigit())
-            if digits.startswith("227"):
-                return f"+{digits}"
-        raise ValueError("identifier must be an email or a WhatsApp number starting with +227")
+        phone = normalize_phone(normalized)
+        if phone:
+            return phone
+        raise ValueError("Saisissez un e-mail valide ou un numéro WhatsApp avec l'indicatif du pays (ex. +227…).")
 
     @field_validator("email")
     @classmethod
@@ -167,6 +162,37 @@ class UserPreferencesResponse(BaseModel):
     country_code: str = DEFAULT_COUNTRY
     region: str | None = None
     preferred_language: str = DEFAULT_LANGUAGE
+    notify_email: bool = True
+    notify_whatsapp: bool = True
+
+
+class ContactUpdateRequest(BaseModel):
+    """Ajout du contact manquant (e-mail ou WhatsApp) pour recevoir les notifications."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    email: str | None = Field(default=None, min_length=6, max_length=120)
+    whatsapp_phone: str | None = Field(default=None, min_length=8, max_length=20)
+
+    @field_validator("email")
+    @classmethod
+    def validate_contact_email(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        if not EMAIL_REGEX.match(normalized):
+            raise ValueError("Adresse e-mail invalide.")
+        return normalized
+
+    @field_validator("whatsapp_phone")
+    @classmethod
+    def validate_contact_phone(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        phone = normalize_phone(value)
+        if not phone:
+            raise ValueError("Numéro WhatsApp invalide : ajoutez l'indicatif du pays (ex. +227…, +33…).")
+        return phone
 
 
 class UserPreferencesUpdateRequest(BaseModel):
@@ -176,6 +202,8 @@ class UserPreferencesUpdateRequest(BaseModel):
     country_code: str | None = Field(default=None, pattern=COUNTRY_PATTERN)
     region: str | None = Field(default=None, max_length=120)
     preferred_language: str | None = Field(default=None, pattern=LANGUAGE_PATTERN)
+    notify_email: bool | None = None
+    notify_whatsapp: bool | None = None
 
 
 class DeleteAccountRequest(BaseModel):

@@ -1,5 +1,6 @@
 from typing import Annotated
 
+from sqlalchemy.exc import IntegrityError
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy import select
 
@@ -8,11 +9,12 @@ from app.core.deps import get_auth_service, get_current_user
 from app.core.cache import cache_delete_prefixes
 from app.core.csrf import enforce_csrf, generate_csrf_token
 from app.config import get_settings
-from app.core.exceptions import NotFoundError, UnauthorizedError
+from app.core.exceptions import ConflictError, NotFoundError, UnauthorizedError
 from app.core.rate_limit import client_ip, enforce_rate_limit
 from app.models.user import User
 from app.models.user_preferences import UserPreferences
 from app.schemas.auth import (
+    ContactUpdateRequest,
     DeleteAccountRequest,
     LoginRequest,
     PasswordForgotRequest,
@@ -34,7 +36,7 @@ from app.schemas.finance import (
     SellerPreRegisterStatusResponse,
 )
 from app.schemas.user import UserResponse
-from app.services.auth_service import AuthService
+from app.services.auth_service import SHADOW_EMAIL_DOMAIN, AuthService
 from app.models.seller_pending_registration import SellerPendingRegistration
 from app.core.security import hash_password
 from app.services.notification_service import NotificationPayload, NotificationService
@@ -122,6 +124,8 @@ def register(
         full_name=payload.full_name,
         password=payload.password.get_secret_value(),
         seller_profile=payload.seller_profile.model_dump(exclude_none=True) if payload.seller_profile else None,
+        contact_email=payload.email,
+        contact_phone=payload.whatsapp_phone,
     )
     if result.get("success"):
         log_security_event(
@@ -269,6 +273,38 @@ def me(user: Annotated[User, Depends(get_current_user)]) -> User:
     return user
 
 
+@router.put("/me/contact", response_model=UserResponse)
+def update_contact(
+    payload: ContactUpdateRequest,
+    request: Request,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    """Ajoute l'e-mail (compte cree avec un numero) ou le WhatsApp manquant. Ne remplace jamais un contact existant."""
+    enforce_csrf(request)
+    enforce_rate_limit(request, key="auth_contact_update", limit=10, window_seconds=600)
+    db = auth_service.db
+    if payload.email:
+        if not user.email.endswith(SHADOW_EMAIL_DOMAIN):
+            raise ConflictError("Votre compte a deja une adresse e-mail.")
+        if auth_service.users.get_by_email(payload.email) is not None:
+            raise ConflictError("Cette adresse e-mail est deja utilisee.")
+        user.email = payload.email
+    if payload.whatsapp_phone:
+        if user.whatsapp_phone:
+            raise ConflictError("Votre compte a deja un numero WhatsApp.")
+        if auth_service.users.get_by_whatsapp_phone(payload.whatsapp_phone) is not None:
+            raise ConflictError("Ce numero WhatsApp est deja utilise.")
+        user.whatsapp_phone = payload.whatsapp_phone
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise ConflictError("Ce contact est deja utilise.") from exc
+    db.refresh(user)
+    return user
+
+
 @router.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -337,6 +373,9 @@ def _apply_preferences(row: UserPreferences, values: dict) -> None:
         row.region = (values.get("region") or "").strip() or None
     if values.get("preferred_language"):
         row.preferred_language = values["preferred_language"]
+    for flag in ("notify_email", "notify_whatsapp"):
+        if values.get(flag) is not None:
+            setattr(row, flag, bool(values[flag]))
 
 
 def _preferences_response(row: UserPreferences) -> UserPreferencesResponse:
@@ -346,6 +385,8 @@ def _preferences_response(row: UserPreferences) -> UserPreferencesResponse:
         country_code=row.country_code or DEFAULT_COUNTRY,
         region=row.region,
         preferred_language=row.preferred_language or DEFAULT_LANGUAGE,
+        notify_email=getattr(row, "notify_email", True) is not False,
+        notify_whatsapp=getattr(row, "notify_whatsapp", True) is not False,
     )
 
 
