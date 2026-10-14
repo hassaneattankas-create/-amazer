@@ -104,3 +104,25 @@ def test_role_change_guards(_route, target, actor, message) -> None:
 def test_role_payload_rejects_unknown_role() -> None:
     with pytest.raises(ValueError):
         AdminUserRoleUpdateRequest(role="superadmin")
+
+
+def test_permanent_delete_anonymizes_and_frees_email(_route, monkeypatch) -> None:
+    monkeypatch.setattr(admin_route, "_invalidate_public_marketplace_cache", lambda: None)
+    target = _user("u-9", "client@example.test", role="courier")
+    target.hashed_password = "old"
+    db = Mock()
+    db.get.return_value = target
+    db.scalar.return_value = None
+    admin_route.permanently_delete_user("u-9", _request(), db, _principal())
+    assert target.email.endswith("@users.deleted.amazer.ne")
+    assert target.full_name == "Compte supprime" and target.whatsapp_phone is None
+    assert target.is_active is False and target.role == "user" and target.hashed_password != "old"
+    assert _route[0]["details"] == {"email": "client@example.test"}
+    db.commit.assert_called_once()
+
+
+def test_permanent_delete_refuses_admin(_route) -> None:
+    db = Mock()
+    db.get.return_value = _user(role="admin")
+    with pytest.raises(ValidationDomainError):
+        admin_route.permanently_delete_user("u-1", _request(), db, _principal())

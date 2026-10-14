@@ -1019,7 +1019,12 @@ def list_users_admin(
     _require_finance_pin(request)
     _audit_admin_access(db, request, admin_user, "admin_users_read")
     safe_limit = min(max(limit, 1), 500)
-    stmt = select(User).order_by(desc(User.created_at)).limit(safe_limit)
+    stmt = (
+        select(User)
+        .where(User.email.notlike("%@users.deleted.amazer.ne"))
+        .order_by(desc(User.created_at))
+        .limit(safe_limit)
+    )
     if query:
         needle = query.strip().lower()
         if needle:
@@ -1067,6 +1072,55 @@ def deactivate_user_admin(
         entity_type="user",
         entity_id=target.id,
         details={"email": target.email},
+    )
+    db.commit()
+    _invalidate_public_marketplace_cache()
+
+
+@router.post("/users/{user_id}/permanent-delete", status_code=204)
+def permanently_delete_user(
+    user_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> None:
+    """Suppression definitive d'un utilisateur : compte anonymise, email libere, historique conserve."""
+    enforce_csrf(request)
+    _require_finance_pin(request)
+    target = db.get(User, user_id)
+    if target is None:
+        raise ValidationDomainError("Utilisateur introuvable")
+    if is_admin(target):
+        raise ValidationDomainError("Le compte administrateur ne peut pas etre supprime.")
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == target.id))
+    if profile is not None:
+        vendor = db.get(Vendor, profile.vendor_id)
+        if vendor is not None:
+            vendor.is_active = False
+            db.execute(update(Price).where(Price.vendor_id == vendor.id).values(is_active=False))
+        profile.phone = None
+        profile.address = None
+        profile.description = "Compte vendeur supprime"
+        profile.whatsapp_contact = None
+        profile.contact_email = None
+        profile.is_verified = False
+    old_email = target.email
+    marker = f"deleted-{target.id[:8]}-{uuid.uuid4().hex[:10]}"
+    target.email = f"{marker}@users.deleted.amazer.ne"
+    target.full_name = "Compte supprime"
+    target.whatsapp_phone = None
+    target.hashed_password = hash_password(secrets.token_urlsafe(32))
+    target.is_active = False
+    target.role = "user"
+    append_audit_log(
+        db,
+        event_type="admin_user_permanently_deleted",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="user",
+        entity_id=target.id,
+        details={"email": old_email},
     )
     db.commit()
     _invalidate_public_marketplace_cache()

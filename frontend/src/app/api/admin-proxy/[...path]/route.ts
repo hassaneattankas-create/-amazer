@@ -94,7 +94,9 @@ async function forward(request: NextRequest, context: { params: Promise<{ path: 
     responseHeaders.set("content-type", upstreamType);
   }
 
-  return new Response(await upstream.arrayBuffer(), {
+  // 204/205/304 : une reponse sans corps est obligatoire, sinon Response leve une erreur (suppressions bloquees).
+  const bodyless = upstream.status === 204 || upstream.status === 205 || upstream.status === 304;
+  return new Response(bodyless ? null : await upstream.arrayBuffer(), {
     status: upstream.status,
     headers: responseHeaders,
   });

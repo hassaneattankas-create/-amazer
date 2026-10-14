@@ -16,6 +16,7 @@ import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
 import {
   getAdminUserStats,
   listAdminUsers,
+  permanentlyDeleteAdminUser,
   removeAdminUser,
   restoreAdminUser,
   updateAdminUserRole,
@@ -117,6 +118,18 @@ export default function AdminUsersPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: permanentlyDeleteAdminUser,
+    onSuccess: () => {
+      setActionStatus("Compte supprimé définitivement.");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-stats"] });
+    },
+    onError: (error) => {
+      setActionStatus(buildAdminActionMessage(error, "Impossible de supprimer cet utilisateur."));
+    },
+  });
+
   const roleMutation = useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: AdminUserRole }) => updateAdminUserRole(userId, role),
     onSuccess: (updated) => {
@@ -130,7 +143,8 @@ export default function AdminUsersPage() {
     },
   });
 
-  const isBusy = removeMutation.isPending || restoreMutation.isPending || roleMutation.isPending;
+  const isBusy =
+    removeMutation.isPending || restoreMutation.isPending || roleMutation.isPending || deleteMutation.isPending;
   const rows = useMemo(() => {
     const list = users ?? [];
     if (showInactive) {
@@ -394,15 +408,31 @@ export default function AdminUsersPage() {
                         </Button>
                       </div>
                     ) : (
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="bg-emerald-600 text-white hover:bg-emerald-500"
-                        disabled={isBusy}
-                        onClick={() => restoreMutation.mutate(user.id)}
-                      >
-                        Restaurer
-                      </Button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="bg-emerald-600 text-white hover:bg-emerald-500"
+                          disabled={isBusy}
+                          onClick={() => restoreMutation.mutate(user.id)}
+                        >
+                          Restaurer
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="border-danger text-danger"
+                          disabled={isBusy}
+                          onClick={() => {
+                            if (window.confirm(`Supprimer définitivement ${user.email} ? Action irréversible.`)) {
+                              deleteMutation.mutate(user.id);
+                            }
+                          }}
+                        >
+                          Supprimer
+                        </Button>
+                      </div>
                     )}
                   </td>
                 </tr>

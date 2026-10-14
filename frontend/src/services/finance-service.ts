@@ -304,6 +304,13 @@ export async function removeAdminUser(userId: string): Promise<void> {
   });
 }
 
+export async function permanentlyDeleteAdminUser(userId: string): Promise<void> {
+  await adminProxyRequest<void>({
+    url: `/admin/finance/users/${userId}/permanent-delete`,
+    method: "POST",
+  });
+}
+
 export type AdminUserRole = "user" | "admin" | "courier";
 
 export async function updateAdminUserRole(userId: string, role: AdminUserRole): Promise<AdminUser> {
