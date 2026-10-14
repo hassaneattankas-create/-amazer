@@ -311,6 +311,20 @@ export async function permanentlyDeleteAdminUser(userId: string): Promise<void> 
   });
 }
 
+export type AdminResellerEarning = {
+  user_id: string;
+  full_name: string;
+  contact: string;
+  whatsapp_phone: string | null;
+  earned: number;
+  pending: number;
+  orders_delivered: number;
+};
+
+export async function listResellerEarnings(): Promise<AdminResellerEarning[]> {
+  return adminProxyRequest<AdminResellerEarning[]>({ url: "/admin/finance/reseller-earnings", method: "GET" });
+}
+
 export type AdminMessageAudience = "all" | "customers" | "sellers" | "couriers" | "user";
 
 /** Message de l'equipe : notification sur le site + e-mail automatique. */

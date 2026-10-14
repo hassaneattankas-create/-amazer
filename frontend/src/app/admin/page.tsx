@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CreditCard, Flag, FolderTree, Layers, QrCode, Send, SlidersHorizontal, Users, type LucideIcon } from "lucide-react";
+import { CreditCard, Flag, FolderTree, Layers, QrCode, Send, SlidersHorizontal, Users, Wallet, type LucideIcon } from "lucide-react";
 
 type AdminLink = { href: string; title: string; description: string; icon: LucideIcon };
 
@@ -10,6 +10,7 @@ const GROUPS: { title: string; items: AdminLink[] }[] = [
     items: [
       { href: "/admin/finance", title: "Paiements et commandes", description: "Valider les paiements, suivre et annuler les commandes.", icon: CreditCard },
       { href: "/admin/moderation", title: "Modération", description: "Signalements des clients et produits masqués.", icon: Flag },
+      { href: "/admin/revendeurs", title: "Revendeurs", description: "Gains à verser aux revendeurs sans stock.", icon: Wallet },
       { href: "/admin/receipt-scan", title: "Confirmer une livraison", description: "Scanner le QR code du reçu client.", icon: QrCode },
     ],
   },

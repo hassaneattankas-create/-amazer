@@ -72,6 +72,9 @@ const EN: Record<string, string> = {
   "Chargement…": "Loading…",
   "Voir plus de produits": "Show more products",
   "Vous avez un commerce ?": "Do you run a business?",
+  "Vendez ou revendez sur AMAZER": "Sell or resell on AMAZER",
+  "Ouvrez votre boutique, ou revendez nos produits sans stock et gardez la marge.":
+    "Open your shop, or resell our products without stock and keep the margin.",
   "Ouvrez votre boutique AMAZER et vendez partout.": "Open your AMAZER shop and sell everywhere.",
   Scan: "Scan",
   // Catalogue
@@ -97,6 +100,8 @@ const EN: Record<string, string> = {
   "Espace vendeur": "Seller area",
   "Guide du vendeur": "Seller guide",
   "Devenir livreur": "Become a courier",
+  "Revendre sans stock": "Resell without stock",
+  "Formations gratuites": "Free training",
   "Signaler un problème": "Report a problem",
   "Conditions d'utilisation": "Terms of use",
   "Politique de confidentialité": "Privacy policy",

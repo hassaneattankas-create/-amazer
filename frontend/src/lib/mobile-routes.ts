@@ -59,3 +59,10 @@ export function getRestaurantOrderReceiptRoute(orderId: string, token?: string |
     ? buildQueryRoute("/restaurant/order/receipt", { id: orderId, token })
     : buildQueryRoute(`/restaurant/order/receipt/${encodeURIComponent(orderId)}`, { token });
 }
+
+/** Boutique publique d'un revendeur (revente sans stock). */
+export function getResellerShopRoute(resellerId: string): string {
+  return isMobileAppBuild()
+    ? buildQueryRoute("/revendeur", { u: resellerId })
+    : `/revendeur/${encodeURIComponent(resellerId)}`;
+}

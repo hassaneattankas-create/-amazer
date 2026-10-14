@@ -23,6 +23,7 @@ function pickChosenOffer(offers: Offer[], quantity: number): Offer | null {
 function formatPlanItem(item: CartItem, offer: Offer): OptimizedPlanItem {
   return {
     productId: item.productId,
+    resellerListingId: item.resellerListingId,
     productName: item.name,
     vendorId: offer.vendor.id,
     vendorName: offer.vendor.name,

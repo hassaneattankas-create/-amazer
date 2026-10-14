@@ -38,6 +38,7 @@ export type CheckoutPayload = {
     vendor_id: string;
     quantity: number;
     unit_price: number;
+    reseller_listing_id?: string;
   }>;
   payment_mode: "nita" | "amana";
   delivery_type: "standard" | "express_niamey";

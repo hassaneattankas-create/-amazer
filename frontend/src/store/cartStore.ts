@@ -52,6 +52,7 @@ export const useCartStore = create<CartStoreState>()(
                       ...entry,
                       quantity: entry.quantity + quantity,
                       offersSnapshot: item.offersSnapshot,
+                      resellerListingId: item.resellerListingId,
                     }
                   : entry
               ),
@@ -66,6 +67,7 @@ export const useCartStore = create<CartStoreState>()(
                 name: item.name,
                 quantity,
                 offersSnapshot: item.offersSnapshot,
+                resellerListingId: item.resellerListingId,
               },
             ],
           };

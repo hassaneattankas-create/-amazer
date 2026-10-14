@@ -108,6 +108,7 @@ export default function CartPage() {
           vendor_id: entry.vendorId,
           quantity: entry.quantity,
           unit_price: entry.unitPrice,
+          reseller_listing_id: entry.resellerListingId,
         })),
         payment_mode: paymentMode,
         delivery_type: deliveryType,

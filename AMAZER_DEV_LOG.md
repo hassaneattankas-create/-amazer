@@ -377,6 +377,14 @@ Toutes les couleurs, rayons et espacements viennent des tokens du design system 
 - Accents corrigés dans les textes visibles (passe automatique limitée au texte ; une seconde passe trop large a été annulée).
 - Non refaits en profondeur (style unifié seulement) : espace vendeur /seller (formulaires), admin Finance et Tarifs, reçu.
 
+## 4 septvicies. Revente sans stock et formations — 2026-10-14
+
+- Revente sans stock (dropshipping intégré, modèle AliExpress / JForce) : un membre choisit une offre, fixe son prix (≥ prix boutique, ≤ 3×), partage sa boutique /revendeur/{id}. Le client paie le prix de revente ; `order_items.unit_price` reste le prix boutique (préparation, livraison et paiement vendeur inchangés) ; `reseller_margin` revient au revendeur.
+- Prix de revente toujours relu côté serveur (annonce liée à l'offre exacte) ; la vue publique n'expose ni prix boutique ni marge.
+- Gains : « en attente » (payé, non livré) puis « gagné » (livré) ; Admin → Revendeurs liste les montants à verser (Nita/Amana, manuel).
+- /formations : mini-formation AMAZER (7 leçons) + ressources externes gratuites vérifiées (liens testés le 2026-10-14).
+- Tests : backend 272.
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).

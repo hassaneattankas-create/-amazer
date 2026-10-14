@@ -145,6 +145,16 @@ export default function VendrePage() {
         </div>
       )}
 
+      <aside className="mt-6 flex flex-col items-start gap-3 rounded-card border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-semibold text-ink-900">Pas de stock ? Revendez sans boutique.</p>
+          <p className="text-sm text-ink-600">Choisissez des produits AMAZER, fixez votre prix, partagez votre lien : gratuit.</p>
+        </div>
+        <Button asChild variant="outline" className="shrink-0">
+          <Link href="/revendre">Revendre sans stock</Link>
+        </Button>
+      </aside>
+
       {pricing ? (
         <article className="mt-6 rounded-card border border-border bg-card p-5">
           <h2 className="font-semibold text-ink-900">Frais transparents</h2>

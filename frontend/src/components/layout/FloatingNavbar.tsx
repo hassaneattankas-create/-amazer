@@ -43,6 +43,8 @@ const clientNavItems = [
   { href: "/hotels", label: "Premium" },
   { href: "/promotions", label: "Promotions" },
   { href: "/avis", label: "Avis" },
+  { href: "/revendre", label: "Revendre sans stock" },
+  { href: "/formations", label: "Formations gratuites" },
 ];
 
 const sellerNavItems = [

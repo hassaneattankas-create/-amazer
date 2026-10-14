@@ -5,6 +5,8 @@ export type CartItem = {
   name: string;
   quantity: number;
   offersSnapshot: Offer[];
+  /** Achat via la boutique d'un revendeur : le serveur relit le prix de revente. */
+  resellerListingId?: string;
 };
 
 export type OptimizedPlanItem = {
@@ -16,6 +18,7 @@ export type OptimizedPlanItem = {
   unitPrice: number;
   subtotal: number;
   currency: string;
+  resellerListingId?: string;
 };
 
 export type OptimizeCartResult = {

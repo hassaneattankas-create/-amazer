@@ -329,13 +329,18 @@ export default function HomePage() {
         <div className="flex items-center gap-3">
           <Store className="h-8 w-8 shrink-0 text-brand-400" aria-hidden="true" />
           <div>
-            <p className="font-semibold">{t("Vous avez un commerce ?")}</p>
-            <p className="text-sm text-white/80">{t("Ouvrez votre boutique AMAZER et vendez partout.")}</p>
+            <p className="font-semibold">{t("Vendez ou revendez sur AMAZER")}</p>
+            <p className="text-sm text-white/80">{t("Ouvrez votre boutique, ou revendez nos produits sans stock et gardez la marge.")}</p>
           </div>
         </div>
-        <Button asChild className="shrink-0">
-          <Link href="/vendre">{t("Devenir vendeur")}</Link>
-        </Button>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Button asChild>
+            <Link href="/vendre">{t("Devenir vendeur")}</Link>
+          </Button>
+          <Button asChild variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white">
+            <Link href="/revendre">{t("Revendre sans stock")}</Link>
+          </Button>
+        </div>
       </aside>
     </section>
   );
