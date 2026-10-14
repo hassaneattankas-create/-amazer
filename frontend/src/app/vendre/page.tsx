@@ -58,7 +58,7 @@ const PLANS: Plan[] = [
   },
 ];
 
-const STEPS = ["Créez votre compte vendeur", "Payez l'abonnement (Nita ou Amana)", "Publiez vos produits et vendez"];
+const STEPS = ["Créez votre boutique : elle est en ligne tout de suite", "Publiez vos produits et vendez", "Payez l'abonnement après l'essai gratuit"];
 
 export default function VendrePage() {
   const { data: pricing, isPending, isError } = useQuery({

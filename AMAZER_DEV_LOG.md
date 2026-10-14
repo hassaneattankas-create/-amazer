@@ -394,6 +394,12 @@ Toutes les couleurs, rayons et espacements viennent des tokens du design system 
 - `order_items.reseller_commission` figé à la commande ; gains revendeur = marge − commission.
 - Tests : backend 282.
 
+## 4 novemvicies. Inscription vendeur immédiate — 2026-10-14
+
+- Décision du propriétaire : plus de validation admin avant la création d'une boutique. L'inscription vendeur crée compte + boutique tout de suite (inscription normale avec `seller_profile`), essai gratuit appliqué (7 jours en production), boutique visible pendant l'essai.
+- Plus de choix de formule à l'inscription : rappel de la formule choisie sur « Vendre » (lien « Changer »). Paiement retiré de l'inscription : il se fait depuis l'espace vendeur après l'essai.
+- L'admin garde la main : retrait / suspension d'une boutique dans Tarifs et Utilisateurs. Les anciennes demandes en attente restent traitables dans Tarifs.
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, CheckCircle2, Copy, Store, UtensilsCrossed } from "lucide-react";
+import { Building2, CheckCircle2, Store, UtensilsCrossed } from "lucide-react";
 
 import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
@@ -13,16 +13,13 @@ import { COUNTRIES, findCountry } from "@/lib/locale";
 import { useLocaleStore } from "@/store/locale-store";
 import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
-import { login, preRegisterSeller, register, verifyAccount, type RegisterResponse } from "@/services/auth-service";
-import { setPendingSellerPreReg } from "@/lib/pending-seller";
+import { login, register, verifyAccount, type RegisterResponse } from "@/services/auth-service";
 import { getPublicFinanceSettings } from "@/services/finance-service";
 import type { FinanceSettings } from "@/types/finance";
 import type { SellerActivityType, StorefrontTier } from "@/types/seller";
 
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 // Memes regles que le serveur, affichees en direct (pas de refus surprise a l'envoi).
-const MONTH_CHOICES = [1, 3, 6, 12] as const;
-const FALLBACK_WALLET = "+227 96 95 31 63";
 
 const PASSWORD_RULES: { label: string; test: (value: string) => boolean }[] = [
   { label: "8 caractères minimum", test: (v) => v.length >= 8 },
@@ -111,7 +108,7 @@ function RegisterPageContent() {
   const passwordValid = passwordRules.every((rule) => rule.ok);
   const [businessName, setBusinessName] = useState("");
   // Formule choisie sur la page « Vendre » (?type=shop|restaurant|enterprise).
-  const [sellerType, setSellerType] = useState<SellerRegistrationType>(() => {
+  const [sellerType] = useState<SellerRegistrationType>(() => {
     const requested = searchParams.get("type");
     return requested === "restaurant" || requested === "enterprise" ? requested : "shop";
   });
@@ -123,10 +120,6 @@ function RegisterPageContent() {
     preview: string | null;
   } | null>(null);
   const [verifyCode, setVerifyCode] = useState("");
-  const [paymentMode, setPaymentMode] = useState<"nita" | "amana">("nita");
-  const [subscriptionMonths, setSubscriptionMonths] = useState(1);
-  const [transactionRef, setTransactionRef] = useState("");
-  const [preRegSubmitted, setPreRegSubmitted] = useState(false);
 
   const next = searchParams.get("next") || "/";
   const isSellerFlow = useMemo(
@@ -134,11 +127,7 @@ function RegisterPageContent() {
     [next, searchParams]
   );
 
-  function updateSubscriptionMonths(months: number) {
-    setSubscriptionMonths(Math.max(1, Math.min(12, months)));
-  }
-
-  const { data: sellerPricing, isPending: sellerPricingPending, isError: sellerPricingError } = useQuery({
+  const { data: sellerPricing } = useQuery({
     queryKey: ["public-finance-settings"],
     queryFn: getPublicFinanceSettings,
     enabled: isSellerFlow,
@@ -150,29 +139,6 @@ function RegisterPageContent() {
     setStatus("");
     setIsLoading(true);
     try {
-      if (isSellerFlow) {
-        // Flux vendeur : pre-inscription, pas de compte cree avant confirmation admin
-        const preReg = await preRegisterSeller({
-          full_name: fullName.trim(),
-          identifier: identifier.trim(),
-          password,
-          business_name: businessName.trim() || fullName.trim(),
-          activity_type: sellerType,
-          storefront_tier: sellerType === "enterprise" ? "premium" : "basic",
-          payment_mode: paymentMode,
-          months: subscriptionMonths,
-          transaction_reference: transactionRef.trim() || undefined,
-        });
-        // Memorise la demande sur l'appareil pour pouvoir notifier l'activation
-        // du compte directement dans l'app, meme avant connexion.
-        setPendingSellerPreReg({
-          id: preReg.id,
-          identifier: identifier.trim(),
-          businessName: businessName.trim() || fullName.trim(),
-        });
-        setPreRegSubmitted(true);
-        return;
-      }
       const country = findCountry(countryCode);
       // La devise suit le pays choisi, sauf si le visiteur en a deja choisi une autre.
       const currency = localePrefs.chosen ? localePrefs.currency : country.currency;
@@ -187,6 +153,14 @@ function RegisterPageContent() {
         region: region.trim(),
         preferred_currency: currency,
         preferred_language: localePrefs.language,
+        // Vendeur : la boutique est creee immediatement (essai gratuit), sans attendre l'admin.
+        seller_profile: isSellerFlow
+          ? {
+              ...buildSellerProfilePayload(sellerType, fullName, businessName),
+              city: region.trim() || "Niamey",
+              whatsapp_contact: fullPhone || undefined,
+            }
+          : undefined,
       });
       if (reg.verification_channel && reg.verification_channel !== "none") {
         setPendingVerification({
@@ -229,9 +203,6 @@ function RegisterPageContent() {
     }
   }
 
-  const monthlyFee = sellerPricing ? sellerSubscriptionFee(sellerPricing, sellerType) : null;
-  const totalAmount = monthlyFee !== null ? monthlyFee * subscriptionMonths : null;
-
   const canSubmit =
     fullName.trim().length >= 2 &&
     identifier.length >= 6 &&
@@ -239,32 +210,9 @@ function RegisterPageContent() {
     phoneValid &&
     passwordValid &&
     acceptedLegal &&
-    (!isSellerFlow || ((businessName.trim().length >= 2 || fullName.trim().length >= 2) && transactionRef.trim().length >= 4));
+    (!isSellerFlow || businessName.trim().length >= 2 || fullName.trim().length >= 2);
 
   const canVerify = verifyCode.trim().length >= 4 && identifier.trim().length >= 6;
-  const walletNumber = sellerPricing?.platform_wallet_phone || FALLBACK_WALLET;
-
-  if (preRegSubmitted) {
-    return (
-      <section className="mx-auto max-w-xl px-gutter py-8">
-        <article className="rounded-card border border-border bg-card p-6 text-center">
-          <CheckCircle2 className="mx-auto h-12 w-12 text-success" aria-hidden="true" />
-          <h1 className="mt-3 text-2xl font-semibold text-ink-900">Demande envoyée</h1>
-          <p className="mt-2 text-sm text-ink-700">
-            Nous vérifions votre paiement sur le <span className="font-semibold">{walletNumber}</span>. Votre boutique est
-            créée dès la confirmation.
-          </p>
-          <p className="mt-2 text-sm text-ink-600">
-            Vous serez prévenu ici, même sans être connecté. Vous pourrez ensuite vous connecter avec{" "}
-            <span className="font-medium text-ink-900">{identifier}</span>.
-          </p>
-          <Button asChild variant="outline" className="mt-5">
-            <Link href="/">Retour à l&apos;accueil</Link>
-          </Button>
-        </article>
-      </section>
-    );
-  }
 
   if (pendingVerification) {
     return (
@@ -342,44 +290,19 @@ function RegisterPageContent() {
 
         {isSellerFlow ? (
           <>
-            <ol className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-ink-600" aria-label="Étapes">
-              <li>1. Formule</li>
-              <li>2. Vos informations</li>
-              <li>3. Paiement</li>
-            </ol>
-            <h2 className="mt-5 text-sm font-semibold text-ink-900">1. Choisissez votre formule</h2>
-            <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="Formule">
-              {SELLER_TYPE_OPTIONS.map((option) => {
-                const Icon = option.icon;
-                const isActive = sellerType === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={isActive}
-                    onClick={() => setSellerType(option.value)}
-                    className={`relative rounded-card border p-3 text-left transition-colors duration-fast sm:p-4 ${
-                      isActive ? "border-brand-500 bg-brand-50" : "border-border bg-card hover:border-ink-400"
-                    }`}
-                  >
-                    {isActive ? (
-                      <CheckCircle2 className="absolute right-2 top-2 h-4 w-4 text-brand-600 sm:h-5 sm:w-5" aria-hidden="true" />
-                    ) : null}
-                    <Icon className="h-5 w-5 text-brand-600" aria-hidden="true" />
-                    <p className="mt-2 text-sm font-semibold text-ink-900 sm:text-base">{option.title}</p>
-                    <p className="hidden text-xs text-ink-600 sm:block">{option.description}</p>
-                    {sellerPricing ? (
-                      <p className="mt-1 text-xs font-bold text-ink-900 sm:mt-2 sm:text-sm">
-                        {formatXOF(sellerSubscriptionFee(sellerPricing, option.value))}
-                        <span className="block font-normal text-ink-600 sm:inline"> / mois</span>
-                      </p>
-                    ) : null}
-                  </button>
-                );
-              })}
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-card border border-border bg-surface-1 px-4 py-3">
+              <p className="flex items-center gap-2 text-sm text-ink-800">
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-success" aria-hidden="true" />
+                <span>
+                  Formule <span className="font-semibold">{SELLER_TYPE_OPTIONS.find((o) => o.value === sellerType)?.title}</span>
+                  {sellerPricing ? <> · {formatXOF(sellerSubscriptionFee(sellerPricing, sellerType))} / mois</> : null}
+                </span>
+              </p>
+              <Link href="/vendre" className="inline-flex min-h-11 items-center text-sm font-medium text-brand-700 hover:underline">
+                Changer
+              </Link>
             </div>
-            <h2 className="mt-6 text-sm font-semibold text-ink-900">2. Vos informations</h2>
+            <h2 className="mt-5 text-sm font-semibold text-ink-900">Vos informations</h2>
           </>
         ) : null}
 
@@ -526,92 +449,15 @@ function RegisterPageContent() {
           </div>
 
           {isSellerFlow ? (
-            <fieldset className="space-y-4 rounded-card border border-border bg-surface-1 p-4">
-              <legend className="px-1 text-sm font-semibold text-ink-900">3. Paiement de l&apos;abonnement</legend>
-              <div>
-                <p className="text-sm font-medium text-ink-800">Durée</p>
-                <div className="mt-1 grid grid-cols-4 gap-2" role="radiogroup" aria-label="Durée de l'abonnement">
-                  {MONTH_CHOICES.map((months) => (
-                    <button
-                      key={months}
-                      type="button"
-                      role="radio"
-                      aria-checked={subscriptionMonths === months}
-                      onClick={() => updateSubscriptionMonths(months)}
-                      className={`min-h-11 rounded-field border text-sm font-semibold ${
-                        subscriptionMonths === months
-                          ? "border-ink-900 bg-ink-900 text-white"
-                          : "border-border bg-card text-ink-800 hover:border-ink-400"
-                      }`}
-                    >
-                      {months} mois
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-ink-800">Moyen de paiement</p>
-                <div className="mt-1 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Moyen de paiement">
-                  {(["nita", "amana"] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      role="radio"
-                      aria-checked={paymentMode === mode}
-                      onClick={() => setPaymentMode(mode)}
-                      className={`min-h-11 rounded-field border text-sm font-semibold ${
-                        paymentMode === mode
-                          ? "border-ink-900 bg-ink-900 text-white"
-                          : "border-border bg-card text-ink-800 hover:border-ink-400"
-                      }`}
-                    >
-                      {mode === "nita" ? "Nita" : "Amana"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="rounded-field border border-border bg-card p-3 text-sm text-ink-800">
-                <p>
-                  Envoyez{" "}
-                  <span className="text-lg font-bold text-ink-900">
-                    {totalAmount !== null ? formatXOF(totalAmount) : "le montant de l'abonnement"}
-                  </span>{" "}
-                  par {paymentMode === "nita" ? "Nita" : "Amana"} au
-                </p>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <span className="text-lg font-bold tracking-wide text-ink-900">{walletNumber}</span>
-                  <button
-                    type="button"
-                    onClick={() => void navigator.clipboard?.writeText(walletNumber.replace(/\s/g, ""))}
-                    className="inline-flex min-h-9 items-center gap-1 rounded-field border border-border px-2 text-xs font-medium text-ink-700 hover:bg-surface-1"
-                  >
-                    <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-                    Copier
-                  </button>
-                </div>
-                {totalAmount !== null && subscriptionMonths > 1 ? (
-                  <p className="mt-1 text-xs text-ink-600">
-                    {subscriptionMonths} mois × {formatXOF(monthlyFee!)}
-                  </p>
-                ) : null}
-              </div>
-              <div>
-                <label className="text-sm font-medium text-ink-800" htmlFor="transaction-ref">
-                  Référence du paiement (reçue par SMS)
-                </label>
-                <input
-                  id="transaction-ref"
-                  type="text"
-                  required
-                  value={transactionRef}
-                  onChange={(e) => setTransactionRef(e.target.value)}
-                  className="mt-1 h-11 w-full rounded-field border border-border bg-card px-3 text-sm"
-                />
-              </div>
-              <p className="text-xs text-ink-600">
-                Votre boutique est créée dès que AMAZER a vérifié le paiement. Vous êtes prévenu automatiquement.
-              </p>
-            </fieldset>
+            <p className="rounded-card border border-border bg-surface-1 px-4 py-3 text-sm text-ink-800">
+              Votre boutique est en ligne dès la création du compte
+              {(sellerPricing?.seller_trial_days ?? 0) > 0 ? (
+                <>
+                  , avec <span className="font-semibold">{sellerPricing?.seller_trial_days} jours d&apos;essai gratuit</span>
+                </>
+              ) : null}
+              . Vous payerez ensuite l&apos;abonnement depuis votre espace vendeur.
+            </p>
           ) : null}
 
           <label className="flex items-center gap-2 text-xs text-ink-600">
@@ -639,7 +485,7 @@ function RegisterPageContent() {
             disabled={isLoading || !canSubmit}
             className="w-full"
           >
-            {isLoading ? "Envoi…" : isSellerFlow ? "Envoyer ma demande" : "Créer mon compte"}
+            {isLoading ? "Création…" : isSellerFlow ? "Créer ma boutique" : "Créer mon compte"}
           </Button>
         </form>
 
