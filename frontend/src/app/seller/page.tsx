@@ -1119,7 +1119,7 @@ function SellerPageContent() {
                 setProductForm((prev) => ({ ...prev, category_id: event.target.value }))
               }
             >
-              <option value="">Categorie (optionnel)</option>
+              <option value="">Catégorie : automatique</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}

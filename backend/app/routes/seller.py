@@ -54,6 +54,7 @@ from app.schemas.seller import (
     SellerStorefrontResponse,
 )
 from app.schemas.seller_lead import SellerLeadCreateRequest, SellerLeadResponse
+from app.services.category_classifier import guess_category_id
 from app.services.audit_log_service import append_audit_log
 from app.services.order_cancellation_service import ensure_not_cancelled
 from app.services.order_fulfillment_service import set_vendor_status, vendor_status
@@ -671,7 +672,8 @@ def create_product_listing(
         brand=payload.brand,
         description=payload.description,
         main_image_url=payload.main_image_url,
-        category_id=payload.category_id,
+        # Sans choix du vendeur, on range le produit automatiquement (sinon il n'apparait dans aucun filtre).
+        category_id=payload.category_id or guess_category_id(db, payload.name, payload.description),
         specs={},
     )
     db.add(product)

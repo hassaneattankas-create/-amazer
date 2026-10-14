@@ -296,11 +296,28 @@ def _ensure_admin_account() -> None:
         db.close()
 
 
+def _assign_missing_categories() -> None:
+    """Range automatiquement les produits publies sans categorie (filtres de l'accueil)."""
+    from app.services.category_classifier import assign_missing_categories
+
+    db = SessionLocal()
+    try:
+        updated = assign_missing_categories(db)
+        if updated:
+            logger.info("Categories attribuees automatiquement a %s produit(s).", updated)
+    except Exception:  # noqa: BLE001 - ne doit jamais empecher le demarrage
+        db.rollback()
+        logger.exception("Attribution automatique des categories impossible.")
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     if settings.bootstrap_on_startup:
         _bootstrap_database_if_needed()
     _ensure_admin_account()
+    _assign_missing_categories()
     if settings.is_production() and settings.curated_public_catalog_mode:
         from seed_demo_storefronts import main as seed_storefronts_main
         from seed_demo_restaurants import main as seed_restaurants_main
