@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
+from app.core.crypto import decrypt_phone_value
 from app.core.exceptions import NotFoundError
 from app.models.product import Price, Product
 from app.repositories.product_repository import ProductRepository, SearchOfferRow
@@ -28,6 +29,13 @@ from app.services.public_catalog_policy import (
     is_allowed_public_product_offer,
     product_seed_source,
 )
+
+
+def _seller_contact(profile) -> str | None:
+    """Numero public du vendeur pour les questions des clients (WhatsApp, sinon telephone)."""
+    if profile is None:
+        return None
+    return getattr(profile, "whatsapp_contact", None) or decrypt_phone_value(getattr(profile, "phone", None))
 
 
 @dataclass(frozen=True)
@@ -256,9 +264,7 @@ class ProductService:
                 is_verified=bool(
                     getattr(getattr(offer.row.price.vendor, "seller_profile", None), "is_verified", False)
                 ),
-                whatsapp_contact=getattr(
-                    getattr(offer.row.price.vendor, "seller_profile", None), "whatsapp_contact", None
-                ),
+                whatsapp_contact=_seller_contact(getattr(offer.row.price.vendor, "seller_profile", None)),
             ),
             currency=offer.row.price.currency,
             amount=offer.row.price.amount,
