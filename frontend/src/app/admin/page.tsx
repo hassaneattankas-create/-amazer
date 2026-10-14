@@ -1,56 +1,59 @@
 import Link from "next/link";
+import { CreditCard, Flag, FolderTree, Layers, QrCode, SlidersHorizontal, Users, type LucideIcon } from "lucide-react";
+
+type AdminLink = { href: string; title: string; description: string; icon: LucideIcon };
+
+// Regroupe par usage quotidien : d'abord ce qui demande une action, puis les reglages.
+const GROUPS: { title: string; items: AdminLink[] }[] = [
+  {
+    title: "À traiter",
+    items: [
+      { href: "/admin/finance", title: "Paiements et commandes", description: "Valider les paiements, suivre et annuler les commandes.", icon: CreditCard },
+      { href: "/admin/moderation", title: "Modération", description: "Signalements des clients et produits masqués.", icon: Flag },
+      { href: "/admin/receipt-scan", title: "Confirmer une livraison", description: "Scanner le QR code du reçu client.", icon: QrCode },
+    ],
+  },
+  {
+    title: "Gestion",
+    items: [
+      { href: "/admin/users", title: "Utilisateurs", description: "Rôles (admin, livreur), retrait et suppression de comptes.", icon: Users },
+      { href: "/admin/tarifs", title: "Tarifs et vendeurs", description: "Commission, frais, livraison par quartier, abonnements.", icon: SlidersHorizontal },
+      { href: "/admin/catalog", title: "Catégories", description: "Catégories du catalogue.", icon: FolderTree },
+      { href: "/admin/sections", title: "Sections de l'accueil", description: "Blocs mis en avant sur le site.", icon: Layers },
+    ],
+  },
+];
 
 export default function AdminHomePage() {
-  const items = [
-    {
-      href: "/admin/tarifs",
-      title: "Tarifs & Commission",
-      description: "Configurer commission, frais plateforme, livraison et contacts publics.",
-    },
-    {
-      href: "/admin/finance",
-      title: "Finance",
-      description: "Suivre les flux, virements simules et historique financiere.",
-    },
-    {
-      href: "/admin/users",
-      title: "Utilisateurs",
-      description: "Suivre le nombre d'utilisateurs, desactiver/restaurer les comptes et piloter l'activite.",
-    },
-    {
-      href: "/admin/catalog",
-      title: "Catalogues",
-      description: "Gerer categories et rubriques dynamiques du site.",
-    },
-    {
-      href: "/admin/sections",
-      title: "Sections Dynamiques",
-      description: "Organiser les blocs home: Meilleures Ventes, Nouveautes, Tendances.",
-    },
-    {
-      href: "/admin/receipt-scan",
-      title: "Validation Recu",
-      description: "Vérifier les QR reçus et bloquer les doubles usages.",
-    },
-  ];
-
   return (
-    <section className="space-y-5">
-      <header className="premium-card border border-slate-200 bg-white p-6">
-        <h1 className="luxury-title text-3xl font-semibold">Panneau Proprietaire AMAZER</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Espace prive de configuration. Les clients et vendeurs ne voient pas ces fonctionnalites.
-        </p>
+    <section className="space-y-6">
+      <header>
+        <h1 className="text-2xl font-semibold text-ink-900">Administration AMAZER</h1>
+        <p className="mt-1 text-sm text-ink-600">Visible uniquement par l&apos;équipe AMAZER.</p>
       </header>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {items.map((item) => (
-          <Link key={item.href} href={item.href} className="premium-card border border-slate-200 bg-white p-5">
-            <h2 className="text-lg font-semibold text-slate-900">{item.title}</h2>
-            <p className="mt-2 text-sm text-slate-600">{item.description}</p>
-          </Link>
-        ))}
-      </div>
+      {GROUPS.map((group) => (
+        <div key={group.title}>
+          <h2 className="text-sm font-semibold uppercase tracking-label text-ink-600">{group.title}</h2>
+          <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {group.items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex gap-3 rounded-card border border-border bg-card p-4 transition-colors duration-fast hover:border-ink-400"
+                >
+                  <Icon className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" aria-hidden="true" />
+                  <span>
+                    <span className="block font-semibold text-ink-900">{item.title}</span>
+                    <span className="mt-0.5 block text-sm text-ink-600">{item.description}</span>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </section>
   );
 }

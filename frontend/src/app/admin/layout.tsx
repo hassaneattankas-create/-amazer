@@ -11,14 +11,14 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { isAdminEmail } from "@/lib/admin";
 
 const adminNavItems = [
-  { href: "/admin", label: "Vue Generale", icon: BarChart3 },
-  { href: "/admin/tarifs", label: "Tarifs & Vendeurs", icon: SlidersHorizontal },
+  { href: "/admin", label: "Vue générale", icon: BarChart3 },
+  { href: "/admin/tarifs", label: "Tarifs et vendeurs", icon: SlidersHorizontal },
   { href: "/admin/finance", label: "Finance", icon: CreditCard },
   { href: "/admin/users", label: "Utilisateurs", icon: Users },
   { href: "/admin/catalog", label: "Catalogues", icon: FolderTree },
-  { href: "/admin/moderation", label: "Moderation", icon: Flag },
+  { href: "/admin/moderation", label: "Modération", icon: Flag },
   { href: "/admin/sections", label: "Sections", icon: Layers },
-  { href: "/admin/receipt-scan", label: "Scan Recu", icon: QrCode },
+  { href: "/admin/receipt-scan", label: "Confirmer une livraison", icon: QrCode },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
