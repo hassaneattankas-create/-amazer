@@ -436,7 +436,7 @@ function RegisterPageContent() {
           <fieldset className="space-y-3">
             <legend className="text-sm font-medium text-slate-800">Comment vous joindre</legend>
             <p className="text-xs text-slate-600">
-              Indiquez au moins l&apos;un des deux. Avec les deux, vous recevez vos notifications par e-mail et WhatsApp.
+              Indiquez au moins l&apos;un des deux. Avec un e-mail, vous recevez aussi vos notifications par e-mail.
             </p>
             <div>
               <label className="text-sm font-medium text-slate-800" htmlFor="email">

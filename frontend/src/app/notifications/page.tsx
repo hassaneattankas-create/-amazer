@@ -100,11 +100,11 @@ export default function NotificationsPage() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-4xl space-y-6 px-4 pb-14 sm:px-6">
+    <section className="mx-auto w-full max-w-3xl space-y-4 px-gutter pb-14 pt-4">
       <header className="premium-card border border-slate-200 bg-white p-6">
-        <h1 className="luxury-title text-3xl font-semibold">Notifications</h1>
+        <h1 className="text-2xl font-semibold text-ink-900">Notifications</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Commandes, paiements, messages et livraisons. Elles partent aussi par e-mail et WhatsApp.
+          Commandes, paiements, messages et livraisons. Elles vous sont aussi envoyées par e-mail.
         </p>
         <div className="mt-3">
           <ContactReminder />
@@ -115,7 +115,7 @@ export default function NotificationsPage() {
           </Button>
           <Button
             type="button"
-            className="border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
+            variant="outline"
             onClick={handleClearAll}
             disabled={isBusy}
           >
@@ -130,10 +130,8 @@ export default function NotificationsPage() {
           {items.map((item) => {
             const content = (
               <div
-                className={`rounded-2xl border p-4 transition ${
-                  item.unread
-                    ? "border-brand-300 bg-orange-50"
-                    : "border-slate-200 bg-slate-50"
+                className={`rounded-card border p-4 transition-colors duration-fast hover:border-ink-400 ${
+                  item.unread ? "border-brand-500 bg-card" : "border-border bg-card"
                 }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -164,7 +162,7 @@ export default function NotificationsPage() {
             return <div key={item.id}>{content}</div>;
           })}
           {!items.length ? (
-            <p className="text-sm text-slate-500">Aucune notification pour le moment.</p>
+            <p className="py-6 text-center text-sm text-ink-600">Aucune notification pour le moment. Vous serez prévenu ici à chaque étape de vos commandes.</p>
           ) : null}
           {items.length > 0 && hasMore ? (
             <div className="pt-2 text-center">
@@ -175,7 +173,7 @@ export default function NotificationsPage() {
                 disabled={loadingMore}
                 className="text-sm"
               >
-                {loadingMore ? "Chargement..." : "Charger plus"}
+                {loadingMore ? "Chargement…" : "Voir plus"}
               </Button>
             </div>
           ) : null}

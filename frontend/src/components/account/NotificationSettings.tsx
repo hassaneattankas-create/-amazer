@@ -94,7 +94,7 @@ export function NotificationSettings() {
         Notifications
       </h2>
       <p className="mt-1 text-sm text-ink-600">
-        Commandes, paiements, messages et livraisons : en plus du site, vous les recevez directement ici.
+        Commandes, paiements, messages et livraisons : en plus du site, vous les recevez par e-mail.
       </p>
 
       <ul className="mt-4 divide-y divide-border">
@@ -176,14 +176,7 @@ export function NotificationSettings() {
               </form>
             )}
           </div>
-          {hasPhone ? (
-            <Toggle
-              label="Notifications WhatsApp"
-              checked={prefs?.notify_whatsapp !== false}
-              disabled={channels.isPending}
-              onChange={(value) => channels.mutate({ notify_whatsapp: value })}
-            />
-          ) : null}
+          {hasPhone ? <span className="text-xs text-ink-600">Notifications WhatsApp : bientôt</span> : null}
         </li>
       </ul>
       {message ? (

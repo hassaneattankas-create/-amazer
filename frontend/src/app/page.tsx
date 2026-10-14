@@ -125,6 +125,23 @@ export default function HomePage() {
     setQuery(value);
   };
 
+  // Recherche partageable : ?q= est lu a l'ouverture et tenu a jour pendant la saisie.
+  useEffect(() => {
+    // Lu apres le premier rendu (le HTML serveur ne connait pas l'URL) : pas d'ecart d'hydratation.
+    const initial = new URLSearchParams(window.location.search).get("q");
+    if (!initial) return undefined;
+    const timer = window.setTimeout(() => setQuery(initial), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const value = debouncedQuery.trim();
+    if ((url.searchParams.get("q") ?? "") === value) return;
+    if (value) url.searchParams.set("q", value);
+    else url.searchParams.delete("q");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search);
+  }, [debouncedQuery]);
+
   useEffect(() => {
     try {
       window.localStorage.setItem(HOME_STATE_DRAFT_KEY, JSON.stringify({ query, barcode, category }));
