@@ -78,7 +78,7 @@ export function ManualPaymentCard({
                     <p>Le numéro de paiement Nita n&apos;est pas encore disponible : contactez le support avant de payer.</p>
                   )}
                   <p className="mt-1">
-                    Saisissez ensuite la reference de votre transaction. La commande sera confirmee apres verification
+                    Saisissez ensuite la référence de votre transaction. La commande sera confirmée après vérification
                     par AMAZER.
                   </p>
                 </div>

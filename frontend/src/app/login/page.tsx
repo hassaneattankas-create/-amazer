@@ -102,7 +102,7 @@ function LoginPageContent() {
 
           <p className="text-sm text-slate-600">
             <Link href="/forgot-password" className="font-medium text-brand-600 hover:underline">
-              Mot de passe oublie ?
+              Mot de passe oublié ?
             </Link>
           </p>
 
@@ -116,7 +116,7 @@ function LoginPageContent() {
           <p className="text-sm text-slate-600">
             Pas encore de compte ?{" "}
             <Link href="/register" className="font-medium text-brand-600 hover:underline">
-              Creer un compte client
+              Créer un compte client
             </Link>
             {" "}ou{" "}
             <Link href={sellerRegisterHref} className="font-medium text-brand-600 hover:underline">

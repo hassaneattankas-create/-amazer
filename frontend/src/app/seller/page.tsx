@@ -525,7 +525,7 @@ function SellerPageContent() {
           </p>
           {subscriptionStatus?.has_pending_payment_request ? (
             <p className="mt-3 text-sm font-medium text-sky-900">
-              Paiement de renouvellement deja soumis — en attente de validation admin. Tu recevras une notification.
+              Paiement de renouvellement déjà soumis — en attente de validation admin. Tu recevras une notification.
             </p>
           ) : (
             <div className="mt-4 space-y-3">
@@ -621,7 +621,7 @@ function SellerPageContent() {
           ) : null}
           {subscriptionStatus?.has_pending_payment_request ? (
             <p className="mt-3 text-sm font-medium text-amber-900">
-              Paiement deja soumis. En attente de validation par l&apos;admin. Une notification t&apos;avertira des la decision.
+              Paiement déjà soumis. En attente de validation par l&apos;admin. Une notification t&apos;avertira dès la décision.
             </p>
           ) : null}
           {!hasActiveSubscription && hasProfile && subscriptionStatus?.onboarding_fee_paid ? (

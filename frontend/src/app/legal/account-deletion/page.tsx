@@ -2,49 +2,43 @@ import Link from "next/link";
 
 export default function AccountDeletionPage() {
   return (
-    <section className="mx-auto w-full max-w-4xl px-4 pb-16 sm:px-6">
-      <article className="premium-card border border-slate-200 bg-white p-6">
-        <h1 className="luxury-title text-3xl font-semibold text-slate-900">
-          Suppression De Compte AMAZER
-        </h1>
-        <p className="mt-3 text-sm text-slate-600">Dernière mise à jour: 25/03/2026</p>
+    <section className="mx-auto w-full max-w-4xl px-gutter pb-16 pt-4">
+      <article className="rounded-card border border-border bg-card p-6">
+        <h1 className="text-3xl font-semibold text-ink-900">Supprimer votre compte</h1>
+        <p className="mt-3 text-sm text-ink-600">Dernière mise à jour : 14/10/2026</p>
 
-        <div className="mt-6 space-y-4 text-sm text-slate-700">
+        <div className="mt-6 space-y-4 text-sm text-ink-700">
+          <h2 className="text-base font-semibold text-ink-900">Depuis l&apos;application</h2>
           <p>
-            Cette page permet aux utilisateurs AMAZER de comprendre comment demander la suppression
-            de leur compte et des donnees associees.
+            Connectez-vous, ouvrez{" "}
+            <Link href="/dashboard" className="font-medium text-brand-700 hover:underline">
+              Mon compte
+            </Link>
+            , puis « Supprimer mon compte ». Votre mot de passe vous est demandé pour confirmer.
           </p>
+          <h2 className="pt-2 text-base font-semibold text-ink-900">Sans accès à votre compte</h2>
           <p>
-            Methode recommandee: connectez-vous a votre compte, ouvrez le dashboard, puis utilisez
-            la section <span className="font-medium text-slate-900">Suppression Du Compte</span>.
-            La suppression demande votre mot de passe actuel pour confirmer l operation.
-          </p>
-          <p>
-            Si vous ne pouvez plus acceder a l application, envoyez une demande depuis l adresse
-            email ou le numero WhatsApp associe au compte a{" "}
-            <a className="font-medium text-brand-600 hover:underline" href="mailto:amazer.niger2@gmail.com">
+            Écrivez à{" "}
+            <a className="font-medium text-brand-700 hover:underline" href="mailto:amazer.niger2@gmail.com">
               amazer.niger2@gmail.com
             </a>{" "}
-            en indiquant:
+            depuis l&apos;e-mail ou le numéro WhatsApp du compte, en indiquant :
           </p>
-          <ul className="list-disc space-y-2 pl-5 text-sm text-slate-700">
-            <li>votre identifiant de compte (email ou numéro WhatsApp),</li>
-            <li>la mention explicite que vous demandez la suppression du compte AMAZER,</li>
+          <ul className="list-disc space-y-2 pl-5">
+            <li>votre identifiant (e-mail ou numéro WhatsApp) ;</li>
+            <li>que vous demandez la suppression de votre compte AMAZER ;</li>
             <li>toute information utile pour vérifier votre identité.</li>
           </ul>
+          <h2 className="pt-2 text-base font-semibold text-ink-900">Ce qui se passe</h2>
           <p>
-            Effet de la suppression: le compte est desactive, les sessions sont revoquees, les
-            donnees d identification directe sont supprimees ou anonymisees, et les offres vendeur
-            associees sont desactivees.
+            Le compte est désactivé, les sessions sont fermées, les données d&apos;identification sont effacées ou
+            anonymisées et les offres vendeur sont retirées. Certaines données peuvent être conservées si la sécurité, la
+            prévention de la fraude, la loi ou un litige l&apos;exigent.
           </p>
           <p>
-            Certaines donnees peuvent etre conservees si cela est necessaire pour la securite, la
-            prevention de fraude, le respect d obligations legales ou la resolution de litiges.
-          </p>
-          <p>
-            Pour plus d informations, consultez la{" "}
-            <Link className="font-medium text-brand-600 hover:underline" href="/legal/privacy">
-              politique de confidentialite
+            Plus d&apos;informations :{" "}
+            <Link className="font-medium text-brand-700 hover:underline" href="/legal/privacy">
+              politique de confidentialité
             </Link>
             .
           </p>

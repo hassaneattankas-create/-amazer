@@ -146,7 +146,7 @@ export default function ForgotPasswordPage() {
         ) : null}
 
         <p className="mt-6 text-sm text-ink-600">
-          Aucun code recu ?{" "}
+          Aucun code reçu ?{" "}
           <a className="font-medium text-brand-600 hover:underline" href={SUPPORT_MAILTO}>
             Contactez le support
           </a>{" "}

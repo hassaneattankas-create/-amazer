@@ -247,7 +247,7 @@ function RegisterPageContent() {
           <div className="text-4xl">✅</div>
           <h1 className="luxury-title text-2xl font-semibold text-slate-900">Demande envoyee !</h1>
           <p className="text-sm text-slate-600">
-            Votre demande a ete recue. Nous allons verifier votre paiement sur le{" "}
+            Votre demande a été reçue. Nous allons vérifier votre paiement sur le{" "}
             <span className="font-semibold text-slate-900">+227 96 95 31 63</span>.
             Votre compte et votre boutique seront crees des que le paiement sera confirme.
           </p>
@@ -272,12 +272,12 @@ function RegisterPageContent() {
           <p className="mt-2 text-sm text-slate-600">
             {pendingVerification.channel === "retry" ? (
               <>
-                Saisissez le code recu par WhatsApp ou e-mail pour{" "}
+                Saisissez le code reçu par WhatsApp ou e-mail pour{" "}
                 <span className="font-medium text-slate-900">{pendingVerification.masked}</span>.
               </>
             ) : (
               <>
-                Un code a ete envoye
+                Un code a été envoyé
                 {pendingVerification.channel === "whatsapp"
                   ? " par WhatsApp"
                   : pendingVerification.channel === "email"
@@ -519,9 +519,9 @@ function RegisterPageContent() {
                   ? `Deposez ${formatXOF(totalAmount)} (${subscriptionMonths} mois × ${formatXOF(monthlyFee!)})`
                   : "Deposez le montant de votre abonnement"}{" "}
                 sur le <span className="text-brand-600">+227 96 95 31 63</span> via Nita ou Amana,
-                puis saisissez la reference de transaction ci-dessous.
-                Les informations fournies serviront a verifier votre paiement.
-                Votre compte et votre boutique seront crees uniquement apres confirmation du paiement.
+                puis saisissez la référence de transaction ci-dessous.
+                Les informations fournies serviront à vérifier votre paiement.
+                Votre compte et votre boutique seront créés uniquement après confirmation du paiement.
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
                 <select

@@ -9,6 +9,7 @@ import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { SingleMediaField } from "@/components/seller/MediaFields";
+import { SellerKpis } from "@/components/seller/SellerKpis";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatXOF } from "@/lib/currency";
@@ -455,6 +456,8 @@ export default function SellerDashboardPage() {
         </div>
       </header>
 
+      {showProductTools ? <SellerKpis orders={shopOrders} inventory={inventory} /> : null}
+
       {profile?.storefront_tier === "premium" ||
       profile?.activity_type === "enterprise" ||
       profile?.activity_type === "hotel" ? (
@@ -775,9 +778,9 @@ export default function SellerDashboardPage() {
 
         {showProductTools ? (
           <article className="premium-card border border-slate-200 bg-white p-6">
-            <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
+            <h2 id="commandes" className="luxury-title inline-flex scroll-mt-24 items-center gap-2 text-xl font-semibold">
               <Clock3 className="h-5 w-5 text-brand-600" />
-              Commandes boutique en temps reel
+              Commandes boutique en temps réel
             </h2>
             <div className="mt-4 space-y-3">
               {shopOrders.map((order) => {
@@ -912,7 +915,7 @@ export default function SellerDashboardPage() {
         {showProductTools && !isInventoryPending && !isProfilePending ? (
           <div className="space-y-3">
             <article className="premium-card border border-slate-200 bg-white p-6">
-              <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
+              <h2 id="catalogue" className="luxury-title inline-flex scroll-mt-24 items-center gap-2 text-xl font-semibold">
                 <Boxes className="h-5 w-5 text-brand-600" />
 Catalogue produits
               </h2>
@@ -1060,7 +1063,7 @@ Catalogue produits
           <article className="premium-card mt-3 border border-rose-200 bg-rose-50 p-5">
             <h2 className="text-sm font-semibold text-rose-700">Suppression du compte vendeur</h2>
             <p className="mt-1 text-xs text-rose-700/80">
-              Action irreversible: boutique fermee et donnees anonymisees.
+              Action irréversible : boutique fermée et données anonymisées.
             </p>
             <form className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center" onSubmit={onDeleteAccount}>
               <PasswordInput

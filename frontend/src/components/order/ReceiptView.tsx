@@ -189,7 +189,7 @@ export function ReceiptView({
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="luxury-title bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-400 bg-clip-text text-2xl font-semibold text-transparent">
-              Recu securise AMAZER
+              Reçu sécurisé AMAZER
             </h1>
             <p className="mt-1 text-sm text-slate-600">Commande #{receipt.order_id}</p>
           </div>
@@ -291,7 +291,7 @@ export function ReceiptView({
         <div className="mt-5 space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
           <p className="text-sm font-semibold text-slate-900">Paiement mobile ({receipt.payment_mode.toUpperCase()})</p>
           <p className="text-xs text-slate-600">
-            Faites le versement manuellement au numero AMAZER ci-dessous, puis revenez confirmer que le paiement est bien
+            Faites le versement au numéro AMAZER ci-dessous, puis revenez confirmer que le paiement est bien
             effectue.
           </p>
           <p className="text-sm text-slate-800">
@@ -318,17 +318,17 @@ export function ReceiptView({
 
       <div className="flex flex-wrap gap-2">
         <Button onClick={downloadPdf} className="primary-glow-btn bg-brand-600 text-white hover:bg-brand-700">
-          Telecharger le recu (PDF)
+          Télécharger le reçu (PDF)
         </Button>
         <Button onClick={saveAsImage} className="border border-slate-200 bg-white text-slate-800 hover:bg-slate-50">
           Enregistrer en image
         </Button>
         <Button onClick={sharePdf} className="border border-slate-200 bg-white text-slate-800 hover:bg-slate-50">
-          Partager le recu (PDF)
+          Partager le reçu (PDF)
         </Button>
       </div>
       <p className="text-xs text-slate-500">
-        Sur mobile, l&apos;option image permet de sauvegarder le recu comme photo ou de l&apos;envoyer vers la galerie.
+        Sur mobile, l&apos;option image permet de sauvegarder le reçu comme photo ou de l&apos;envoyer vers la galerie.
       </p>
       {status ? <p className="text-sm text-slate-700">{status}</p> : null}
     </section>

@@ -48,7 +48,7 @@ function PayoutNotice({
   if (!payoutPhone) {
     return (
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-        Le vendeur n&apos;a pas encore renseigne son numero de versement. Contacte-le avant de payer.
+        Le vendeur n&apos;a pas encore renseigné son numéro de versement. Contacte-le avant de payer.
       </div>
     );
   }
