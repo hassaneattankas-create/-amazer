@@ -18,10 +18,13 @@ const mocks = [
   [/\/seller\/inventory$/, products],
   [/\/seller\/orders$/, orders],
   [/\/categories/, { items: [] }],
+  [/\/seller\/subscription-status$/, { has_seller_profile: true, onboarding_fee_paid: true, onboarding_fee_paid_at: null, subscription_paid_until: new Date(Date.now() + 4 * 86400000).toISOString(), subscription_active: true, monthly_fee: 1000, onboarding_fee: 0, amount_due_now: 0, currency: "XOF", has_pending_payment_request: false }],
 ];
 
 const browser = await puppeteer.launch({ headless: true });
 const page = await browser.newPage();
+page.on("console", (m) => { if (["error", "warn"].includes(m.type())) console.log("console:", m.text().slice(0, 300)); });
+page.on("pageerror", (e) => console.log("pageerror:", e.message.slice(0, 300)));
 await page.setRequestInterception(true);
 page.on("request", (request) => {
   const url = request.url();
@@ -33,10 +36,10 @@ page.on("request", (request) => {
 await page.setCookie({ name: "access_token", value: "fake", url: base });
 await page.goto(base, { waitUntil: "domcontentloaded" });
 await page.evaluate(() => localStorage.setItem("amazer_access_token", "fake"));
-await page.setViewport({ width: 390, height: 1100 });
-for (const tab of ["commandes"]) {
+await page.setViewport({ width: 390, height: 1700 });
+for (const tab of ["profil"]) {
   await page.goto("about:blank");
-  await page.goto(`${base}/seller/dashboard#${tab}`, { waitUntil: "networkidle2", timeout: 180000 });
+  await page.goto(tab === "profil" ? `${base}/seller` : `${base}/seller/dashboard#${tab}`, { waitUntil: "networkidle2", timeout: 180000 });
   await new Promise((r) => setTimeout(r, 8000));
   console.log("url:", await page.evaluate(() => location.href), "| onglet actif:", await page.evaluate(() => document.querySelector("[role=tab][aria-selected=true]")?.textContent));
   await page.screenshot({ path: `${out}/seller-${tab}.png` });

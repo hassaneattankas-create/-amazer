@@ -4,13 +4,6 @@ import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Building2,
-  PenSquare,
-  PlusCircle,
-  UtensilsCrossed,
-} from "lucide-react";
-
 import { GalleryMediaField, SingleMediaField } from "@/components/seller/MediaFields";
 import {
   RoomTypesEditor,
@@ -18,24 +11,18 @@ import {
   roomRowsToPayload,
   type RoomRow,
 } from "@/components/seller/RoomTypesEditor";
-import { BarcodeScannerDrawer } from "@/components/BarcodeScannerDrawer";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import { normalizeImageInputForApi } from "@/lib/image";
 import { persistAppMode } from "@/lib/session-mode";
-import { listCatalogCategories } from "@/services/catalog-service";
 import { getPublicFinanceSettings } from "@/services/finance-service";
-import { createRestaurantMenuItem, listRestaurantMenu } from "@/services/restaurant-service";
 import {
-  createSellerProduct,
   getSellerProfile,
   listSellerSubscriptionPaymentRequests,
   getSellerSubscriptionStatus,
-  listSellerInventory,
   paySellerSubscription,
   upsertSellerProfile,
 } from "@/services/seller-service";
@@ -43,8 +30,6 @@ import { useAuthStore } from "@/store/auth-store";
 import type { SellerProfile, StorefrontTier } from "@/types/seller";
 
 const SELLER_PROFILE_DRAFT_KEY = "amazer_seller_profile_draft";
-const SELLER_PRODUCT_DRAFT_KEY = "amazer_seller_product_draft";
-const SELLER_RESTAURANT_DRAFT_KEY = "amazer_seller_restaurant_draft";
 
 function splitListInput(value: string): string[] {
   return value
@@ -154,8 +139,7 @@ function SellerPageContent() {
   const setAppMode = useAuthStore((state) => state.setAppMode);
   const [status, setStatus] = useState("");
   const [profileHydratedFromServer, setProfileHydratedFromServer] = useState(false);
-  const [showProfileEditor, setShowProfileEditor] = useState(false);
-  const [showAdvancedProfileFields, setShowAdvancedProfileFields] = useState(false);
+  const [showPayForm, setShowPayForm] = useState(false);
   const [nowMs, setNowMs] = useState<number | null>(null);
   const [subscriptionForm, setSubscriptionForm] = useState<{
     payment_mode: "nita" | "amana";
@@ -202,30 +186,6 @@ function SellerPageContent() {
       storefront_tier: normalizedActivity === "enterprise" ? "premium" : "basic",
     };
   });
-  const [productForm, setProductForm] = useState(() =>
-    loadDraft(SELLER_PRODUCT_DRAFT_KEY, {
-      name: "",
-      brand: "",
-      category_id: "",
-      barcode: "",
-      amount: "",
-      stock_quantity: "1",
-      description: "",
-      main_image_url: "",
-    })
-  );
-  const [restaurantForm, setRestaurantForm] = useState(() =>
-    loadDraft(SELLER_RESTAURANT_DRAFT_KEY, {
-      name: "",
-      description: "",
-      image_url: "",
-      base_price: "",
-      estimated_prep_minutes: "20",
-      category: "plat" as "plat" | "boisson",
-      is_plat_du_jour: false,
-    })
-  );
-
   useEffect(() => {
     setAppMode("seller");
     persistAppMode("seller");
@@ -236,18 +196,6 @@ function SellerPageContent() {
       window.localStorage.setItem(SELLER_PROFILE_DRAFT_KEY, JSON.stringify(profileForm));
     }
   }, [profileForm]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(SELLER_PRODUCT_DRAFT_KEY, JSON.stringify(productForm));
-    }
-  }, [productForm]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(SELLER_RESTAURANT_DRAFT_KEY, JSON.stringify(restaurantForm));
-    }
-  }, [restaurantForm]);
 
   const { data: profile, isPending } = useQuery({
     queryKey: ["seller-profile"],
@@ -271,21 +219,6 @@ function SellerPageContent() {
     refetchInterval: 5_000,
     refetchOnWindowFocus: true,
   });
-  const { data: restaurantItems = [] } = useQuery({
-    queryKey: ["seller-restaurant-menu", profile?.vendor_id],
-    queryFn: () => listRestaurantMenu(profile?.vendor_id),
-    enabled: Boolean(profile?.vendor_id),
-  });
-  const { data: inventory = [] } = useQuery({
-    queryKey: ["seller-inventory", profile?.vendor_id],
-    queryFn: listSellerInventory,
-    enabled: Boolean(profile?.vendor_id),
-  });
-  const { data: categories = [] } = useQuery({
-    queryKey: ["catalog-categories"],
-    queryFn: listCatalogCategories,
-  });
-
   useEffect(() => {
     if (isAuthPending) {
       return;
@@ -380,33 +313,6 @@ function SellerPageContent() {
       setStatus(getApiErrorMessage(error, "Erreur lors de l'enregistrement du profil.")),
   });
 
-  const productMutation = useMutation({
-    mutationFn: createSellerProduct,
-    onSuccess: () => {
-      // Met à jour les résultats produits affichés sur la home (search products).
-      queryClient.invalidateQueries({ queryKey: ["products-search"] });
-      setStatus("Produit liste avec succes.");
-    },
-    onError: () => setStatus("Erreur lors de la creation du produit."),
-  });
-
-  const restaurantMutation = useMutation({
-    mutationFn: createRestaurantMenuItem,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["seller-restaurant-menu", profile?.vendor_id] });
-      setStatus("Article restaurant publie avec succes.");
-      setRestaurantForm({
-        name: "",
-        description: "",
-        image_url: "",
-        base_price: "",
-        estimated_prep_minutes: "20",
-        category: "plat",
-        is_plat_du_jour: false,
-      });
-    },
-    onError: () => setStatus("Erreur lors de la publication de l'article restaurant."),
-  });
   const subscriptionMutation = useMutation({
     mutationFn: paySellerSubscription,
     onSuccess: () => {
@@ -420,28 +326,20 @@ function SellerPageContent() {
 
   const normalizeImageInput = (raw: string): string | undefined => normalizeImageInputForApi(raw);
   const profileGalleryImages = splitListInput(profileForm.gallery_images_text);
-  const isShop = profileForm.activity_type === "shop";
   const isRestaurant = profileForm.activity_type === "restaurant";
   const isTransport = Boolean(profile?.offers_transport);
   const isPremium = profileForm.activity_type === "hotel" || profileForm.activity_type === "enterprise";
   const showRestaurantSection = isRestaurant || isPremium;
-  const showProductSection = isShop || isPremium;
   const showRoomTypes = isPremium || isTransport;
   const { data: publicFinance } = useQuery({
     queryKey: ["public-finance-settings"],
     queryFn: getPublicFinanceSettings,
   });
-  const maxBasicListings = publicFinance?.max_products_basic_tier ?? 10;
   const savedPlanBucket = profile
     ? resolveSellerPlanBucket(profile.activity_type, profile.storefront_tier)
     : null;
   const selectedPlanBucket = resolveSellerPlanBucket(profileForm.activity_type, profileForm.storefront_tier);
   const hasUnsavedPlanChange = Boolean(savedPlanBucket && savedPlanBucket !== selectedPlanBucket);
-  const isPremiumTier = selectedPlanBucket === "premium";
-  const shopListingLimitReached =
-    showProductSection && !isPremiumTier && inventory.length >= maxBasicListings;
-  const menuListingLimitReached =
-    showRestaurantSection && !isPremiumTier && restaurantItems.length >= maxBasicListings;
   const hasProfile = Boolean(profile?.id);
   const hasActiveSubscription = Boolean(subscriptionStatus?.subscription_active);
   const subscriptionPaidUntilMs = subscriptionStatus?.subscription_paid_until
@@ -487,846 +385,377 @@ function SellerPageContent() {
     "";
   const selectedSubscriptionMonths = Math.max(1, Math.min(12, Number(subscriptionForm.months || 1)));
   const selectedSubscriptionAmount = visibleMonthlyFee * selectedSubscriptionMonths;
-  const latestPaymentStatusLabel =
-    latestSubscriptionPayment?.status === "approved"
-      ? "Accepte"
-      : latestSubscriptionPayment?.status === "rejected"
-        ? "Refuse"
-        : latestSubscriptionPayment?.status === "pending"
-          ? "En attente"
-          : null;
+
+  const subscriptionUntil = subscriptionStatus?.subscription_paid_until
+    ? new Date(subscriptionStatus.subscription_paid_until).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : null;
+  const pendingPayment = Boolean(subscriptionStatus?.has_pending_payment_request);
+  const showPaymentForm = hasProfile && !pendingPayment && (sellerPaymentRequired || showSubscriptionRenewHeadsUp || showPayForm);
+  const fieldClass = "mt-1 h-11 w-full rounded-field border border-border bg-card px-3 text-sm text-ink-900";
+  const labelClass = "block text-sm font-medium text-ink-800";
+  const setField = (key: keyof typeof profileForm) => (value: string | boolean) =>
+    setProfileForm((prev) => ({ ...prev, [key]: value }));
+
+  const saveProfile = () =>
+    profileMutation.mutate({
+      business_name: profileForm.business_name,
+      city: profileForm.city,
+      phone: profileForm.phone || undefined,
+      payout_phone: profileForm.payout_phone ?? "",
+      address: profileForm.address || undefined,
+      activity_type: profileForm.activity_type,
+      storefront_tier: profileForm.storefront_tier as StorefrontTier,
+      description: profileForm.description || undefined,
+      logo_url: normalizeImageInput(profileForm.logo_url),
+      cover_image_url: normalizeImageInput(profileForm.cover_image_url),
+      opening_hours: profileForm.opening_hours || undefined,
+      whatsapp_contact: profileForm.whatsapp_contact || undefined,
+      contact_email: profileForm.contact_email || undefined,
+      gallery_images: isPremium
+        ? splitListInput(profileForm.gallery_images_text).flatMap((value) => {
+            const normalized = normalizeImageInput(value);
+            return normalized ? [normalized] : [];
+          })
+        : [],
+      service_offerings: isPremium ? parseServices(profileForm.service_offerings_text) : [],
+      room_types: showRoomTypes ? roomRowsToPayload(profileForm.room_types_list) : [],
+      deposit_payment_method: showRoomTypes ? profileForm.deposit_payment_method : undefined,
+      deposit_amount: isPremium ? (profileForm.deposit_amount ? Number(profileForm.deposit_amount) : undefined) : undefined,
+      accepts_table_reservations: showRestaurantSection ? profileForm.accepts_table_reservations : false,
+      accepts_hotel_bookings: isPremium ? profileForm.accepts_hotel_bookings : false,
+      offers_shop: isPremium ? profileForm.offers_shop : undefined,
+      offers_restaurant: isPremium ? profileForm.offers_restaurant : undefined,
+    });
 
   return (
-    <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
-      <header className="premium-card border border-slate-200 bg-white p-6">
-        <h1 className="luxury-title text-3xl font-semibold">Espace vendeur</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Gere ta boutique, ton menu et tes operations vendeur depuis un seul espace.
-        </p>
+    <section className="mx-auto w-full max-w-3xl space-y-4 px-gutter pb-28 pt-4">
+      <header>
         {!sellerPaymentRequired ? (
-          <Button asChild variant="outline" className="mt-4">
-            <Link href="/seller/dashboard">Aller au dashboard de stock</Link>
-          </Button>
+          <Link href="/seller/dashboard" className="inline-flex min-h-11 items-center text-sm font-medium text-brand-700 hover:underline">
+            ← Mon espace vendeur
+          </Link>
         ) : null}
+        <h1 className="text-2xl font-semibold text-ink-900">Profil et abonnement</h1>
+        {welcomeMessage ? <p className="mt-1 text-sm text-success">{welcomeMessage}</p> : null}
       </header>
 
-      {showSubscriptionRenewHeadsUp ? (
-        <article
-          className="premium-card border border-sky-200 bg-sky-50 p-6"
-          role="status"
-        >
-          <h2 className="text-lg font-semibold text-sky-950">Renouvellement proche</h2>
-          <p className="mt-1 text-sm text-sky-900">
-            Ton abonnement vendeur se termine dans environ{" "}
-            {daysUntilSubscriptionEnd !== null && daysUntilSubscriptionEnd < 1
-              ? "moins de 24 heures"
-              : `${Math.max(1, Math.ceil(daysUntilSubscriptionEnd ?? 1))} jour(s)`}
-            . Renouvelle maintenant pour eviter toute interruption (tes donnees restent conservees).
+      {/* Abonnement : un seul bloc, etat clair, paiement seulement quand il faut */}
+      <article className="rounded-card border border-border bg-card p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-ink-900">Abonnement</h2>
+            <p
+              className={`mt-1 text-sm font-medium ${
+                hasActiveSubscription ? (showSubscriptionRenewHeadsUp ? "text-warning" : "text-success") : "text-danger"
+              }`}
+            >
+              {pendingPayment
+                ? "Paiement envoyé : AMAZER le vérifie. Vous serez prévenu."
+                : hasActiveSubscription
+                  ? `Actif${subscriptionUntil ? ` jusqu'au ${subscriptionUntil}` : ""}${showSubscriptionRenewHeadsUp ? " · à renouveler bientôt" : ""}`
+                  : hasProfile
+                    ? "Inactif : votre boutique est masquée aux clients."
+                    : "Enregistrez d'abord votre profil ci-dessous."}
+            </p>
+          </div>
+          <p className="text-right text-sm text-ink-700">
+            <span className="block text-lg font-bold text-ink-900">{formatXOF(visibleMonthlyFee)}</span>
+            par mois
           </p>
-          {subscriptionStatus?.has_pending_payment_request ? (
-            <p className="mt-3 text-sm font-medium text-sky-900">
-              Paiement de renouvellement déjà soumis — en attente de validation admin. Tu recevras une notification.
-            </p>
-          ) : (
-            <div className="mt-4 space-y-3">
-              <div className="rounded-2xl border border-sky-300 bg-white p-4 text-sm text-slate-800">
-                <p className="font-semibold text-slate-900">Numéro de versement AMAZER</p>
-                <p className="mt-2">
-                  <span className="font-semibold text-brand-600">
-                    {paymentDestination || "Numéro non renseigne pour le moment"}
-                  </span>
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <select
-                  className="h-11 w-full rounded-md border border-sky-300 bg-white px-3 text-sm text-slate-900"
-                  value={subscriptionForm.payment_mode}
-                  onChange={(event) =>
-                    setSubscriptionForm((prev) => ({
-                      ...prev,
-                      payment_mode: event.target.value as "nita" | "amana",
-                    }))
-                  }
-                >
-                  <option value="nita">Versement via Nita</option>
-                  <option value="amana">Versement via Amana</option>
-                </select>
-                <Input
-                  type="number"
-                  min={1}
-                  max={12}
-                  placeholder="Nombre de mois"
-                  value={subscriptionForm.months}
-                  onChange={(event) =>
-                    setSubscriptionForm((prev) => ({ ...prev, months: event.target.value || "1" }))
-                  }
-                />
-                <Input
-                  placeholder="Référence de transaction"
-                  value={subscriptionForm.transaction_reference}
-                  onChange={(event) =>
-                    setSubscriptionForm((prev) => ({
-                      ...prev,
-                      transaction_reference: event.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <p className="text-sm text-sky-800">
-                Total : {formatXOF(visibleMonthlyFee * selectedSubscriptionMonths)} pour{" "}
-                {selectedSubscriptionMonths} mois.
-              </p>
-              <Button
-                type="button"
-                disabled={subscriptionMutation.isPending}
-                className="bg-sky-700 text-white hover:bg-sky-600"
-                onClick={() =>
-                  subscriptionMutation.mutate({
-                    payment_mode: subscriptionForm.payment_mode,
-                    transaction_reference:
-                      subscriptionForm.transaction_reference.trim() || undefined,
-                    months: selectedSubscriptionMonths,
-                  })
-                }
-              >
-                {subscriptionMutation.isPending ? "Envoi..." : "Soumettre le renouvellement"}
-              </Button>
-            </div>
-          )}
-        </article>
-      ) : null}
-
-      {sellerPaymentRequired ? (
-        <article className="premium-card border border-amber-200 bg-amber-50 p-6">
-          <h2 className="text-lg font-semibold text-amber-900">Activation vendeur requise</h2>
-          <p className="mt-1 text-sm text-amber-800">
-            L&apos;abonnement vendeur doit etre valide pour activer la boutique.
-          </p>
-          {!hasProfile ? (
-            <p className="mt-2 text-sm text-amber-900">
-              Enregistre d&apos;abord ton profil vendeur.
-            </p>
-          ) : null}
-          <div className="mt-3 grid gap-2 text-sm text-amber-900 sm:grid-cols-3">
-            <p>Frais creation: desactives</p>
-            <p>Mensualite: {formatXOF(visibleMonthlyFee)}</p>
-            <p>A payer maintenant: {formatXOF(selectedSubscriptionAmount)}</p>
-          </div>
-          <p className="mt-2 text-xs text-amber-900">{selectedSubscriptionMonths} mois selectionne(s).</p>
-          {hasUnsavedPlanChange ? (
-            <p className="mt-3 text-sm font-medium text-amber-900">
-              Tu as choisi une nouvelle formule. Enregistre d&apos;abord le profil pour appliquer cette mensualite,
-              puis lance la demande de paiement.
-            </p>
-          ) : null}
-          {subscriptionStatus?.has_pending_payment_request ? (
-            <p className="mt-3 text-sm font-medium text-amber-900">
-              Paiement déjà soumis. En attente de validation par l&apos;admin. Une notification t&apos;avertira dès la décision.
-            </p>
-          ) : null}
-          {!hasActiveSubscription && hasProfile && subscriptionStatus?.onboarding_fee_paid ? (
-            <p className="mt-3 text-sm font-medium text-amber-900">
-              Abonnement expire: les publications, la gestion boutique et les actions vendeur restent bloquees jusqu&apos;a
-              validation d&apos;un nouveau paiement.
-            </p>
-          ) : null}
-          {latestSubscriptionPayment ? (
-            <div className="mt-4 rounded-2xl border border-amber-300 bg-amber-100/70 p-4 text-sm text-amber-950">
-              <p className="font-semibold">Dernière demande de paiement</p>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                <p>Statut : {latestPaymentStatusLabel}</p>
-                <p>Mode : {latestSubscriptionPayment.payment_mode === "nita" ? "Nita" : "Amana"}</p>
-                <p>Reference : {latestSubscriptionPayment.transaction_reference}</p>
-                <p>Mois : {latestSubscriptionPayment.months}</p>
-              </div>
-              {latestSubscriptionPayment.admin_note ? (
-                <p className="mt-2">
-                  Note admin : <span className="font-medium">{latestSubscriptionPayment.admin_note}</span>
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-          {hasProfile ? (
-            <div className="mt-4 space-y-4">
-              <div className="rounded-2xl border border-amber-300 bg-white p-4 text-sm text-slate-800">
-                <p className="font-semibold text-slate-900">Numéro de versement</p>
-                <p className="mt-2">
-                  AMAZER :{" "}
-                  <span className="font-semibold text-brand-600">
-                    {paymentDestination || "Numéro non renseigne pour le moment"}
-                  </span>
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <select
-                  className="h-11 w-full rounded-md border border-amber-300 bg-white px-3 text-sm text-slate-900"
-                  value={subscriptionForm.payment_mode}
-                  onChange={(event) =>
-                    setSubscriptionForm((prev) => ({
-                      ...prev,
-                      payment_mode: event.target.value as "nita" | "amana",
-                    }))
-                  }
-                >
-                  <option value="nita">Versement via Nita</option>
-                  <option value="amana">Versement via Amana</option>
-                </select>
-                <Input
-                  type="number"
-                  min={1}
-                  max={12}
-                  placeholder="Nombre de mois"
-                  value={subscriptionForm.months}
-                  onChange={(event) =>
-                    setSubscriptionForm((prev) => ({ ...prev, months: event.target.value || "1" }))
-                  }
-                />
-                <Input
-                  placeholder="Référence de transaction"
-                  value={subscriptionForm.transaction_reference}
-                  onChange={(event) =>
-                    setSubscriptionForm((prev) => ({
-                      ...prev,
-                      transaction_reference: event.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="rounded-2xl border border-amber-300 bg-white p-4 text-sm text-slate-800">
-                <p className="font-semibold text-slate-900">Resume</p>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  <p>Mode choisi : {subscriptionForm.payment_mode === "nita" ? "Nita" : "Amana"}</p>
-                  <p>Mois choisis : {selectedSubscriptionMonths}</p>
-                  <p>Frais de creation appliques : Non</p>
-                  <p>Total attendu : {formatXOF(selectedSubscriptionAmount)}</p>
-                </div>
-              </div>
-              <Button
-                type="button"
-                disabled={
-                  subscriptionMutation.isPending ||
-                  hasUnsavedPlanChange ||
-                  Boolean(subscriptionStatus?.has_pending_payment_request)
-                }
-                className="primary-glow-btn bg-brand-600 text-white hover:bg-brand-700"
-                onClick={() =>
-                  subscriptionMutation.mutate({
-                    payment_mode: subscriptionForm.payment_mode,
-                    transaction_reference: subscriptionForm.transaction_reference.trim() || undefined,
-                    months: selectedSubscriptionMonths,
-                  })
-                }
-              >
-                {subscriptionMutation.isPending ? "Envoi..." : "J'ai payé, vérifier maintenant"}
-              </Button>
-            </div>
-          ) : null}
-        </article>
-      ) : null}
-
-      <article className="premium-card border border-slate-200 bg-white p-6">
-        <h2 className="text-lg font-semibold text-slate-900">Tarification appliquee a cette boutique</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Les valeurs ci-dessous suivent soit le tarif global AMAZER, soit une surcharge definie pour ta boutique.
-        </p>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Commission</p>
-            <p className="mt-2 text-xl font-semibold text-slate-900">
-              {pricingSnapshot.commissionRate !== null
-                ? `${(pricingSnapshot.commissionRate * 100).toFixed(2)}%`
-                : "—"}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Frais plateforme</p>
-            <p className="mt-2 text-xl font-semibold text-slate-900">
-              {pricingSnapshot.serviceFee !== null ? formatXOF(pricingSnapshot.serviceFee) : "—"}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Abonnement vendeur</p>
-            <p className="mt-2 text-xl font-semibold text-slate-900">
-              {formatXOF(pricingSnapshot.sellerSubscriptionFee)}
-            </p>
-          </div>
         </div>
+        <p className="mt-2 text-xs text-ink-600">
+          Commission sur les ventes :{" "}
+          {pricingSnapshot.commissionRate !== null ? `${Number((pricingSnapshot.commissionRate * 100).toFixed(2))} %` : "—"} · frais de
+          service : {pricingSnapshot.serviceFee !== null ? formatXOF(pricingSnapshot.serviceFee) : "—"} par commande (payés par le client)
+        </p>
+        {latestSubscriptionPayment?.status === "rejected" ? (
+          <p className="mt-3 rounded-field bg-surface-1 px-3 py-2 text-sm text-danger">
+            Dernier paiement refusé
+            {latestSubscriptionPayment.admin_note ? ` : ${latestSubscriptionPayment.admin_note}` : ""}. Vérifiez la référence et
+            réessayez.
+          </p>
+        ) : null}
+        {hasUnsavedPlanChange ? (
+          <p className="mt-3 rounded-field bg-surface-1 px-3 py-2 text-sm text-ink-800">
+            Nouvelle formule choisie : enregistrez le profil avant de payer.
+          </p>
+        ) : null}
+
+        {showPaymentForm ? (
+          <div className="mt-4 space-y-4 border-t border-border pt-4">
+            <div>
+              <p className="text-sm font-medium text-ink-800">Durée</p>
+              <div className="mt-1 grid grid-cols-4 gap-2" role="radiogroup" aria-label="Durée">
+                {[1, 3, 6, 12].map((months) => (
+                  <button
+                    key={months}
+                    type="button"
+                    role="radio"
+                    aria-checked={selectedSubscriptionMonths === months}
+                    onClick={() => setSubscriptionForm((prev) => ({ ...prev, months: String(months) }))}
+                    className={`min-h-11 rounded-field border text-sm font-semibold ${
+                      selectedSubscriptionMonths === months ? "border-ink-900 bg-ink-900 text-white" : "border-border bg-card text-ink-800"
+                    }`}
+                  >
+                    {months} mois
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-ink-800">Moyen de paiement</p>
+              <div className="mt-1 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Moyen de paiement">
+                {(["nita", "amana"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="radio"
+                    aria-checked={subscriptionForm.payment_mode === mode}
+                    onClick={() => setSubscriptionForm((prev) => ({ ...prev, payment_mode: mode }))}
+                    className={`min-h-11 rounded-field border text-sm font-semibold ${
+                      subscriptionForm.payment_mode === mode ? "border-ink-900 bg-ink-900 text-white" : "border-border bg-card text-ink-800"
+                    }`}
+                  >
+                    {mode === "nita" ? "Nita" : "Amana"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-field bg-surface-1 p-3 text-sm text-ink-800">
+              Envoyez <span className="text-lg font-bold text-ink-900">{formatXOF(selectedSubscriptionAmount)}</span> au{" "}
+              <span className="text-lg font-bold text-ink-900">{paymentDestination || "numéro AMAZER"}</span>
+            </div>
+            <label className={labelClass}>
+              Référence du paiement (reçue par SMS)
+              <input
+                className={fieldClass}
+                value={subscriptionForm.transaction_reference}
+                onChange={(event) => setSubscriptionForm((prev) => ({ ...prev, transaction_reference: event.target.value }))}
+              />
+            </label>
+            <Button
+              type="button"
+              size="lg"
+              className="w-full"
+              disabled={subscriptionMutation.isPending || hasUnsavedPlanChange || subscriptionForm.transaction_reference.trim().length < 4}
+              onClick={() =>
+                subscriptionMutation.mutate({
+                  payment_mode: subscriptionForm.payment_mode,
+                  transaction_reference: subscriptionForm.transaction_reference.trim() || undefined,
+                  months: selectedSubscriptionMonths,
+                })
+              }
+            >
+              {subscriptionMutation.isPending ? "Envoi…" : "J'ai payé, envoyer"}
+            </Button>
+          </div>
+        ) : hasProfile && !pendingPayment ? (
+          <Button type="button" variant="outline" className="mt-4" onClick={() => setShowPayForm(true)}>
+            Prolonger mon abonnement
+          </Button>
+        ) : null}
       </article>
 
+      {/* Profil : sections courtes et etiquetees */}
       {isPending ? (
         <ProductCardSkeleton />
       ) : (
-        <article className="premium-card border border-slate-200 bg-white p-6">
-          <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
-            <Building2 className="h-5 w-5 text-brand-600" />
-            Profil vendeur
-          </h2>
-          {profile ? (
-            <p className="mt-2 text-sm text-emerald-700">
-              Profil enregistre: {profile.business_name} ({profile.city}) -{" "}
-              {hasActiveSubscription
-                ? profile.is_verified
-                  ? "Boutique active avec badge Confiance"
-                  : "Boutique active"
-                : "Activation en attente d'un abonnement valide"}
-            </p>
-          ) : (
-            <p className="mt-2 text-sm text-slate-600">Aucun profil actif pour ce compte.</p>
-          )}
-          {welcomeMessage ? <p className="mt-3 text-sm font-medium text-emerald-700">{welcomeMessage}</p> : null}
-          <p className="mt-3 text-sm text-slate-600">
-            Garde ici les informations utiles de ta boutique. Les options avancees restent disponibles si besoin.
-          </p>
-          {profile ? (
-            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-              <p className="font-semibold">Profil vendeur</p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.12em] text-emerald-700/80">Commerce</p>
-                  <p className="mt-1 font-medium">{profileForm.business_name || "Non renseigné"}</p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.12em] text-emerald-700/80">Type</p>
-                  <p className="mt-1 font-medium">
-                    {profileForm.activity_type === "shop"
-                      ? "Boutique"
-                      : profileForm.activity_type === "restaurant"
-                        ? "Restaurant"
-                        : "Premium"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.12em] text-emerald-700/80">Ville</p>
-                  <p className="mt-1 font-medium">{profileForm.city || "Niamey"}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-white px-4 py-2 text-xs font-medium text-emerald-800 hover:bg-emerald-100"
-                onClick={() => setShowProfileEditor((value) => !value)}
-              >
-                <PenSquare className="h-3.5 w-3.5" />
-                {showProfileEditor ? "Masquer les détails" : "Modifier ou completer mon profil"}
-              </button>
-            </div>
-          ) : null}
-          {!profile || showProfileEditor ? (
-            <>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <Input
-                placeholder="Nom du commerce"
-                value={profileForm.business_name}
-              onChange={(event) =>
-                setProfileForm((prev) => ({ ...prev, business_name: event.target.value }))
-              }
-            />
-            <Input
-              placeholder="Ville"
-              value={profileForm.city}
-              onChange={(event) => setProfileForm((prev) => ({ ...prev, city: event.target.value }))}
-            />
-            <Input
-              placeholder="Telephone"
-              value={profileForm.phone}
-              onChange={(event) => setProfileForm((prev) => ({ ...prev, phone: event.target.value }))}
-            />
-            <Input
-              placeholder="Adresse"
-              value={profileForm.address}
-              onChange={(event) => setProfileForm((prev) => ({ ...prev, address: event.target.value }))}
-            />
-            <select
-              className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900"
-              value={profileForm.activity_type}
-              onChange={(event) => {
-                const activityType = event.target.value as "shop" | "restaurant" | "enterprise";
-                setProfileForm((prev) => ({
-                  ...prev,
-                  activity_type: activityType,
-                  storefront_tier: activityType === "enterprise" ? "premium" : "basic",
-                }));
-              }}
-            >
-              <option value="shop">Boutique (produits)</option>
-              <option value="restaurant">Restaurant (menu)</option>
-              <option value="enterprise">Premium entreprise (mini-site complet)</option>
-            </select>
-            <textarea
-              placeholder="Description courte"
-              value={profileForm.description}
-              onChange={(event) =>
-                setProfileForm((prev) => ({ ...prev, description: event.target.value }))
-              }
-              className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
-            />
-            <button
-              type="button"
-              className="w-fit rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:col-span-2"
-              onClick={() => setShowAdvancedProfileFields((value) => !value)}
-            >
-              {showAdvancedProfileFields ? "Masquer les options avancees" : "Afficher les options avancees"}
-            </button>
-            {showAdvancedProfileFields ? (
-              <>
-            <SingleMediaField
-              label="Logo du commerce"
-              value={profileForm.logo_url}
-              onChange={(value) => setProfileForm((prev) => ({ ...prev, logo_url: value }))}
-              emptyMessage="Ajoute le logo depuis la galerie."
-            />
-            <SingleMediaField
-              label="Couverture du commerce"
-              value={profileForm.cover_image_url}
-              onChange={(value) => setProfileForm((prev) => ({ ...prev, cover_image_url: value }))}
-              emptyMessage="Ajoute la couverture depuis la galerie."
-            />
-            <Input
-              placeholder="Horaires"
-              value={profileForm.opening_hours}
-              onChange={(event) =>
-                setProfileForm((prev) => ({ ...prev, opening_hours: event.target.value }))
-              }
-            />
-            <Input
-              placeholder="WhatsApp contact"
-              value={profileForm.whatsapp_contact}
-              onChange={(event) =>
-                setProfileForm((prev) => ({ ...prev, whatsapp_contact: event.target.value }))
-              }
-            />
-            <Input
-              placeholder="Email contact"
-              value={profileForm.contact_email}
-              onChange={(event) =>
-                setProfileForm((prev) => ({ ...prev, contact_email: event.target.value }))
-              }
-            />
-            {isPremium || profileForm.activity_type === "restaurant" ? (
-              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-slate-700 sm:col-span-2">
-                <p className="font-medium text-slate-900">Numéro de versement (Nita / Amana)</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Numero sur lequel tes clients t&apos;envoient l&apos;argent (reservations, trajets, commandes).
-                  Il s&apos;affiche au client au moment de payer.
-                </p>
-                <Input
-                  className="mt-2 bg-white"
-                  placeholder="Ex: 90 00 00 00"
-                  value={profileForm.payout_phone}
-                  onChange={(event) =>
-                    setProfileForm((prev) => ({ ...prev, payout_phone: event.target.value }))
-                  }
-                />
-              </div>
-            ) : null}
-            {isPremium ? (
-              <Input
-                placeholder="Frais de reservation de table (XOF, optionnel)"
-                type="number"
-                value={profileForm.deposit_amount}
-                onChange={(event) =>
-                  setProfileForm((prev) => ({ ...prev, deposit_amount: event.target.value }))
-                }
+        <article className="space-y-5 rounded-card border border-border bg-card p-5">
+          <h2 className="text-lg font-semibold text-ink-900">Ma boutique</h2>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className={`${labelClass} sm:col-span-2`}>
+              Nom de la boutique
+              <input className={fieldClass} value={profileForm.business_name} onChange={(e) => setField("business_name")(e.target.value)} />
+            </label>
+            <label className={`${labelClass} sm:col-span-2`}>
+              Description (ce que vous vendez)
+              <textarea
+                className={`${fieldClass} h-auto min-h-24 py-2`}
+                value={profileForm.description}
+                onChange={(e) => setField("description")(e.target.value)}
               />
-            ) : null}
-            {isPremium ? (
+            </label>
+            <SingleMediaField
+              label="Logo"
+              value={profileForm.logo_url}
+              onChange={(value) => setField("logo_url")(value)}
+              emptyMessage="Ajoutez votre logo."
+            />
+            <SingleMediaField
+              label="Photo de couverture"
+              value={profileForm.cover_image_url}
+              onChange={(value) => setField("cover_image_url")(value)}
+              emptyMessage="Ajoutez une belle photo de votre commerce."
+            />
+          </div>
+
+          <div className="border-t border-border pt-4">
+            <h3 className="font-semibold text-ink-900">Contact client</h3>
+            <p className="text-xs text-ink-600">Affiché sur votre boutique : les clients vous appellent ou vous écrivent directement.</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className={labelClass}>
+                WhatsApp
+                <input className={fieldClass} inputMode="tel" value={profileForm.whatsapp_contact} onChange={(e) => setField("whatsapp_contact")(e.target.value)} />
+              </label>
+              <label className={labelClass}>
+                Téléphone
+                <input className={fieldClass} inputMode="tel" value={profileForm.phone} onChange={(e) => setField("phone")(e.target.value)} />
+              </label>
+              <label className={labelClass}>
+                E-mail
+                <input className={fieldClass} type="email" value={profileForm.contact_email} onChange={(e) => setField("contact_email")(e.target.value)} />
+              </label>
+              <label className={labelClass}>
+                Horaires
+                <input
+                  className={fieldClass}
+                  placeholder="Ex. Lun-Sam 8h-20h"
+                  value={profileForm.opening_hours}
+                  onChange={(e) => setField("opening_hours")(e.target.value)}
+                />
+              </label>
+              <label className={labelClass}>
+                Ville
+                <input className={fieldClass} value={profileForm.city} onChange={(e) => setField("city")(e.target.value)} />
+              </label>
+              <label className={labelClass}>
+                Adresse / quartier
+                <input className={fieldClass} value={profileForm.address} onChange={(e) => setField("address")(e.target.value)} />
+              </label>
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-4">
+            <h3 className="font-semibold text-ink-900">Formule</h3>
+            <label className={`${labelClass} mt-2`}>
+              Type d&apos;activité
               <select
-                className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900"
-                value={profileForm.deposit_payment_method}
-                onChange={(event) =>
+                className={fieldClass}
+                value={profileForm.activity_type}
+                onChange={(event) => {
+                  const activityType = event.target.value as "shop" | "restaurant" | "enterprise";
                   setProfileForm((prev) => ({
                     ...prev,
-                    deposit_payment_method: event.target.value as "nita" | "amana",
-                  }))
-                }
+                    activity_type: activityType,
+                    storefront_tier: activityType === "enterprise" ? "premium" : "basic",
+                  }));
+                }}
               >
-                <option value="nita">Nita</option>
-                <option value="amana">Amana</option>
+                <option value="shop">Boutique (produits)</option>
+                <option value="restaurant">Restaurant (menu)</option>
+                <option value="enterprise">Premium (hôtel, transport, entreprise)</option>
               </select>
-            ) : null}
-            {showRestaurantSection && !sellerPaymentRequired ? (
-              <div className="rounded-md border border-slate-200 p-3 text-sm text-slate-700">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={profileForm.accepts_table_reservations}
-                    onChange={(event) =>
-                      setProfileForm((prev) => ({
-                        ...prev,
-                        accepts_table_reservations: event.target.checked,
-                      }))
-                    }
-                  />
-                  Activer reservation de table
-                </label>
-                {isPremium ? (
-                  <label className="mt-2 flex items-center gap-2">
+            </label>
+          </div>
+
+          {isPremium || isRestaurant ? (
+            <div className="space-y-3 border-t border-border pt-4">
+              <h3 className="font-semibold text-ink-900">Options {isPremium ? "Premium" : "restaurant"}</h3>
+              {isPremium ? (
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-medium text-ink-800">Ce que propose votre mini-site</legend>
+                  <label className="flex min-h-11 items-center gap-2 text-sm text-ink-800">
+                    <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={profileForm.offers_shop} onChange={(e) => setField("offers_shop")(e.target.checked)} />
+                    Boutique (vendre des produits)
+                  </label>
+                  <label className="flex min-h-11 items-center gap-2 text-sm text-ink-800">
                     <input
                       type="checkbox"
-                      checked={profileForm.accepts_hotel_bookings}
-                      onChange={(event) =>
-                        setProfileForm((prev) => ({
-                          ...prev,
-                          accepts_hotel_bookings: event.target.checked,
-                        }))
-                      }
+                      className="h-4 w-4 accent-brand-600"
+                      checked={profileForm.offers_restaurant}
+                      onChange={(e) => setField("offers_restaurant")(e.target.checked)}
                     />
-                    Activer reservation premium
+                    Restaurant (menu et commandes)
                   </label>
-                ) : null}
-              </div>
-            ) : null}
-            {isPremium ? (
-              <div className="rounded-md border border-orange-200 bg-orange-50 p-3 text-sm text-slate-700 sm:col-span-2">
-                <p className="font-medium text-slate-900">Que propose votre Premium ?</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Cochez ce que vous voulez activer. Seuls les espaces cochés apparaitront sur votre mini-site.
-                </p>
-                <label className="mt-2 flex items-center gap-2">
+                  <label className="flex min-h-11 items-center gap-2 text-sm text-ink-800">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-brand-600"
+                      checked={profileForm.accepts_hotel_bookings}
+                      onChange={(e) => setField("accepts_hotel_bookings")(e.target.checked)}
+                    />
+                    Réservations en ligne ({isTransport ? "trajets" : "chambres"})
+                  </label>
+                </fieldset>
+              ) : null}
+              {showRestaurantSection && !sellerPaymentRequired ? (
+                <label className="flex min-h-11 items-center gap-2 text-sm text-ink-800">
                   <input
                     type="checkbox"
-                    checked={profileForm.offers_shop}
-                    onChange={(event) =>
-                      setProfileForm((prev) => ({ ...prev, offers_shop: event.target.checked }))
-                    }
+                    className="h-4 w-4 accent-brand-600"
+                    checked={profileForm.accepts_table_reservations}
+                    onChange={(e) => setField("accepts_table_reservations")(e.target.checked)}
                   />
-                  Boutique (vendre des produits)
+                  Réservation de tables
                 </label>
-                <label className="mt-2 flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={profileForm.offers_restaurant}
-                    onChange={(event) =>
-                      setProfileForm((prev) => ({ ...prev, offers_restaurant: event.target.checked }))
-                    }
-                  />
-                  Restaurant (menu et commandes)
-                </label>
-              </div>
-            ) : null}
-            {isPremium ? (
-              <GalleryMediaField
-                label="Galerie photos"
-                values={profileGalleryImages}
-                onChange={(values) =>
-                  setProfileForm((prev) => ({
-                    ...prev,
-                    gallery_images_text: mergeImageList(values),
-                  }))
-                }
-              />
-            ) : null}
-            {isPremium ? (
-              <textarea
-                placeholder="Services: titre | description | consult_only"
-                value={profileForm.service_offerings_text}
-                onChange={(event) =>
-                  setProfileForm((prev) => ({ ...prev, service_offerings_text: event.target.value }))
-                }
-                className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm"
-              />
-            ) : null}
-            {showRoomTypes ? (
-              <div className="sm:col-span-2">
-                <p className="mb-2 text-sm font-medium text-slate-800">
-                  {isTransport ? "Vos trajets" : "Vos chambres"}
-                </p>
-                <RoomTypesEditor
-                  value={profileForm.room_types_list}
-                  onChange={(rows) =>
-                    setProfileForm((prev) => ({ ...prev, room_types_list: rows }))
-                  }
-                  isTransport={isTransport}
+              ) : null}
+              <label className={labelClass}>
+                Numéro qui reçoit les paiements clients (Nita / Amana)
+                <input className={fieldClass} inputMode="tel" placeholder="Ex. 90 00 00 00" value={profileForm.payout_phone} onChange={(e) => setField("payout_phone")(e.target.value)} />
+                <span className="mt-1 block text-xs font-normal text-ink-600">Affiché au client pour les réservations et acomptes.</span>
+              </label>
+              {isPremium ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className={labelClass}>
+                    Acompte de réservation (XOF, facultatif)
+                    <input className={fieldClass} inputMode="numeric" value={profileForm.deposit_amount} onChange={(e) => setField("deposit_amount")(e.target.value.replace(/\D/g, ""))} />
+                  </label>
+                  <label className={labelClass}>
+                    Acompte payé par
+                    <select className={fieldClass} value={profileForm.deposit_payment_method} onChange={(e) => setField("deposit_payment_method")(e.target.value)}>
+                      <option value="nita">Nita</option>
+                      <option value="amana">Amana</option>
+                    </select>
+                  </label>
+                </div>
+              ) : null}
+              {isPremium ? (
+                <GalleryMediaField
+                  label="Galerie photos"
+                  values={profileGalleryImages}
+                  onChange={(values) => setProfileForm((prev) => ({ ...prev, gallery_images_text: mergeImageList(values) }))}
                 />
-              </div>
-            ) : null}
-              </>
-            ) : null}
-          </div>
-            <Button
-              className="primary-glow-btn mt-4 bg-brand-600 text-white hover:bg-brand-700"
-              onClick={() =>
-              profileMutation.mutate({
-                business_name: profileForm.business_name,
-                city: profileForm.city,
-                phone: profileForm.phone || undefined,
-                payout_phone: profileForm.payout_phone ?? "",
-                address: profileForm.address || undefined,
-                activity_type: profileForm.activity_type,
-                storefront_tier: profileForm.storefront_tier as StorefrontTier,
-                description: profileForm.description || undefined,
-                logo_url: normalizeImageInput(profileForm.logo_url),
-                cover_image_url: normalizeImageInput(profileForm.cover_image_url),
-                opening_hours: profileForm.opening_hours || undefined,
-                whatsapp_contact: profileForm.whatsapp_contact || undefined,
-                contact_email: profileForm.contact_email || undefined,
-                gallery_images: isPremium
-                  ? splitListInput(profileForm.gallery_images_text).flatMap((value) => {
-                      const normalized = normalizeImageInput(value);
-                      return normalized ? [normalized] : [];
-                    })
-                  : [],
-                service_offerings: isPremium ? parseServices(profileForm.service_offerings_text) : [],
-                room_types: showRoomTypes ? roomRowsToPayload(profileForm.room_types_list) : [],
-                deposit_payment_method: showRoomTypes ? profileForm.deposit_payment_method : undefined,
-                deposit_amount: isPremium
-                  ? profileForm.deposit_amount
-                    ? Number(profileForm.deposit_amount)
-                    : undefined
-                  : undefined,
-                accepts_table_reservations: showRestaurantSection
-                  ? profileForm.accepts_table_reservations
-                  : false,
-                accepts_hotel_bookings: isPremium ? profileForm.accepts_hotel_bookings : false,
-                offers_shop: isPremium ? profileForm.offers_shop : undefined,
-                offers_restaurant: isPremium ? profileForm.offers_restaurant : undefined,
-              })
-              }
-            >
-              Enregistrer le profil
-            </Button>
-            </>
+              ) : null}
+              {isPremium ? (
+                <label className={labelClass}>
+                  Services (un par ligne : titre | description)
+                  <textarea
+                    className={`${fieldClass} h-auto min-h-24 py-2`}
+                    value={profileForm.service_offerings_text}
+                    onChange={(e) => setField("service_offerings_text")(e.target.value)}
+                  />
+                </label>
+              ) : null}
+              {showRoomTypes ? (
+                <div>
+                  <p className="mb-2 text-sm font-medium text-ink-800">{isTransport ? "Vos trajets" : "Vos chambres"}</p>
+                  <RoomTypesEditor
+                    value={profileForm.room_types_list}
+                    onChange={(rows) => setProfileForm((prev) => ({ ...prev, room_types_list: rows }))}
+                    isTransport={isTransport}
+                  />
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </article>
       )}
 
-      {false && showProductSection && !sellerPaymentRequired ? (
-        <article className="premium-card border border-slate-200 bg-white p-6">
-          <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
-            <PlusCircle className="h-5 w-5 text-brand-600" />
-            Boutique produits
-          </h2>
-          <p className="mt-2 text-sm text-slate-600">
-            Publiez vos articles avec une experience type Shopify, sans connexion Shopify.
-          </p>
-          {!isPremiumTier ? (
-            <p className="mt-2 text-sm text-slate-700">
-              Compte hors Premium : jusqu&apos;a {maxBasicListings} article(s) catalogue. Premium : illimite.
-            </p>
-          ) : null}
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Input
-              placeholder="Nom produit"
-              value={productForm.name}
-              onChange={(event) => setProductForm((prev) => ({ ...prev, name: event.target.value }))}
-            />
-            <Input
-              placeholder="Marque"
-              value={productForm.brand}
-              onChange={(event) => setProductForm((prev) => ({ ...prev, brand: event.target.value }))}
-            />
-            <select
-              className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900"
-              value={productForm.category_id}
-              onChange={(event) =>
-                setProductForm((prev) => ({ ...prev, category_id: event.target.value }))
-              }
-            >
-              <option value="">Catégorie : automatique</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            <div className="relative">
-              <Input
-                placeholder="Code-barres (facultatif)"
-                inputMode="numeric"
-                value={productForm.barcode ?? ""}
-                onChange={(event) =>
-                  setProductForm((prev) => ({ ...prev, barcode: event.target.value.replace(/[^0-9A-Za-z-]/g, "") }))
-                }
-                className="pr-28"
-              />
-              <BarcodeScannerDrawer
-                onDetected={(value) =>
-                  setProductForm((prev) => ({ ...prev, barcode: value.replace(/[^0-9A-Za-z-]/g, "").slice(0, 80) }))
-                }
-                triggerClassName="absolute right-1 top-1/2 h-9 -translate-y-1/2 rounded-pill bg-ink-900 px-3 text-xs text-white hover:bg-ink-800"
-              />
-            </div>
-            <Input
-              placeholder="Prix XOF"
-              type="number"
-              value={productForm.amount}
-              onChange={(event) => setProductForm((prev) => ({ ...prev, amount: event.target.value }))}
-            />
-            <Input
-              placeholder="Stock"
-              type="number"
-              value={productForm.stock_quantity}
-              onChange={(event) =>
-                setProductForm((prev) => ({ ...prev, stock_quantity: event.target.value }))
-              }
-            />
-            <SingleMediaField
-              label="Photo du produit"
-              value={productForm.main_image_url}
-              onChange={(value) => setProductForm((prev) => ({ ...prev, main_image_url: value }))}
-              emptyMessage="Choisis la photo du produit depuis la galerie."
-            />
-            <Input
-              placeholder="Description"
-              value={productForm.description}
-              onChange={(event) =>
-                setProductForm((prev) => ({ ...prev, description: event.target.value }))
-              }
-            />
-          </div>
-          <Button
-            className="primary-glow-btn mt-4 bg-brand-600 text-white hover:bg-brand-700"
-            onClick={() =>
-              (() => {
-                if (shopListingLimitReached) {
-                  setStatus(
-                    `Limite atteinte (${maxBasicListings} articles hors Premium). Passe en Premium pour continuer.`
-                  );
-                  return;
-                }
-                const stock = Number(productForm.stock_quantity || 0);
-                if (!Number.isFinite(stock) || stock <= 0) {
-                  setStatus("Ton produit doit avoir un stock > 0 pour s'afficher dans les boutiques.");
-                  return;
-                }
-                productMutation.mutate({
-                  name: productForm.name,
-                  brand: productForm.brand,
-                  amount: Number(productForm.amount || 0),
-                  stock_quantity: stock,
-                  description: productForm.description || undefined,
-                  main_image_url: normalizeImageInput(productForm.main_image_url),
-                  category_id: productForm.category_id || undefined,
-                  barcode: productForm.barcode || undefined,
-                  currency: "XOF",
-                });
-              })()
-            }
-          >
-            Publier mon produit
-          </Button>
-        </article>
+      {status ? (
+        <p className="rounded-field bg-surface-1 px-3 py-2 text-sm text-ink-800" role="status">
+          {status}
+        </p>
       ) : null}
 
-      {false && showRestaurantSection && !sellerPaymentRequired ? (
-        <article className="premium-card border border-slate-200 bg-white p-6">
-          <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
-            <UtensilsCrossed className="h-5 w-5 text-brand-600" />
-            Menu restaurant
-          </h2>
-          <p className="mt-2 text-sm text-slate-600">
-        Ajoutez vos plats, boissons, prix et marquez vos offres en Plat du Jour.
-          </p>
-          {!isPremiumTier ? (
-            <p className="mt-2 text-sm text-slate-700">
-              Hors Premium : jusqu&apos;a {maxBasicListings} plat(s) au menu. Premium : illimite.
-            </p>
-          ) : null}
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Input
-              placeholder="Nom (ex: Shawarma Poulet / Jus d'ananas)"
-              value={restaurantForm.name}
-              onChange={(event) => setRestaurantForm((prev) => ({ ...prev, name: event.target.value }))}
-            />
-            <Input
-              placeholder="Prix XOF"
-              type="number"
-              value={restaurantForm.base_price}
-              onChange={(event) => setRestaurantForm((prev) => ({ ...prev, base_price: event.target.value }))}
-            />
-            <Input
-              placeholder="Description"
-              value={restaurantForm.description}
-              onChange={(event) => setRestaurantForm((prev) => ({ ...prev, description: event.target.value }))}
-            />
-            <SingleMediaField
-              label="Photo du plat"
-              value={restaurantForm.image_url}
-              onChange={(value) => setRestaurantForm((prev) => ({ ...prev, image_url: value }))}
-              emptyMessage="Choisis la photo du plat depuis la galerie."
-            />
-            <Input
-              placeholder="Temps de preparation (minutes)"
-              type="number"
-              value={restaurantForm.estimated_prep_minutes}
-              onChange={(event) =>
-                setRestaurantForm((prev) => ({ ...prev, estimated_prep_minutes: event.target.value }))
-              }
-            />
-            <select
-              value={restaurantForm.category}
-              onChange={(event) =>
-                setRestaurantForm((prev) => ({ ...prev, category: event.target.value as "plat" | "boisson" }))
-              }
-              className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900"
-            >
-              <option value="plat">Plat</option>
-              <option value="boisson">Boisson</option>
-            </select>
-          </div>
-
-          <label className="mt-3 inline-flex items-center gap-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={restaurantForm.is_plat_du_jour}
-              onChange={(event) =>
-                setRestaurantForm((prev) => ({ ...prev, is_plat_du_jour: event.target.checked }))
-              }
-            />
-            Marquer comme Plat du Jour
-          </label>
-
-          <Button
-            className="primary-glow-btn mt-4 bg-brand-600 text-white hover:bg-brand-700"
-            onClick={() => {
-              if (menuListingLimitReached) {
-                setStatus(
-                  `Limite atteinte (${maxBasicListings} plats hors Premium). Passe en Premium pour un menu illimite.`
-                );
-                return;
-              }
-              const tags = [restaurantForm.category === "boisson" ? "Boisson" : "Plat"];
-              if (restaurantForm.is_plat_du_jour) {
-                tags.push("Plat du Jour");
-              }
-              restaurantMutation.mutate({
-                name: restaurantForm.name,
-                description: restaurantForm.description || undefined,
-                image_url: normalizeImageInput(restaurantForm.image_url),
-                base_price: Number(restaurantForm.base_price || 0),
-                currency: "XOF",
-                estimated_prep_minutes: Number(restaurantForm.estimated_prep_minutes || 20),
-                tags,
-                options: [],
-              });
-            }}
-          >
-            Publier article restaurant
+      {/* Bouton d'enregistrement toujours visible sur telephone */}
+      <div className="fixed inset-x-0 bottom-0 z-sticky border-t border-border bg-card/95 px-gutter py-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0">
+        <div className="mx-auto max-w-3xl">
+          <Button type="button" size="lg" className="w-full sm:w-auto" disabled={profileMutation.isPending} onClick={saveProfile}>
+            {profileMutation.isPending ? "Enregistrement…" : "Enregistrer le profil"}
           </Button>
-
-          <div className="mt-5 space-y-2">
-            <p className="text-sm font-medium text-slate-800">Articles déjà publies</p>
-            {restaurantItems.length ? (
-              restaurantItems.slice(0, 8).map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-                >
-                  <div>
-                    <p className="font-medium text-slate-900">{item.name}</p>
-                    <p className="text-xs text-slate-500">{item.tags.join(" - ") || "Sans tag"}</p>
-                  </div>
-                  <p className="font-semibold text-brand-600">{formatXOF(item.base_price)}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-slate-500">Aucun article restaurant pour le moment.</p>
-            )}
-          </div>
-        </article>
-      ) : null}
-
-      {status ? <p className="text-sm text-slate-700">{status}</p> : null}
+        </div>
+      </div>
     </section>
   );
 }

@@ -418,6 +418,12 @@ Toutes les couleurs, rayons et espacements viennent des tokens du design system 
 - Une entreprise sans restaurant ne voit plus les outils restaurant (offers_shop / offers_restaurant respectés).
 - Tests : backend 289, frontend 38. Rendu vérifié avec données simulées (tools/e2e/seller-mock.mjs).
 
+## 4 duotricies. Page vendeur « Profil et abonnement » — 2026-10-15
+
+- Un seul bloc Abonnement (au lieu de deux formulaires de paiement) : état clair (actif jusqu'au…, à renouveler, inactif, paiement en vérification), durée en boutons, Nita/Amana en boutons, montant et numéro en gros ; « Prolonger » à la demande ; refus admin affiché avec son motif.
+- Profil en sections étiquetées (Ma boutique, Contact client, Formule, Options Premium/restaurant seulement si utiles) ; bouton Enregistrer toujours visible sur téléphone.
+- Code mort supprimé (anciens formulaires produit/menu masqués) : 1 346 → 776 lignes.
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).
