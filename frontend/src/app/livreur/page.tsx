@@ -30,13 +30,15 @@ export default function CourierPage() {
     queryKey: ["courier-available"],
     queryFn: listAvailableDeliveries,
     enabled: allowed,
-    refetchInterval: 30_000,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
   });
   const mine = useQuery({
     queryKey: ["courier-mine"],
     queryFn: listMyDeliveries,
     enabled: allowed,
-    refetchInterval: 30_000,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
   });
 
   const refresh = () => {

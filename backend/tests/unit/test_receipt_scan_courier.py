@@ -18,6 +18,9 @@ def _isolate(monkeypatch):
     monkeypatch.setattr(route, "_build_receipt_payload", lambda *a: {})
     monkeypatch.setattr(route, "_product_names", lambda *a: {})
     monkeypatch.setattr(route, "sync_fulfillments", lambda _o: None)
+    from app.services import order_delivery_service as delivery
+    monkeypatch.setattr(delivery, "sync_fulfillments", lambda _o: None)
+    monkeypatch.setattr(delivery, "_notify_delivery", lambda *a: None)
 
 
 def _call(user, order):

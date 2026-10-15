@@ -18,6 +18,8 @@ export function OrderConfirmation({ orderId }: { orderId: string }) {
     queryFn: listMyOrders,
     enabled: Boolean(orderId),
     retry: 1,
+    refetchInterval: 20_000,
+    refetchOnWindowFocus: true,
   });
   const order = orders?.find((item) => item.id === orderId);
   const { data: receipt } = useQuery({

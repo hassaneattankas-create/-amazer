@@ -32,6 +32,9 @@ export default function DashboardPage() {
     queryKey: ["orders-me"],
     queryFn: listMyOrders,
     retry: false,
+    // Statut a jour sans recharger : livraison confirmee par le livreur, la boutique, AMAZER ou le scan du recu.
+    refetchInterval: 20_000,
+    refetchOnWindowFocus: true,
   });
 
   const deleteAccountMutation = useMutation({

@@ -424,6 +424,13 @@ Toutes les couleurs, rayons et espacements viennent des tokens du design system 
 - Profil en sections étiquetées (Ma boutique, Contact client, Formule, Options Premium/restaurant seulement si utiles) ; bouton Enregistrer toujours visible sur téléphone.
 - Code mort supprimé (anciens formulaires produit/menu masqués) : 1 346 → 776 lignes.
 
+## 4 tertricies. Livraison synchronisée partout — 2026-10-15
+
+- Nouvelle règle unique `mark_order_delivered` (services/order_delivery_service.py) utilisée par les 6 sources : livreur, vendeur (quand sa part rend la commande entièrement livrée), admin, scan du QR code, confirmation client, délai automatique (2 endroits).
+- Effet identique partout : commande + parts de chaque boutique « livrée », date de livraison enregistrée (manquait pour vendeur/admin/client/auto), notification au client, aux boutiques et au livreur — jamais à l'auteur de l'action, jamais deux fois.
+- Écrans : Mon compte et la confirmation de commande se rafraîchissent toutes les 20 s (et au retour sur l'onglet) ; espace livreur 15 s ; vendeur et admin déjà à 5 s.
+- Tests : backend 293.
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).

@@ -26,6 +26,7 @@ from app.models.order import Order, OrderFulfillment, OrderItem
 from app.models.product import Price, Product
 from app.models.receipt_scan import ReceiptScan
 from app.models.reseller import ResellerListing
+from app.services.order_delivery_service import mark_order_delivered
 from app.services.reseller_account_service import reseller_terms, split_margin, subscription_active
 from app.services.affiliate_service import customer_bonus_for_order
 from app.models.seller_profile import SellerProfile
@@ -282,8 +283,7 @@ def _auto_finalize_order_without_qr(
         return False
     vendor_ids = {item.vendor_id for item in order.items}
     resolved_vendor_id = next(iter(vendor_ids)) if len(vendor_ids) == 1 else None
-    order.status = "recu"
-    sync_fulfillments(order)
+    mark_order_delivered(db, order, source="auto")
     db.add(
         ReceiptScan(
             order_id=order.id,
@@ -775,8 +775,7 @@ def client_confirm_reception(
         raise UnauthorizedError("Acces non autorise")
     if order.status not in {"livraison", "commande", "preparation"}:
         raise ValidationDomainError("Cette commande ne peut pas etre confirmee dans son etat actuel")
-    order.status = "recu"
-    sync_fulfillments(order)
+    mark_order_delivered(db, order, source="customer")
     db.commit()
     db.refresh(order)
     return _to_order_response(order)
@@ -949,13 +948,9 @@ def verify_receipt_scan(
             scanned_at=scan.scanned_at,
         )
 
-    order.status = "recu"
-    if order.delivered_at is None:
-        order.delivered_at = datetime.now(UTC)
-    sync_fulfillments(order)
+    mark_order_delivered(db, order, source="qr_scan")
     scan.result = "accepted"
     db.add(scan)
-    order_events.notify_order_status(db, order, "recu")
     db.commit()
     db.refresh(scan)
     return ReceiptVerifyResponse(

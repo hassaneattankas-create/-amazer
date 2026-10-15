@@ -24,6 +24,7 @@ from app.models.order import Order
 from app.models.product import Product
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
+from app.services.order_delivery_service import mark_order_delivered
 from app.services.audit_log_service import append_audit_log
 from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.order_fulfillment_service import sync_fulfillments
@@ -229,9 +230,7 @@ def mark_delivered(
         raise ForbiddenError("Seul le livreur chargé de cette commande peut la marquer livrée.")
     if order.status != "livraison":
         raise ConflictError("Cette commande n'est pas en cours de livraison.")
-    order.status = "recu"
-    order.delivered_at = datetime.now(UTC)
-    sync_fulfillments(order)
+    mark_order_delivered(db, order, source="courier")
     append_audit_log(
         db,
         event_type="courier_order_delivered",
@@ -244,8 +243,6 @@ def mark_delivered(
     )
     db.commit()
     db.refresh(order)
-    tracking = order.tracking_code or order.id[:8].upper()
-    _notify(db, order.user_id, "Commande livrée", f"La commande #{tracking} a été livrée. Merci !", f"delivery-{order.id}", "/dashboard")
     return _build(db, order, courier)
 
 

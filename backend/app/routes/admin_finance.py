@@ -73,6 +73,7 @@ from app.routes.resellers import compute_earnings as compute_reseller_earnings
 from app.models.reseller import ResellerSubscriptionPayment
 from app.models.affiliate import AffiliateAccount, AffiliateEarning
 from app.routes.affiliates import compute_affiliate_earnings
+from app.services.order_delivery_service import mark_order_delivered
 from app.services.affiliate_service import credit_subscription_share
 from app.services.reseller_account_service import ensure_account as ensure_reseller_account
 from app.services.reseller_account_service import extend_subscription as extend_reseller_subscription
@@ -360,8 +361,7 @@ def _auto_finalize_order_without_qr(
     if elapsed < timedelta(hours=AUTO_RECEIPT_TIMEOUT_HOURS):
         return False
 
-    order.status = "recu"
-    sync_fulfillments(order)
+    mark_order_delivered(db, order, source="auto")
     unique_vendor_ids = {item.vendor_id for item in order.items}
     vendor_id = next(iter(unique_vendor_ids)) if len(unique_vendor_ids) == 1 else None
     db.add(
@@ -880,10 +880,13 @@ def dispatch_order_to_delivery(
         raise ValidationDomainError("Order not found")
     ensure_not_cancelled(order)
     previous_status = order.status
-    order.status = payload.status
-    sync_fulfillments(order)
-    if payload.status != previous_status:
-        order_events.notify_order_status(db, order, payload.status)
+    if payload.status == "recu":
+        mark_order_delivered(db, order, source="admin")
+    else:
+        order.status = payload.status
+        sync_fulfillments(order)
+        if payload.status != previous_status:
+            order_events.notify_order_status(db, order, payload.status)
     if payload.status == "livraison":
         db.add(
             ReceiptScan(
