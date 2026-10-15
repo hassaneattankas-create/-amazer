@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Pub Affiliation AMAZER</title>
+<style>
+  html, body { margin: 0; background: #0B1220; }
+  canvas { display: block; width: 100vw; height: auto; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+/* Pub « Affiliation AMAZER » — 30 s, rendu deterministe : window.seek(t) est le seul point d'entree. */
+const W = 1920, H = 1080, DURATION = 30;
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d', { willReadFrequently: true }); // rendu logiciel : identique au bit pres
+const C = {
+  night: '#0B1220', night2: '#111A2E', card: '#1A2540', line: '#2A3A5C',
+  brand: '#FF4D00', brandL: '#FF7A1A', peach: '#FDBA74', cream: '#FFF7F2',
+  white: '#F8FAFC', mute: '#A5B1C6', ink: '#0F172A', inkMute: '#475569', ok: '#22C55E',
+};
+const FONT = '"Segoe UI", Arial, sans-serif';
+const LINK = 'amazer.store/?ref=K7M4QA';
+
+/* ------------------------------- utilitaires ------------------------------ */
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+const P = (t, a, b) => clamp((t - a) / (b - a));
+const eo = p => 1 - Math.pow(1 - p, 5);                       // easeOutQuint
+const eio = p => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+const ein = p => p * p * p;
+const pop = p => { const c1 = 1.36, c3 = c1 + 1; return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2); }; // ~8 % d'elan
+function hash(i) { let x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+function font(weight, size, family = FONT) { ctx.font = `${weight} ${size}px ${family}`; }
+function rr(x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function withAlpha(a, fn) { if (a <= 0.001) return; ctx.save(); ctx.globalAlpha *= clamp(a); fn(); ctx.restore(); }
+function camera(cx, cy, s, dx = 0, dy = 0) { ctx.translate(cx + dx, cy + dy); ctx.scale(s, s); ctx.translate(-cx, -cy); }
+function center(text, x, y) { ctx.textAlign = 'center'; ctx.fillText(text, x, y); ctx.textAlign = 'left'; }
+
+const S = (str, color, underlineAt) => str.split(' ').map((w, i, arr) => [w, color, i === arr.length - 1 ? underlineAt : undefined]);
+
+/* Texte cinetique : chaque mot monte depuis un masque ; sortie vers le haut (0,3 s). */
+function kText(lines, cx, cy, size, weight, t, t0, tOut, align = 'center') {
+  font(weight, size);
+  const lh = size * 1.14, total = lines.length * lh;
+  const out = tOut == null ? 0 : ein(P(t, tOut, tOut + 0.3));
+  let k = 0;
+  lines.forEach((line, li) => {
+    const sp = size * 0.27;
+    const widths = line.map(w => ctx.measureText(w[0]).width);
+    const tw = widths.reduce((a, b) => a + b, 0) + sp * (line.length - 1);
+    let x = align === 'center' ? cx - tw / 2 : cx;
+    const y = cy - total / 2 + li * lh + size * 0.9;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x - 30, y - size * 1.02, tw + 60, size * 1.34); ctx.clip();
+    line.forEach((w, wi) => {
+      const p = eo(P(t, t0 + k * 0.06, t0 + k * 0.06 + 0.55)); k++;
+      const dy = (1 - p) * size * 1.15 - out * size * 1.3;
+      ctx.fillStyle = w[1] || C.white;
+      ctx.fillText(w[0], x, y + dy);
+      if (w[2] != null) {
+        const u = eo(P(t, w[2], w[2] + 0.5));
+        ctx.fillStyle = C.brand;
+        rr(x, y + size * 0.13 + dy, Math.max(1, widths[wi] * u), size * 0.085, size * 0.04); ctx.fill();
+      }
+      x += widths[wi] + sp;
+    });
+    ctx.restore();
+  });
+}
+
+/* --------------------------------- decor ---------------------------------- */
+function background(t) {
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, C.night); g.addColorStop(1, C.night2);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // halo orange qui derive lentement
+  const gx = 960 + Math.sin(t * 0.35) * 420, gy = 520 + Math.cos(t * 0.27) * 180;
+  const rg = ctx.createRadialGradient(gx, gy, 0, gx, gy, 900);
+  rg.addColorStop(0, 'rgba(255,77,0,0.16)'); rg.addColorStop(1, 'rgba(255,77,0,0)');
+  ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+  // trame de points (parallaxe lente)
+  ctx.fillStyle = 'rgba(248,250,252,0.055)';
+  const off = (t * 10) % 48;
+  for (let y = -48; y < H + 48; y += 48) for (let x = 0; x < W + 48; x += 48) {
+    ctx.beginPath(); ctx.arc(x, y + off, 1.6, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function coinGlyph(x, y, r, a = 1) {
+  withAlpha(a, () => {
+    const g = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+    g.addColorStop(0, C.brandL); g.addColorStop(1, C.brand);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = Math.max(1.5, r * 0.08);
+    ctx.beginPath(); ctx.arc(x, y, r * 0.78, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#fff'; font(900, r * 0.95); ctx.textBaseline = 'middle'; center('F', x, y + r * 0.04); ctx.textBaseline = 'alphabetic';
+  });
+}
+
+function linkIcon(x, y, s, color) {
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = s * 0.16; ctx.lineCap = 'round';
+  ctx.translate(x, y); ctx.rotate(-Math.PI / 4);
+  rr(-s * 0.55, -s * 0.22, s * 0.62, s * 0.44, s * 0.22); ctx.stroke();
+  rr(-s * 0.07, -s * 0.22, s * 0.62, s * 0.44, s * 0.22); ctx.stroke();
+  ctx.restore();
+}
+
+function check(x, y, s, color, p = 1) {
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = s * 0.16; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const pts = [[-0.42, 0.02], [-0.12, 0.32], [0.45, -0.3]];
+  const L1 = Math.hypot(0.3, 0.3), L2 = Math.hypot(0.57, 0.62), L = (L1 + L2) * p;
+  ctx.beginPath(); ctx.moveTo(x + pts[0][0] * s, y + pts[0][1] * s);
+  if (L <= L1) { const q = L / L1; ctx.lineTo(x + lerp(pts[0][0], pts[1][0], q) * s, y + lerp(pts[0][1], pts[1][1], q) * s); }
+  else { ctx.lineTo(x + pts[1][0] * s, y + pts[1][1] * s); const q = (L - L1) / L2; ctx.lineTo(x + lerp(pts[1][0], pts[2][0], q) * s, y + lerp(pts[1][1], pts[2][1], q) * s); }
+  ctx.stroke(); ctx.restore();
+}
+
+/* Puce de lien (le « heros » qui voyage dans le film). */
+function chip(x, y, s, a = 1) {
+  withAlpha(a, () => {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    font(700, 34, 'Consolas, monospace');
+    const tw = ctx.measureText(LINK).width, w = tw + 110, h = 74;
+    ctx.shadowColor = 'rgba(255,77,0,0.45)'; ctx.shadowBlur = 30;
+    ctx.fillStyle = C.ink; rr(-w / 2, -h / 2, w, h, h / 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = C.brand; ctx.lineWidth = 3; rr(-w / 2, -h / 2, w, h, h / 2); ctx.stroke();
+    linkIcon(-w / 2 + 44, 0, 34, C.brand);
+    ctx.fillStyle = C.white; ctx.textBaseline = 'middle'; ctx.fillText(LINK, -w / 2 + 80, 2); ctx.textBaseline = 'alphabetic';
+    ctx.restore();
+  });
+}
+
+/* ------------------------- scenes 1 & 2 : accroche ------------------------ */
+const BUBBLES = [
+  [330, 210, 300, 0], [1590, 190, 330, 1], [260, 340, 200, 1], [1665, 720, 200, 0],
+  [380, 860, 320, 1], [1540, 870, 300, 0], [790, 120, 230, 1], [1150, 960, 250, 0], [720, 960, 210, 1],
+];
+function bubbles(t) {
+  BUBBLES.forEach(([bx, by, bw, sent], i) => {
+    const appear = pop(P(t, 0.05 + i * 0.05, 0.47 + i * 0.05));
+    if (appear <= 0) return;
+    const morph = eio(P(t, 2.9 + i * 0.04, 3.6 + i * 0.04));              // bulle -> piece
+    const drift = Math.sin(t * 0.9 + i) * 8;
+    const x = bx, y = by - t * 12 + drift;
+    const w = lerp(bw, 92, morph), h = lerp(86, 92, morph), r = lerp(26, 46, morph);
+    ctx.save(); ctx.translate(x, y); ctx.scale(appear, appear);
+    withAlpha(1 - morph, () => {
+      ctx.fillStyle = sent ? '#3A2416' : C.card; rr(-w / 2, -h / 2, w, h, r); ctx.fill();
+      ctx.strokeStyle = sent ? 'rgba(253,186,116,0.45)' : C.line; ctx.lineWidth = 2; rr(-w / 2, -h / 2, w, h, r); ctx.stroke();
+      linkIcon(-w / 2 + 40, 0, 30, sent ? C.peach : C.mute);
+      ctx.fillStyle = sent ? 'rgba(253,186,116,0.55)' : 'rgba(165,177,198,0.45)';
+      rr(-w / 2 + 72, -16, Math.max(0, w - 110), 12, 6); ctx.fill();
+      rr(-w / 2 + 72, 6, Math.max(0, (w - 110) * 0.6), 12, 6); ctx.fill();
+    });
+    if (morph > 0) coinGlyph(0, 0, 46 * (0.6 + 0.4 * morph), morph);
+    ctx.restore();
+  });
+}
+
+function scene12(t) {
+  // poussee camera vers le telephone (sortie de la scene 2)
+  const push = ein(P(t, 5.25, 5.7));
+  const a = 1 - push;
+  if (a <= 0) return;
+  ctx.save(); camera(960, 540, 1 + push * 0.35 + t * 0.006);
+  withAlpha(a, () => {
+    bubbles(t);
+    if (t < 2.65) kText([S('Vous partagez déjà'), [['sur', C.white], ['WhatsApp ?', C.peach]]], 960, 540, 120, 900, t, 0.12, 2.3);
+    if (t >= 2.6) kText([S('Et si chaque partage'), [['vous', C.white], ['rapportait ?', C.white, 3.45]]], 960, 540, 120, 900, t, 2.6, null);
+  });
+  ctx.restore();
+}
+
+/* ------------------------- scene 3 : le telephone ------------------------- */
+let MARK = null;
+const PHONE = { x: 1110, y: 92, w: 440, h: 896 };
+const BTN = { x: PHONE.x + 16 + 28, y: PHONE.y + 16 + 400, w: 408 - 56, h: 80 };
+const FIELD = { x: PHONE.x + 16 + 28, y: PHONE.y + 16 + 300, w: 408 - 56, h: 76 };
+
+function phone(t) {
+  const { x, y, w, h } = PHONE;
+  ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 30;
+  ctx.fillStyle = '#0A0F1C'; rr(x, y, w, h, 64); ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 3; rr(x, y, w, h, 64); ctx.stroke();
+  const sx = x + 16, sy = y + 16, sw = w - 32, sh = h - 32;
+  ctx.save(); rr(sx, sy, sw, sh, 50); ctx.clip();
+  ctx.fillStyle = '#F8FAFC'; ctx.fillRect(sx, sy, sw, sh);
+  // en-tete
+  ctx.fillStyle = C.ink; ctx.fillRect(sx, sy, sw, 104);
+  if (MARK) ctx.drawImage(MARK, sx + 28, sy + 36, 52, 52);
+  ctx.fillStyle = C.white; font(900, 32); ctx.fillText('AMAZER', sx + 92, sy + 74);
+  // titre
+  ctx.fillStyle = C.ink; font(900, 50); ctx.fillText('Affiliation', sx + 28, sy + 186);
+  ctx.fillStyle = C.inkMute; font(600, 28); ctx.fillText('Partagez, gagnez.', sx + 28, sy + 228);
+  ctx.fillStyle = C.inkMute; font(700, 26); ctx.fillText('Votre lien', sx + 28, sy + 290);
+  // champ du lien
+  ctx.fillStyle = '#E2E8F0'; rr(FIELD.x, FIELD.y, FIELD.w, FIELD.h, 16); ctx.fill();
+  const lifted = P(t, 8.15, 8.3);
+  withAlpha(1 - lifted * 0.7, () => { ctx.fillStyle = C.ink; font(700, 24, 'Consolas, monospace'); ctx.fillText(LINK, FIELD.x + 20, FIELD.y + 47); });
+  // bouton « Copier mon lien »
+  const press = Math.sin(Math.PI * P(t, 7.5, 7.75)) * 0.05;
+  ctx.save(); camera(BTN.x + BTN.w / 2, BTN.y + BTN.h / 2, 1 - press);
+  ctx.fillStyle = C.brand; rr(BTN.x, BTN.y, BTN.w, BTN.h, 18); ctx.fill();
+  ctx.fillStyle = '#fff'; font(800, 32); center('Copier mon lien', BTN.x + BTN.w / 2, BTN.y + 52);
+  ctx.restore();
+  // tuiles de gains
+  const ty = sy + 540;
+  [['Vendeurs', '20 %'], ['Clients', '250 F']].forEach(([label, val], i) => {
+    const tx = sx + 28 + i * 184;
+    ctx.fillStyle = '#FFF1E8'; rr(tx, ty, 168, 150, 20); ctx.fill();
+    ctx.fillStyle = C.brand; font(900, 46); ctx.fillText(val, tx + 18, ty + 72);
+    ctx.fillStyle = C.inkMute; font(700, 26); ctx.fillText(label, tx + 18, ty + 118);
+  });
+  // toast « Lien copié »
+  const toast = pop(P(t, 7.78, 8.2)), toastOut = P(t, 8.75, 8.95);
+  if (toast > 0) withAlpha(1 - toastOut, () => {
+    ctx.save(); camera(sx + sw / 2, sy + 790, toast);
+    ctx.fillStyle = C.ink; rr(sx + 60, sy + 750, sw - 120, 80, 40); ctx.fill();
+    check(sx + 112, sy + 790, 34, C.ok, eo(P(t, 7.9, 8.2)));
+    ctx.fillStyle = C.white; font(800, 30); ctx.fillText('Lien copié', sx + 146, sy + 801);
+    ctx.restore();
+  });
+  ctx.restore();
+  // doigt : point d'appui + onde
+  const tap = P(t, 7.3, 7.55), tapOut = P(t, 7.75, 7.95);
+  if (tap > 0 && tapOut < 1) {
+    const fx = BTN.x + BTN.w * 0.62, fy = BTN.y + BTN.h * 0.55;
+    withAlpha((1 - tapOut) * eo(tap), () => {
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(fx, fy, 30, 0, Math.PI * 2); ctx.fill();
+      const ring = P(t, 7.5, 7.95);
+      ctx.strokeStyle = `rgba(255,255,255,${0.7 * (1 - ring)})`; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(fx, fy, 30 + ring * 70, 0, Math.PI * 2); ctx.stroke();
+    });
+  }
+}
+
+const STEPS = [['Créez votre compte', 5.62], ['Ouvrez Affiliation', 6.5], ['Copiez votre lien', 7.3]];
+function steps(t) {
+  STEPS.forEach(([label, t0], i) => {
+    const p = eo(P(t, t0, t0 + 0.5));
+    if (p <= 0) return;
+    const next = i < STEPS.length - 1 ? STEPS[i + 1][1] : 99;
+    const done = P(t, next, next + 0.3);
+    const y = 380 + i * 150;
+    withAlpha(p, () => {
+      ctx.save(); ctx.translate(0, (1 - p) * 24);
+      ctx.fillStyle = done > 0 ? C.ok : C.brand;
+      ctx.beginPath(); ctx.arc(250, y, 40, 0, Math.PI * 2); ctx.fill();
+      if (done > 0) check(250, y, 46, '#fff', eo(done));
+      else { ctx.fillStyle = '#fff'; font(900, 40); center(String(i + 1), 250, y + 14); }
+      ctx.fillStyle = done > 0 ? C.mute : C.white; font(800, 58); ctx.fillText(label, 320, y + 20);
+      ctx.restore();
+    });
+  });
+}
+
+function scene3(t) {
+  if (t < 5.3 || t > 9.1) return;
+  const enter = eo(P(t, 5.3, 6.0)), exit = ein(P(t, 8.55, 8.95));
+  ctx.save(); camera(960, 540, lerp(1.08, 1, enter) - exit * 0.04, -exit * 260, (1 - enter) * 260);
+  withAlpha(enter * (1 - exit), () => { steps(t); phone(t); });
+  ctx.restore();
+}
+
+/* ---------------------- scene 4 : le vendeur parraine --------------------- */
+const YOU = { x: 430, y: 450 }, SHOP = { x: 1490, y: 450 }, CTRL = { x: 960, y: 250 };
+const bez = (p, a, c, b) => ({ x: (1 - p) * (1 - p) * a.x + 2 * (1 - p) * p * c.x + p * p * b.x, y: (1 - p) * (1 - p) * a.y + 2 * (1 - p) * p * c.y + p * p * b.y });
+
+function node(x, y, label, kind, a, glow) {
+  withAlpha(a, () => {
+    if (glow > 0) {
+      const rg = ctx.createRadialGradient(x, y, 40, x, y, 150);
+      rg.addColorStop(0, `rgba(255,77,0,${0.45 * glow})`); rg.addColorStop(1, 'rgba(255,77,0,0)');
+      ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y, 150, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = C.card; ctx.beginPath(); ctx.arc(x, y, 72, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = glow > 0 ? C.brand : C.line; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, 72, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = C.peach;
+    if (kind === 'person') {
+      ctx.beginPath(); ctx.arc(x, y - 16, 20, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x, y + 30, 34, 22, 0, Math.PI, 0); ctx.fill();
+    } else if (kind === 'shop') {
+      ctx.fillRect(x - 34, y - 6, 68, 40);
+      ctx.fillStyle = C.brand; rr(x - 42, y - 34, 84, 30, 8); ctx.fill();
+      ctx.fillStyle = C.card; ctx.fillRect(x - 10, y + 10, 20, 24);
+    } else {
+      ctx.strokeStyle = C.peach; ctx.lineWidth = 7; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(x - 38, y - 26); ctx.lineTo(x - 24, y - 26); ctx.lineTo(x - 12, y + 18); ctx.lineTo(x + 30, y + 18); ctx.lineTo(x + 38, y - 12); ctx.lineTo(x - 18, y - 12); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x - 6, y + 34, 7, 0, Math.PI * 2); ctx.arc(x + 24, y + 34, 7, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = C.white; font(800, 40); center(label, x, y + 128);
+  });
+}
+
+function scene4(t, ox) {
+  if (t < 8.4 || t > 14.5) return;
+  ctx.save(); ctx.translate(ox, 0);
+  const a = eo(P(t, 8.75, 9.2));
+  kText([S('Un vendeur ouvre sa boutique'), S('avec votre lien', C.peach)], 960, 165, 64, 900, t, 8.85, 13.7);
+  // trajet en pointilles qui se trace
+  const trace = eio(P(t, 9.0, 9.6));
+  withAlpha(a, () => {
+    ctx.strokeStyle = 'rgba(253,186,116,0.5)'; ctx.lineWidth = 4; ctx.setLineDash([2, 16]); ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let i = 0; i <= 60 * trace; i++) { const q = bez(i / 60, YOU, CTRL, SHOP); i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y); }
+    ctx.stroke(); ctx.setLineDash([]);
+  });
+  const arrived = P(t, 10.2, 10.6);
+  node(YOU.x, YOU.y, 'Vous', 'person', a, 0);
+  node(SHOP.x, SHOP.y, 'Vendeur', 'shop', a, eo(arrived));
+  if (arrived > 0) withAlpha(1, () => {
+    const s = pop(P(t, 10.2, 10.6));
+    ctx.save(); camera(SHOP.x + 58, SHOP.y - 58, s);
+    ctx.fillStyle = C.ok; ctx.beginPath(); ctx.arc(SHOP.x + 58, SHOP.y - 58, 26, 0, Math.PI * 2); ctx.fill();
+    check(SHOP.x + 58, SHOP.y - 58, 30, '#fff', eo(P(t, 10.3, 10.6)));
+    ctx.restore();
+  });
+  // pieces : du vendeur vers vous
+  for (let k = 0; k < 6; k++) {
+    const q = (t - 11.0 - k * 0.42) / 1.3;
+    if (q <= 0 || q >= 1 || t > 13.9) continue;
+    const pos = bez(1 - eio(q), YOU, CTRL, SHOP);
+    coinGlyph(pos.x, pos.y, 22, Math.sin(Math.PI * q));
+  }
+  // 20 %
+  const st = P(t, 10.55, 11.35);
+  if (st > 0) {
+    const n = Math.round(20 * eo(st));
+    const s = pop(P(t, 10.55, 11.0));
+    ctx.save(); camera(960, 640, s);
+    ctx.fillStyle = C.brand; font(900, 200); center(`${n} %`, 960, 700);
+    ctx.restore();
+    withAlpha(eo(P(t, 10.9, 11.3)), () => { ctx.fillStyle = C.white; font(700, 50); center('de son abonnement', 960, 780); });
+  }
+  // 12 mois
+  for (let m = 0; m < 12; m++) {
+    const p = pop(P(t, 11.7 + m * 0.09, 12.05 + m * 0.09));
+    if (p <= 0) continue;
+    const mx = 960 - 11 * 34 + m * 68;
+    ctx.save(); camera(mx, 870, p);
+    ctx.fillStyle = C.brand; rr(mx - 24, 846, 48, 48, 12); ctx.fill();
+    ctx.fillStyle = '#fff'; font(800, 22); center(String(m + 1), mx, 878);
+    ctx.restore();
+  }
+  withAlpha(eo(P(t, 12.4, 12.8)), () => { ctx.fillStyle = C.peach; font(800, 44); center('pendant 12 mois', 960, 968); });
+  ctx.restore();
+}
+
+/* Trajet de la puce : champ du telephone -> « Vous » -> vendeur. */
+function heroChip(t) {
+  if (t < 8.15 || t > 10.45) return;
+  const start = { x: FIELD.x + FIELD.w / 2, y: FIELD.y + FIELD.h / 2 };
+  const youSpot = { x: YOU.x + 40, y: YOU.y - 130 };
+  if (t < 9.25) {
+    const p = eio(P(t, 8.15, 9.25));
+    const x = lerp(start.x, youSpot.x, p), y = lerp(start.y, youSpot.y, p) - Math.sin(Math.PI * p) * 120;
+    chip(x, y, lerp(0.62, 0.8, p), 1);
+  } else {
+    const p = eio(P(t, 9.25, 10.25));
+    const q = bez(p, YOU, CTRL, SHOP);
+    const x = lerp(youSpot.x, q.x, P(t, 9.25, 9.5)), y = lerp(youSpot.y, q.y - 70, P(t, 9.25, 9.5)) ;
+    chip(p > 0.02 ? q.x : x, p > 0.02 ? q.y - 70 : y, lerp(0.8, 0.45, p), 1 - P(t, 10.1, 10.4));
+  }
+}
+
+/* ------------------------ scene 5 : le nouveau client --------------------- */
+const TRACK = [['Commande', 14.55], ['En livraison', 15.25], ['Livrée', 15.95]];
+function scene5(t, ox) {
+  if (t < 13.8 || t > 19.4) return;
+  ctx.save(); ctx.translate(ox, 0);
+  const out = ein(P(t, 18.95, 19.25));
+  ctx.translate(0, -out * 120);
+  withAlpha(1 - out, () => {
+    kText([S('Un nouveau client'), S('fait sa première commande', C.peach)], 960, 165, 64, 900, t, 14.05, null);
+    // suivi de commande
+    const xs = [520, 960, 1400], y = 470;
+    const fill = eio(P(t, 14.6, 15.95));
+    ctx.strokeStyle = C.line; ctx.lineWidth = 10; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(xs[0], y); ctx.lineTo(xs[2], y); ctx.stroke();
+    ctx.strokeStyle = C.brand; ctx.beginPath(); ctx.moveTo(xs[0], y); ctx.lineTo(lerp(xs[0], xs[2], fill), y); ctx.stroke();
+    TRACK.forEach(([label, t0], i) => {
+      const on = pop(P(t, t0, t0 + 0.4));
+      const appear = eo(P(t, 14.2 + i * 0.05, 14.6 + i * 0.05));
+      withAlpha(appear, () => {
+        ctx.fillStyle = C.card; ctx.beginPath(); ctx.arc(xs[i], y, 46, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = C.line; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(xs[i], y, 46, 0, Math.PI * 2); ctx.stroke();
+        if (on > 0) {
+          ctx.save(); camera(xs[i], y, on);
+          ctx.fillStyle = i === 2 ? C.ok : C.brand; ctx.beginPath(); ctx.arc(xs[i], y, 46, 0, Math.PI * 2); ctx.fill();
+          check(xs[i], y, 44, '#fff', eo(P(t, t0 + 0.1, t0 + 0.4)));
+          ctx.restore();
+        }
+        ctx.fillStyle = on > 0 ? C.white : C.mute; font(800, 42); center(label, xs[i], y + 104);
+      });
+    });
+    // +250 F
+    const b = P(t, 16.3, 16.75);
+    if (b > 0) {
+      ctx.save(); camera(960, 770, pop(b));
+      coinGlyph(700, 760, 62, 1);
+      ctx.fillStyle = C.brand; font(900, 170); ctx.textAlign = 'left'; ctx.fillText('+250 F', 790, 820);
+      ctx.restore();
+      withAlpha(eo(P(t, 16.7, 17.1)), () => { ctx.fillStyle = C.white; font(700, 48); center('pour vous, dès qu’elle est livrée', 960, 925); });
+    }
+  });
+  ctx.restore();
+}
+
+/* ------------------------ scene 6 : gratuit, paiement --------------------- */
+function scene6(t) {
+  if (t < 19.0 || t > 22.4) return;
+  const zoom = 1 + P(t, 19.1, 22.3) * 0.03;
+  ctx.save(); camera(960, 540, zoom);
+  kText([[['Gratuit.', C.white, 19.55]]], 960, 360, 170, 900, t, 19.1, null);
+  [['Inscription gratuite', 'check'], ['Payé par Nita ou Amana', 'wallet']].forEach(([label, icon], i) => {
+    const p = eo(P(t, 19.75 + i * 0.25, 20.3 + i * 0.25));
+    if (p <= 0) return;
+    const x = i === 0 ? 270 : 990, y = 560, w = 660, h = 180;
+    withAlpha(p, () => {
+      ctx.save(); ctx.translate(0, (1 - p) * 40);
+      ctx.fillStyle = C.card; rr(x, y, w, h, 32); ctx.fill();
+      ctx.strokeStyle = C.line; ctx.lineWidth = 2; rr(x, y, w, h, 32); ctx.stroke();
+      ctx.fillStyle = i === 0 ? C.ok : C.brand; ctx.beginPath(); ctx.arc(x + 100, y + h / 2, 52, 0, Math.PI * 2); ctx.fill();
+      if (icon === 'check') check(x + 100, y + h / 2, 56, '#fff', eo(P(t, 19.95, 20.4)));
+      else { ctx.fillStyle = '#fff'; rr(x + 72, y + h / 2 - 22, 56, 44, 8); ctx.fill(); ctx.fillStyle = C.brand; ctx.beginPath(); ctx.arc(x + 116, y + h / 2, 7, 0, Math.PI * 2); ctx.fill(); }
+      ctx.fillStyle = C.white; font(800, 48); ctx.fillText(label, x + 176, y + h / 2 + 17);
+      ctx.restore();
+    });
+  });
+  ctx.restore();
+}
+
+/* Volet diagonal orange -> creme. */
+function wipe(t) {
+  const p = eio(P(t, 21.85, 22.4));
+  if (p <= 0) return false;
+  const skew = 520, edge = p * (W + skew + 200);
+  const poly = (e, color) => { ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(e, 0); ctx.lineTo(e - skew, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill(); };
+  poly(edge, C.brand);
+  poly(edge - 200, C.cream);
+  return p >= 1;
+}
+
+/* ------------------------------ scene 7 : fin ----------------------------- */
+function scene7(t) {
+  if (t < 22.2) return;
+  ctx.fillStyle = C.cream; ctx.fillRect(0, 0, W, H);
+  const rg = ctx.createRadialGradient(1700, 120, 0, 1700, 120, 900);
+  rg.addColorStop(0, 'rgba(255,122,26,0.16)'); rg.addColorStop(1, 'rgba(255,122,26,0)');
+  ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+  const settle = 1 + (1 - eo(P(t, 22.3, 30))) * 0.02;
+  ctx.save(); camera(960, 540, settle);
+  // logo (echelle uniforme uniquement)
+  const lp = P(t, 22.4, 22.85);
+  if (lp > 0 && MARK) withAlpha(eo(lp), () => {
+    ctx.save(); camera(960, 300, lerp(0.88, 1, pop(lp)));
+    ctx.drawImage(MARK, 960 - 95, 300 - 95, 190, 190);
+    ctx.restore();
+  });
+  ctx.save();
+  ctx.letterSpacing = '8px';
+  kText([[['AMAZER', C.ink]]], 960, 500, 124, 900, t, 22.7, null);
+  ctx.restore();
+  kText([[['Affiliation', C.brand]]], 960, 600, 60, 800, t, 22.95, null);
+  kText([[['Partagez.', C.ink], ['Gagnez.', C.ink, 24.75]]], 960, 715, 84, 900, t, 23.95, null);
+  // CTA (un seul)
+  const cp = P(t, 25.0, 25.45);
+  if (cp > 0) {
+    font(800, 48);
+    const label = 'amazer.store/affiliation', w = ctx.measureText(label).width + 110, h = 100, y = 790;
+    ctx.save(); camera(960, y + h / 2, lerp(0.88, 1, pop(cp)));
+    withAlpha(eo(cp), () => {
+      ctx.shadowColor = 'rgba(255,77,0,0.35)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14;
+      ctx.fillStyle = C.brand; rr(960 - w / 2, y, w, h, h / 2); ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.fillStyle = '#fff'; font(800, 48); center(label, 960, y + 66);
+    });
+    ctx.restore();
+  }
+  withAlpha(eo(P(t, 26.0, 26.5)), () => { ctx.fillStyle = C.inkMute; font(600, 34); center('Montants en vigueur en octobre 2026', 960, 970); });
+  ctx.restore();
+}
+
+/* --------------------------------- seek ----------------------------------- */
+function seek(t) {
+  t = clamp(t, 0, DURATION);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1; ctx.letterSpacing = '0px'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  if (t < 22.4) {
+    background(t);
+    scene12(t);
+    scene3(t);
+    const pan = eio(P(t, 13.85, 14.35)) * W;
+    scene4(t, -pan);
+    scene5(t, W - pan);
+    heroChip(t);
+    scene6(t);
+  }
+  wipe(t);
+  if (t >= 22.4) scene7(t); // le volet couvre alors tout l'ecran : la fin prend le relais
+
+}
+window.seek = seek;
+window.DURATION = DURATION;
+window.ready = new Promise(resolve => {
+  const img = new Image();
+  img.onload = () => { MARK = img; resolve(true); };
+  img.onerror = () => resolve(false);
+  img.src = 'mark.svg';
+}).then(ok => { seek(0); return ok; });
+
+// apercu dans un navigateur : ?t=12.5 fige une image, sinon lecture
+const q = new URLSearchParams(location.search);
+if (!navigator.webdriver) window.ready.then(() => {
+  if (q.has('t')) return seek(parseFloat(q.get('t')));
+  const t0 = performance.now();
+  const loop = now => { seek(((now - t0) / 1000) % DURATION); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+});
+</script>
+</body>
+</html>
