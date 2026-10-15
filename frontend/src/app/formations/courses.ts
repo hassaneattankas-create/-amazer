@@ -59,7 +59,7 @@ export const COURSES: Course[] = [
         title: "5. Promotions et visibilité",
         goal: "Attirer de nouveaux clients sans brader.",
         points: [
-          "Une promotion s'affiche dans « Bonnes affaires » avec le pourcentage de remise : choisissez 1 ou 2 produits d'appel.",
+          "Espace vendeur > Produits > Modifier : indiquez un prix promo et une durée (1 à 30 jours). Le produit s'affiche dans « Promotions » avec le prix normal barré, puis revient seul à son prix normal. Choisissez 1 ou 2 produits d'appel.",
           "Partagez le lien de votre boutique dans votre statut WhatsApp chaque semaine.",
           "Gardez une marge : une remise qui vous fait perdre de l'argent n'est pas une bonne affaire.",
         ],

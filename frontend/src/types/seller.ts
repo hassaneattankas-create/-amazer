@@ -144,6 +144,8 @@ export type SellerInventoryItem = {
   is_active: boolean;
   promo_price: number | null;
   promo_until: string | null;
+  /** Prix normal (hors promo). Pendant une promo, « amount » vaut le prix promo. */
+  regular_amount?: number | null;
 };
 
 export type SellerShopOrderItem = {

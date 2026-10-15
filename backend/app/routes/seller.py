@@ -22,6 +22,7 @@ from app.models.hospitality import HotelBooking, RestaurantReservation
 from app.models.order import Order, OrderItem
 from app.models.price_history import PriceHistory
 from app.models.product import Price, Product
+from app.services import promo_service
 from app.models.restaurant import RestaurantMenuItem
 from app.models.seller_profile import SellerProfile
 from app.models.seller_subscription_payment import SellerSubscriptionPayment
@@ -1055,6 +1056,8 @@ def list_inventory(
     for row in rows:
         if _is_seller_deleted_listing(row):
             continue
+        if not promo_service.promo_active(row.product.specs or {}) and promo_service.end_promo(row):
+            dirty = True
         promo_price, promo_until = _sync_product_flags(row.product)
         payload.append(
             SellerInventoryItemResponse(
@@ -1071,6 +1074,7 @@ def list_inventory(
                 is_active=row.is_active,
                 promo_price=promo_price,
                 promo_until=promo_until,
+                regular_amount=promo_service.normal_price(row),
             )
         )
     if dirty:
@@ -1244,8 +1248,6 @@ def update_inventory_item(
         price.product.description = payload.description.strip() or None
     if payload.main_image_url is not None:
         price.product.main_image_url = _normalize_product_image_url(payload.main_image_url)
-    if payload.amount is not None:
-        price.amount = payload.amount
     if payload.stock_quantity is not None:
         price.stock_quantity = payload.stock_quantity
     if payload.is_active is not None:
@@ -1254,14 +1256,16 @@ def update_inventory_item(
                 "Ce produit a ete masque par l'equipe AMAZER. Contactez le support pour le reafficher."
             )
         price.is_active = payload.is_active
-    if payload.promo_amount is not None:
-        current = float(price.amount)
-        if current > float(payload.promo_amount):
-            specs["original_price"] = current
-        specs["promo_price"] = payload.promo_amount
-        specs["promo_until"] = (now + timedelta(days=7)).isoformat()
-        price.amount = payload.promo_amount
     price.product.specs = specs
+    if payload.amount is not None or payload.promo_amount is not None or payload.clear_promo:
+        promo_service.apply_price_and_promo(
+            price,
+            amount=payload.amount,
+            promo_amount=payload.promo_amount,
+            promo_days=payload.promo_days,
+            clear_promo=payload.clear_promo,
+            now=now,
+        )
 
     # N'historiser que si le prix ou le stock change reellement (pas pour une edition
     # de nom/marque/description seule).
@@ -1312,6 +1316,7 @@ def update_inventory_item(
         is_active=price.is_active,
         promo_price=promo_price,
         promo_until=promo_until,
+        regular_amount=promo_service.normal_price(price),
     )
 
 

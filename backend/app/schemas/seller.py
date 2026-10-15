@@ -143,6 +143,8 @@ class SellerInventoryItemResponse(BaseModel):
     is_active: bool
     promo_price: float | None = None
     promo_until: datetime | None = None
+    # Prix normal (hors promo) : c'est lui qu'on modifie dans « Prix ».
+    regular_amount: float | None = None
 
 
 class SellerInventoryUpdateRequest(BaseModel):
@@ -158,6 +160,9 @@ class SellerInventoryUpdateRequest(BaseModel):
     main_image_url: str | None = Field(default=None, max_length=1024)
     is_active: bool | None = None
     promo_amount: float | None = Field(default=None, gt=0)
+    # Duree de la promo en jours (defaut 7) ; clear_promo retire la promo et remet le prix normal.
+    promo_days: int | None = Field(default=None, ge=1, le=60)
+    clear_promo: bool = False
 
 
 class SellerShopOrderItemResponse(BaseModel):

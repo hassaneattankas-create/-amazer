@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatXOF } from "@/lib/currency";
 import { normalizeImageInputForApi } from "@/lib/image";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { deleteMyAccount } from "@/services/auth-service";
 import { notifyLocalOrderEvent } from "@/services/notification-service";
 import { listCatalogCategories } from "@/services/catalog-service";
@@ -169,6 +170,8 @@ export default function SellerDashboardPage() {
       stock,
       is_active,
       promo_amount,
+      promo_days,
+      clear_promo,
       main_image_url,
       product_name,
       brand,
@@ -179,6 +182,8 @@ export default function SellerDashboardPage() {
       stock: number;
       is_active?: boolean;
       promo_amount?: number;
+      promo_days?: number;
+      clear_promo?: boolean;
       main_image_url?: string;
       product_name?: string;
       brand?: string;
@@ -189,6 +194,8 @@ export default function SellerDashboardPage() {
         stock_quantity: stock,
         is_active,
         promo_amount,
+        promo_days,
+        clear_promo,
         main_image_url,
         product_name,
         brand,
@@ -196,9 +203,9 @@ export default function SellerDashboardPage() {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["seller-inventory"] });
-      setStatus("Stock mis a jour.");
+      setStatus("Produit mis à jour.");
     },
-    onError: () => setStatus("Erreur mise à jour stock."),
+    onError: (error) => setStatus(getApiErrorMessage(error, "Mise à jour impossible. Réessayez.")),
   });
 
   const deleteInventoryMutation = useMutation({

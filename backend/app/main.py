@@ -390,6 +390,10 @@ def on_startup() -> None:
     _ensure_admin_account()
     _assign_missing_categories()
     _backfill_affiliate_ledger()
+    if settings.app_env.lower() not in ("test", "testing"):
+        from app.services.promo_service import start_promo_expiry_worker
+
+        start_promo_expiry_worker()
     if settings.is_production() and settings.curated_public_catalog_mode:
         from seed_demo_storefronts import main as seed_storefronts_main
         from seed_demo_restaurants import main as seed_restaurants_main

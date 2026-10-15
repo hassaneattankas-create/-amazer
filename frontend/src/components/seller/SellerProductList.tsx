@@ -15,6 +15,8 @@ export type InventoryUpdate = {
   stock: number;
   is_active?: boolean;
   promo_amount?: number;
+  promo_days?: number;
+  clear_promo?: boolean;
   main_image_url?: string;
   product_name?: string;
   brand?: string;
@@ -128,7 +130,16 @@ export function SellerProductList({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-ink-900">{item.product_name}</p>
                   <p className="text-xs text-ink-600">
-                    {formatXOF(item.promo_price ?? item.amount)} · stock{" "}
+                    {item.promo_price ? (
+                      <>
+                        <span className="font-semibold text-brand-700">Promo {formatXOF(item.promo_price)}</span>{" "}
+                        <span className="line-through">{formatXOF(item.regular_amount ?? item.amount)}</span> · jusqu&apos;au{" "}
+                        {formatPromoEnd(item.promo_until)}
+                      </>
+                    ) : (
+                      formatXOF(item.amount)
+                    )}{" "}
+                    · stock{" "}
                     <span className={item.stock_quantity <= LOW_STOCK ? "font-semibold text-danger" : ""}>{item.stock_quantity}</span>
                     {" · "}
                     <span className={item.is_active ? "text-success" : "text-ink-500"}>{item.is_active ? "En ligne" : "Masqué"}</span>
@@ -153,7 +164,7 @@ export function SellerProductList({
                     onUpdate(update);
                     setEditing(null);
                   }}
-                  onToggle={() => onUpdate({ priceId: item.price_id, amount: item.amount, stock: item.stock_quantity, is_active: !item.is_active })}
+                  onToggle={() => onUpdate({ priceId: item.price_id, amount: item.regular_amount ?? item.amount, stock: item.stock_quantity, is_active: !item.is_active })}
                   onDelete={() => {
                     if (window.confirm(`Supprimer « ${item.product_name} » ?`)) onDelete(item.price_id);
                   }}
@@ -178,6 +189,12 @@ export function SellerProductList({
   );
 }
 
+const PROMO_DAYS = [1, 3, 7, 14, 30];
+
+function formatPromoEnd(value: string | null): string {
+  return value ? new Date(value).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "";
+}
+
 function ProductEditor({
   item,
   busy,
@@ -195,11 +212,13 @@ function ProductEditor({
     name: item.product_name,
     brand: item.brand,
     description: item.description ?? "",
-    amount: String(item.amount),
+    amount: String(item.regular_amount ?? item.amount),
     stock: String(item.stock_quantity),
     promo: item.promo_price ? String(item.promo_price) : "",
+    days: "",
     image: item.main_image_url ?? "",
   });
+  const [promoError, setPromoError] = useState("");
   const set = (key: keyof typeof draft) => (value: string) => setDraft((prev) => ({ ...prev, [key]: value }));
   const digits = (value: string) => value.replace(/\D/g, "");
 
@@ -215,26 +234,68 @@ function ProductEditor({
           <input className={fieldClass} value={draft.brand} onChange={(e) => set("brand")(e.target.value)} />
         </label>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <label className="block text-sm font-medium text-ink-800">
-          Prix XOF
+          Prix normal XOF
           <input inputMode="numeric" className={fieldClass} value={draft.amount} onChange={(e) => set("amount")(digits(e.target.value))} />
         </label>
         <label className="block text-sm font-medium text-ink-800">
           Stock
           <input inputMode="numeric" className={fieldClass} value={draft.stock} onChange={(e) => set("stock")(digits(e.target.value))} />
         </label>
-        <label className="block text-sm font-medium text-ink-800">
-          Promo XOF
-          <input
-            inputMode="numeric"
-            placeholder="Aucune"
-            className={fieldClass}
-            value={draft.promo}
-            onChange={(e) => set("promo")(digits(e.target.value))}
-          />
-        </label>
       </div>
+      <fieldset className="space-y-2 rounded-field border border-border bg-card p-3">
+        <legend className="px-1 text-sm font-semibold text-ink-900">Promotion</legend>
+        {item.promo_price ? (
+          <p className="text-sm text-ink-700">
+            En cours : {formatXOF(item.promo_price)}, jusqu&apos;au {formatPromoEnd(item.promo_until)}
+          </p>
+        ) : (
+          <p className="text-xs text-ink-600">
+            Mettez un prix plus bas et une durée. Le produit apparaît dans « Promotions » avec le prix normal barré, puis revient seul à son prix normal.
+          </p>
+        )}
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block text-sm font-medium text-ink-800">
+            Prix promo XOF
+            <input
+              inputMode="numeric"
+              placeholder="Aucune"
+              className={fieldClass}
+              value={draft.promo}
+              onChange={(e) => set("promo")(digits(e.target.value))}
+            />
+          </label>
+          <label className="block text-sm font-medium text-ink-800">
+            Durée
+            <select className={fieldClass} value={draft.days} onChange={(e) => set("days")(e.target.value)}>
+              <option value="">{item.promo_price ? "Même date" : "7 jours"}</option>
+              {PROMO_DAYS.map((days) => (
+                <option key={days} value={String(days)}>
+                  {days} jour{days > 1 ? "s" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {promoError ? (
+          <p className="text-sm text-danger" role="alert">
+            {promoError}
+          </p>
+        ) : null}
+        {item.promo_price ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() =>
+              onSave({ priceId: item.price_id, amount: Number(draft.amount) || (item.regular_amount ?? item.amount), stock: Number(draft.stock || 0), clear_promo: true })
+            }
+          >
+            Arrêter la promo
+          </Button>
+        ) : null}
+      </fieldset>
       <label className="block text-sm font-medium text-ink-800">
         Description
         <textarea className={`${fieldClass} h-auto min-h-20 py-2`} value={draft.description} onChange={(e) => set("description")(e.target.value)} />
@@ -246,15 +307,22 @@ function ProductEditor({
           disabled={busy}
           onClick={() => {
             const promo = Number(draft.promo);
+            const normal = Number(draft.amount) || (item.regular_amount ?? item.amount);
+            if (promo > 0 && promo >= normal) {
+              setPromoError(`Le prix promo doit être inférieur au prix normal (${formatXOF(normal)}).`);
+              return;
+            }
+            setPromoError("");
             onSave({
               priceId: item.price_id,
-              amount: Number(draft.amount) || item.amount,
+              amount: normal,
               stock: Number(draft.stock || 0),
               product_name: draft.name.trim() || undefined,
               brand: draft.brand.trim() || undefined,
               description: draft.description.trim() || undefined,
               main_image_url: draft.image !== (item.main_image_url ?? "") ? normalizeImageInputForApi(draft.image) ?? "" : undefined,
-              ...(promo > 0 ? { promo_amount: promo } : {}),
+              ...(promo > 0 ? { promo_amount: promo, ...(draft.days ? { promo_days: Number(draft.days) } : {}) } : {}),
+              ...(!promo && item.promo_price ? { clear_promo: true } : {}),
             });
           }}
         >

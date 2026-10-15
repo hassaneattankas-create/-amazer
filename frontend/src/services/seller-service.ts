@@ -59,6 +59,8 @@ export async function updateSellerInventory(
     main_image_url?: string;
     is_active?: boolean;
     promo_amount?: number;
+    promo_days?: number;
+    clear_promo?: boolean;
   },
 ): Promise<SellerInventoryItem> {
   const response = await api.patch<SellerInventoryItem>(
