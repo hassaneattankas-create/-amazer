@@ -1,3 +1,6 @@
+import time
+import hmac
+import hashlib
 from datetime import UTC, date, datetime, timedelta
 import csv
 import io
@@ -19,7 +22,7 @@ from app.core.permissions import is_admin, is_principal_admin
 from app.core.cache import cache_delete_prefixes
 from app.core.crypto import decrypt_payment_code, decrypt_phone_value, encrypt_payment_code
 from app.core.csrf import enforce_csrf
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.core.deps import get_admin_user
 from app.core.exceptions import UnauthorizedError, ValidationDomainError
 from app.core.rate_limit import enforce_rate_limit
@@ -71,10 +74,19 @@ from app.schemas.finance import (
 from app.services import order_event_notifications as order_events
 from app.routes.resellers import compute_earnings as compute_reseller_earnings
 from app.models.reseller import ResellerSubscriptionPayment
-from app.models.affiliate import AffiliateAccount, AffiliateEarning
+from app.models.affiliate import AffiliateAccount, AffiliateEarning, AffiliatePayout, AffiliateReferral
 from app.routes.affiliates import compute_affiliate_earnings
 from app.services.order_delivery_service import mark_order_delivered
-from app.services.affiliate_service import credit_subscription_share
+from app.services.affiliate_service import (
+    PayoutError,
+    add_manual_bonus,
+    cancel_unpaid,
+    credit_subscription_share,
+    decide_earning,
+    ensure_affiliate_account,
+    mature_earnings,
+    settle_payout,
+)
 from app.services.reseller_account_service import ensure_account as ensure_reseller_account
 from app.services.reseller_account_service import extend_subscription as extend_reseller_subscription
 from app.services.audit_log_service import append_audit_log
@@ -172,15 +184,50 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
         affiliate_seller_share_percent=float(getattr(settings, "affiliate_seller_share_percent", 20) or 0),
         affiliate_seller_share_months=int(getattr(settings, "affiliate_seller_share_months", 12) or 12),
         affiliate_customer_bonus=float(getattr(settings, "affiliate_customer_bonus", 250) or 0),
+        affiliate_hold_days=int(getattr(settings, "affiliate_hold_days", 30) if getattr(settings, "affiliate_hold_days", None) is not None else 30),
+        affiliate_min_payout=float(getattr(settings, "affiliate_min_payout", 2000) if getattr(settings, "affiliate_min_payout", None) is not None else 2000),
+        affiliate_new_account_monthly_cap=float(getattr(settings, "affiliate_new_account_monthly_cap", 25000) if getattr(settings, "affiliate_new_account_monthly_cap", None) is not None else 25000),
+        affiliate_max_referrals_per_day=int(getattr(settings, "affiliate_max_referrals_per_day", 15) if getattr(settings, "affiliate_max_referrals_per_day", None) is not None else 15),
+        ambassador_first_month_percent=float(getattr(settings, "ambassador_first_month_percent", 50) if getattr(settings, "ambassador_first_month_percent", None) is not None else 50),
+        ambassador_tier2_shops=int(getattr(settings, "ambassador_tier2_shops", 10) if getattr(settings, "ambassador_tier2_shops", None) is not None else 10),
+        ambassador_tier2_percent=float(getattr(settings, "ambassador_tier2_percent", 25) if getattr(settings, "ambassador_tier2_percent", None) is not None else 25),
+        ambassador_tier3_shops=int(getattr(settings, "ambassador_tier3_shops", 25) if getattr(settings, "ambassador_tier3_shops", None) is not None else 25),
+        ambassador_tier3_percent=float(getattr(settings, "ambassador_tier3_percent", 30) if getattr(settings, "ambassador_tier3_percent", None) is not None else 30),
+        ambassador_monthly_top_bonus=float(getattr(settings, "ambassador_monthly_top_bonus", 10000) if getattr(settings, "ambassador_monthly_top_bonus", None) is not None else 10000),
         support_email=settings.support_email,
         support_phone=settings.support_phone,
         support_whatsapp=settings.support_whatsapp,
     )
 
 
-def _require_finance_pin(request: Request) -> None:
-    pin_cookie = request.cookies.get("finance_pin_verified")
-    if pin_cookie != "1":
+FINANCE_PIN_TTL_SECONDS = 30 * 60
+
+
+def _finance_pin_signature(user_id: str, expires_at: int) -> str:
+    key = settings.jwt_secret_key.encode()
+    return hmac.new(key, f"finance-pin:{user_id}:{expires_at}".encode(), hashlib.sha256).hexdigest()[:48]
+
+
+def issue_finance_pin_token(user_id: str, now: int | None = None) -> str:
+    """Jeton signe « PIN finance verifie » : lie a l'admin, expire apres 30 minutes, infalsifiable sans le secret."""
+    expires_at = int(now if now is not None else time.time()) + FINANCE_PIN_TTL_SECONDS
+    return f"{user_id}.{expires_at}.{_finance_pin_signature(user_id, expires_at)}"
+
+
+def finance_pin_token_valid(token: str | None, user_id: str | None, now: int | None = None) -> bool:
+    parts = (token or "").rsplit(".", 2)
+    if len(parts) != 3 or not parts[1].isdigit():
+        return False
+    token_user, expires_at, signature = parts[0], int(parts[1]), parts[2]
+    if not hmac.compare_digest(signature, _finance_pin_signature(token_user, expires_at)):
+        return False
+    if expires_at < int(now if now is not None else time.time()):
+        return False
+    return user_id is None or hmac.compare_digest(token_user, user_id)
+
+
+def _require_finance_pin(request: Request, admin_user: User | None = None) -> None:
+    if not finance_pin_token_valid(request.cookies.get("finance_pin_verified"), admin_user.id if admin_user else None):
         raise UnauthorizedError("Finance PIN verification required")
 
 
@@ -390,22 +437,28 @@ def _auto_finalize_order_without_qr(
     return True
 
 
-@router.post("/pin/verify", status_code=204)
+class FinancePinTokenResponse(BaseModel):
+    token: str
+    expires_in: int
+
+
+@router.post("/pin/verify", response_model=FinancePinTokenResponse)
 def verify_admin_finance_pin(
     payload: PinVerifyRequest,
     request: Request,
     response: Response,
     db: Annotated[Session, Depends(get_db)],
     admin_user: Annotated[User, Depends(get_admin_user)],
-) -> None:
+) -> FinancePinTokenResponse:
     enforce_csrf(request)
     enforce_rate_limit(request, key="admin_finance_pin", limit=5, window_seconds=300)
     if not _admin_finance_keys_match(payload.pin, payload.birth_date):
         raise UnauthorizedError("Invalid finance PIN")
+    token = issue_finance_pin_token(admin_user.id)
     same_site = "none" if settings.is_production() else "lax"
     response.set_cookie(
         key="finance_pin_verified",
-        value="1",
+        value=token,
         httponly=True,
         secure=settings.is_production(),
         samesite=same_site,
@@ -422,6 +475,7 @@ def verify_admin_finance_pin(
         details={},
     )
     db.commit()
+    return FinancePinTokenResponse(token=token, expires_in=FINANCE_PIN_TTL_SECONDS)
 
 
 @router.get("/settings", response_model=FinanceSettingsResponse)
@@ -430,7 +484,7 @@ def get_finance_settings(
     db: Annotated[Session, Depends(get_db)],
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> FinanceSettingsResponse:
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     _audit_admin_access(db, request, admin_user, "admin_finance_settings_read")
     settings = _get_or_create_settings(db)
     return _to_response(settings)
@@ -444,7 +498,7 @@ def update_finance_settings(
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> FinanceSettingsResponse:
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     settings_row = _get_or_create_settings(db)
     settings_row.commission_rate = payload.commission_rate
     settings_row.service_fee = payload.service_fee
@@ -469,6 +523,16 @@ def update_finance_settings(
     settings_row.affiliate_seller_share_percent = payload.affiliate_seller_share_percent
     settings_row.affiliate_seller_share_months = payload.affiliate_seller_share_months
     settings_row.affiliate_customer_bonus = payload.affiliate_customer_bonus
+    settings_row.affiliate_hold_days = payload.affiliate_hold_days
+    settings_row.affiliate_min_payout = payload.affiliate_min_payout
+    settings_row.affiliate_new_account_monthly_cap = payload.affiliate_new_account_monthly_cap
+    settings_row.affiliate_max_referrals_per_day = payload.affiliate_max_referrals_per_day
+    settings_row.ambassador_first_month_percent = payload.ambassador_first_month_percent
+    settings_row.ambassador_tier2_shops = payload.ambassador_tier2_shops
+    settings_row.ambassador_tier2_percent = payload.ambassador_tier2_percent
+    settings_row.ambassador_tier3_shops = payload.ambassador_tier3_shops
+    settings_row.ambassador_tier3_percent = payload.ambassador_tier3_percent
+    settings_row.ambassador_monthly_top_bonus = payload.ambassador_monthly_top_bonus
     settings_row.support_email = payload.support_email
     settings_row.support_phone = payload.support_phone
     settings_row.support_whatsapp = payload.support_whatsapp
@@ -492,7 +556,7 @@ def get_finance_summary(
     db: Annotated[Session, Depends(get_db)],
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> FinanceSummaryResponse:
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     _audit_admin_access(db, request, admin_user, "admin_finance_summary_read")
     settings = _get_or_create_settings(db)
     today = datetime.now(UTC).date()
@@ -561,7 +625,7 @@ def get_wallet_summary(
     db: Annotated[Session, Depends(get_db)],
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> WalletSummaryResponse:
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     _audit_admin_access(db, request, admin_user, "admin_finance_wallet_read")
     finance = _get_or_create_settings(db)
 
@@ -639,7 +703,7 @@ def get_treasury_history(
     admin_user: Annotated[User, Depends(get_admin_user)],
     limit: int = 80,
 ) -> list[TreasuryTransactionResponse]:
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     _audit_admin_access(db, request, admin_user, "admin_finance_treasury_read")
     history: list[TreasuryTransactionResponse] = []
     settings_row = _get_or_create_settings(db)
@@ -687,7 +751,7 @@ def create_fund_transfer(
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> TransferResponse:
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     wallet = get_wallet_summary(request, db, admin_user)
     available = wallet.total_all - wallet.amazer_commission_total - wallet.service_fee_total
     if payload.amount > available:
@@ -737,7 +801,7 @@ def reset_finance_counters(
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> CountersResetResponse:
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     settings_row = _get_or_create_settings(db)
     now = datetime.now(UTC)
     settings_row.finance_counters_reset_at = now
@@ -792,7 +856,7 @@ def list_district_fees(
     db: Annotated[Session, Depends(get_db)],
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> list[DistrictFeeItem]:
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     _audit_admin_access(db, request, admin_user, "admin_district_fees_read")
     rows = db.scalars(select(FinanceDistrictFee).order_by(FinanceDistrictFee.district_name.asc())).all()
     return [DistrictFeeItem(district_name=row.district_name, delivery_fee=row.delivery_fee) for row in rows]
@@ -806,7 +870,7 @@ def replace_district_fees(
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> list[DistrictFeeItem]:
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     db.query(FinanceDistrictFee).delete()
     for item in payload:
         db.add(FinanceDistrictFee(district_name=item.district_name, delivery_fee=item.delivery_fee))
@@ -831,7 +895,7 @@ def list_admin_orders(
     admin_user: Annotated[User, Depends(get_admin_user)],
     limit: int = 40,
 ) -> list[AdminOrderTrackingResponse]:
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     _audit_admin_access(db, request, admin_user, "admin_orders_read")
     settings_row = _get_or_create_settings(db)
     reset_at = _finance_counters_reset_at(settings_row)
@@ -874,7 +938,7 @@ def dispatch_order_to_delivery(
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> AdminOrderTrackingResponse:
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     order = db.get(Order, order_id)
     if order is None:
         raise ValidationDomainError("Order not found")
@@ -928,7 +992,7 @@ def toggle_launch_mode(
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> FinanceSettingsResponse:
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     settings_row = _get_or_create_settings(db)
     settings_row.launch_mode_zero_commission = enabled
     append_audit_log(
@@ -1007,7 +1071,7 @@ def get_admin_user_stats(
     db: Annotated[Session, Depends(get_db)],
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> AdminUserStatsResponse:
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     _audit_admin_access(db, request, admin_user, "admin_users_stats_read")
     now = datetime.now(UTC)
     since_7_days = now - timedelta(days=7)
@@ -1044,7 +1108,7 @@ def list_users_admin(
     limit: int = 200,
     query: str | None = None,
 ) -> list[AdminUserResponse]:
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     _audit_admin_access(db, request, admin_user, "admin_users_read")
     safe_limit = min(max(limit, 1), 500)
     stmt = (
@@ -1078,7 +1142,7 @@ def deactivate_user_admin(
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> None:
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     target = db.get(User, user_id)
     if target is None:
         return
@@ -1114,7 +1178,7 @@ def permanently_delete_user(
 ) -> None:
     """Suppression definitive d'un utilisateur : compte anonymise, email libere, historique conserve."""
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     target = db.get(User, user_id)
     if target is None:
         raise ValidationDomainError("Utilisateur introuvable")
@@ -1162,7 +1226,7 @@ def restore_user_admin(
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> AdminUserResponse:
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     target = db.get(User, user_id)
     if target is None:
         raise ValidationDomainError("User not found")
@@ -1200,7 +1264,7 @@ def update_user_role_admin(
 ) -> AdminUserResponse:
     """Nomme ou retire un administrateur. Le compte principal (ADMIN_EMAIL) est intouchable."""
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     target = db.get(User, user_id)
     if target is None:
         raise ValidationDomainError("User not found")
@@ -1237,7 +1301,7 @@ def cancel_order_admin(
 ) -> AdminOrderTrackingResponse:
     """Annule une commande non livree ; le stock est remis si elle etait payee."""
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     order = db.get(Order, order_id)
     if order is None:
         raise ValidationDomainError("Order not found")
@@ -1311,7 +1375,7 @@ def disable_seller(
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> None:
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     profile = db.get(SellerProfile, profile_id)
     if profile is None:
         raise ValidationDomainError("Seller profile not found")
@@ -1346,7 +1410,7 @@ def permanently_delete_seller(
     """Suppression definitive: anonymise le compte et libere l'email (meme methode que la
     suppression de compte cote utilisateur). Preserve l'historique des commandes."""
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     profile = db.get(SellerProfile, profile_id)
     if profile is None:
         raise ValidationDomainError("Profil vendeur introuvable")
@@ -1398,7 +1462,7 @@ def restore_seller(
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> AdminSellerResponse:
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     profile = db.get(SellerProfile, profile_id)
     if profile is None:
         raise ValidationDomainError("Seller profile not found")
@@ -1442,7 +1506,7 @@ def grant_seller_subscription(
 ) -> AdminSellerResponse:
     """Active manuellement l'abonnement d'un vendeur sans paiement."""
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     profile = db.get(SellerProfile, profile_id)
     if profile is None:
         raise ValidationDomainError("Profil vendeur introuvable")
@@ -1485,7 +1549,7 @@ def verify_seller(
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> AdminSellerResponse:
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     profile = db.get(SellerProfile, profile_id)
     if profile is None:
         raise ValidationDomainError("Seller profile not found")
@@ -1516,7 +1580,7 @@ def update_seller_pricing(
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> AdminSellerResponse:
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     profile = db.get(SellerProfile, profile_id)
     if profile is None:
         raise ValidationDomainError("Seller profile not found")
@@ -1549,7 +1613,7 @@ def update_seller_type(
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> AdminSellerResponse:
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     profile = db.get(SellerProfile, profile_id)
     if profile is None:
         raise ValidationDomainError("Profil vendeur introuvable")
@@ -1582,7 +1646,7 @@ def set_seller_transport(
 ) -> AdminSellerResponse:
     """Marque une entreprise comme societe de transport (reservation de trajets)."""
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     profile = db.get(SellerProfile, profile_id)
     if profile is None:
         raise ValidationDomainError("Profil vendeur introuvable")
@@ -1622,7 +1686,7 @@ def set_seller_enterprise(
     """Active/desactive le niveau Premium Entreprise (sur devis). Un seul switch debloque
     import, export, reservations (chambres/tables/transport) et calendrier."""
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     profile = db.get(SellerProfile, profile_id)
     if profile is None:
         raise ValidationDomainError("Profil vendeur introuvable")
@@ -1662,7 +1726,7 @@ def list_seller_subscription_payment_requests(
     status: str = "pending",
     limit: int = 100,
 ) -> list[AdminSellerSubscriptionPaymentRequestResponse]:
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     _audit_admin_access(db, request, admin_user, "admin_seller_subscription_payments_read")
     safe_limit = min(max(limit, 1), 500)
     stmt = select(SellerSubscriptionPayment).order_by(desc(SellerSubscriptionPayment.created_at)).limit(safe_limit)
@@ -1695,7 +1759,7 @@ def decide_seller_subscription_payment(
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> AdminSellerSubscriptionPaymentRequestResponse:
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     row = db.get(SellerSubscriptionPayment, payment_id)
     if row is None:
         raise ValidationDomainError("Demande de paiement introuvable")
@@ -1724,7 +1788,7 @@ def decide_seller_subscription_payment(
             vendor.is_active = True
             # Activer aussi tous les prix du vendeur pour qu ils apparaissent dans le catalogue.
             db.execute(update(Price).where(Price.vendor_id == vendor.id).values(is_active=True))
-        credit_subscription_share(db, row.seller_user_id, float(row.amount_claimed or 0), f"seller-sub:{row.id}")
+        credit_subscription_share(db, row.seller_user_id, float(row.amount_claimed or 0), f"seller-sub:{row.id}", row.months)
     seller_user = db.get(User, row.seller_user_id)
 
     append_audit_log(
@@ -1787,7 +1851,7 @@ def list_seller_pre_registrations(
     admin_user: Annotated[User, Depends(get_admin_user)],
     status_filter: str = "pending",
 ) -> list[AdminPendingSellerResponse]:
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     rows = db.scalars(
         select(SellerPendingRegistration)
         .where(SellerPendingRegistration.status == status_filter)
@@ -1823,7 +1887,7 @@ def decide_seller_pre_registration(
 ) -> AdminPendingSellerResponse:
     """Approuver (cree le compte + boutique) ou rejeter une inscription vendeur en attente."""
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     reg = db.get(SellerPendingRegistration, reg_id)
     if reg is None:
         raise ValidationDomainError("Inscription introuvable")
@@ -2035,7 +2099,7 @@ def send_admin_message(
 ) -> AdminBroadcastResponse:
     """Envoie un message de l'equipe : notification sur le site + e-mail automatique (file d'envoi)."""
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     stmt = select(User).where(User.is_active.is_(True), User.email.notlike("%@users.deleted.amazer.ne"))
     if payload.audience == "user":
         if not payload.user_email:
@@ -2091,7 +2155,7 @@ def list_reseller_earnings(
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> list[AdminResellerEarning]:
     """Marges des revendeurs a verser (commandes payees et livrees) et en attente de livraison."""
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     reseller_ids = db.scalars(
         select(OrderItem.reseller_user_id).where(OrderItem.reseller_user_id.is_not(None)).distinct()
     ).all()
@@ -2141,7 +2205,7 @@ def list_reseller_payments(
     admin_user: Annotated[User, Depends(get_admin_user)],
     status: Literal["pending", "approved", "rejected", "all"] = "pending",
 ) -> list[AdminResellerPayment]:
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     stmt = select(ResellerSubscriptionPayment).order_by(desc(ResellerSubscriptionPayment.created_at)).limit(200)
     if status != "all":
         stmt = stmt.where(ResellerSubscriptionPayment.status == status)
@@ -2175,7 +2239,7 @@ def decide_reseller_payment(
 ) -> AdminResellerPayment:
     """Valide (prolonge l'abonnement) ou refuse un paiement d'abonnement revendeur."""
     enforce_csrf(request)
-    _require_finance_pin(request)
+    _require_finance_pin(request, admin_user)
     payment = db.get(ResellerSubscriptionPayment, payment_id)
     if payment is None:
         raise ValidationDomainError("Paiement introuvable")
@@ -2185,7 +2249,7 @@ def decide_reseller_payment(
     payment.reviewed_at = datetime.now(UTC)
     if payload.decision == "approved":
         extend_reseller_subscription(ensure_reseller_account(db, payment.user_id), payment.months)
-        credit_subscription_share(db, payment.user_id, float(payment.amount_claimed or 0), f"reseller-sub:{payment.id}")
+        credit_subscription_share(db, payment.user_id, float(payment.amount_claimed or 0), f"reseller-sub:{payment.id}", payment.months)
         title, body = "Abonnement revendeur actif", "Votre paiement est validé : vos produits sont en ligne."
     else:
         title, body = "Paiement revendeur refusé", "Votre paiement n'a pas pu être vérifié. Contactez AMAZER sur WhatsApp."
@@ -2225,10 +2289,128 @@ class AdminAffiliateEarning(BaseModel):
     contact: str
     whatsapp_phone: str | None
     code: str
+    tier: str
+    status: str
     clicks: int
+    referred: int
+    flagged_referrals: int
     earned: float
     pending: float
+    on_hold: float
+    review: float
+    available: float
+    requested: float
+    paid: float
     orders_delivered: int
+    ambassador_applied_at: str | None
+    ambassador_application: str | None
+    admin_note: str | None
+
+
+class AdminAffiliateLedgerLine(BaseModel):
+    id: str
+    kind: str
+    amount: float
+    status: str
+    percent: float | None
+    note: str | None
+    source_name: str | None
+    reference: str
+    created_at: str
+    available_at: str | None
+
+
+class AdminAffiliatePayout(BaseModel):
+    id: str
+    user_id: str
+    full_name: str
+    tier: str
+    amount: float
+    method: str
+    phone: str
+    status: str
+    transaction_reference: str | None
+    admin_note: str | None
+    review_amount: float
+    created_at: str
+    processed_at: str | None
+
+
+class AdminAffiliateUpdate(BaseModel):
+    tier: Literal["affiliate", "ambassador"] | None = None
+    status: Literal["active", "suspended"] | None = None
+    admin_note: str | None = Field(default=None, max_length=500)
+    cancel_unpaid: bool = False
+    reason: str | None = Field(default=None, max_length=300)
+
+
+class AdminEarningDecision(BaseModel):
+    action: Literal["approve", "cancel"]
+    note: str | None = Field(default=None, max_length=300)
+
+
+class AdminAffiliateBonus(BaseModel):
+    amount: float = Field(gt=0, le=1_000_000)
+    reason: str = Field(min_length=3, max_length=300)
+
+
+class AdminPayoutDecision(BaseModel):
+    action: Literal["paid", "rejected"]
+    transaction_reference: str | None = Field(default=None, max_length=120)
+    note: str | None = Field(default=None, max_length=300)
+    cancel_earnings: bool = False
+
+
+def _audit(db: Session, request: Request, admin_user: User, event: str, entity_type: str, entity_id: str, details: dict) -> None:
+    append_audit_log(
+        db,
+        event_type=event,
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type=entity_type,
+        entity_id=entity_id,
+        details=details,
+    )
+
+
+def _iso_or_none(value: datetime | None) -> str | None:
+    return value.isoformat() if value else None
+
+
+def _admin_affiliate_row(db: Session, account: AffiliateAccount, user: User) -> AdminAffiliateEarning:
+    totals = compute_affiliate_earnings(db, account.user_id)
+    referred = db.scalar(
+        select(func.count()).select_from(AffiliateReferral).where(AffiliateReferral.affiliate_user_id == account.user_id)
+    ) or 0
+    flagged = db.scalar(
+        select(func.count()).select_from(AffiliateReferral).where(
+            AffiliateReferral.affiliate_user_id == account.user_id, AffiliateReferral.flag.is_not(None)
+        )
+    ) or 0
+    return AdminAffiliateEarning(
+        user_id=user.id,
+        full_name=user.full_name or "Affilié",
+        contact=user.email,
+        whatsapp_phone=user.whatsapp_phone,
+        code=account.code,
+        tier=account.tier,
+        status=account.status,
+        clicks=int(account.click_count or 0),
+        referred=int(referred),
+        flagged_referrals=int(flagged),
+        earned=totals.earned,
+        pending=totals.pending,
+        on_hold=totals.on_hold,
+        review=totals.review,
+        available=totals.available,
+        requested=totals.requested,
+        paid=totals.paid,
+        orders_delivered=totals.orders_delivered,
+        ambassador_applied_at=_iso_or_none(account.ambassador_applied_at),
+        ambassador_application=account.ambassador_application,
+        admin_note=account.admin_note,
+    )
 
 
 @router.get("/affiliate-earnings", response_model=list[AdminAffiliateEarning])
@@ -2237,31 +2419,240 @@ def list_affiliate_earnings(
     db: Annotated[Session, Depends(get_db)],
     admin_user: Annotated[User, Depends(get_admin_user)],
 ) -> list[AdminAffiliateEarning]:
-    """Commissions d'affiliation : a verser (commandes livrees) et en attente."""
-    _require_finance_pin(request)
-    affiliate_ids = set(db.scalars(select(Order.affiliate_user_id).where(Order.affiliate_user_id.is_not(None)).distinct()).all())
-    affiliate_ids |= set(db.scalars(select(AffiliateEarning.affiliate_user_id).distinct()).all())
+    """Affilies et ambassadeurs : soldes, signaux de fraude, candidatures."""
+    _require_finance_pin(request, admin_user)
+    mature_earnings(db)
+    db.commit()
+    ids = set(db.scalars(select(Order.affiliate_user_id).where(Order.affiliate_user_id.is_not(None)).distinct()).all())
+    ids |= set(db.scalars(select(AffiliateEarning.affiliate_user_id).distinct()).all())
+    ids |= set(db.scalars(select(AffiliateReferral.affiliate_user_id).distinct()).all())
+    ids |= set(
+        db.scalars(
+            select(AffiliateAccount.user_id).where(
+                (AffiliateAccount.tier == "ambassador")
+                | (AffiliateAccount.status != "active")
+                | AffiliateAccount.ambassador_applied_at.is_not(None)
+            )
+        ).all()
+    )
     rows: list[AdminAffiliateEarning] = []
-    for affiliate_id in affiliate_ids:
+    for affiliate_id in ids:
         user = db.get(User, affiliate_id)
         account = db.get(AffiliateAccount, affiliate_id)
         if user is None or account is None:
             continue
-        totals = compute_affiliate_earnings(db, affiliate_id)
-        if totals.earned == 0 and totals.pending == 0:
-            continue
-        rows.append(
-            AdminAffiliateEarning(
-                user_id=user.id,
-                full_name=user.full_name or "Affilié",
-                contact=user.email,
-                whatsapp_phone=user.whatsapp_phone,
-                code=account.code,
-                clicks=int(account.click_count or 0),
-                earned=totals.earned,
-                pending=totals.pending,
-                orders_delivered=totals.orders_delivered,
-            )
-        )
-    return sorted(rows, key=lambda row: row.earned, reverse=True)
+        rows.append(_admin_affiliate_row(db, account, user))
+    return sorted(rows, key=lambda row: (-row.review, -row.available, -row.earned))
 
+
+@router.get("/affiliates/{user_id}/ledger", response_model=list[AdminAffiliateLedgerLine])
+def affiliate_ledger(
+    user_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> list[AdminAffiliateLedgerLine]:
+    """Detail des gains d'un affilie (avec les motifs de verification)."""
+    _require_finance_pin(request, admin_user)
+    earnings = db.scalars(
+        select(AffiliateEarning)
+        .where(AffiliateEarning.affiliate_user_id == user_id)
+        .order_by(AffiliateEarning.created_at.desc())
+        .limit(300)
+    ).all()
+    source_ids = {e.source_user_id for e in earnings if e.source_user_id}
+    names = {u.id: u.full_name for u in db.scalars(select(User).where(User.id.in_(source_ids)))} if source_ids else {}
+    return [_ledger_line(e, names.get(e.source_user_id or "")) for e in earnings]
+
+
+def _ledger_line(e: AffiliateEarning, source_name: str | None) -> AdminAffiliateLedgerLine:
+    return AdminAffiliateLedgerLine(
+        id=e.id,
+        kind=e.kind,
+        amount=float(e.amount),
+        status=e.status,
+        percent=e.percent,
+        note=e.note,
+        source_name=source_name,
+        reference=e.reference,
+        created_at=_iso_or_none(e.created_at) or "",
+        available_at=_iso_or_none(e.available_at),
+    )
+
+
+@router.post("/affiliates/{user_id}", response_model=AdminAffiliateEarning)
+def update_affiliate(
+    user_id: str,
+    payload: AdminAffiliateUpdate,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminAffiliateEarning:
+    """Nommer/retirer ambassadeur, suspendre/reactiver, annuler les gains non payes (fraude)."""
+    enforce_csrf(request)
+    _require_finance_pin(request, admin_user)
+    user = db.get(User, user_id)
+    if user is None:
+        raise ValidationDomainError("Utilisateur introuvable")
+    account = ensure_affiliate_account(db, user_id)
+    promoted = payload.tier == "ambassador" and account.tier != "ambassador"
+    if payload.tier is not None:
+        account.tier = payload.tier
+        account.ambassador_applied_at = None
+    if payload.status is not None:
+        account.status = payload.status
+    if payload.admin_note is not None:
+        account.admin_note = payload.admin_note.strip() or None
+    cancelled = 0
+    if payload.cancel_unpaid:
+        cancelled = cancel_unpaid(db, user_id, payload.reason or "annulé par AMAZER (fraude)", admin_user.id)
+    _audit(
+        db, request, admin_user, "admin_affiliate_updated", "affiliate_account", user_id,
+        {"tier": payload.tier, "status": payload.status, "cancelled_earnings": cancelled, "reason": payload.reason},
+    )
+    if promoted:
+        NotificationService(db).send_to_user(
+            user_id=user_id,
+            payload=NotificationPayload(
+                title="Vous êtes ambassadeur AMAZER",
+                body="Bienvenue ! Vos nouveaux taux et le classement du mois sont sur la page Affiliation.",
+                data={"tag": f"ambassador-{user_id}", "href": "/affiliation"},
+            ),
+        )
+    db.commit()
+    return _admin_affiliate_row(db, account, user)
+
+
+@router.post("/affiliate-ledger/{earning_id}", response_model=AdminAffiliateLedgerLine)
+def decide_affiliate_earning(
+    earning_id: str,
+    payload: AdminEarningDecision,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminAffiliateLedgerLine:
+    """Valider un gain bloque, ou annuler un gain non paye."""
+    enforce_csrf(request)
+    _require_finance_pin(request, admin_user)
+    earning = db.get(AffiliateEarning, earning_id)
+    if earning is None:
+        raise ValidationDomainError("Gain introuvable")
+    try:
+        decide_earning(db, earning, admin_id=admin_user.id, approve=payload.action == "approve", note=payload.note)
+    except PayoutError as exc:
+        raise ValidationDomainError(str(exc)) from exc
+    _audit(
+        db, request, admin_user, "admin_affiliate_earning_decision", "affiliate_earning", earning.id,
+        {"action": payload.action, "amount": float(earning.amount), "note": payload.note},
+    )
+    db.commit()
+    source = db.get(User, earning.source_user_id) if earning.source_user_id else None
+    return _ledger_line(earning, source.full_name if source else None)
+
+
+@router.post("/affiliates/{user_id}/bonus", status_code=204)
+def give_affiliate_bonus(
+    user_id: str,
+    payload: AdminAffiliateBonus,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> None:
+    """Prime manuelle (ex. meilleur ambassadeur du mois)."""
+    enforce_csrf(request)
+    _require_finance_pin(request, admin_user)
+    account = db.get(AffiliateAccount, user_id)
+    if account is None or account.status != "active":
+        raise ValidationDomainError("Compte affilié introuvable ou suspendu")
+    earning = add_manual_bonus(db, user_id, payload.amount, payload.reason.strip(), admin_user.id)
+    _audit(
+        db, request, admin_user, "admin_affiliate_bonus", "affiliate_earning", earning.reference,
+        {"user_id": user_id, "amount": payload.amount, "reason": payload.reason},
+    )
+    NotificationService(db).send_to_user(
+        user_id=user_id,
+        payload=NotificationPayload(
+            title="Prime AMAZER reçue",
+            body=f"Vous recevez une prime de {int(payload.amount)} F : {payload.reason.strip()}",
+            data={"tag": f"affiliate-bonus-{earning.reference}", "href": "/affiliation"},
+        ),
+    )
+    db.commit()
+
+
+def _payout_row(db: Session, payout: AffiliatePayout) -> AdminAffiliatePayout:
+    user = db.get(User, payout.affiliate_user_id)
+    account = db.get(AffiliateAccount, payout.affiliate_user_id)
+    review = db.scalar(
+        select(func.coalesce(func.sum(AffiliateEarning.amount), 0)).where(
+            AffiliateEarning.affiliate_user_id == payout.affiliate_user_id, AffiliateEarning.status == "review"
+        )
+    ) or 0
+    return AdminAffiliatePayout(
+        id=payout.id,
+        user_id=payout.affiliate_user_id,
+        full_name=(user.full_name if user else None) or "Affilié",
+        tier=account.tier if account else "affiliate",
+        amount=float(payout.amount),
+        method=payout.method,
+        phone=payout.phone,
+        status=payout.status,
+        transaction_reference=payout.transaction_reference,
+        admin_note=payout.admin_note,
+        review_amount=float(review),
+        created_at=_iso_or_none(payout.created_at) or "",
+        processed_at=_iso_or_none(payout.processed_at),
+    )
+
+
+@router.get("/affiliate-payouts", response_model=list[AdminAffiliatePayout])
+def list_affiliate_payouts(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+    status_filter: Annotated[Literal["requested", "paid", "rejected", "all"], Query(alias="status")] = "requested",
+) -> list[AdminAffiliatePayout]:
+    """Demandes de paiement des affilies (par defaut : celles a traiter)."""
+    _require_finance_pin(request, admin_user)
+    query = select(AffiliatePayout).order_by(AffiliatePayout.created_at.desc()).limit(200)
+    if status_filter != "all":
+        query = query.where(AffiliatePayout.status == status_filter)
+    return [_payout_row(db, payout) for payout in db.scalars(query).all()]
+
+
+@router.post("/affiliate-payouts/{payout_id}", response_model=AdminAffiliatePayout)
+def decide_affiliate_payout(
+    payout_id: str,
+    payload: AdminPayoutDecision,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminAffiliatePayout:
+    """Versement effectue (reference de transaction obligatoire) ou refuse."""
+    enforce_csrf(request)
+    _require_finance_pin(request, admin_user)
+    payout = db.get(AffiliatePayout, payout_id)
+    if payout is None:
+        raise ValidationDomainError("Demande introuvable")
+    try:
+        settle_payout(
+            db, payout, admin_id=admin_user.id, paid=payload.action == "paid",
+            reference=payload.transaction_reference, note=payload.note, cancel_earnings=payload.cancel_earnings,
+        )
+    except PayoutError as exc:
+        raise ValidationDomainError(str(exc)) from exc
+    _audit(
+        db, request, admin_user, "admin_affiliate_payout_decision", "affiliate_payout", payout.id,
+        {"action": payload.action, "amount": float(payout.amount), "reference": payload.transaction_reference},
+    )
+    if payload.action == "paid":
+        title = "Paiement envoyé"
+        body = f"{int(payout.amount)} F vous ont été versés ({payout.method}). Référence : {payout.transaction_reference}."
+    else:
+        title, body = "Demande de paiement refusée", payload.note or "Contactez AMAZER pour plus de détails."
+    NotificationService(db).send_to_user(
+        user_id=payout.affiliate_user_id,
+        payload=NotificationPayload(title=title, body=body, data={"tag": f"affiliate-payout-{payout.id}", "href": "/affiliation"}),
+    )
+    db.commit()
+    return _payout_row(db, payout)

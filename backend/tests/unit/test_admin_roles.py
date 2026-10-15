@@ -50,7 +50,7 @@ def test_admin_dependency_rejects_regular_user() -> None:
 @pytest.fixture
 def _route(monkeypatch):
     monkeypatch.setattr(admin_route, "enforce_csrf", lambda _request: None)
-    monkeypatch.setattr(admin_route, "_require_finance_pin", lambda _request: None)
+    monkeypatch.setattr(admin_route, "_require_finance_pin", lambda *_args, **_kwargs: None)
     audit: list[dict] = []
     monkeypatch.setattr(admin_route, "append_audit_log", lambda *a, **k: audit.append(k))
     return audit

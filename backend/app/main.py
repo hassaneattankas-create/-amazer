@@ -208,6 +208,40 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_customer_bonus DOUBLE PRECISION NOT NULL DEFAULT 250",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_user_id VARCHAR(36)",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_commission DOUBLE PRECISION NOT NULL DEFAULT 0",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_hold_days INTEGER NOT NULL DEFAULT 30",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_min_payout DOUBLE PRECISION NOT NULL DEFAULT 2000",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_new_account_monthly_cap DOUBLE PRECISION NOT NULL DEFAULT 25000",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_max_referrals_per_day INTEGER NOT NULL DEFAULT 15",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS ambassador_first_month_percent DOUBLE PRECISION NOT NULL DEFAULT 50",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS ambassador_tier2_shops INTEGER NOT NULL DEFAULT 10",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS ambassador_tier2_percent DOUBLE PRECISION NOT NULL DEFAULT 25",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS ambassador_tier3_shops INTEGER NOT NULL DEFAULT 25",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS ambassador_tier3_percent DOUBLE PRECISION NOT NULL DEFAULT 30",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS ambassador_monthly_top_bonus DOUBLE PRECISION NOT NULL DEFAULT 10000",
+        "ALTER TABLE affiliate_accounts ADD COLUMN IF NOT EXISTS tier VARCHAR(20) NOT NULL DEFAULT 'affiliate'",
+        "ALTER TABLE affiliate_accounts ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active'",
+        "ALTER TABLE affiliate_accounts ADD COLUMN IF NOT EXISTS admin_note VARCHAR(500)",
+        "ALTER TABLE affiliate_accounts ADD COLUMN IF NOT EXISTS device_hash VARCHAR(64)",
+        "ALTER TABLE affiliate_accounts ADD COLUMN IF NOT EXISTS last_ip_hash VARCHAR(64)",
+        "ALTER TABLE affiliate_accounts ADD COLUMN IF NOT EXISTS payout_method VARCHAR(20)",
+        "ALTER TABLE affiliate_accounts ADD COLUMN IF NOT EXISTS payout_phone VARCHAR(24)",
+        "ALTER TABLE affiliate_accounts ADD COLUMN IF NOT EXISTS ambassador_applied_at TIMESTAMPTZ",
+        "ALTER TABLE affiliate_accounts ADD COLUMN IF NOT EXISTS ambassador_application VARCHAR(600)",
+        "ALTER TABLE affiliate_referrals ADD COLUMN IF NOT EXISTS ip_hash VARCHAR(64)",
+        "ALTER TABLE affiliate_referrals ADD COLUMN IF NOT EXISTS device_hash VARCHAR(64)",
+        "ALTER TABLE affiliate_referrals ADD COLUMN IF NOT EXISTS flag VARCHAR(200)",
+        "ALTER TABLE affiliate_earnings ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'available'",
+        "ALTER TABLE affiliate_earnings ADD COLUMN IF NOT EXISTS source_user_id VARCHAR(36)",
+        "ALTER TABLE affiliate_earnings ADD COLUMN IF NOT EXISTS percent DOUBLE PRECISION",
+        "ALTER TABLE affiliate_earnings ADD COLUMN IF NOT EXISTS note VARCHAR(300)",
+        "ALTER TABLE affiliate_earnings ADD COLUMN IF NOT EXISTS available_at TIMESTAMPTZ",
+        "ALTER TABLE affiliate_earnings ADD COLUMN IF NOT EXISTS payout_id VARCHAR(36)",
+        "ALTER TABLE affiliate_earnings ADD COLUMN IF NOT EXISTS decided_by_user_id VARCHAR(36)",
+        "ALTER TABLE affiliate_earnings ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ",
+        "CREATE INDEX IF NOT EXISTS ix_affiliate_earnings_status ON affiliate_earnings (status)",
+        "CREATE INDEX IF NOT EXISTS ix_affiliate_earnings_source_user_id ON affiliate_earnings (source_user_id)",
+        "CREATE INDEX IF NOT EXISTS ix_affiliate_earnings_payout_id ON affiliate_earnings (payout_id)",
+        "CREATE INDEX IF NOT EXISTS ix_affiliate_accounts_device_hash ON affiliate_accounts (device_hash)",
         (
             "CREATE TABLE IF NOT EXISTS media_files ("
             "id VARCHAR(36) PRIMARY KEY, "
@@ -332,12 +366,30 @@ def _assign_missing_categories() -> None:
         db.close()
 
 
+def _backfill_affiliate_ledger() -> None:
+    """Bonus clients deja livres (ancien calcul) inscrits une fois au registre des gains d'affiliation."""
+    from app.services.affiliate_service import backfill_delivered_bonuses
+
+    db = SessionLocal()
+    try:
+        added = backfill_delivered_bonuses(db)
+        db.commit()
+        if added:
+            logger.info("Registre d'affiliation : %s bonus repris.", added)
+    except Exception:  # noqa: BLE001 - ne doit jamais empecher le demarrage
+        db.rollback()
+        logger.exception("Reprise du registre d'affiliation impossible.")
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     if settings.bootstrap_on_startup:
         _bootstrap_database_if_needed()
     _ensure_admin_account()
     _assign_missing_categories()
+    _backfill_affiliate_ledger()
     if settings.is_production() and settings.curated_public_catalog_mode:
         from seed_demo_storefronts import main as seed_storefronts_main
         from seed_demo_restaurants import main as seed_restaurants_main

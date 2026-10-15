@@ -51,6 +51,42 @@ function parsePositiveInteger(value: string, fallback: number) {
   return parsed >= 1 ? parsed : fallback;
 }
 
+type AffiliateSecurityKey =
+  | "affiliate_hold_days"
+  | "affiliate_min_payout"
+  | "affiliate_new_account_monthly_cap"
+  | "affiliate_max_referrals_per_day"
+  | "ambassador_first_month_percent"
+  | "ambassador_tier2_shops"
+  | "ambassador_tier2_percent"
+  | "ambassador_tier3_shops"
+  | "ambassador_tier3_percent"
+  | "ambassador_monthly_top_bonus";
+
+/** Securite des gains d'affiliation et taux des ambassadeurs (tous reglables). */
+const AFFILIATE_SECURITY_FIELDS: Array<{
+  key: AffiliateSecurityKey;
+  label: string;
+  suffix: string;
+  fallback: number;
+  min: number;
+  max: number;
+  step: string;
+  integer?: boolean;
+  helper: string;
+}> = [
+  { key: "affiliate_hold_days", label: "Affiliés : délai de sécurité avant paiement", suffix: "jours", fallback: 30, min: 0, max: 180, step: "1", integer: true, helper: "Temps pour repérer annulations et fraudes avant qu'un gain soit payable." },
+  { key: "affiliate_min_payout", label: "Affiliés : minimum pour demander un paiement", suffix: "XOF", fallback: 2000, min: 0, max: 10_000_000, step: "500", helper: "En dessous, le solde reste et s'additionne au mois suivant." },
+  { key: "affiliate_new_account_monthly_cap", label: "Affiliés : plafond mensuel des nouveaux comptes", suffix: "XOF", fallback: 25000, min: 0, max: 100_000_000, step: "1000", helper: "Pendant les 3 premiers mois : au-delà, les gains passent « à vérifier ». 0 = pas de plafond." },
+  { key: "affiliate_max_referrals_per_day", label: "Affiliés : inscriptions par jour avant vérification", suffix: "/ jour", fallback: 15, min: 1, max: 10000, step: "1", integer: true, helper: "Au-delà, les nouveaux parrainages sont signalés comme suspects." },
+  { key: "ambassador_first_month_percent", label: "Ambassadeurs : prime sur le 1er mois d'abonnement", suffix: "%", fallback: 50, min: 0, max: 100, step: "1", helper: "Exemple : 50 % de 5 000 XOF = 2 500 XOF au premier mois payé par une boutique recrutée." },
+  { key: "ambassador_tier2_shops", label: "Ambassadeurs : boutiques payantes pour le palier Argent", suffix: "boutiques", fallback: 10, min: 1, max: 100000, step: "1", integer: true, helper: "Avant ce palier, l'ambassadeur touche la part normale des affiliés." },
+  { key: "ambassador_tier2_percent", label: "Ambassadeurs : part au palier Argent", suffix: "%", fallback: 25, min: 0, max: 90, step: "1", helper: "Part des abonnements suivants des boutiques recrutées." },
+  { key: "ambassador_tier3_shops", label: "Ambassadeurs : boutiques payantes pour le palier Or", suffix: "boutiques", fallback: 25, min: 1, max: 100000, step: "1", integer: true, helper: "Doit être supérieur au palier Argent." },
+  { key: "ambassador_tier3_percent", label: "Ambassadeurs : part au palier Or", suffix: "%", fallback: 30, min: 0, max: 90, step: "1", helper: "Part des abonnements suivants au palier Or." },
+  { key: "ambassador_monthly_top_bonus", label: "Ambassadeurs : prime du n°1 du mois", suffix: "XOF", fallback: 10000, min: 0, max: 100_000_000, step: "1000", helper: "Affichée dans le classement. Versée par l'admin (page Affiliés) si le mois a rapporté plus." },
+];
+
 function AdminNumberField({
   label,
   value,
@@ -681,6 +717,26 @@ export default function AdminTarifsPage() {
               }
               helper="Montant fixe payé par AMAZER pour la 1re commande livrée d'un client amené. 0 = désactivé."
             />
+            {AFFILIATE_SECURITY_FIELDS.map((field) => (
+              <AdminNumberField
+                key={field.key}
+                label={field.label}
+                value={effective[field.key] ?? field.fallback}
+                suffix={field.suffix}
+                min={field.min}
+                step={field.step}
+                onChange={(value) =>
+                  setDraft({
+                    ...effective,
+                    [field.key]: Math.max(
+                      field.min,
+                      Math.min(field.max, field.integer ? Math.round(parseNonNegativeNumber(value, field.fallback)) : parseNonNegativeNumber(value, field.fallback))
+                    ),
+                  })
+                }
+                helper={field.helper}
+              />
+            ))}
           </div>
           <div className="grid gap-3 sm:grid-cols-1">
             <div>

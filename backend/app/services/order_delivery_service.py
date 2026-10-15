@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.models.order import Order
 from app.models.seller_profile import SellerProfile
+from app.services.affiliate_service import credit_customer_bonus
 from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.order_fulfillment_service import sync_fulfillments
 
@@ -44,6 +45,11 @@ def mark_order_delivered(db: Session, order: Order, *, source: str) -> bool:
         order.delivered_at = datetime.now(UTC)
     if already:
         return False
+    try:
+        with db.begin_nested():
+            credit_customer_bonus(db, order)
+    except Exception:  # noqa: BLE001 - la livraison reste enregistree meme si le bonus echoue
+        logger.exception("Bonus d'affiliation non inscrit (commande %s).", order.id)
     _notify_delivery(db, order, source)
     return True
 

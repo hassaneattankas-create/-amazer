@@ -63,10 +63,11 @@ async function forward(request: NextRequest, context: { params: Promise<{ path: 
       forwardedCookies.set(name, value);
     }
   }
-  // Filet de sécurité mobile: si la WebView refuse de rejouer le cookie cross-site de validation admin,
-  // le client envoie ce drapeau et on reconstruit le cookie attendu par le backend.
-  if (request.headers.get("x-finance-pin-verified") === "1") {
-    forwardedCookies.set("finance_pin_verified", "1");
+  // Filet de sécurité mobile : si la WebView refuse de rejouer le cookie cross-site, le client envoie le
+  // jeton signé reçu à la vérification du PIN. Le backend vérifie signature, expiration et administrateur.
+  const pinToken = request.headers.get("x-finance-pin-token");
+  if (pinToken && /^[A-Za-z0-9-]{8,64}\.\d{10}\.[a-f0-9]{48}$/.test(pinToken)) {
+    forwardedCookies.set("finance_pin_verified", pinToken);
   }
   if (forwardedCookies.size) {
     headers.set(

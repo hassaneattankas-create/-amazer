@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from collections import defaultdict, deque
 from datetime import UTC, datetime, timedelta
 from ipaddress import ip_address
@@ -66,15 +67,26 @@ def _is_private_address(value: str) -> bool:
 
 
 def enforce_rate_limit(request: Request, *, key: str, limit: int, window_seconds: int) -> None:
-    client_ip_value = client_ip(request)
-    bucket_key = f"{key}:{client_ip_value}"
+    _hit(f"{key}:{client_ip(request)}", limit, window_seconds)
+
+
+def enforce_identity_rate_limit(*, key: str, identity: str, limit: int, window_seconds: int) -> None:
+    """Limite par compte vise (et non par IP) : bloque le forcage d'un mot de passe depuis de nombreuses IP."""
+    normalized = (identity or "").strip().lower()
+    if not normalized:
+        return
+    digest = hashlib.sha256(normalized.encode()).hexdigest()[:32]
+    _hit(f"{key}:id:{digest}", limit, window_seconds)
+
+
+def _hit(bucket_key: str, limit: int, window_seconds: int) -> None:
     redis_client = _get_redis_client()
     if redis_client is not None:
         count = redis_client.incr(bucket_key)
         if count == 1:
             redis_client.expire(bucket_key, window_seconds)
         if count > limit:
-            raise TooManyRequestsError("Too many attempts, please try again later")
+            raise TooManyRequestsError("Trop de tentatives. Réessayez dans quelques minutes.")
         return
 
     now = datetime.now(UTC)
@@ -83,5 +95,5 @@ def enforce_rate_limit(request: Request, *, key: str, limit: int, window_seconds
     while bucket and bucket[0] < threshold:
         bucket.popleft()
     if len(bucket) >= limit:
-        raise TooManyRequestsError("Too many attempts, please try again later")
+        raise TooManyRequestsError("Trop de tentatives. Réessayez dans quelques minutes.")
     bucket.append(now)

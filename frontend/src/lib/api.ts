@@ -1,6 +1,7 @@
 import axios from "axios";
 import { getBackendOriginFromEnv, getMobileBundledBackendApiBase } from "@/lib/backend-origin";
 import { isMobileAppBuild } from "@/lib/mobile-app";
+import { getDeviceId } from "@/lib/device-id";
 
 const API_PROXY_BASE_URL = "/backend-api";
 
@@ -222,12 +223,31 @@ export function syncPersistedAuthSession(): void {
   }
 }
 
-export function persistAdminFinanceVerified(): void {
-  if (typeof window === "undefined") {
+export function persistAdminFinanceVerified(token: string, expiresInSeconds = 1800): void {
+  if (typeof window === "undefined" || !token) {
     return;
   }
-  window.localStorage.setItem(ADMIN_FINANCE_VERIFIED_KEY, "1");
-  window.sessionStorage.setItem(ADMIN_FINANCE_VERIFIED_KEY, "1");
+  const value = JSON.stringify({ token, exp: Date.now() + expiresInSeconds * 1000 });
+  window.localStorage.setItem(ADMIN_FINANCE_VERIFIED_KEY, value);
+  window.sessionStorage.setItem(ADMIN_FINANCE_VERIFIED_KEY, value);
+}
+
+/** Jeton « PIN finance verifie » encore valide, ou null. */
+export function getAdminFinancePinToken(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  for (const storage of [window.sessionStorage, window.localStorage]) {
+    try {
+      const parsed = JSON.parse(storage.getItem(ADMIN_FINANCE_VERIFIED_KEY) || "null") as { token?: string; exp?: number } | null;
+      if (parsed?.token && typeof parsed.exp === "number" && parsed.exp > Date.now()) {
+        return parsed.token;
+      }
+    } catch {
+      // ancienne valeur « 1 » ou stockage illisible : PIN a revalider
+    }
+  }
+  return null;
 }
 
 export function clearAdminFinanceVerified(): void {
@@ -242,10 +262,7 @@ export function hasAdminFinanceVerified(): boolean {
   if (typeof window === "undefined") {
     return false;
   }
-  return (
-    window.localStorage.getItem(ADMIN_FINANCE_VERIFIED_KEY) === "1" ||
-    window.sessionStorage.getItem(ADMIN_FINANCE_VERIFIED_KEY) === "1"
-  );
+  return getAdminFinancePinToken() !== null;
 }
 
 export const api = axios.create({
@@ -264,6 +281,11 @@ api.interceptors.request.use((config) => {
     }
   }
   const method = (config.method || "get").toLowerCase();
+  const deviceId = getDeviceId();
+  if (deviceId) {
+    config.headers = config.headers || {};
+    config.headers["X-Device-Id"] = deviceId;
+  }
   if (["post", "put", "patch", "delete"].includes(method)) {
     const csrfToken = getCookieValue("csrf_token");
     if (csrfToken) {

@@ -6,7 +6,7 @@ import {
   getClientAccessToken,
   getClientCookieValue,
   getClientRefreshToken,
-  hasAdminFinanceVerified,
+  getAdminFinancePinToken,
   persistAuthTokens,
 } from "@/lib/api";
 import { isMobileAppBuild } from "@/lib/mobile-app";
@@ -51,8 +51,9 @@ adminProxyApi.interceptors.request.use((config) => {
   if (csrfToken && ["post", "put", "patch", "delete"].includes(method)) {
     config.headers["X-CSRF-Token"] = csrfToken;
   }
-  if (hasAdminFinanceVerified()) {
-    config.headers["X-Finance-Pin-Verified"] = "1";
+  const pinToken = getAdminFinancePinToken();
+  if (pinToken) {
+    config.headers["X-Finance-Pin-Token"] = pinToken;
   }
   return config;
 });

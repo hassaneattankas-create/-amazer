@@ -102,12 +102,15 @@ export async function verifyAdminFinancePin(payload: VerifyPinPayload): Promise<
     headers["X-CSRF-Token"] = csrfToken;
   }
   try {
-    await axios.post(getAdminFinancePinVerifyUrl(), payload, {
+    const response = await axios.post<{ token?: string; expires_in?: number }>(getAdminFinancePinVerifyUrl(), payload, {
       headers,
       withCredentials: true,
       timeout: 30000,
     });
-    persistAdminFinanceVerified();
+    if (!response.data?.token) {
+      throw new Error("Vérification du PIN impossible.");
+    }
+    persistAdminFinanceVerified(response.data.token, response.data.expires_in);
   } catch (error) {
     clearAdminFinanceVerified();
     throw error;
@@ -356,14 +359,98 @@ export type AdminAffiliateEarning = {
   contact: string;
   whatsapp_phone: string | null;
   code: string;
+  tier: "affiliate" | "ambassador";
+  status: "active" | "suspended";
   clicks: number;
+  referred: number;
+  flagged_referrals: number;
   earned: number;
   pending: number;
+  on_hold: number;
+  review: number;
+  available: number;
+  requested: number;
+  paid: number;
   orders_delivered: number;
+  ambassador_applied_at: string | null;
+  ambassador_application: string | null;
+  admin_note: string | null;
+};
+
+export type AffiliateEarningStatus = "pending" | "review" | "available" | "requested" | "paid" | "cancelled";
+
+export type AdminAffiliateLedgerLine = {
+  id: string;
+  kind: "seller_subscription" | "customer_bonus" | "bonus";
+  amount: number;
+  status: AffiliateEarningStatus;
+  percent: number | null;
+  note: string | null;
+  source_name: string | null;
+  reference: string;
+  created_at: string;
+  available_at: string | null;
+};
+
+export type AdminAffiliatePayout = {
+  id: string;
+  user_id: string;
+  full_name: string;
+  tier: "affiliate" | "ambassador";
+  amount: number;
+  method: string;
+  phone: string;
+  status: "requested" | "paid" | "rejected";
+  transaction_reference: string | null;
+  admin_note: string | null;
+  review_amount: number;
+  created_at: string;
+  processed_at: string | null;
 };
 
 export async function listAffiliateEarnings(): Promise<AdminAffiliateEarning[]> {
   return adminProxyRequest<AdminAffiliateEarning[]>({ url: "/admin/finance/affiliate-earnings", method: "GET" });
+}
+
+export async function getAffiliateLedger(userId: string): Promise<AdminAffiliateLedgerLine[]> {
+  return adminProxyRequest<AdminAffiliateLedgerLine[]>({ url: `/admin/finance/affiliates/${userId}/ledger`, method: "GET" });
+}
+
+export async function updateAffiliate(
+  userId: string,
+  data: {
+    tier?: "affiliate" | "ambassador";
+    status?: "active" | "suspended";
+    admin_note?: string;
+    cancel_unpaid?: boolean;
+    reason?: string;
+  }
+): Promise<AdminAffiliateEarning> {
+  return adminProxyRequest<AdminAffiliateEarning>({ url: `/admin/finance/affiliates/${userId}`, method: "POST", data });
+}
+
+export async function decideAffiliateEarning(
+  earningId: string,
+  data: { action: "approve" | "cancel"; note?: string }
+): Promise<AdminAffiliateLedgerLine> {
+  return adminProxyRequest<AdminAffiliateLedgerLine>({ url: `/admin/finance/affiliate-ledger/${earningId}`, method: "POST", data });
+}
+
+export async function giveAffiliateBonus(userId: string, data: { amount: number; reason: string }): Promise<void> {
+  await adminProxyRequest<void>({ url: `/admin/finance/affiliates/${userId}/bonus`, method: "POST", data });
+}
+
+export async function listAffiliatePayouts(
+  status: "requested" | "paid" | "rejected" | "all" = "requested"
+): Promise<AdminAffiliatePayout[]> {
+  return adminProxyRequest<AdminAffiliatePayout[]>({ url: `/admin/finance/affiliate-payouts?status=${status}`, method: "GET" });
+}
+
+export async function decideAffiliatePayout(
+  payoutId: string,
+  data: { action: "paid" | "rejected"; transaction_reference?: string; note?: string; cancel_earnings?: boolean }
+): Promise<AdminAffiliatePayout> {
+  return adminProxyRequest<AdminAffiliatePayout>({ url: `/admin/finance/affiliate-payouts/${payoutId}`, method: "POST", data });
 }
 
 export type AdminMessageAudience = "all" | "customers" | "sellers" | "couriers" | "user";

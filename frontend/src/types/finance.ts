@@ -22,6 +22,18 @@ export type FinanceSettings = {
   affiliate_seller_share_percent?: number;
   affiliate_seller_share_months?: number;
   affiliate_customer_bonus?: number;
+  /** Securite des gains : delai avant paiement (jours), minimum de retrait, plafond des nouveaux comptes, inscriptions/jour. */
+  affiliate_hold_days?: number;
+  affiliate_min_payout?: number;
+  affiliate_new_account_monthly_cap?: number;
+  affiliate_max_referrals_per_day?: number;
+  /** Ambassadeurs : prime 1er mois (%), paliers (boutiques payantes -> %), prime du n°1 du mois. */
+  ambassador_first_month_percent?: number;
+  ambassador_tier2_shops?: number;
+  ambassador_tier2_percent?: number;
+  ambassador_tier3_shops?: number;
+  ambassador_tier3_percent?: number;
+  ambassador_monthly_top_bonus?: number;
   /** Reduction de lancement sur le tarif standard, en % (0 = desactivee). */
   seller_launch_discount_percent?: number;
 };

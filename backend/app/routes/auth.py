@@ -10,7 +10,7 @@ from app.core.cache import cache_delete_prefixes
 from app.core.csrf import enforce_csrf, generate_csrf_token
 from app.config import get_settings
 from app.core.exceptions import ConflictError, NotFoundError, UnauthorizedError
-from app.core.rate_limit import client_ip, enforce_rate_limit
+from app.core.rate_limit import client_ip, enforce_identity_rate_limit, enforce_rate_limit
 from app.models.user import User
 from app.models.user_preferences import UserPreferences
 from app.schemas.auth import (
@@ -37,7 +37,7 @@ from app.schemas.finance import (
 )
 from app.schemas.user import UserResponse
 from app.services import order_event_notifications as order_events
-from app.services.affiliate_service import record_referral
+from app.services.affiliate_service import record_referral, request_fingerprints
 from app.services.auth_service import SHADOW_EMAIL_DOMAIN, AuthService
 from app.models.seller_pending_registration import SellerPendingRegistration
 from app.core.security import hash_password
@@ -144,7 +144,8 @@ def register(
         user_id = result.get("user_id")
         if isinstance(user_id, str):
             order_events.notify_welcome(auth_service.db, user_id, payload.full_name)
-            record_referral(auth_service.db, user_id, payload.affiliate_code)
+            ip_hash, device_hash = request_fingerprints(request)
+            record_referral(auth_service.db, user_id, payload.affiliate_code, ip_hash=ip_hash, device_hash=device_hash)
             prefs = auth_service.db.scalar(select(UserPreferences).where(UserPreferences.user_id == user_id))
             if prefs is None:
                 prefs = UserPreferences(user_id=user_id, preferred_currency=DEFAULT_CURRENCY)
@@ -194,6 +195,10 @@ def login(
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> dict[str, str]:
     enforce_rate_limit(request, key="auth_login", limit=6, window_seconds=60)
+    # 10 essais par compte et par quart d'heure, quelle que soit l'IP (les IP mobiles changent et se partagent).
+    enforce_identity_rate_limit(
+        key="auth_login", identity=payload.identifier or payload.email or "", limit=10, window_seconds=900
+    )
     try:
         tokens = auth_service.login(
             identifier=payload.identifier or payload.email or "",
@@ -226,6 +231,7 @@ def forgot_password(
 ) -> PasswordForgotResponse:
     # Reponse identique que le compte existe ou non : on ne revele pas les comptes inscrits.
     enforce_rate_limit(request, key="auth_password_forgot", limit=3, window_seconds=900)
+    enforce_identity_rate_limit(key="auth_password_forgot", identity=payload.identifier, limit=3, window_seconds=3600)
     result = auth_service.request_password_reset(payload.identifier)
     return PasswordForgotResponse(message=PASSWORD_FORGOT_MESSAGE, code_preview=result.get("code_preview"))
 
@@ -237,6 +243,7 @@ def reset_password(
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> PasswordResetResponse:
     enforce_rate_limit(request, key="auth_password_reset", limit=8, window_seconds=900)
+    enforce_identity_rate_limit(key="auth_password_reset", identity=payload.identifier, limit=8, window_seconds=900)
     try:
         auth_service.reset_password(
             identifier=payload.identifier,

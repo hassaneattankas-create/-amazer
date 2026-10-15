@@ -28,7 +28,7 @@ from app.models.receipt_scan import ReceiptScan
 from app.models.reseller import ResellerListing
 from app.services.order_delivery_service import mark_order_delivered
 from app.services.reseller_account_service import reseller_terms, split_margin, subscription_active
-from app.services.affiliate_service import customer_bonus_for_order
+from app.services.affiliate_service import customer_bonus_for_order, request_fingerprints
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.schemas.order import (
@@ -512,7 +512,9 @@ def checkout(
     }
 
     # Affiliation : bonus fixe sur la premiere commande d'un nouveau client (jamais un % des ventes).
-    affiliate_user_id, affiliate_amount = customer_bonus_for_order(db, current_user.id, payload.affiliate_code)
+    affiliate_user_id, affiliate_amount = customer_bonus_for_order(
+        db, current_user.id, payload.affiliate_code, request_fingerprints(request)[1]
+    )
 
     order = Order(
         user_id=current_user.id,

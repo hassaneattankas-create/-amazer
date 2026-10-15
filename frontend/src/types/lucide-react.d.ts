@@ -86,6 +86,7 @@ declare module "lucide-react" {
   export const Settings2: LucideIcon;
   export const Share2: LucideIcon;
   export const ShieldCheck: LucideIcon;
+  export const Trophy: LucideIcon;
   export const ShoppingCart: LucideIcon;
   export const SlidersHorizontal: LucideIcon;
   export const Sparkles: LucideIcon;

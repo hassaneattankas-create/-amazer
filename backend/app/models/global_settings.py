@@ -43,6 +43,19 @@ class GlobalSettings(Base):
     affiliate_seller_share_percent: Mapped[float] = mapped_column(Float, nullable=False, default=20, server_default="20")
     affiliate_seller_share_months: Mapped[int] = mapped_column(Integer, nullable=False, default=12, server_default="12")
     affiliate_customer_bonus: Mapped[float] = mapped_column(Float, nullable=False, default=250, server_default="250")
+    # Securite des gains : delai avant paiement, minimum de retrait, plafond des nouveaux comptes (3 premiers mois),
+    # nombre d'inscriptions par jour au-dela duquel les parrainages sont a verifier.
+    affiliate_hold_days: Mapped[int] = mapped_column(Integer, nullable=False, default=30, server_default="30")
+    affiliate_min_payout: Mapped[float] = mapped_column(Float, nullable=False, default=2000, server_default="2000")
+    affiliate_new_account_monthly_cap: Mapped[float] = mapped_column(Float, nullable=False, default=25000, server_default="25000")
+    affiliate_max_referrals_per_day: Mapped[int] = mapped_column(Integer, nullable=False, default=15, server_default="15")
+    # Ambassadeurs : prime sur le 1er mois d'abonnement, paliers selon le nombre de boutiques payantes, prime du mois.
+    ambassador_first_month_percent: Mapped[float] = mapped_column(Float, nullable=False, default=50, server_default="50")
+    ambassador_tier2_shops: Mapped[int] = mapped_column(Integer, nullable=False, default=10, server_default="10")
+    ambassador_tier2_percent: Mapped[float] = mapped_column(Float, nullable=False, default=25, server_default="25")
+    ambassador_tier3_shops: Mapped[int] = mapped_column(Integer, nullable=False, default=25, server_default="25")
+    ambassador_tier3_percent: Mapped[float] = mapped_column(Float, nullable=False, default=30, server_default="30")
+    ambassador_monthly_top_bonus: Mapped[float] = mapped_column(Float, nullable=False, default=10000, server_default="10000")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

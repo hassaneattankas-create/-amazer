@@ -437,6 +437,17 @@ Toutes les couleurs, rayons et espacements viennent des tokens du design system 
 - Ressources externes remplacées : uniquement des cours gratuits en français d'organismes reconnus (Google Skillshop et Ateliers Numériques, OpenClassrooms, guides officiels WhatsApp Business, HubSpot Academy, FUN MOOC, Fondation Tony Elumelu, Meta Blueprint). Chaque lien ouvert et son titre contrôlé le 2026-10-15. Retirés : recherches YouTube génériques, guide Shopify en anglais.
 - Test : contenu des modules et liens https sans doublon (frontend 40 tests).
 
+## 4 quinquatricies. Ambassadeurs, anti-fraude, paiements affiliés, sécurité — 2026-10-15
+
+- Registre des gains (affiliate_earnings.status) : pending (délai de sécurité) → available → requested → paid ; review (signal de fraude, bloqué jusqu'à décision admin) ; cancelled (motif conservé). Bonus clients inscrits au registre à la livraison (mark_order_delivered), reprise unique des anciens au démarrage.
+- Ambassadeurs (nommés par l'admin) : prime sur 1 mois d'abonnement (50 %), paliers par boutiques payantes (20 → 25 → 30 %), classement du mois (prénom + initiale), prime manuelle, candidature depuis /affiliation.
+- Anti-fraude : auto-parrainage refusé (même compte, même appareil via X-Device-Id haché) ; signalés « à vérifier » : plusieurs inscriptions même connexion, trop d'inscriptions/jour, même numéro, livraison au numéro de l'affilié, plafond mensuel des comptes de moins de 90 jours ; à maturité : commande annulée → annulé, compte parrainé fermé → à vérifier. Admin : valider/annuler chaque gain, suspendre, « fraude : tout annuler ». Un clic ne rapporte jamais rien.
+- Paiements : demande par l'affilié (tout le disponible, minimum réglable, une à la fois, Nita/Amana/Airtel/Moov) ; admin : payé (référence obligatoire) ou refusé (gains rendus, ou annulés si fraude) ; notifications.
+- Tous les taux et seuils dans Admin > Tarifs (10 nouveaux réglages).
+- Sécurité : le PIN finance admin reposait sur un cookie « 1 » (et un en-tête que le proxy transformait en cookie) → contournable avec une session admin. Remplacé par un jeton HMAC lié à l'admin, expirant à 30 min (backend, route PIN, proxy, client). Limite de connexion et de réinitialisation par compte (en plus de l'IP). Message de limitation en français.
+- Tests : backend 320 (dont 23 affiliation sur SQLite réelle, 9 jeton PIN, 2 limite par compte), frontend 40, tsc 0, eslint 0 erreur. Aperçus simulés : tools/e2e/affiliate-mock.mjs, admin-affiliate-mock.mjs.
+- Après déploiement : les admins doivent ressaisir le PIN finance une fois (anciens cookies invalides).
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).

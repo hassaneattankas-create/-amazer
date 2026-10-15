@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, Copy, MousePointerClick, Wallet } from "lucide-react";
+import { BookOpen, Copy, MousePointerClick } from "lucide-react";
 
+import { AffiliateWallet } from "@/components/affiliate/AffiliateWallet";
+import { AmbassadorPanel } from "@/components/affiliate/AmbassadorPanel";
 import { WhatsAppIcon } from "@/components/contact/WhatsAppButton";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -105,35 +107,14 @@ export default function AffiliationPage() {
           <div className="h-40 animate-pulse rounded-card bg-surface-3" aria-busy="true" />
         ) : (
           <>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-card border border-border bg-card p-4">
-                <p className="flex items-center gap-2 text-sm text-ink-600">
-                  <Wallet className="h-4 w-4" aria-hidden="true" />
-                  Gagné
-                </p>
-                <p className="mt-1 text-2xl font-bold text-ink-900">{formatXOF(me.earnings.earned)}</p>
-                <p className="text-xs text-ink-600">
-                  Vendeurs {formatXOF(me.earnings.from_sellers)} · clients {formatXOF(me.earnings.from_customers)}
-                </p>
-              </div>
-              <div className="rounded-card border border-border bg-card p-4">
-                <p className="text-sm text-ink-600">Bonus clients en attente de livraison</p>
-                <p className="mt-1 text-2xl font-bold text-ink-900">{formatXOF(me.earnings.pending)}</p>
-              </div>
-              <div className="rounded-card border border-border bg-card p-4">
-                <p className="flex items-center gap-2 text-sm text-ink-600">
-                  <MousePointerClick className="h-4 w-4" aria-hidden="true" />
-                  Visites · inscrits
-                </p>
-                <p className="mt-1 text-2xl font-bold text-ink-900">
-                  {me.clicks} · {me.referred_sellers + me.referred_customers}
-                </p>
-                <p className="text-xs text-ink-600">
-                  {me.referred_sellers} vendeur{me.referred_sellers > 1 ? "s" : ""}, {me.referred_customers} client
-                  {me.referred_customers > 1 ? "s" : ""}
-                </p>
-              </div>
-            </div>
+            <AffiliateWallet me={me} />
+            <p className="flex items-start gap-2 text-sm text-ink-700">
+              <MousePointerClick className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>
+                {me.clicks} visite{me.clicks > 1 ? "s" : ""} via vos liens · {me.referred_sellers} vendeur
+                {me.referred_sellers > 1 ? "s" : ""} et {me.referred_customers} client{me.referred_customers > 1 ? "s" : ""} inscrits
+              </span>
+            </p>
 
             <div className="space-y-3 rounded-card border border-border bg-card p-4">
               <p className="text-sm font-semibold text-ink-900">
@@ -198,6 +179,8 @@ export default function AffiliationPage() {
               ) : null}
             </div>
 
+            <AmbassadorPanel me={me} />
+
             {message ? (
               <p className={`text-sm ${message.ok ? "text-success" : "text-danger"}`} role="status">
                 {message.text}
@@ -213,8 +196,11 @@ export default function AffiliationPage() {
           <li>La personne doit s&apos;inscrire ou commander dans les 30 jours après le clic (le dernier lien cliqué compte).</li>
           <li>Vendeur amené : vous touchez votre part à chaque abonnement payé, pendant la durée indiquée.</li>
           <li>Client amené : bonus versé pour sa première commande, une fois livrée. Le client paie le prix normal.</li>
-          <li>Vos propres inscriptions et achats ne comptent pas.</li>
-          <li>Gains versés par Nita ou Amana : demandez-les sur WhatsApp.</li>
+          <li>Un clic seul ne rapporte rien : seuls les abonnements payés et les commandes livrées comptent.</li>
+          <li>Vos propres inscriptions et achats ne comptent pas (même personne, même téléphone ou même numéro).</li>
+          <li>Chaque gain attend un délai de sécurité{me ? ` de ${me.hold_days} jours` : ""} avant d&apos;être payable.</li>
+          <li>Paiement sur demande, par Nita, Amana, Airtel Money ou Moov Money{me ? `, à partir de ${formatXOF(me.min_payout)}` : ""}.</li>
+          <li>Toute fraude (faux comptes, auto-parrainage) entraîne l&apos;annulation des gains et la suspension du compte.</li>
         </ul>
         <Link href="/formations" className="mt-3 inline-flex min-h-11 items-center gap-2 font-semibold text-brand-700 hover:underline">
           <BookOpen className="h-4 w-4" aria-hidden="true" />

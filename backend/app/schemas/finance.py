@@ -32,6 +32,16 @@ class FinanceSettingsResponse(BaseModel):
     affiliate_seller_share_percent: float = 20
     affiliate_seller_share_months: int = 12
     affiliate_customer_bonus: float = 250
+    affiliate_hold_days: int = 30
+    affiliate_min_payout: float = 2000
+    affiliate_new_account_monthly_cap: float = 25000
+    affiliate_max_referrals_per_day: int = 15
+    ambassador_first_month_percent: float = 50
+    ambassador_tier2_shops: int = 10
+    ambassador_tier2_percent: float = 25
+    ambassador_tier3_shops: int = 25
+    ambassador_tier3_percent: float = 30
+    ambassador_monthly_top_bonus: float = 10000
 
 
 class FinanceSettingsUpdateRequest(BaseModel):
@@ -65,6 +75,17 @@ class FinanceSettingsUpdateRequest(BaseModel):
     affiliate_seller_share_percent: float = Field(default=20, ge=0, le=90)
     affiliate_seller_share_months: int = Field(default=12, ge=1, le=120)
     affiliate_customer_bonus: float = Field(default=250, ge=0)
+    # Securite des gains et ambassadeurs (voir affiliate_service).
+    affiliate_hold_days: int = Field(default=30, ge=0, le=180)
+    affiliate_min_payout: float = Field(default=2000, ge=0)
+    affiliate_new_account_monthly_cap: float = Field(default=25000, ge=0)
+    affiliate_max_referrals_per_day: int = Field(default=15, ge=1, le=10000)
+    ambassador_first_month_percent: float = Field(default=50, ge=0, le=100)
+    ambassador_tier2_shops: int = Field(default=10, ge=1, le=100000)
+    ambassador_tier2_percent: float = Field(default=25, ge=0, le=90)
+    ambassador_tier3_shops: int = Field(default=25, ge=1, le=100000)
+    ambassador_tier3_percent: float = Field(default=30, ge=0, le=90)
+    ambassador_monthly_top_bonus: float = Field(default=10000, ge=0)
 
 
 class PublicContactInfoResponse(BaseModel):
