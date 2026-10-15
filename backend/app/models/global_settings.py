@@ -38,7 +38,11 @@ class GlobalSettings(Base):
     reseller_subscription_fee: Mapped[float] = mapped_column(Float, nullable=False, default=500, server_default="500")
     reseller_commission_percent: Mapped[float] = mapped_column(Float, nullable=False, default=10, server_default="10")
     # Affiliation : part du montant des articles versee a l'affilie qui a apporte la vente.
-    affiliate_commission_percent: Mapped[float] = mapped_column(Float, nullable=False, default=3, server_default="3")
+    affiliate_commission_percent: Mapped[float] = mapped_column(Float, nullable=False, default=3, server_default="3")  # obsolete
+    # Affiliation : part des abonnements des vendeurs amenes (pendant N mois) et bonus par nouveau client.
+    affiliate_seller_share_percent: Mapped[float] = mapped_column(Float, nullable=False, default=20, server_default="20")
+    affiliate_seller_share_months: Mapped[int] = mapped_column(Integer, nullable=False, default=12, server_default="12")
+    affiliate_customer_bonus: Mapped[float] = mapped_column(Float, nullable=False, default=250, server_default="250")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

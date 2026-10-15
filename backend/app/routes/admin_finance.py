@@ -71,8 +71,9 @@ from app.schemas.finance import (
 from app.services import order_event_notifications as order_events
 from app.routes.resellers import compute_earnings as compute_reseller_earnings
 from app.models.reseller import ResellerSubscriptionPayment
-from app.models.affiliate import AffiliateAccount
+from app.models.affiliate import AffiliateAccount, AffiliateEarning
 from app.routes.affiliates import compute_affiliate_earnings
+from app.services.affiliate_service import credit_subscription_share
 from app.services.reseller_account_service import ensure_account as ensure_reseller_account
 from app.services.reseller_account_service import extend_subscription as extend_reseller_subscription
 from app.services.audit_log_service import append_audit_log
@@ -167,7 +168,9 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
         seller_launch_discount_percent=float(getattr(settings, "seller_launch_discount_percent", 0) or 0),
         reseller_subscription_fee=float(getattr(settings, "reseller_subscription_fee", 500) or 0),
         reseller_commission_percent=float(getattr(settings, "reseller_commission_percent", 10) or 0),
-        affiliate_commission_percent=float(getattr(settings, "affiliate_commission_percent", 3) or 0),
+        affiliate_seller_share_percent=float(getattr(settings, "affiliate_seller_share_percent", 20) or 0),
+        affiliate_seller_share_months=int(getattr(settings, "affiliate_seller_share_months", 12) or 12),
+        affiliate_customer_bonus=float(getattr(settings, "affiliate_customer_bonus", 250) or 0),
         support_email=settings.support_email,
         support_phone=settings.support_phone,
         support_whatsapp=settings.support_whatsapp,
@@ -463,7 +466,9 @@ def update_finance_settings(
     settings_row.seller_launch_discount_percent = payload.seller_launch_discount_percent
     settings_row.reseller_subscription_fee = payload.reseller_subscription_fee
     settings_row.reseller_commission_percent = payload.reseller_commission_percent
-    settings_row.affiliate_commission_percent = payload.affiliate_commission_percent
+    settings_row.affiliate_seller_share_percent = payload.affiliate_seller_share_percent
+    settings_row.affiliate_seller_share_months = payload.affiliate_seller_share_months
+    settings_row.affiliate_customer_bonus = payload.affiliate_customer_bonus
     settings_row.support_email = payload.support_email
     settings_row.support_phone = payload.support_phone
     settings_row.support_whatsapp = payload.support_whatsapp
@@ -1716,6 +1721,7 @@ def decide_seller_subscription_payment(
             vendor.is_active = True
             # Activer aussi tous les prix du vendeur pour qu ils apparaissent dans le catalogue.
             db.execute(update(Price).where(Price.vendor_id == vendor.id).values(is_active=True))
+        credit_subscription_share(db, row.seller_user_id, float(row.amount_claimed or 0), f"seller-sub:{row.id}")
     seller_user = db.get(User, row.seller_user_id)
 
     append_audit_log(
@@ -2176,6 +2182,7 @@ def decide_reseller_payment(
     payment.reviewed_at = datetime.now(UTC)
     if payload.decision == "approved":
         extend_reseller_subscription(ensure_reseller_account(db, payment.user_id), payment.months)
+        credit_subscription_share(db, payment.user_id, float(payment.amount_claimed or 0), f"reseller-sub:{payment.id}")
         title, body = "Abonnement revendeur actif", "Votre paiement est validé : vos produits sont en ligne."
     else:
         title, body = "Paiement revendeur refusé", "Votre paiement n'a pas pu être vérifié. Contactez AMAZER sur WhatsApp."
@@ -2229,7 +2236,8 @@ def list_affiliate_earnings(
 ) -> list[AdminAffiliateEarning]:
     """Commissions d'affiliation : a verser (commandes livrees) et en attente."""
     _require_finance_pin(request)
-    affiliate_ids = db.scalars(select(Order.affiliate_user_id).where(Order.affiliate_user_id.is_not(None)).distinct()).all()
+    affiliate_ids = set(db.scalars(select(Order.affiliate_user_id).where(Order.affiliate_user_id.is_not(None)).distinct()).all())
+    affiliate_ids |= set(db.scalars(select(AffiliateEarning.affiliate_user_id).distinct()).all())
     rows: list[AdminAffiliateEarning] = []
     for affiliate_id in affiliate_ids:
         user = db.get(User, affiliate_id)

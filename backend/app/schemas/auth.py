@@ -27,6 +27,8 @@ class RegisterRequest(BaseModel):
     region: str | None = Field(default=None, max_length=120)
     preferred_currency: str | None = Field(default=None, pattern=CURRENCY_PATTERN)
     preferred_language: str | None = Field(default=None, pattern=LANGUAGE_PATTERN)
+    # Code de l'affilie dont le lien a ete suivi (parrainage).
+    affiliate_code: str | None = Field(default=None, max_length=16)
 
     @field_validator("password")
     @classmethod

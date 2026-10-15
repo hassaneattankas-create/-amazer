@@ -37,6 +37,7 @@ from app.schemas.finance import (
 )
 from app.schemas.user import UserResponse
 from app.services import order_event_notifications as order_events
+from app.services.affiliate_service import record_referral
 from app.services.auth_service import SHADOW_EMAIL_DOMAIN, AuthService
 from app.models.seller_pending_registration import SellerPendingRegistration
 from app.core.security import hash_password
@@ -143,6 +144,7 @@ def register(
         user_id = result.get("user_id")
         if isinstance(user_id, str):
             order_events.notify_welcome(auth_service.db, user_id, payload.full_name)
+            record_referral(auth_service.db, user_id, payload.affiliate_code)
             prefs = auth_service.db.scalar(select(UserPreferences).where(UserPreferences.user_id == user_id))
             if prefs is None:
                 prefs = UserPreferences(user_id=user_id, preferred_currency=DEFAULT_CURRENCY)

@@ -182,6 +182,7 @@ def test_approving_reseller_payment_extends_and_notifies(_route, monkeypatch) ->
     monkeypatch.setattr(admin_route, "NotificationService", FakeNotifications)
     monkeypatch.setattr(admin_route, "ensure_reseller_account", lambda _db, _uid: SimpleNamespace(paid_until=None))
     monkeypatch.setattr(admin_route, "extend_reseller_subscription", lambda _account, months: extended.append(months))
+    monkeypatch.setattr(admin_route, "credit_subscription_share", lambda *a, **k: None)
     payment = SimpleNamespace(id="pay-1", user_id="u-1", status="pending", months=3, amount_claimed=1500,
                               payment_mode="nita", transaction_reference="REF123", created_at=None, reviewed_at=None)
     db = Mock()
