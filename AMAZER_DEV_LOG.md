@@ -409,6 +409,15 @@ Toutes les couleurs, rayons et espacements viennent des tokens du design system 
 - Bouton « Partager et gagner » sur chaque produit (partage natif du téléphone, sinon copie).
 - Tests : backend 288, frontend 38.
 
+## 4 untricies. Affiliation v2 et espace vendeur en onglets — 2026-10-15
+
+- Affiliation (décision du propriétaire, pas de % sur les ventes des vendeurs) : parrainage enregistré à l'inscription (`affiliate_referrals`) ; part des abonnements des vendeurs/revendeurs amenés (défaut 20 % pendant 12 mois, `affiliate_earnings`, une fois par paiement validé) ; bonus fixe nouveau client (défaut 250 XOF) sur sa 1re commande, acquis à la livraison. Réglages dans Admin → Tarifs.
+- Espace vendeur réorganisé en onglets (Accueil, Commandes, Produits, Ajouter, Réglages), ancre d'URL conservée.
+- Produits : liste compacte, recherche, filtres (en ligne / masqués / stock faible), édition à la demande, pagination.
+- Commandes : filtres (à traiter / en cours / terminées / paiement en attente), une action claire par étape ; le vendeur ne « confirme » plus le paiement (c'est AMAZER).
+- Une entreprise sans restaurant ne voit plus les outils restaurant (offers_shop / offers_restaurant respectés).
+- Tests : backend 289, frontend 38. Rendu vérifié avec données simulées (tools/e2e/seller-mock.mjs).
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { AlertTriangle, ClipboardList, PackageCheck, TrendingUp, type LucideIcon } from "lucide-react";
 
 import { formatXOF } from "@/lib/currency";
@@ -15,7 +16,7 @@ const THIRTY_DAYS = 30 * 86_400_000;
  * puis les chiffres cles. Chaque tuile mene a la section concernee.
  */
 export function SellerKpis({ orders, inventory }: { orders: SellerShopOrder[]; inventory: SellerInventoryItem[] }) {
-  const now = Date.now();
+  const [now] = useState(() => Date.now());
   const toHandle = orders.filter((order) => order.payment_status === "paid" && ["commande", "preparation"].includes(order.status));
   const recentSales = orders
     .filter((order) => order.payment_status === "paid" && order.status !== "annulee")
@@ -44,14 +45,14 @@ export function SellerKpis({ orders, inventory }: { orders: SellerShopOrder[]; i
       value: String(online.length),
       hint: `${inventory.length - online.length} masqué${inventory.length - online.length > 1 ? "s" : ""}`,
       icon: PackageCheck,
-      href: "#catalogue",
+      href: "#produits",
     },
     {
       label: "Stock faible",
       value: String(lowStock.length),
       hint: lowStock.length ? `${LOW_STOCK} unités ou moins` : "Stock correct",
       icon: AlertTriangle,
-      href: "#catalogue",
+      href: "#produits",
       alert: lowStock.length > 0,
     },
   ];
