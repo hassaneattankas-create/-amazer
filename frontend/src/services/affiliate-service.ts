@@ -2,9 +2,20 @@ import { api } from "@/lib/api";
 
 export type AffiliateMe = {
   code: string;
-  commission_percent: number;
+  seller_share_percent: number;
+  seller_share_months: number;
+  customer_bonus: number;
   clicks: number;
-  earnings: { earned: number; pending: number; orders_delivered: number; orders_pending: number };
+  referred_sellers: number;
+  referred_customers: number;
+  earnings: {
+    earned: number;
+    pending: number;
+    from_sellers: number;
+    from_customers: number;
+    orders_delivered: number;
+    orders_pending: number;
+  };
 };
 
 export async function getMyAffiliate() {

@@ -9,6 +9,7 @@ import { Building2, CheckCircle2, Store, UtensilsCrossed } from "lucide-react";
 import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
+import { getActiveAffiliateCode } from "@/lib/affiliate";
 import { COUNTRIES, findCountry } from "@/lib/locale";
 import { useLocaleStore } from "@/store/locale-store";
 import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
@@ -153,6 +154,7 @@ function RegisterPageContent() {
         region: region.trim(),
         preferred_currency: currency,
         preferred_language: localePrefs.language,
+        affiliate_code: getActiveAffiliateCode(),
         // Vendeur : la boutique est creee immediatement (essai gratuit), sans attendre l'admin.
         seller_profile: isSellerFlow
           ? {

@@ -14,10 +14,10 @@ import { formatXOF } from "@/lib/currency";
 import { getMyAffiliate } from "@/services/affiliate-service";
 
 const STEPS = [
-  { title: "Copiez votre lien", text: "ou le lien de n'importe quel produit AMAZER" },
-  { title: "Partagez-le", text: "WhatsApp, Facebook, TikTok, groupes…" },
-  { title: "Le client achète", text: "au prix normal, dans les 30 jours" },
-  { title: "Vous gagnez", text: "un pourcentage de la vente, après livraison" },
+  { title: "Copiez votre lien", text: "ou le lien d'un produit ou d'une boutique" },
+  { title: "Partagez-le", text: "aux commerçants et à vos proches" },
+  { title: "Ils s'inscrivent", text: "ou commandent via votre lien (30 jours)" },
+  { title: "Vous gagnez", text: "sur leurs abonnements et leur 1re commande" },
 ];
 
 function siteOrigin(): string {
@@ -57,9 +57,23 @@ export default function AffiliationPage() {
       <header className="rounded-card bg-ink-900 px-4 py-6 text-white sm:px-8">
         <h1 className="text-display-sm font-semibold tracking-display">Programme d&apos;affiliation</h1>
         <p className="mt-1 max-w-2xl text-sm text-white/80">
-          Partagez AMAZER et gagnez{me ? ` ${me.commission_percent} %` : " une commission"} sur chaque vente apportée. Gratuit,
-          sans stock, sans abonnement.
+          Faites connaître AMAZER et gagnez de l&apos;argent. Gratuit, sans stock, sans abonnement.
         </p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <div className="rounded-field bg-white/10 px-3 py-2 text-sm">
+            <p className="font-semibold">Vous amenez un vendeur</p>
+            <p className="text-white/80">
+              {me ? `${me.seller_share_percent} %` : "Une part"} de chacun de ses abonnements
+              {me ? ` pendant ${me.seller_share_months} mois` : ""}.
+            </p>
+          </div>
+          <div className="rounded-field bg-white/10 px-3 py-2 text-sm">
+            <p className="font-semibold">Vous amenez un client</p>
+            <p className="text-white/80">
+              {me ? formatXOF(me.customer_bonus) : "Un bonus"} pour sa première commande livrée.
+            </p>
+          </div>
+        </div>
         <ol className="mt-4 grid gap-2 sm:grid-cols-4">
           {STEPS.map((step, index) => (
             <li key={step.title} className="rounded-field bg-white/10 px-3 py-2 text-sm">
@@ -95,20 +109,29 @@ export default function AffiliationPage() {
               <div className="rounded-card border border-border bg-card p-4">
                 <p className="flex items-center gap-2 text-sm text-ink-600">
                   <Wallet className="h-4 w-4" aria-hidden="true" />
-                  Gagné (commandes livrées)
+                  Gagné
                 </p>
                 <p className="mt-1 text-2xl font-bold text-ink-900">{formatXOF(me.earnings.earned)}</p>
+                <p className="text-xs text-ink-600">
+                  Vendeurs {formatXOF(me.earnings.from_sellers)} · clients {formatXOF(me.earnings.from_customers)}
+                </p>
               </div>
               <div className="rounded-card border border-border bg-card p-4">
-                <p className="text-sm text-ink-600">En attente de livraison</p>
+                <p className="text-sm text-ink-600">Bonus clients en attente de livraison</p>
                 <p className="mt-1 text-2xl font-bold text-ink-900">{formatXOF(me.earnings.pending)}</p>
               </div>
               <div className="rounded-card border border-border bg-card p-4">
                 <p className="flex items-center gap-2 text-sm text-ink-600">
                   <MousePointerClick className="h-4 w-4" aria-hidden="true" />
-                  Visites via vos liens
+                  Visites · inscrits
                 </p>
-                <p className="mt-1 text-2xl font-bold text-ink-900">{me.clicks}</p>
+                <p className="mt-1 text-2xl font-bold text-ink-900">
+                  {me.clicks} · {me.referred_sellers + me.referred_customers}
+                </p>
+                <p className="text-xs text-ink-600">
+                  {me.referred_sellers} vendeur{me.referred_sellers > 1 ? "s" : ""}, {me.referred_customers} client
+                  {me.referred_customers > 1 ? "s" : ""}
+                </p>
               </div>
             </div>
 
@@ -121,6 +144,10 @@ export default function AffiliationPage() {
                 <Button type="button" variant="outline" onClick={() => copy(homeLink)}>
                   <Copy className="h-4 w-4" aria-hidden="true" />
                   Copier mon lien
+                </Button>
+                <Button type="button" variant="outline" onClick={() => copy(withAffiliateRef(`${siteOrigin()}/vendre`, me.code))}>
+                  <Copy className="h-4 w-4" aria-hidden="true" />
+                  Lien pour les vendeurs
                 </Button>
                 <a
                   href={shareOnWhatsApp(homeLink)}
@@ -183,10 +210,11 @@ export default function AffiliationPage() {
       <div className="rounded-card border border-border bg-card p-4 text-sm text-ink-700">
         <p className="font-semibold text-ink-900">Règles simples</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>Le client paie le prix normal : rien n&apos;est ajouté pour lui.</li>
-          <li>La vente vous revient si elle a lieu dans les 30 jours après le clic sur votre lien (le dernier lien cliqué compte).</li>
-          <li>Vos achats personnels ne donnent pas de commission.</li>
-          <li>Commission versée après livraison, par Nita ou Amana : demandez-la sur WhatsApp.</li>
+          <li>La personne doit s&apos;inscrire ou commander dans les 30 jours après le clic (le dernier lien cliqué compte).</li>
+          <li>Vendeur amené : vous touchez votre part à chaque abonnement payé, pendant la durée indiquée.</li>
+          <li>Client amené : bonus versé pour sa première commande, une fois livrée. Le client paie le prix normal.</li>
+          <li>Vos propres inscriptions et achats ne comptent pas.</li>
+          <li>Gains versés par Nita ou Amana : demandez-les sur WhatsApp.</li>
         </ul>
         <Link href="/formations" className="mt-3 inline-flex min-h-11 items-center gap-2 font-semibold text-brand-700 hover:underline">
           <BookOpen className="h-4 w-4" aria-hidden="true" />

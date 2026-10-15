@@ -640,18 +640,46 @@ export default function AdminTarifsPage() {
               helper="Prélevée sur chaque marge gagnée. Exemple : 10 % d'une marge de 1 500 XOF = 150 XOF pour AMAZER."
             />
             <AdminNumberField
-              label="Commission des affiliés"
-              value={effective.affiliate_commission_percent ?? 3}
-              suffix="% des articles"
+              label="Affiliés : part des abonnements des vendeurs amenés"
+              value={effective.affiliate_seller_share_percent ?? 20}
+              suffix="%"
               min={0}
-              step="0.5"
+              step="1"
               onChange={(value) =>
                 setDraft({
                   ...effective,
-                  affiliate_commission_percent: Math.min(50, parseNonNegativeNumber(value, effective.affiliate_commission_percent ?? 3)),
+                  affiliate_seller_share_percent: Math.min(90, parseNonNegativeNumber(value, effective.affiliate_seller_share_percent ?? 20)),
                 })
               }
-              helper="Payée par AMAZER à la personne dont le lien a apporté la vente (30 jours). Exemple : 3 % de 20 000 XOF = 600 XOF."
+              helper="Prise sur l'abonnement encaissé (vendeurs et revendeurs). Exemple : 20 % de 5 000 XOF = 1 000 XOF pour l'affilié."
+            />
+            <AdminNumberField
+              label="Affiliés : durée de la part d'abonnement"
+              value={effective.affiliate_seller_share_months ?? 12}
+              suffix="mois"
+              min={1}
+              step="1"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  affiliate_seller_share_months: Math.max(1, Math.min(120, Math.round(parseNonNegativeNumber(value, effective.affiliate_seller_share_months ?? 12)))),
+                })
+              }
+              helper="Après cette durée depuis l'inscription du vendeur, l'affilié ne touche plus rien sur ses abonnements."
+            />
+            <AdminNumberField
+              label="Affiliés : bonus par nouveau client"
+              value={effective.affiliate_customer_bonus ?? 250}
+              suffix="XOF"
+              min={0}
+              step="50"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  affiliate_customer_bonus: parseNonNegativeNumber(value, effective.affiliate_customer_bonus ?? 250),
+                })
+              }
+              helper="Montant fixe payé par AMAZER pour la 1re commande livrée d'un client amené. 0 = désactivé."
             />
           </div>
           <div className="grid gap-3 sm:grid-cols-1">

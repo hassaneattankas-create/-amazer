@@ -18,6 +18,7 @@ type RegisterPayload = {
   region?: string;
   preferred_currency?: CurrencyCode;
   preferred_language?: LanguageCode;
+  affiliate_code?: string;
 };
 
 type TokenPair = {
@@ -113,6 +114,7 @@ export async function register(payload: RegisterPayload) {
     region: payload.region || undefined,
     preferred_currency: payload.preferred_currency,
     preferred_language: payload.preferred_language,
+    affiliate_code: payload.affiliate_code,
   });
   return response.data;
 }
