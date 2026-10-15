@@ -639,6 +639,20 @@ export default function AdminTarifsPage() {
               }
               helper="Prélevée sur chaque marge gagnée. Exemple : 10 % d'une marge de 1 500 XOF = 150 XOF pour AMAZER."
             />
+            <AdminNumberField
+              label="Commission des affiliés"
+              value={effective.affiliate_commission_percent ?? 3}
+              suffix="% des articles"
+              min={0}
+              step="0.5"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  affiliate_commission_percent: Math.min(50, parseNonNegativeNumber(value, effective.affiliate_commission_percent ?? 3)),
+                })
+              }
+              helper="Payée par AMAZER à la personne dont le lien a apporté la vente (30 jours). Exemple : 3 % de 20 000 XOF = 600 XOF."
+            />
           </div>
           <div className="grid gap-3 sm:grid-cols-1">
             <div>

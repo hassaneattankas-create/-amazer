@@ -400,6 +400,15 @@ Toutes les couleurs, rayons et espacements viennent des tokens du design system 
 - Plus de choix de formule à l'inscription : rappel de la formule choisie sur « Vendre » (lien « Changer »). Paiement retiré de l'inscription : il se fait depuis l'espace vendeur après l'essai.
 - L'admin garde la main : retrait / suspension d'une boutique dans Tarifs et Utilisateurs. Les anciennes demandes en attente restent traitables dans Tarifs.
 
+## 4 tricies. Programme d'affiliation — 2026-10-15
+
+- Modèle Amazon Partenaires / Jumia : tout membre a un code (6 caractères, sans 0/O/1/I) ; lien = n'importe quelle page AMAZER + `?ref=CODE`.
+- Navigateur : le dernier code cliqué est retenu 30 jours et envoyé avec la commande ; visites comptées (1 par session et par code, limite par IP côté serveur).
+- Commande : `orders.affiliate_user_id` + `affiliate_commission` = % (défaut 3 %, Admin → Tarifs) des articles au prix normal ; jamais sur une revente (déjà rémunérée) ni sur ses propres achats.
+- Gains versés après livraison (manuel Nita/Amana) ; Admin → Affiliés liste les montants.
+- Bouton « Partager et gagner » sur chaque produit (partage natif du téléphone, sinon copie).
+- Tests : backend 288, frontend 38.
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).

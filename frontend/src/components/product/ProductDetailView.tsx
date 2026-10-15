@@ -20,6 +20,7 @@ import { getProductDetailById, getProductRecommendations } from "@/services/prod
 import { useCartStore } from "@/store/cartStore";
 import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 import { ConvertedPrice } from "@/components/ConvertedPrice";
+import { ShareAndEarn } from "@/components/product/ShareAndEarn";
 
 const ProductPriceHistoryChart = dynamic(
   () => import("@/components/product/ProductPriceHistoryChart").then((mod) => mod.ProductPriceHistoryChart),
@@ -250,6 +251,8 @@ export function ProductDetailView({ productId }: { productId: string }) {
               </Link>
             </p>
           ) : null}
+
+          <ShareAndEarn title={product.name} />
 
           <ul className="space-y-2 text-sm text-ink-700">
             <li className="flex items-center gap-2">

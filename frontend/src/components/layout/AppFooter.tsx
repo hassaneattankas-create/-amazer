@@ -22,6 +22,7 @@ const COLUMNS = [
     links: [
       { href: "/vendre", label: "Devenir vendeur" },
       { href: "/revendre", label: "Revendre sans stock" },
+      { href: "/affiliation", label: "Affiliation" },
       { href: "/formations", label: "Formations gratuites" },
       { href: "/seller", label: "Espace vendeur" },
       { href: "/comment-ca-marche#vendre", label: "Guide du vendeur" },

@@ -44,6 +44,7 @@ const clientNavItems = [
   { href: "/promotions", label: "Promotions" },
   { href: "/avis", label: "Avis" },
   { href: "/revendre", label: "Revendre sans stock" },
+  { href: "/affiliation", label: "Affiliation" },
   { href: "/formations", label: "Formations gratuites" },
 ];
 

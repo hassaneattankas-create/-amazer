@@ -350,6 +350,22 @@ export async function decideResellerPayment(id: string, decision: "approved" | "
   });
 }
 
+export type AdminAffiliateEarning = {
+  user_id: string;
+  full_name: string;
+  contact: string;
+  whatsapp_phone: string | null;
+  code: string;
+  clicks: number;
+  earned: number;
+  pending: number;
+  orders_delivered: number;
+};
+
+export async function listAffiliateEarnings(): Promise<AdminAffiliateEarning[]> {
+  return adminProxyRequest<AdminAffiliateEarning[]>({ url: "/admin/finance/affiliate-earnings", method: "GET" });
+}
+
 export type AdminMessageAudience = "all" | "customers" | "sellers" | "couriers" | "user";
 
 /** Message de l'equipe : notification sur le site + e-mail automatique. */

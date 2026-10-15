@@ -10,6 +10,7 @@ import { ConvertedPrice } from "@/components/ConvertedPrice";
 import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getActiveAffiliateCode } from "@/lib/affiliate";
 import { formatXOF } from "@/lib/currency";
 import { getOrderPayRoute, getOrderReceiptRoute, getOrderSuccessRoute } from "@/lib/mobile-routes";
 import { DEFAULT_SHIPPING_COST, optimizeCart } from "@/lib/optimize-cart";
@@ -117,6 +118,7 @@ export default function CartPage() {
         district: deliveryType === "standard" && district ? district : undefined,
         delivery_address: deliveryAddress.trim(),
         delivery_phone: deliveryPhone.trim(),
+        affiliate_code: getActiveAffiliateCode(),
       });
       let receiptHref: string | undefined;
       try {

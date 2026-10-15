@@ -6,6 +6,7 @@ import { AndroidBackButtonHandler } from "@/components/providers/AndroidBackButt
 import { FaviconBadge } from "@/components/FaviconBadge";
 import { FloatingNavbar } from "@/components/layout/FloatingNavbar";
 import { AuthPreferenceBootstrap } from "@/components/providers/AuthPreferenceBootstrap";
+import { AffiliateTracker } from "@/components/providers/AffiliateTracker";
 import { BackendKeepAlive } from "@/components/providers/BackendKeepAlive";
 import { MobileAuthBootstrap } from "@/components/providers/MobileAuthBootstrap";
 import { PwaRegistrar } from "@/components/providers/PwaRegistrar";
@@ -86,6 +87,7 @@ export default function RootLayout({
           <MobileAuthBootstrap />
           <AndroidBackButtonHandler />
           <AuthPreferenceBootstrap />
+          <AffiliateTracker />
           <FloatingNavbar />
           <main className="min-h-screen">{children}</main>
           <AppFooter />

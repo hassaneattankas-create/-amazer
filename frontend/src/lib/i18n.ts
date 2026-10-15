@@ -101,6 +101,7 @@ const EN: Record<string, string> = {
   "Guide du vendeur": "Seller guide",
   "Devenir livreur": "Become a courier",
   "Revendre sans stock": "Resell without stock",
+  Affiliation: "Affiliate program",
   "Formations gratuites": "Free training",
   "Signaler un problème": "Report a problem",
   "Conditions d'utilisation": "Terms of use",

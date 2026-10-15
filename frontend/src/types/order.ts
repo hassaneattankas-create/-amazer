@@ -46,6 +46,8 @@ export type CheckoutPayload = {
   currency?: string;
   /** Quartier de livraison (tarif fixe par l'admin), livraison standard uniquement. */
   district?: string;
+  /** Code de l'affilie dont le lien a ete clique (30 jours). */
+  affiliate_code?: string;
   delivery_address?: string;
   delivery_phone?: string;
 };

@@ -18,6 +18,8 @@ export type FinanceSettings = {
   /** Revente sans stock : abonnement mensuel du revendeur (XOF) et part AMAZER sur la marge (%). */
   reseller_subscription_fee?: number;
   reseller_commission_percent?: number;
+  /** Affiliation : % du montant des articles verse a l'affilie qui a apporte la vente. */
+  affiliate_commission_percent?: number;
   /** Reduction de lancement sur le tarif standard, en % (0 = desactivee). */
   seller_launch_discount_percent?: number;
 };
