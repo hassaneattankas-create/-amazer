@@ -431,6 +431,12 @@ Toutes les couleurs, rayons et espacements viennent des tokens du design system 
 - Écrans : Mon compte et la confirmation de commande se rafraîchissent toutes les 20 s (et au retour sur l'onglet) ; espace livreur 15 s ; vendeur et admin déjà à 5 s.
 - Tests : backend 293.
 
+## 4 quattuortricies. Formations refaites — 2026-10-15
+
+- 5 parcours, 15 modules (objectif, essentiel, exercice « à faire maintenant ») : Vendre sur AMAZER, Revendre sans stock, Affiliation, WhatsApp et réseaux, Confiance et sécurité. Contenu aligné sur le fonctionnement réel de la plateforme (frontend/src/app/formations/courses.ts — à mettre à jour si une fonction change).
+- Ressources externes remplacées : uniquement des cours gratuits en français d'organismes reconnus (Google Skillshop et Ateliers Numériques, OpenClassrooms, guides officiels WhatsApp Business, HubSpot Academy, FUN MOOC, Fondation Tony Elumelu, Meta Blueprint). Chaque lien ouvert et son titre contrôlé le 2026-10-15. Retirés : recherches YouTube génériques, guide Shopify en anglais.
+- Test : contenu des modules et liens https sans doublon (frontend 40 tests).
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).
