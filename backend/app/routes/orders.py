@@ -27,6 +27,7 @@ from app.models.product import Price, Product
 from app.models.receipt_scan import ReceiptScan
 from app.models.reseller import ResellerListing
 from app.services.reseller_account_service import reseller_terms, split_margin, subscription_active
+from app.services.affiliate_service import affiliate_commission, affiliate_percent, resolve_affiliate
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.schemas.order import (
@@ -510,8 +511,15 @@ def checkout(
         "platform_service_fee": round(service_fee, 2),
     }
 
+    # Affiliation : commission sur les articles au prix normal (pas sur une revente, deja remuneree).
+    affiliate_user_id = resolve_affiliate(db, payload.affiliate_code, current_user.id)
+    affiliate_base = sum(float(price.amount) * quantity for price, quantity, listing in validated_items if listing is None)
+    affiliate_amount = affiliate_commission(affiliate_base, affiliate_percent(db)) if affiliate_user_id else 0.0
+
     order = Order(
         user_id=current_user.id,
+        affiliate_user_id=affiliate_user_id if affiliate_amount > 0 else None,
+        affiliate_commission=affiliate_amount,
         payment_mode=payload.payment_mode,
         delivery_type=payload.delivery_type,
         transaction_code=encrypted_code,

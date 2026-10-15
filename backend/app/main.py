@@ -26,6 +26,7 @@ from app.models.user_preferences import UserPreferences
 from app.models.vendor import Vendor
 from app.routes.locale import router as locale_router
 from app.routes.resellers import router as resellers_router
+from app.routes.affiliates import router as affiliates_router
 from app.routes.alerts import router as alerts_router
 from app.routes.auth import router as auth_router
 from app.routes.cart import router as cart_router
@@ -201,6 +202,9 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE order_items ADD COLUMN IF NOT EXISTS reseller_commission DOUBLE PRECISION NOT NULL DEFAULT 0",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS reseller_subscription_fee DOUBLE PRECISION NOT NULL DEFAULT 500",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS reseller_commission_percent DOUBLE PRECISION NOT NULL DEFAULT 10",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_commission_percent DOUBLE PRECISION NOT NULL DEFAULT 3",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_user_id VARCHAR(36)",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_commission DOUBLE PRECISION NOT NULL DEFAULT 0",
         (
             "CREATE TABLE IF NOT EXISTS media_files ("
             "id VARCHAR(36) PRIMARY KEY, "
@@ -477,6 +481,7 @@ app.include_router(admin_moderation_router, prefix=settings.api_prefix)
 app.include_router(courier_router, prefix=settings.api_prefix)
 app.include_router(locale_router, prefix=settings.api_prefix)
 app.include_router(resellers_router, prefix=settings.api_prefix)
+app.include_router(affiliates_router, prefix=settings.api_prefix)
 app.include_router(assistant_router, prefix=settings.api_prefix)
 app.include_router(maintenance_router, prefix=settings.api_prefix)
 

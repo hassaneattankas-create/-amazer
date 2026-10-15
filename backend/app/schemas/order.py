@@ -23,6 +23,8 @@ class CheckoutRequest(BaseModel):
     transaction_code: str | None = Field(default=None, max_length=120)
     currency: str = Field(default="XOF", min_length=3, max_length=3)
     # Quartier de livraison : applique le tarif configure par l'admin pour cette zone.
+    # Code de l'affilie qui a partage le lien (30 jours apres le clic, cote navigateur).
+    affiliate_code: str | None = Field(default=None, max_length=16)
     district: str | None = Field(default=None, max_length=120)
     # Ou et a qui livrer (indispensable au livreur).
     delivery_address: str | None = Field(default=None, min_length=3, max_length=255)

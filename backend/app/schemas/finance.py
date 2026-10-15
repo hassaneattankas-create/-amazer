@@ -29,6 +29,7 @@ class FinanceSettingsResponse(BaseModel):
     seller_launch_discount_percent: float = 0
     reseller_subscription_fee: float = 500
     reseller_commission_percent: float = 10
+    affiliate_commission_percent: float = 3
 
 
 class FinanceSettingsUpdateRequest(BaseModel):
@@ -58,6 +59,8 @@ class FinanceSettingsUpdateRequest(BaseModel):
     # Revente sans stock : abonnement mensuel et part AMAZER sur la marge (%).
     reseller_subscription_fee: float = Field(default=500, ge=0)
     reseller_commission_percent: float = Field(default=10, ge=0, le=90)
+    # Affiliation : % du montant des articles verse a l'affilie (finance par AMAZER).
+    affiliate_commission_percent: float = Field(default=3, ge=0, le=50)
 
 
 class PublicContactInfoResponse(BaseModel):

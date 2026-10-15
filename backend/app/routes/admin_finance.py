@@ -71,6 +71,8 @@ from app.schemas.finance import (
 from app.services import order_event_notifications as order_events
 from app.routes.resellers import compute_earnings as compute_reseller_earnings
 from app.models.reseller import ResellerSubscriptionPayment
+from app.models.affiliate import AffiliateAccount
+from app.routes.affiliates import compute_affiliate_earnings
 from app.services.reseller_account_service import ensure_account as ensure_reseller_account
 from app.services.reseller_account_service import extend_subscription as extend_reseller_subscription
 from app.services.audit_log_service import append_audit_log
@@ -165,6 +167,7 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
         seller_launch_discount_percent=float(getattr(settings, "seller_launch_discount_percent", 0) or 0),
         reseller_subscription_fee=float(getattr(settings, "reseller_subscription_fee", 500) or 0),
         reseller_commission_percent=float(getattr(settings, "reseller_commission_percent", 10) or 0),
+        affiliate_commission_percent=float(getattr(settings, "affiliate_commission_percent", 3) or 0),
         support_email=settings.support_email,
         support_phone=settings.support_phone,
         support_whatsapp=settings.support_whatsapp,
@@ -460,6 +463,7 @@ def update_finance_settings(
     settings_row.seller_launch_discount_percent = payload.seller_launch_discount_percent
     settings_row.reseller_subscription_fee = payload.reseller_subscription_fee
     settings_row.reseller_commission_percent = payload.reseller_commission_percent
+    settings_row.affiliate_commission_percent = payload.affiliate_commission_percent
     settings_row.support_email = payload.support_email
     settings_row.support_phone = payload.support_phone
     settings_row.support_whatsapp = payload.support_whatsapp
@@ -2203,4 +2207,50 @@ def decide_reseller_payment(
         status=payment.status,
         created_at=payment.created_at.isoformat() if payment.created_at else "",
     )
+
+
+class AdminAffiliateEarning(BaseModel):
+    user_id: str
+    full_name: str
+    contact: str
+    whatsapp_phone: str | None
+    code: str
+    clicks: int
+    earned: float
+    pending: float
+    orders_delivered: int
+
+
+@router.get("/affiliate-earnings", response_model=list[AdminAffiliateEarning])
+def list_affiliate_earnings(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> list[AdminAffiliateEarning]:
+    """Commissions d'affiliation : a verser (commandes livrees) et en attente."""
+    _require_finance_pin(request)
+    affiliate_ids = db.scalars(select(Order.affiliate_user_id).where(Order.affiliate_user_id.is_not(None)).distinct()).all()
+    rows: list[AdminAffiliateEarning] = []
+    for affiliate_id in affiliate_ids:
+        user = db.get(User, affiliate_id)
+        account = db.get(AffiliateAccount, affiliate_id)
+        if user is None or account is None:
+            continue
+        totals = compute_affiliate_earnings(db, affiliate_id)
+        if totals.earned == 0 and totals.pending == 0:
+            continue
+        rows.append(
+            AdminAffiliateEarning(
+                user_id=user.id,
+                full_name=user.full_name or "Affilié",
+                contact=user.email,
+                whatsapp_phone=user.whatsapp_phone,
+                code=account.code,
+                clicks=int(account.click_count or 0),
+                earned=totals.earned,
+                pending=totals.pending,
+                orders_delivered=totals.orders_delivered,
+            )
+        )
+    return sorted(rows, key=lambda row: row.earned, reverse=True)
 

@@ -37,6 +37,8 @@ class GlobalSettings(Base):
     # Revente sans stock : abonnement mensuel du revendeur + commission AMAZER sur chaque marge.
     reseller_subscription_fee: Mapped[float] = mapped_column(Float, nullable=False, default=500, server_default="500")
     reseller_commission_percent: Mapped[float] = mapped_column(Float, nullable=False, default=10, server_default="10")
+    # Affiliation : part du montant des articles versee a l'affilie qui a apporte la vente.
+    affiliate_commission_percent: Mapped[float] = mapped_column(Float, nullable=False, default=3, server_default="3")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

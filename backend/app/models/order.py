@@ -61,6 +61,9 @@ class Order(Base):
     )
     courier_assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Affiliation : affilie qui a apporte la vente et sa commission (figee a la commande).
+    affiliate_user_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    affiliate_commission: Mapped[float] = mapped_column(Float, nullable=False, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     items: Mapped[list[OrderItem]] = relationship(
