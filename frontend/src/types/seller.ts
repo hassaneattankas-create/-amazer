@@ -220,6 +220,26 @@ export type SellerStorefront = {
   /** Restaurant ouvert maintenant (horaires + pause) et texte court : « Ouvert jusqu'à 22:00 ». */
   restaurant_is_open?: boolean;
   restaurant_open_label?: string;
+  /** Avis verifies des clients */
+  rating_average?: number;
+  rating_count?: number;
+};
+
+export type VendorReviewItem = {
+  id: string;
+  author: string;
+  rating: number;
+  comment: string | null;
+  reply: string | null;
+  created_at: string;
+  is_mine: boolean;
+};
+
+export type VendorReviews = {
+  average: number;
+  count: number;
+  distribution: Record<string, number>;
+  items: VendorReviewItem[];
 };
 
 export type HotelBookingRequest = {

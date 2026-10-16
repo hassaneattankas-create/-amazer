@@ -23,13 +23,14 @@ from app.models.hospitality import HotelBooking, RestaurantReservation
 from app.models.order import Order, OrderItem
 from app.models.price_history import PriceHistory
 from app.models.product import Price, Product
-from app.services import hotel_service, promo_service, restaurant_service, transport_service
+from app.services import hotel_service, promo_service, restaurant_service, transport_service, vendor_review_service
 from app.models.restaurant import RestaurantMenuItem
 from app.models.seller_profile import SellerProfile
 from app.models.seller_subscription_payment import SellerSubscriptionPayment
 from app.models.seller_lead import SellerLead
 from app.models.user import User
 from app.models.vendor import Vendor
+from app.models.vendor_review import VendorReview
 from app.schemas.restaurant import (
     RestaurantMenuItemResponse,
     RestaurantReservationCreateRequest,
@@ -41,6 +42,10 @@ from app.schemas.seller import (
     HotelBookingResponse,
     RoomAvailabilityResponse,
     MyBookingResponse,
+    VendorReviewItem,
+    VendorReviewReplyRequest,
+    VendorReviewRequest,
+    VendorReviewsResponse,
     SeatAvailabilityResponse,
     TicketScanRequest,
     TicketScanResponse,
@@ -600,6 +605,7 @@ def _build_public_storefront(vendor_id: str, db: Session) -> SellerStorefrontRes
         .order_by(RestaurantMenuItem.category, RestaurantMenuItem.sort_order, RestaurantMenuItem.name)
         .limit(200)
     ).all()
+    rating = vendor_review_service.summary(db, vendor_id)
     open_state = restaurant_service.open_state(getattr(profile, "weekly_hours", None), bool(getattr(profile, "orders_paused", False)))
     finance = build_effective_seller_finance_settings(get_or_create_global_settings(db), profile)
 
@@ -667,6 +673,8 @@ def _build_public_storefront(vendor_id: str, db: Session) -> SellerStorefrontRes
         ],
         restaurant_is_open=open_state.is_open,
         restaurant_open_label=open_state.label,
+        rating_average=rating.average,
+        rating_count=rating.count,
     )
 
 
@@ -1701,6 +1709,143 @@ def scan_ticket(
         message=f"Bon voyage ! {booking.guest_name} · {booking.guest_count} place(s) · {trip} · {when}",
         booking=_hotel_booking_response(booking),
     )
+
+
+def _review_items(db: Session, rows: list[VendorReview], me: str | None) -> list[VendorReviewItem]:
+    users = {u.id: u for u in db.scalars(select(User).where(User.id.in_({r.user_id for r in rows})))} if rows else {}
+    return [
+        VendorReviewItem(
+            id=row.id,
+            author=vendor_review_service.public_name(users.get(row.user_id)),
+            rating=row.rating,
+            comment=row.comment,
+            reply=row.reply,
+            created_at=row.updated_at or row.created_at,
+            is_mine=row.user_id == me,
+        )
+        for row in rows
+    ]
+
+
+@router.get("/storefront/{vendor_id}/reviews", response_model=VendorReviewsResponse)
+def vendor_reviews(vendor_id: str, db: Annotated[Session, Depends(get_db)]) -> VendorReviewsResponse:
+    """Avis verifies (publics) : moyenne, repartition et 30 derniers avis."""
+    info = vendor_review_service.summary(db, vendor_id)
+    rows = db.scalars(
+        select(VendorReview)
+        .where(VendorReview.vendor_id == vendor_id, VendorReview.is_hidden.is_(False))
+        .order_by(VendorReview.updated_at.desc())
+        .limit(30)
+    ).all()
+    return VendorReviewsResponse(average=info.average, count=info.count, distribution=info.distribution, items=_review_items(db, list(rows), None))
+
+
+@router.post("/storefront/{vendor_id}/reviews", response_model=VendorReviewItem)
+def post_vendor_review(
+    vendor_id: str,
+    payload: VendorReviewRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> VendorReviewItem:
+    """Donner (ou modifier) son avis : seulement apres une commande livree, un sejour ou un voyage."""
+    enforce_csrf(request)
+    enforce_rate_limit(request, key="vendor_review", limit=10, window_seconds=3600)
+    if not vendor_review_service.can_review(db, current_user.id, vendor_id):
+        raise ValidationDomainError("Vous pourrez donner votre avis après une commande livrée, un séjour ou un voyage avec cet établissement.")
+    row = db.scalar(select(VendorReview).where(VendorReview.vendor_id == vendor_id, VendorReview.user_id == current_user.id))
+    if row is None:
+        row = VendorReview(vendor_id=vendor_id, user_id=current_user.id, rating=payload.rating)
+        db.add(row)
+    row.rating = payload.rating
+    row.comment = payload.comment or None
+    db.flush()
+    owner = db.scalar(select(SellerProfile.user_id).where(SellerProfile.vendor_id == vendor_id))
+    _notify_booking(db, owner, "Nouvel avis client", f"{payload.rating}/5 — {(payload.comment or '').strip()[:80]}", f"review-{row.id}", "/seller/dashboard#accueil")
+    db.commit()
+    db.refresh(row)
+    _invalidate_public_marketplace_cache()
+    return _review_items(db, [row], current_user.id)[0]
+
+
+@router.get("/reviews", response_model=VendorReviewsResponse)
+def my_shop_reviews(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> VendorReviewsResponse:
+    """Avis recus par l'etablissement du vendeur (pour y repondre)."""
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        return VendorReviewsResponse(average=0, count=0, distribution={i: 0 for i in range(1, 6)}, items=[])
+    info = vendor_review_service.summary(db, profile.vendor_id)
+    rows = db.scalars(
+        select(VendorReview).where(VendorReview.vendor_id == profile.vendor_id).order_by(VendorReview.updated_at.desc()).limit(50)
+    ).all()
+    return VendorReviewsResponse(average=info.average, count=info.count, distribution=info.distribution, items=_review_items(db, list(rows), None))
+
+
+@router.post("/reviews/{review_id}/reply", response_model=VendorReviewItem)
+def reply_to_review(
+    review_id: str,
+    payload: VendorReviewReplyRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> VendorReviewItem:
+    """Reponse publique de l'etablissement a un avis."""
+    enforce_csrf(request)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    row = db.get(VendorReview, review_id)
+    if profile is None or row is None or row.vendor_id != profile.vendor_id:
+        raise NotFoundError("Review not found")
+    row.reply = payload.reply
+    _notify_booking(db, row.user_id, "Réponse à votre avis", f"{profile.business_name} a répondu à votre avis.", f"review-reply-{row.id}", f"/shop/{row.vendor_id}")
+    db.commit()
+    db.refresh(row)
+    _invalidate_public_marketplace_cache()
+    return _review_items(db, [row], None)[0]
+
+
+class AdminVendorReview(VendorReviewItem):
+    vendor_name: str
+    is_hidden: bool
+
+
+@router.get("/admin/reviews", response_model=list[AdminVendorReview])
+def admin_list_reviews(
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> list[AdminVendorReview]:
+    """Admin : 100 derniers avis (pour masquer un avis abusif)."""
+    rows = list(db.scalars(select(VendorReview).order_by(VendorReview.updated_at.desc()).limit(100)).all())
+    names = {
+        p.vendor_id: p.business_name
+        for p in db.scalars(select(SellerProfile).where(SellerProfile.vendor_id.in_({r.vendor_id for r in rows})))
+    } if rows else {}
+    items = _review_items(db, rows, None)
+    return [
+        AdminVendorReview(**item.model_dump(), vendor_name=names.get(row.vendor_id, "Établissement"), is_hidden=bool(row.is_hidden))
+        for item, row in zip(items, rows)
+    ]
+
+
+@router.post("/reviews/{review_id}/hide", response_model=VendorReviewItem)
+def hide_review(
+    review_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> VendorReviewItem:
+    """Admin : masquer (ou reafficher) un avis abusif."""
+    enforce_csrf(request)
+    row = db.get(VendorReview, review_id)
+    if row is None:
+        raise NotFoundError("Review not found")
+    row.is_hidden = not row.is_hidden
+    db.commit()
+    db.refresh(row)
+    _invalidate_public_marketplace_cache()
+    return _review_items(db, [row], None)[0]
 
 
 def _notify_booking(db: Session, user_id: str | None, title: str, body: str, tag: str, href: str) -> None:

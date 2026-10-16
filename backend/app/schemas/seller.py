@@ -289,6 +289,43 @@ class SellerStorefrontResponse(BaseModel):
     # Restaurant : ouvert maintenant ? (horaires + pause) et texte court pour le client.
     restaurant_is_open: bool = True
     restaurant_open_label: str = "Ouvert"
+    # Avis verifies des clients.
+    rating_average: float = 0
+    rating_count: int = 0
+
+
+class VendorReviewItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    author: str
+    rating: int
+    comment: str | None
+    reply: str | None
+    created_at: datetime
+    is_mine: bool = False
+
+
+class VendorReviewsResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    average: float
+    count: int
+    distribution: dict[int, int]
+    items: list[VendorReviewItem]
+
+
+class VendorReviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    rating: int = Field(ge=1, le=5)
+    comment: str | None = Field(default=None, max_length=600)
+
+
+class VendorReviewReplyRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    reply: str = Field(min_length=2, max_length=600)
 
 
 class HotelBookingCreateRequest(BaseModel):

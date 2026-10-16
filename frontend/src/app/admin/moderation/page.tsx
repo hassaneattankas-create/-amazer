@@ -9,6 +9,8 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import {
   listConversationReports,
+  listVendorReviewsAdmin,
+  toggleVendorReview,
   searchModeratedProducts,
   setProductVisibility,
   type ModeratedProduct,
@@ -152,6 +154,44 @@ function ProductsSection() {
   );
 }
 
+function ReviewsSection() {
+  const queryClient = useQueryClient();
+  const { data = [], isPending } = useQuery({ queryKey: ["admin-vendor-reviews"], queryFn: listVendorReviewsAdmin });
+  const toggle = useMutation({
+    mutationFn: toggleVendorReview,
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-vendor-reviews"] }),
+  });
+  return (
+    <section aria-labelledby="reviews-title" className="space-y-3">
+      <h2 id="reviews-title" className="text-lg font-semibold text-ink-900">
+        Avis sur les établissements
+      </h2>
+      {isPending ? (
+        <div className="h-20 animate-pulse rounded-card bg-surface-3" aria-busy="true" />
+      ) : data.length ? (
+        <ul className="divide-y divide-border rounded-card border border-border bg-card">
+          {data.map((review) => (
+            <li key={review.id} className={`flex flex-wrap items-start justify-between gap-2 p-3 ${review.is_hidden ? "opacity-60" : ""}`}>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-ink-900">
+                  {review.vendor_name} · {review.rating}/5 · {review.author}
+                  {review.is_hidden ? " · masqué" : ""}
+                </p>
+                {review.comment ? <p className="text-sm text-ink-800">{review.comment}</p> : null}
+              </div>
+              <Button type="button" size="sm" variant="outline" disabled={toggle.isPending} onClick={() => toggle.mutate(review.id)}>
+                {review.is_hidden ? "Réafficher" : "Masquer"}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-ink-600">Aucun avis pour le moment.</p>
+      )}
+    </section>
+  );
+}
+
 export default function AdminModerationPage() {
   return (
     <div className="space-y-6">
@@ -160,6 +200,7 @@ export default function AdminModerationPage() {
         <p className="mt-1 text-sm text-ink-600">Signalements des utilisateurs et visibilité des annonces.</p>
       </header>
       <ReportsSection />
+      <ReviewsSection />
       <ProductsSection />
     </div>
   );

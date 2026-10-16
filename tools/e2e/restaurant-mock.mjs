@@ -22,7 +22,7 @@ const storefront = {
   whatsapp_contact: null, contact_email: null, gallery_images: [], service_offerings: [], room_types: [], deposit_payment_method: null,
   deposit_amount: null, payout_phone: null, effective_commission_rate: 0, effective_service_fee: 0, accepts_table_reservations: false,
   accepts_hotel_bookings: false, offers_transport: false, offers_shop: false, offers_restaurant: true, is_verified: true, products: [],
-  restaurant_menu: menu, restaurant_is_open: true, restaurant_open_label: "Ouvert jusqu'à 22:00",
+  restaurant_menu: menu, restaurant_is_open: true, restaurant_open_label: "Ouvert jusqu'à 22:00", rating_average: 4.3, rating_count: 3,
 };
 const order = (id, status, minAgo, paid = true) => ({
   id, vendor_id: "v1", vendor_name: "Chez Awa", customer_name: "Moussa", customer_phone: "+22790000002", delivery_address: "Quartier Recasement, près de la mosquée",
@@ -34,6 +34,10 @@ const orders = [order("o1", "commande", 4), order("o2", "commande", 52), order("
 const mocks = [
   [/\/auth\/me$/, { id: "u1", email: "awa@example.test", full_name: "Awa", whatsapp_phone: null, is_active: true, role: "user", created_at: iso(9999) }],
   [/\/seller\/storefront\/v1$/, storefront],
+  [/\/seller\/storefront\/v1\/reviews$/, { average: 4.3, count: 3, distribution: { 1: 0, 2: 0, 3: 1, 4: 0, 5: 2 }, items: [
+    { id: "r1", author: "Aïcha M.", rating: 5, comment: "Très bon riz, livré chaud et rapide.", reply: "Merci Aïcha, à bientôt !", created_at: iso(3000), is_mine: false },
+    { id: "r2", author: "Ibrahim S.", rating: 3, comment: "Bon mais un peu long.", reply: null, created_at: iso(9000), is_mine: false },
+  ] }],
   [/\/seller\/profile$/, { id: "sp1", vendor_id: "v1", business_name: "Chez Awa", activity_type: "restaurant", storefront_tier: "basic", offers_restaurant: true, city: "Niamey" }],
   [/\/restaurant\/seller\/menu$/, menu],
   [/\/restaurant\/seller\/orders$/, orders],

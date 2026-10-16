@@ -15,6 +15,7 @@ import { RestaurantKpis } from "@/components/seller/restaurant/RestaurantKpis";
 import { RestaurantMenuManager, SELLER_MENU_KEY } from "@/components/seller/restaurant/RestaurantMenuManager";
 import { RestaurantReservations } from "@/components/seller/restaurant/RestaurantReservations";
 import { RestaurantSettingsPanel } from "@/components/seller/restaurant/RestaurantSettingsPanel";
+import { SellerReviewsPanel } from "@/components/seller/SellerReviewsPanel";
 import { SellerKpis } from "@/components/seller/SellerKpis";
 import { SellerOrderList } from "@/components/seller/SellerOrderList";
 import { SellerProductList } from "@/components/seller/SellerProductList";
@@ -422,6 +423,7 @@ export default function SellerDashboardPage() {
               {showRestaurantTools && !showProductTools ? "Gérer mon menu" : "Gérer mes produits"}
             </Button>
           </div>
+          <SellerReviewsPanel />
           <p className="text-sm text-ink-600">
             Besoin d&apos;aide ?{" "}
             <Link href="/comment-ca-marche#vendre" className="font-medium text-brand-700 hover:underline">

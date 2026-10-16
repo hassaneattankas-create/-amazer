@@ -21,6 +21,27 @@ export type ModeratedProduct = {
   hidden_by_admin: boolean;
 };
 
+export type AdminVendorReview = {
+  id: string;
+  author: string;
+  rating: number;
+  comment: string | null;
+  reply: string | null;
+  created_at: string;
+  vendor_name: string;
+  is_hidden: boolean;
+};
+
+/** 100 derniers avis sur les etablissements. */
+export async function listVendorReviewsAdmin(): Promise<AdminVendorReview[]> {
+  return adminProxyRequest<AdminVendorReview[]>({ url: "/seller/admin/reviews", method: "GET" });
+}
+
+/** Masquer ou reafficher un avis. */
+export async function toggleVendorReview(id: string): Promise<void> {
+  await adminProxyRequest({ url: `/seller/reviews/${id}/hide`, method: "POST" });
+}
+
 export async function listConversationReports(): Promise<ConversationReport[]> {
   return adminProxyRequest<ConversationReport[]>({ url: "/admin/moderation/reports", method: "GET" });
 }

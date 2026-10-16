@@ -18,6 +18,7 @@ import { getProductRoute } from "@/lib/mobile-routes";
 import { resolveImageUrl } from "@/lib/image";
 import { TransportBookingFlow } from "@/components/storefront/TransportBookingFlow";
 import { HotelBookingFlow } from "@/components/storefront/HotelBookingFlow";
+import { Stars, VendorReviews } from "@/components/storefront/VendorReviews";
 import { RestaurantMenu } from "@/components/storefront/RestaurantMenu";
 import { computeRestaurantOrderSummary } from "@/lib/restaurant-order-pricing";
 import { getRestaurantOrderPayRoute, getRestaurantOrderReceiptRoute, getShopRoute } from "@/lib/mobile-routes";
@@ -602,6 +603,8 @@ export function ShopView({ vendorId }: { vendorId: string }) {
         </article>
       ) : null}
 
+      <VendorReviews vendorId={vendorId} name={data.business_name} />
+
       {status ? <p className="text-sm text-slate-700">{status}</p> : null}
     </section>
   );
@@ -658,8 +661,14 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
                 <span className="rounded-pill bg-ink-900 px-2 py-0.5 text-xs font-semibold text-white">Premium</span>
               ) : null}
             </div>
-            <p className="mt-0.5 text-sm text-ink-600">
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-ink-600">
               {activityLabels[data.activity_type]} · {data.city ?? "Niamey"}
+              {data.rating_count ? (
+                <a href="#reviews-title" className="inline-flex items-center gap-1 font-medium text-ink-800 hover:underline">
+                  <Stars value={data.rating_average ?? 0} size="h-3.5 w-3.5" />
+                  {(data.rating_average ?? 0).toLocaleString("fr-FR")} ({data.rating_count} avis)
+                </a>
+              ) : null}
             </p>
           </div>
         </div>

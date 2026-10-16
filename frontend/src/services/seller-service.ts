@@ -7,6 +7,8 @@ import {
   RoomAvailability,
   SeatAvailability,
   TicketScanResult,
+  VendorReviewItem,
+  VendorReviews,
   SellerInventoryItem,
   SellerShopOrder,
   SellerShopOrderStatus,
@@ -108,6 +110,25 @@ export async function createHotelBooking(
     payload,
   );
   return response.data;
+}
+
+/** Avis verifies d'un etablissement (public). */
+export async function getVendorReviews(vendorId: string): Promise<VendorReviews> {
+  return (await api.get<VendorReviews>(`/api/v1/seller/storefront/${vendorId}/reviews`)).data;
+}
+
+/** Donner ou modifier son avis (apres une commande livree, un sejour ou un voyage). */
+export async function postVendorReview(vendorId: string, data: { rating: number; comment?: string }): Promise<VendorReviewItem> {
+  return (await api.post<VendorReviewItem>(`/api/v1/seller/storefront/${vendorId}/reviews`, data)).data;
+}
+
+/** Avis recus par l'etablissement du vendeur connecte. */
+export async function listMyShopReviews(): Promise<VendorReviews> {
+  return (await api.get<VendorReviews>("/api/v1/seller/reviews")).data;
+}
+
+export async function replyToReview(reviewId: string, reply: string): Promise<VendorReviewItem> {
+  return (await api.post<VendorReviewItem>(`/api/v1/seller/reviews/${reviewId}/reply`, { reply })).data;
 }
 
 /** Places restantes par heure de depart d'un trajet, un jour donne. */
