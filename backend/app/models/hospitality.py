@@ -75,6 +75,8 @@ class HotelBooking(Base):
     transaction_reference: Mapped[str | None] = mapped_column(String(180), nullable=True)
     payment_status: Mapped[str] = mapped_column(String(20), nullable=False, default="paid")
     special_request: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    # Transport : heure de depart choisie (HH:MM) parmi celles publiees par le transporteur.
+    departure_time: Mapped[str | None] = mapped_column(String(5), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

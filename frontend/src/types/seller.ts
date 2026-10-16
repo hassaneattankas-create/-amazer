@@ -234,6 +234,8 @@ export type HotelBookingRequest = {
   deposit_payment_method: "nita" | "amana";
   transaction_reference?: string;
   special_request?: string;
+  /** Transport : heure de depart choisie (HH:MM). */
+  departure_time?: string;
 };
 
 export type HotelBooking = {
@@ -254,7 +256,35 @@ export type HotelBooking = {
   special_request: string | null;
   status: HotelBookingStatus;
   created_at: string;
+  departure_time?: string | null;
 };
+
+export type SeatAvailability = {
+  trip_id: string;
+  day: string;
+  /** places restantes par heure de depart ("" = trajet sans horaire) */
+  seats_left: Record<string, number>;
+};
+
+export type MyBooking = {
+  id: string;
+  kind: "hotel" | "transport";
+  vendor_id: string;
+  place_name: string;
+  item_name: string;
+  check_in_date: string;
+  check_out_date: string;
+  departure_time: string | null;
+  guest_count: number;
+  amount: number;
+  status: HotelBookingStatus;
+  payment_status: string;
+  /** Billet a QR code (trajet confirme) */
+  ticket_token: string | null;
+  created_at: string;
+};
+
+export type TicketScanResult = { ok: boolean; message: string; booking: HotelBooking | null };
 
 export type HotelBookingStatus = "pending" | "confirmed" | "cancelled" | "checked_in" | "checked_out" | "no_show";
 

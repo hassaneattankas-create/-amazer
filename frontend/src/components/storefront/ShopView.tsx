@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Clock, Hotel, Images, MapPin, Package, Phone, Search, ShieldCheck, Store } from "lucide-react";
+import { Clock, Images, MapPin, Package, Phone, Search, ShieldCheck, Store } from "lucide-react";
 
 import { PRODUCT_GRID_CLASS } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
@@ -16,6 +16,7 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import { getProductRoute } from "@/lib/mobile-routes";
 import { resolveImageUrl } from "@/lib/image";
+import { TransportBookingFlow } from "@/components/storefront/TransportBookingFlow";
 import { HotelBookingFlow } from "@/components/storefront/HotelBookingFlow";
 import { RestaurantMenu } from "@/components/storefront/RestaurantMenu";
 import { computeRestaurantOrderSummary } from "@/lib/restaurant-order-pricing";
@@ -24,7 +25,7 @@ import { getPublicFinanceSettings } from "@/services/finance-service";
 import { notifyLocalOrderEvent } from "@/services/notification-service";
 import { createRestaurantOrder, createRestaurantReservation, getRestaurantReceiptLink } from "@/services/restaurant-service";
 import { getProductDetailById } from "@/services/product-service";
-import { createHotelBooking, getSellerStorefront } from "@/services/seller-service";
+import { getSellerStorefront } from "@/services/seller-service";
 import { useCartStore } from "@/store/cartStore";
 import type { SellerStorefront, SellerStorefrontProduct } from "@/types/seller";
 import type { RestaurantMenuItem, RestaurantMenuOption } from "@/types/restaurant";
@@ -101,19 +102,6 @@ export function ShopView({ vendorId }: { vendorId: string }) {
     deposit_payment_method: "nita" as "nita" | "amana",
     transaction_reference: "",
   });
-  const [hotelForm, setHotelForm] = useState({
-    room_type_id: "",
-    guest_name: "",
-    guest_phone: "",
-    guest_email: "",
-    check_in_date: "",
-    check_out_date: "",
-    guest_count: "1",
-    deposit_payment_method: "nita" as "nita" | "amana",
-    transaction_reference: "",
-    special_request: "",
-    departure_time: "",
-  });
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["seller-storefront", vendorId],
@@ -189,54 +177,6 @@ export function ShopView({ vendorId }: { vendorId: string }) {
       setOrderStatus(
         getApiErrorMessage(error, "Échec envoi commande. Vérifie les champs et reconnecte-toi.")
       ),
-  });
-
-  const hotelBookingMutation = useMutation({
-    mutationFn: () => {
-      // Transport: une seule date (voyage). On derive la date de fin pour reutiliser le meme backend.
-      let checkOut = hotelForm.check_out_date;
-      if ((data?.offers_transport || data?.activity_type === "transport") && hotelForm.check_in_date) {
-        const d = new Date(hotelForm.check_in_date);
-        d.setDate(d.getDate() + 1);
-        checkOut = d.toISOString().slice(0, 10);
-      }
-      return createHotelBooking(vendorId, {
-        vendor_id: vendorId,
-        room_type_id: hotelForm.room_type_id,
-        guest_name: hotelForm.guest_name,
-        guest_phone: hotelForm.guest_phone,
-        guest_email: hotelForm.guest_email || undefined,
-        check_in_date: hotelForm.check_in_date,
-        check_out_date: checkOut,
-        guest_count: Number(hotelForm.guest_count || 1),
-        deposit_payment_method: hotelForm.deposit_payment_method,
-        transaction_reference: hotelForm.transaction_reference || undefined,
-        special_request:
-          [
-            hotelForm.departure_time ? `Depart souhaite: ${hotelForm.departure_time}` : "",
-            hotelForm.special_request,
-          ]
-            .filter(Boolean)
-            .join(" — ") || undefined,
-      });
-    },
-    onSuccess: () => {
-      setStatus("Demande de reservation premium envoyee.");
-      setHotelForm((prev) => ({
-        ...prev,
-        guest_name: "",
-        guest_phone: "",
-        guest_email: "",
-        check_in_date: "",
-        check_out_date: "",
-        guest_count: "1",
-        transaction_reference: "",
-        special_request: "",
-        departure_time: "",
-      }));
-    },
-    onError: (error) =>
-      setStatus(getApiErrorMessage(error, "Impossible d'envoyer la reservation premium.")),
   });
 
   const handleAddProduct = (productId: string, redirectToCart = false) => {
@@ -353,27 +293,6 @@ export function ShopView({ vendorId }: { vendorId: string }) {
     (isPremiumStore ? Boolean(data?.offers_restaurant) : data?.activity_type === "restaurant");
   const restaurantOpen = data?.restaurant_is_open ?? true;
   const canOrder = showRestaurantSection && filteredMenu.length > 0 && restaurantOpen;
-  const selectedHotelRoom = data?.room_types?.find(
-    (room) => (room.id || room.name) === hotelForm.room_type_id,
-  );
-  const transportDepartureTimes = (isTransport && selectedHotelRoom?.departure_times) || [];
-  const transportAvailableDays = (isTransport && selectedHotelRoom?.available_days) || [];
-  const hotelNights =
-    !isTransport && hotelForm.check_in_date && hotelForm.check_out_date
-      ? Math.max(
-          1,
-          Math.round(
-            (new Date(hotelForm.check_out_date).getTime() -
-              new Date(hotelForm.check_in_date).getTime()) /
-              86400000,
-          ),
-        )
-      : 1;
-  const hotelQuantity = isTransport ? Math.max(1, Number(hotelForm.guest_count || 1)) : hotelNights;
-  const hotelAmountDue = selectedHotelRoom
-    ? Number(selectedHotelRoom.night_price || 0) * hotelQuantity
-    : 0;
-
   const total = useMemo(
     () =>
       selectedItems.reduce((sum, item) => {
@@ -637,197 +556,14 @@ export function ShopView({ vendorId }: { vendorId: string }) {
               payoutPhone={data.payout_phone}
             />
           ) : null}
-          {data.accepts_hotel_bookings && isTransport ? (
-            <article className="premium-card border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-5">
-              <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-                <Hotel className="h-5 w-5 text-[#0ea5e9]" />
-                {isTransport ? "Reserver un trajet" : "Reserver"}
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Paiement obligatoire via Nita ou Amana : la reservation est validee une fois le
-                paiement effectue et la reference saisie.
-              </p>
-              {selectedHotelRoom ? (
-                <p className="mt-1 text-sm font-semibold text-slate-900">
-                  Montant a payer : {formatXOF(hotelAmountDue)}
-                  {isTransport
-                    ? ` (${hotelQuantity} place${hotelQuantity > 1 ? "s" : ""})`
-                    : ` (${hotelQuantity} nuit${hotelQuantity > 1 ? "s" : ""})`}
-                </p>
-              ) : null}
-              <div className="mt-3">
-                <PayoutNotice
-                  payoutPhone={data.payout_phone}
-                  method={hotelForm.deposit_payment_method}
-                  amount={hotelAmountDue}
-                />
-              </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <select
-                  aria-label="Choisir"
-                  value={hotelForm.room_type_id}
-                  onChange={(event) => setHotelForm((prev) => ({ ...prev, room_type_id: event.target.value }))}
-                  className="h-11 rounded-md border border-slate-300 px-3 text-sm"
-                >
-                  <option value="">Choisir</option>
-                  {data.room_types.map((room) => (
-                    <option key={room.id || room.name} value={room.id || room.name}>
-                      {room.name} - {formatXOF(room.night_price)}{isTransport ? "/place" : "/nuit"}
-                      {isTransport && room.departure_times?.length
-                        ? ` (departs: ${room.departure_times.join(", ")})`
-                        : ""}
-                    </option>
-                  ))}
-                </select>
-                {isTransport && transportDepartureTimes.length ? (
-                  <select
-                    aria-label="Heure de depart"
-                    value={hotelForm.departure_time}
-                    onChange={(event) =>
-                      setHotelForm((prev) => ({ ...prev, departure_time: event.target.value }))
-                    }
-                    className="h-11 rounded-md border border-slate-300 px-3 text-sm"
-                  >
-                    <option value="">Heure de depart</option>
-                    {transportDepartureTimes.map((time) => (
-                      <option key={time} value={time}>
-                        {time}
-                      </option>
-                    ))}
-                  </select>
-                ) : null}
-                <Input
-                  placeholder="Nom"
-                  value={hotelForm.guest_name}
-                  onChange={(event) => setHotelForm((prev) => ({ ...prev, guest_name: event.target.value }))}
-                />
-                <Input
-                  placeholder="Telephone"
-                  value={hotelForm.guest_phone}
-                  onChange={(event) => setHotelForm((prev) => ({ ...prev, guest_phone: event.target.value }))}
-                />
-                <Input
-                  placeholder="Email"
-                  value={hotelForm.guest_email}
-                  onChange={(event) => setHotelForm((prev) => ({ ...prev, guest_email: event.target.value }))}
-                />
-                <div className={isTransport ? "md:col-span-2" : ""}>
-                  <label className="mb-1 block text-xs text-slate-500">
-                    {isTransport ? "Jour de depart" : "Date d'arrivee"}
-                  </label>
-                  {isTransport ? (
-                    transportAvailableDays.length ? (
-                      <select
-                        aria-label="Jour de depart"
-                        value={hotelForm.check_in_date}
-                        onChange={(event) =>
-                          setHotelForm((prev) => ({ ...prev, check_in_date: event.target.value }))
-                        }
-                        className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm"
-                      >
-                        <option value="">Choisir un jour</option>
-                        {transportAvailableDays.map((day) => (
-                          <option key={day} value={day}>
-                            {day}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                        {hotelForm.room_type_id
-                          ? "Aucun jour de depart publie pour ce trajet."
-                          : "Choisis d'abord un trajet pour voir les jours de depart."}
-                      </p>
-                    )
-                  ) : (
-                    <Input
-                      type="date"
-                      value={hotelForm.check_in_date}
-                      onChange={(event) =>
-                        setHotelForm((prev) => ({ ...prev, check_in_date: event.target.value }))
-                      }
-                    />
-                  )}
-                </div>
-                {!isTransport ? (
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500">Date de depart</label>
-                    <Input
-                      type="date"
-                      value={hotelForm.check_out_date}
-                      onChange={(event) => setHotelForm((prev) => ({ ...prev, check_out_date: event.target.value }))}
-                    />
-                  </div>
-                ) : null}
-                <Input
-                  type="number"
-                  min={1}
-                  value={hotelForm.guest_count}
-                  onChange={(event) => setHotelForm((prev) => ({ ...prev, guest_count: event.target.value }))}
-                  placeholder={isTransport ? "Nombre de places" : "Voyageurs"}
-                />
-                <select
-                  aria-label="Mode de paiement"
-                  value={hotelForm.deposit_payment_method}
-                  onChange={(event) =>
-                    setHotelForm((prev) => ({
-                      ...prev,
-                      deposit_payment_method: event.target.value as "nita" | "amana",
-                    }))
-                  }
-                  className="h-11 rounded-md border border-slate-300 px-3 text-sm"
-                >
-                  <option value="nita">Nita</option>
-                  <option value="amana">Amana</option>
-                </select>
-                <Input
-                  placeholder="Référence transaction"
-                  value={hotelForm.transaction_reference}
-                  onChange={(event) =>
-                    setHotelForm((prev) => ({ ...prev, transaction_reference: event.target.value }))
-                  }
-                  className="md:col-span-2"
-                />
-                <textarea
-                  value={hotelForm.special_request}
-                  onChange={(event) => setHotelForm((prev) => ({ ...prev, special_request: event.target.value }))}
-                  className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm md:col-span-2"
-                  placeholder="Demande speciale"
-                />
-              </div>
-              <div className="mt-4 rounded-2xl border border-sky-200 bg-white p-4">
-                <p className="text-sm text-slate-700">
-                  Paiement obligatoire via Nita ou Amana : la reservation est validee une fois le
-                  paiement effectue et la reference saisie.
-                </p>
-                {selectedHotelRoom ? (
-                  <p className="mt-1 text-sm font-semibold text-slate-900">
-                    Montant a payer : {formatXOF(hotelAmountDue)}
-                    {isTransport
-                      ? ` (${hotelQuantity} place${hotelQuantity > 1 ? "s" : ""})`
-                      : ` (${hotelQuantity} nuit${hotelQuantity > 1 ? "s" : ""})`}
-                  </p>
-                ) : null}
-                <PayoutNotice
-                  payoutPhone={data.payout_phone}
-                  method={hotelForm.deposit_payment_method}
-                  amount={hotelAmountDue}
-                />
-              </div>
-              <Button
-                className="mt-4 border border-sky-300 bg-sky-600 text-white hover:bg-sky-700"
-                onClick={() => {
-                  if (!requireSession()) return;
-                  if (!hotelForm.room_type_id) {
-                    setStatus(isTransport ? "Choisis un trajet." : "Choisis une option.");
-                    return;
-                  }
-                  hotelBookingMutation.mutate();
-                }}
-              >
-                {hotelAmountDue > 0 ? `J'ai paye ${formatXOF(hotelAmountDue)} - reserver` : "J'ai paye - reserver"}
-              </Button>
-            </article>
+          {isTransport ? (
+            <TransportBookingFlow
+              vendorId={vendorId}
+              companyName={data.business_name}
+              trips={data.room_types ?? []}
+              acceptsBookings={Boolean(data.accepts_hotel_bookings)}
+              payoutPhone={data.payout_phone}
+            />
           ) : null}
         </>
       ) : null}

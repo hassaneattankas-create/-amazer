@@ -248,6 +248,7 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE restaurant_menu_items ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS weekly_hours JSONB",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS orders_paused BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE hotel_bookings ADD COLUMN IF NOT EXISTS departure_time VARCHAR(5)",
         (
             "CREATE TABLE IF NOT EXISTS media_files ("
             "id VARCHAR(36) PRIMARY KEY, "

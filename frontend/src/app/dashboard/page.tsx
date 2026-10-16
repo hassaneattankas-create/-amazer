@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Package, Settings, UserRound } from "lucide-react";
 
+import { MyBookings } from "@/components/account/MyBookings";
 import { NotificationSettings } from "@/components/account/NotificationSettings";
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 import { MobileBuildStamp } from "@/components/MobileBuildStamp";
@@ -89,6 +90,8 @@ export default function DashboardPage() {
           )}
         </div>
       </article>
+
+      <MyBookings />
 
       <NotificationSettings />
 

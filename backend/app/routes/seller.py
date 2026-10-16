@@ -23,7 +23,7 @@ from app.models.hospitality import HotelBooking, RestaurantReservation
 from app.models.order import Order, OrderItem
 from app.models.price_history import PriceHistory
 from app.models.product import Price, Product
-from app.services import hotel_service, promo_service, restaurant_service
+from app.services import hotel_service, promo_service, restaurant_service, transport_service
 from app.models.restaurant import RestaurantMenuItem
 from app.models.seller_profile import SellerProfile
 from app.models.seller_subscription_payment import SellerSubscriptionPayment
@@ -40,6 +40,10 @@ from app.schemas.seller import (
     HotelBookingCreateRequest,
     HotelBookingResponse,
     RoomAvailabilityResponse,
+    MyBookingResponse,
+    SeatAvailabilityResponse,
+    TicketScanRequest,
+    TicketScanResponse,
     HotelBookingStatusUpdateRequest,
     SellerInventoryItemResponse,
     SellerInventoryUpdateRequest,
@@ -338,6 +342,7 @@ def _hotel_booking_response(row: HotelBooking) -> HotelBookingResponse:
         special_request=row.special_request,
         status=row.status,  # type: ignore[arg-type]
         created_at=row.created_at,
+        departure_time=getattr(row, "departure_time", None),
     )
 
 
@@ -1515,6 +1520,14 @@ def create_hotel_booking(
     nights = (payload.check_out_date - payload.check_in_date).days
     if nights <= 0 and not is_transport:
         raise ConflictError("Check-out must be after check-in")
+    departure_time: str | None = None
+    if is_transport:
+        departure_time = transport_service.validate_departure(room, payload.check_in_date, payload.departure_time)
+        left = transport_service.seats_left(db, vendor_id, room, payload.check_in_date, departure_time)
+        if payload.guest_count > left:
+            raise ConflictError(
+                "Plus aucune place sur ce départ." if left <= 0 else f"Il ne reste que {left} place(s) sur ce départ."
+            )
     if not is_transport:
         nights = hotel_service.validate_stay(payload.check_in_date, payload.check_out_date)
         if payload.guest_count > int(room.get("capacity") or 1) * 1:
@@ -1549,6 +1562,7 @@ def create_hotel_booking(
         payment_status=_deposit_payment_status(amount_due),
         special_request=payload.special_request,
         status="pending",
+        departure_time=departure_time,
     )
     db.add(booking)
     db.flush()
@@ -1556,7 +1570,13 @@ def create_hotel_booking(
         db,
         profile.user_id,
         "Nouvelle réservation",
-        f"{payload.guest_name} · {room.get('name') or 'Chambre'} · du {payload.check_in_date:%d/%m} au {payload.check_out_date:%d/%m}. À confirmer.",
+        (
+            f"{payload.guest_name} · {room.get('name') or 'Trajet'} · {payload.guest_count} place(s) le {payload.check_in_date:%d/%m}"
+            + (f" à {departure_time}" if departure_time else "")
+            + ". À confirmer."
+        )
+        if is_transport
+        else f"{payload.guest_name} · {room.get('name') or 'Chambre'} · du {payload.check_in_date:%d/%m} au {payload.check_out_date:%d/%m}. À confirmer.",
         f"booking-new-{booking.id}",
         "/seller/dashboard#commandes",
     )
@@ -1583,6 +1603,103 @@ def room_availability(
         check_out_date=check_out,
         nights=nights,
         available=hotel_service.availability(db, vendor_id, rooms, check_in, check_out),
+    )
+
+
+@router.get("/storefront/{vendor_id}/seats", response_model=SeatAvailabilityResponse)
+def trip_seats(
+    vendor_id: str,
+    trip_id: Annotated[str, Query(min_length=1, max_length=64)],
+    day: Annotated[date, Query()],
+    db: Annotated[Session, Depends(get_db)],
+) -> SeatAvailabilityResponse:
+    """Places restantes pour chaque heure de depart d'un trajet, un jour donne."""
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == vendor_id))
+    trip = next(
+        (room for room in ((profile.room_types or []) if profile else []) if isinstance(room, dict) and str(room.get("id")) == trip_id),
+        None,
+    )
+    if trip is None:
+        raise NotFoundError("Trip not found")
+    times = [str(t) for t in (trip.get("departure_times") or []) if t] or [""]
+    return SeatAvailabilityResponse(
+        trip_id=trip_id,
+        day=day,
+        seats_left={time: transport_service.seats_left(db, vendor_id, trip, day, time or None) for time in times},
+    )
+
+
+@router.get("/my-bookings", response_model=list[MyBookingResponse])
+def my_bookings(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> list[MyBookingResponse]:
+    """Reservations du client (hotels et trajets), avec le billet a QR code des trajets confirmes."""
+    rows = db.scalars(
+        select(HotelBooking).where(HotelBooking.user_id == current_user.id).order_by(HotelBooking.check_in_date.desc()).limit(100)
+    ).all()
+    vendor_ids = {row.vendor_id for row in rows}
+    profiles = (
+        {p.vendor_id: p for p in db.scalars(select(SellerProfile).where(SellerProfile.vendor_id.in_(vendor_ids)))} if vendor_ids else {}
+    )
+    result: list[MyBookingResponse] = []
+    for row in rows:
+        profile = profiles.get(row.vendor_id)
+        is_trip = bool(profile and (getattr(profile, "offers_transport", False) or profile.activity_type == "transport"))
+        result.append(
+            MyBookingResponse(
+                id=row.id,
+                kind="transport" if is_trip else "hotel",
+                vendor_id=row.vendor_id,
+                place_name=profile.business_name if profile else "Établissement",
+                item_name=str((row.room_snapshot or {}).get("name") or ("Trajet" if is_trip else "Chambre")),
+                check_in_date=row.check_in_date,
+                check_out_date=row.check_out_date,
+                departure_time=getattr(row, "departure_time", None),
+                guest_count=row.guest_count,
+                amount=float(row.deposit_amount or 0),
+                status=row.status,
+                payment_status=getattr(row, "payment_status", "pending") or "pending",
+                ticket_token=transport_service.ticket_token(row.id) if is_trip and row.status in ("confirmed", "checked_in") else None,
+                created_at=row.created_at,
+            )
+        )
+    return result
+
+
+@router.post("/tickets/scan", response_model=TicketScanResponse)
+def scan_ticket(
+    payload: TicketScanRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> TicketScanResponse:
+    """Embarquement : le transporteur scanne le QR code du billet (authentique, de sa compagnie, une seule fois)."""
+    enforce_csrf(request)
+    enforce_rate_limit(request, key="ticket_scan", limit=120, window_seconds=60)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        raise NotFoundError("Seller profile not found")
+    try:
+        booking_id = transport_service.read_ticket(payload.token)
+    except ValidationDomainError as exc:
+        return TicketScanResponse(ok=False, message=str(exc))
+    booking = db.get(HotelBooking, booking_id)
+    if booking is None or booking.vendor_id != profile.vendor_id:
+        return TicketScanResponse(ok=False, message="Ce billet n'est pas pour votre compagnie.")
+    trip = str((booking.room_snapshot or {}).get("name") or "Trajet")
+    when = f"{booking.check_in_date:%d/%m}" + (f" à {booking.departure_time}" if getattr(booking, "departure_time", None) else "")
+    if booking.status == "checked_in":
+        return TicketScanResponse(ok=False, message=f"Déjà embarqué : {booking.guest_name}.", booking=_hotel_booking_response(booking))
+    if booking.status != "confirmed":
+        return TicketScanResponse(ok=False, message="Billet non confirmé ou annulé.", booking=_hotel_booking_response(booking))
+    booking.status = "checked_in"
+    db.commit()
+    db.refresh(booking)
+    return TicketScanResponse(
+        ok=True,
+        message=f"Bon voyage ! {booking.guest_name} · {booking.guest_count} place(s) · {trip} · {when}",
+        booking=_hotel_booking_response(booking),
     )
 
 

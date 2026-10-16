@@ -305,6 +305,8 @@ class HotelBookingCreateRequest(BaseModel):
     deposit_payment_method: Literal["nita", "amana"]
     transaction_reference: str | None = Field(default=None, max_length=180)
     special_request: str | None = Field(default=None, max_length=1000)
+    # Transport : heure de depart choisie (HH:MM).
+    departure_time: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
 
 
 class HotelBookingStatusUpdateRequest(BaseModel):
@@ -333,6 +335,51 @@ class HotelBookingResponse(BaseModel):
     special_request: str | None
     status: Literal["pending", "confirmed", "cancelled", "checked_in", "checked_out", "no_show"]
     created_at: datetime
+    departure_time: str | None = None
+
+
+class SeatAvailabilityResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    trip_id: str
+    day: date
+    # places restantes par heure de depart ("" = trajet sans horaire)
+    seats_left: dict[str, int]
+
+
+class MyBookingResponse(BaseModel):
+    """Reservation vue par le client (hotel ou trajet), avec le billet pour un trajet confirme."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    kind: Literal["hotel", "transport"]
+    vendor_id: str
+    place_name: str
+    item_name: str
+    check_in_date: date
+    check_out_date: date
+    departure_time: str | None
+    guest_count: int
+    amount: float
+    status: str
+    payment_status: str
+    ticket_token: str | None
+    created_at: datetime
+
+
+class TicketScanRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=10, max_length=120)
+
+
+class TicketScanResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ok: bool
+    message: str
+    booking: HotelBookingResponse | None = None
 
 
 class RoomAvailabilityResponse(BaseModel):

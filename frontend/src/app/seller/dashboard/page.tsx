@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Hotel, PlusCircle, Settings2 } from "lucide-react";
+import { PlusCircle, Settings2 } from "lucide-react";
 
 import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { SingleMediaField } from "@/components/seller/MediaFields";
+import { TransportDesk } from "@/components/seller/hotel/TransportDesk";
 import { HotelFrontDesk, HotelKpis } from "@/components/seller/hotel/HotelFrontDesk";
 import { RestaurantKitchen } from "@/components/seller/restaurant/RestaurantKitchen";
 import { RestaurantKpis } from "@/components/seller/restaurant/RestaurantKpis";
@@ -20,7 +21,6 @@ import { SellerProductList } from "@/components/seller/SellerProductList";
 import { getShopRoute } from "@/lib/mobile-routes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatXOF } from "@/lib/currency";
 import { normalizeImageInputForApi } from "@/lib/image";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { deleteMyAccount } from "@/services/auth-service";
@@ -42,13 +42,8 @@ import {
   listSellerInventory,
   listSellerOrders,
   updateSellerOrderStatus,
-  updateSellerHotelBookingStatus,
   updateSellerInventory,
 } from "@/services/seller-service";
-
-function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString("fr-FR");
-}
 
 type SellerTab = "accueil" | "commandes" | "produits" | "ajouter" | "reglages";
 const SELLER_TABS: { key: SellerTab; label: string }[] = [
@@ -278,19 +273,6 @@ export default function SellerDashboardPage() {
     onError: () => setStatus("Erreur lors de l'ajout du produit."),
   });
 
-  const hotelBookingStatusMutation = useMutation({
-    mutationFn: ({
-      bookingId,
-      status,
-    }: {
-      bookingId: string;
-      status: "pending" | "confirmed" | "cancelled";
-    }) => updateSellerHotelBookingStatus(bookingId, status),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["seller-hotel-bookings"] });
-      setStatus("Reservation hotel mise à jour.");
-    },
-  });
 
   const deleteAccountMutation = useMutation({
     mutationFn: deleteMyAccount,
@@ -639,50 +621,7 @@ export default function SellerDashboardPage() {
 
         {tab === "commandes" && showHotelBookingTools && !isTransport ? <HotelFrontDesk bookings={hotelBookings} /> : null}
 
-        {tab === "commandes" && showHotelBookingTools && isTransport ? (
-          <article className="premium-card border border-slate-200 bg-white p-6">
-            <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-              <Hotel className="h-5 w-5 text-brand-600" />
-              {isTransport ? "Reservations de trajets" : "Reservations hotel"}
-            </h2>
-            <div className="mt-4 space-y-3">
-              {hotelBookings.map((booking) => (
-                <div key={booking.id} className="rounded-2xl border border-slate-200 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900">
-                      {booking.guest_name} - {booking.guest_phone}
-                    </p>
-                    <p className="text-xs text-slate-500">{booking.status}</p>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {String(booking.room_snapshot?.name || "Chambre")} | du{" "}
-                    {formatDateTime(booking.check_in_date)} au {formatDateTime(booking.check_out_date)}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {booking.guest_count} personne(s) | {booking.payment_status === "paid" ? "paye" : "a verifier"} {formatXOF(booking.deposit_amount)}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {booking.status !== "confirmed" ? (
-                      <Button size="sm" className="border border-emerald-300 bg-emerald-50 text-emerald-700"
-                        onClick={() => hotelBookingStatusMutation.mutate({ bookingId: booking.id, status: "confirmed" })}>
-                        Confirmer
-                      </Button>
-                    ) : null}
-                    {booking.status !== "cancelled" ? (
-                      <Button size="sm" className="border border-rose-300 bg-rose-50 text-rose-700"
-                        onClick={() => hotelBookingStatusMutation.mutate({ bookingId: booking.id, status: "cancelled" })}>
-                        Annuler
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-              {!hotelBookings.length ? (
-                <p className="text-sm text-slate-500">Aucune reservation hotel pour le moment.</p>
-              ) : null}
-            </div>
-          </article>
-        ) : null}
+        {tab === "commandes" && showHotelBookingTools && isTransport ? <TransportDesk bookings={hotelBookings} trips={profile?.room_types ?? []} /> : null}
 
         {tab === "produits" && showProductTools && (isInventoryPending || isProfilePending) ? <ProductCardSkeleton /> : null}
 

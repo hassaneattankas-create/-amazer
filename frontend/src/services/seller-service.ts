@@ -3,7 +3,10 @@ import {
   HotelBooking,
   HotelBookingRequest,
   HotelBookingStatus,
+  MyBooking,
   RoomAvailability,
+  SeatAvailability,
+  TicketScanResult,
   SellerInventoryItem,
   SellerShopOrder,
   SellerShopOrderStatus,
@@ -105,6 +108,22 @@ export async function createHotelBooking(
     payload,
   );
   return response.data;
+}
+
+/** Places restantes par heure de depart d'un trajet, un jour donne. */
+export async function getTripSeats(vendorId: string, tripId: string, day: string): Promise<SeatAvailability> {
+  const response = await api.get<SeatAvailability>(`/api/v1/seller/storefront/${vendorId}/seats`, { params: { trip_id: tripId, day } });
+  return response.data;
+}
+
+/** Reservations du client connecte (hotels et trajets, billet a QR code). */
+export async function listMyBookings(): Promise<MyBooking[]> {
+  return (await api.get<MyBooking[]>("/api/v1/seller/my-bookings")).data;
+}
+
+/** Embarquement : scan du QR code d'un billet par le transporteur. */
+export async function scanTicket(token: string): Promise<TicketScanResult> {
+  return (await api.post<TicketScanResult>("/api/v1/seller/tickets/scan", { token })).data;
 }
 
 /** Chambres libres par type pour des dates (aucune connexion requise). */
