@@ -448,6 +448,17 @@ Toutes les couleurs, rayons et espacements viennent des tokens du design system 
 - Tests : backend 320 (dont 23 affiliation sur SQLite réelle, 9 jeton PIN, 2 limite par compte), frontend 40, tsc 0, eslint 0 erreur. Aperçus simulés : tools/e2e/affiliate-mock.mjs, admin-affiliate-mock.mjs.
 - Après déploiement : les admins doivent ressaisir le PIN finance une fois (anciens cookies invalides).
 
+## 4 sextricies. Restaurants, hôtels, transport, remboursements, avis — 2026-10-16
+
+- Promotions : durée choisie, arrêt, retour automatique au prix normal (tâche toutes les 15 min). Avant : le prix restait au prix promo.
+- Restaurants : rubriques, épuisé, modifier/supprimer un plat, options en lignes, écran cuisine, refus, horaires + pause, menu client à la Uber Eats. Sécurité : prix des options relus dans le menu (avant : envoyés par le client).
+- Hôtels : stock de chambres par type, disponibilité nuit par nuit (plus de surréservation), réception (à confirmer, arrivées, en séjour, absent), occupation, photos et description des chambres conservées (avant : effacées).
+- Transport : départ (jour + heure) obligatoire et publié, places restantes, billet QR signé (HMAC), scan d'embarquement, « Mes réservations » dans Mon compte.
+- Remboursements : registre automatique (annulation admin d'une commande payée, refus restaurant d'une commande payée) + page admin, référence obligatoire, client prévenu. Les hôtels/transporteurs encaissent eux-mêmes : remboursement à leur charge.
+- Avis vérifiés par établissement (après commande livrée, séjour ou voyage), réponse de l'établissement, masquage admin (Modération).
+- Icônes de l'application sur fond blanc (PWA, iPhone ; Android au prochain APK).
+- Tests : backend 349, frontend 40, tsc 0, eslint 0 erreur ; aperçus simulés tools/e2e/*-mock.mjs.
+
 ## 4 sexdecies. Volontairement non faits — décision du 2026-10-13
 
 - **Paiement** : Nita est laissé tel quel ; un autre moyen de paiement sera ajouté plus tard (décision du propriétaire).
