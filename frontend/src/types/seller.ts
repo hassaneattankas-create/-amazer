@@ -225,6 +225,15 @@ export type SellerStorefront = {
   rating_count?: number;
 };
 
+export type SellerStatsWeek = { views: number; contacts: number; orders: number };
+
+export type SellerStats = {
+  is_premium: boolean;
+  this_week: SellerStatsWeek;
+  last_week: SellerStatsWeek;
+  days: Array<{ day: string; views: number; contacts: number }>;
+};
+
 export type VendorReviewItem = {
   id: string;
   author: string;

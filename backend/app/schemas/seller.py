@@ -294,6 +294,39 @@ class SellerStorefrontResponse(BaseModel):
     rating_count: int = 0
 
 
+class StorefrontEventRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["view", "contact"]
+
+
+class StatsDay(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    day: date
+    views: int
+    contacts: int
+
+
+class StatsWeek(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    views: int
+    contacts: int
+    orders: int
+
+
+class SellerStatsResponse(BaseModel):
+    """Statistiques de la vitrine : 7 jours pour tous, historique 30 jours en Premium."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    is_premium: bool
+    this_week: StatsWeek
+    last_week: StatsWeek
+    days: list[StatsDay]
+
+
 class VendorReviewItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

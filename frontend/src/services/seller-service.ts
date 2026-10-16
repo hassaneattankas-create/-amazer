@@ -6,6 +6,7 @@ import {
   MyBooking,
   RoomAvailability,
   SeatAvailability,
+  SellerStats,
   TicketScanResult,
   VendorReviewItem,
   VendorReviews,
@@ -110,6 +111,16 @@ export async function createHotelBooking(
     payload,
   );
   return response.data;
+}
+
+/** Statistiques : visite de la vitrine ou contact (appel, WhatsApp, message). */
+export async function recordStorefrontEvent(vendorId: string, kind: "view" | "contact"): Promise<void> {
+  await api.post(`/api/v1/seller/storefront/${vendorId}/events`, { kind });
+}
+
+/** Statistiques du vendeur : 7 jours (30 jours en Premium). */
+export async function getSellerStats(): Promise<SellerStats> {
+  return (await api.get<SellerStats>("/api/v1/seller/stats")).data;
 }
 
 /** Avis verifies d'un etablissement (public). */

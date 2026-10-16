@@ -39,7 +39,9 @@ const mocks = [
     { id: "r2", author: "Ibrahim S.", rating: 3, comment: "Bon mais un peu long.", reply: null, created_at: iso(9000), is_mine: false },
   ] }],
   [/\/seller\/profile$/, { id: "sp1", vendor_id: "v1", business_name: "Chez Awa", activity_type: "restaurant", storefront_tier: "basic", offers_restaurant: true, city: "Niamey" }],
+  [/\/categories$/, { items: [] }],
   [/\/restaurant\/seller\/menu$/, menu],
+  [/\/seller\/stats$/, { is_premium: false, this_week: { views: 84, contacts: 19, orders: 7 }, last_week: { views: 61, contacts: 21, orders: 5 }, days: Array.from({ length: 7 }, (_, i) => ({ day: new Date(now - (6 - i) * 86400000).toISOString().slice(0, 10), views: [5, 9, 14, 8, 17, 12, 19][i], contacts: 2 })) }],
   [/\/restaurant\/seller\/orders$/, orders],
   [/\/restaurant\/seller\/settings$/, { weekly_hours: null, orders_paused: false, is_open: true, open_label: "Ouvert" }],
   [/\/seller\/subscription-status$/, { has_seller_profile: true, onboarding_fee_paid: true, subscription_active: true, monthly_fee: 1000, onboarding_fee: 0, amount_due_now: 0, currency: "XOF", has_pending_payment_request: false, subscription_paid_until: iso(-9000) }],
@@ -66,6 +68,7 @@ const shots = [
   ["resto-commandes", "/seller/dashboard#commandes", null],
   ["resto-menu", "/seller/dashboard#produits", "Modifier Riz sauce arachide"],
   ["resto-reglages", "/seller/dashboard#reglages", null],
+  ["resto-accueil", "/seller/dashboard#accueil", null],
 ];
 for (const [name, path, click] of shots) {
   await page.goto("about:blank");

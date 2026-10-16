@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Clock, Images, MapPin, Package, Phone, Search, ShieldCheck, Store } from "lucide-react";
 
@@ -19,6 +19,7 @@ import { resolveImageUrl } from "@/lib/image";
 import { TransportBookingFlow } from "@/components/storefront/TransportBookingFlow";
 import { HotelBookingFlow } from "@/components/storefront/HotelBookingFlow";
 import { Stars, VendorReviews } from "@/components/storefront/VendorReviews";
+import { trackStorefrontContact, trackStorefrontView } from "@/lib/storefront-stats";
 import { RestaurantMenu } from "@/components/storefront/RestaurantMenu";
 import { computeRestaurantOrderSummary } from "@/lib/restaurant-order-pricing";
 import { getRestaurantOrderPayRoute, getRestaurantOrderReceiptRoute, getShopRoute } from "@/lib/mobile-routes";
@@ -104,6 +105,9 @@ export function ShopView({ vendorId }: { vendorId: string }) {
     transaction_reference: "",
   });
 
+  useEffect(() => {
+    trackStorefrontView(vendorId);
+  }, [vendorId]);
   const { data, isPending, isError } = useQuery({
     queryKey: ["seller-storefront", vendorId],
     queryFn: () => getSellerStorefront(vendorId),
@@ -677,6 +681,7 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
           {phone ? (
             <a
               href={`tel:${phone.replace(/\s/g, "")}`}
+              onClick={() => trackStorefrontContact(data.vendor_id)}
               className="inline-flex min-h-11 items-center gap-2 rounded-field border border-border px-4 text-sm font-semibold text-ink-900 hover:bg-surface-1"
             >
               <Phone className="h-4 w-4" aria-hidden="true" />
@@ -684,15 +689,18 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
             </a>
           ) : null}
           {data.whatsapp_contact ? (
-            <WhatsAppButton
-              phone={data.whatsapp_contact}
-              variant="outline"
-              label="WhatsApp"
-              message={`Bonjour ${data.business_name}, je vous contacte depuis AMAZER.`}
-            />
+            <span className="contents" onClickCapture={() => trackStorefrontContact(data.vendor_id)}>
+              <WhatsAppButton
+                phone={data.whatsapp_contact}
+                variant="outline"
+                label="WhatsApp"
+                message={`Bonjour ${data.business_name}, je vous contacte depuis AMAZER.`}
+              />
+            </span>
           ) : null}
           <Link
             href={`/messages?vendor=${encodeURIComponent(data.vendor_id)}&name=${encodeURIComponent(data.business_name)}`}
+            onClick={() => trackStorefrontContact(data.vendor_id)}
             className="inline-flex min-h-11 items-center gap-2 rounded-field bg-ink-900 px-4 text-sm font-semibold text-white hover:bg-ink-800"
           >
             Écrire à la boutique

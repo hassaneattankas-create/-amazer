@@ -28,7 +28,8 @@ function shortDate(iso: string): string {
 export function VendorReviews({ vendorId, name }: { vendorId: string; name: string }) {
   const queryClient = useQueryClient();
   const { data: user } = useCurrentUser();
-  const { data } = useQuery({ queryKey: ["vendor-reviews", vendorId], queryFn: () => getVendorReviews(vendorId), staleTime: 60_000 });
+  const { data: raw } = useQuery({ queryKey: ["vendor-reviews", vendorId], queryFn: () => getVendorReviews(vendorId), staleTime: 60_000 });
+  const data = raw && Array.isArray(raw.items) ? raw : undefined;
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");

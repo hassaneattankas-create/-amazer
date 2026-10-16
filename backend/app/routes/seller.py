@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session, object_session, selectinload
 
 from app.config import get_settings
 from app.core.cache import build_cache_key, cache_delete_prefixes, cache_get_json, cache_set_json
-from app.core.deps import get_admin_user, get_current_user, get_seller_user
+from app.core.deps import get_admin_user, get_current_user, get_current_user_optional, get_seller_user
 from app.core.crypto import decrypt_phone_value, encrypt_phone_value
 from app.core.csrf import enforce_csrf
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationDomainError
@@ -23,7 +23,14 @@ from app.models.hospitality import HotelBooking, RestaurantReservation
 from app.models.order import Order, OrderItem
 from app.models.price_history import PriceHistory
 from app.models.product import Price, Product
-from app.services import hotel_service, promo_service, restaurant_service, transport_service, vendor_review_service
+from app.services import (
+    hotel_service,
+    promo_service,
+    restaurant_service,
+    storefront_stats_service,
+    transport_service,
+    vendor_review_service,
+)
 from app.models.restaurant import RestaurantMenuItem
 from app.models.seller_profile import SellerProfile
 from app.models.seller_subscription_payment import SellerSubscriptionPayment
@@ -42,6 +49,10 @@ from app.schemas.seller import (
     HotelBookingResponse,
     RoomAvailabilityResponse,
     MyBookingResponse,
+    SellerStatsResponse,
+    StatsDay,
+    StatsWeek,
+    StorefrontEventRequest,
     VendorReviewItem,
     VendorReviewReplyRequest,
     VendorReviewRequest,
@@ -1708,6 +1719,49 @@ def scan_ticket(
         ok=True,
         message=f"Bon voyage ! {booking.guest_name} · {booking.guest_count} place(s) · {trip} · {when}",
         booking=_hotel_booking_response(booking),
+    )
+
+
+@router.post("/storefront/{vendor_id}/events", status_code=204)
+def storefront_event(
+    vendor_id: str,
+    payload: StorefrontEventRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User | None, Depends(get_current_user_optional)],
+) -> None:
+    """Compte une visite de la vitrine ou un contact (appel, WhatsApp). Le proprietaire n'est pas compte."""
+    try:
+        enforce_rate_limit(request, key=f"sf_{payload.kind}_{vendor_id}", limit=30, window_seconds=3600)
+    except Exception:  # noqa: BLE001 - au-dela de la limite, on ignore sans erreur (statistique seulement)
+        return
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == vendor_id))
+    if profile is None or (user is not None and profile.user_id == user.id):
+        return
+    storefront_stats_service.record(db, vendor_id, payload.kind)
+    db.commit()
+
+
+@router.get("/stats", response_model=SellerStatsResponse)
+def seller_stats(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> SellerStatsResponse:
+    """Visites, contacts et commandes : cette semaine contre la semaine d'avant ; 30 jours en Premium."""
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        raise NotFoundError("Seller profile not found")
+    premium = is_premium_profile(profile)
+    this_week = storefront_stats_service.week_totals(db, profile.vendor_id, 0)
+    last_week = storefront_stats_service.week_totals(db, profile.vendor_id, 1)
+    return SellerStatsResponse(
+        is_premium=premium,
+        this_week=StatsWeek(**this_week.__dict__),
+        last_week=StatsWeek(**last_week.__dict__),
+        days=[
+            StatsDay(day=day, views=views, contacts=contacts)
+            for day, views, contacts in storefront_stats_service.daily(db, profile.vendor_id, 30 if premium else 7)
+        ],
     )
 
 

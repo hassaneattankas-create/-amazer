@@ -26,7 +26,7 @@ function dayLabel(iso: string): string {
 export function MyBookings() {
   const [ticketFor, setTicketFor] = useState<string | null>(null);
   const { data = [], isPending } = useQuery({ queryKey: ["my-bookings"], queryFn: listMyBookings, refetchInterval: 60_000 });
-  if (isPending || !data.length) return null;
+  if (isPending || !Array.isArray(data) || !data.length) return null;
 
   return (
     <article id="reservations" className="scroll-mt-24 rounded-card border border-border bg-card p-5">

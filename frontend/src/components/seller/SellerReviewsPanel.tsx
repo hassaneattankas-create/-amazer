@@ -24,7 +24,8 @@ export function SellerReviewsPanel() {
     },
     onError: (err) => setError(getApiErrorMessage(err, "Réponse impossible.")),
   });
-  if (!data) return null;
+  // Reponse inattendue (ex. pendant un deploiement) : on n'affiche rien plutot que de casser la page.
+  if (!data || !Array.isArray(data.items)) return null;
 
   return (
     <section aria-labelledby="my-reviews-title" className="space-y-2 rounded-card border border-border bg-card p-4">
