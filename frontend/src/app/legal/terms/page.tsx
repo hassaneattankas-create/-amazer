@@ -33,7 +33,7 @@ const SECTIONS: Section[] = [
     paragraphs: [
       "Vous pouvez annuler vous-même une commande non payée tant qu'elle n'est pas en livraison.",
       "Si une commande déjà payée à AMAZER est annulée par AMAZER ou refusée par le restaurant, AMAZER vous rembourse sur le numéro Nita ou Amana utilisé, dans les meilleurs délais. Vous recevez une notification avec la référence du remboursement.",
-      "Pour toute réclamation (produit non conforme, commande incomplète), contactez AMAZER dans les 48 heures après la livraison, avec votre numéro de commande.",
+      "Pour toute réclamation (produit non conforme, commande incomplète), contactez AMAZER dans les 24 heures après la livraison, avec votre numéro de commande.",
     ],
   },
   {
