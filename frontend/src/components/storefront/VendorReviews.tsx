@@ -110,6 +110,13 @@ export function VendorReviews({ vendorId, name }: { vendorId: string; name: stri
               placeholder="Qualité, accueil, rapidité…"
             />
           </label>
+          <p className="text-xs text-ink-600">
+            Avis honnête et respectueux :{" "}
+            <Link href="/legal/terms#avis" className="font-semibold text-brand-700 hover:underline">
+              règles des avis
+            </Link>
+            .
+          </p>
           <Button type="submit" disabled={mutation.isPending}>
             {mutation.isPending ? "Envoi…" : "Publier mon avis"}
           </Button>

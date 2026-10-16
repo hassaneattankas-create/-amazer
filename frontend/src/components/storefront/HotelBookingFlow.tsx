@@ -287,6 +287,13 @@ export function HotelBookingFlow({
             Référence du paiement (si déjà payé)
             <input className={fieldClass} value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} />
           </label>
+          <p className="text-xs text-ink-600">
+            En réservant, vous acceptez les{" "}
+            <Link href="/legal/terms#reservations" className="font-semibold text-brand-700 hover:underline">
+              conditions de réservation
+            </Link>{" "}
+            : vous payez l&apos;établissement directement et ses conditions d&apos;annulation s&apos;appliquent.
+          </p>
           <Button type="submit" size="lg" className="w-full" disabled={booking.isPending}>
             {booking.isPending ? "Envoi…" : `Demander la réservation · ${formatXOF(total)}`}
           </Button>

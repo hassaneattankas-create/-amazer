@@ -201,6 +201,13 @@ export default function AffiliationPage() {
           <li>Chaque gain attend un délai de sécurité{me ? ` de ${me.hold_days} jours` : ""} avant d&apos;être payable.</li>
           <li>Paiement sur demande, par Nita, Amana, Airtel Money ou Moov Money{me ? `, à partir de ${formatXOF(me.min_payout)}` : ""}.</li>
           <li>Toute fraude (faux comptes, auto-parrainage) entraîne l&apos;annulation des gains et la suspension du compte.</li>
+          <li>
+            Règles complètes :{" "}
+            <Link href="/legal/terms#affiliation" className="font-semibold text-brand-700 hover:underline">
+              conditions de l&apos;affiliation
+            </Link>
+            .
+          </li>
         </ul>
         <Link href="/formations" className="mt-3 inline-flex min-h-11 items-center gap-2 font-semibold text-brand-700 hover:underline">
           <BookOpen className="h-4 w-4" aria-hidden="true" />
