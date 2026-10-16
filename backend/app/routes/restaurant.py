@@ -46,6 +46,7 @@ from app.schemas.restaurant import (
 )
 from app.services import order_event_notifications as order_events
 from app.services import restaurant_service
+from app.services.refund_service import record_refund
 from app.services.listing_limit_service import (
     count_vendor_menu_items,
     is_premium_profile,
@@ -819,6 +820,18 @@ def update_seller_restaurant_order_status(
 
     if order.status != payload.status:
         order_events.notify_order_status(db, order, payload.status)
+        if payload.status == "annulee" and order.payment_status == "paid":
+            record_refund(
+                db,
+                source="restaurant_order",
+                source_id=order.id,
+                user_id=order.user_id,
+                customer_name=order.customer_name,
+                phone=order.customer_phone,
+                method=order.payment_mode,
+                amount=float(order.total_amount or 0),
+                reason="Commande refusée par le restaurant",
+            )
     order.status = payload.status
     db.commit()
     db.refresh(order)

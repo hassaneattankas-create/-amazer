@@ -4,6 +4,7 @@ from app.models.app_notification import AppNotification
 from app.models.category import Category
 from app.models.price_history import PriceHistory
 from app.models.reseller import ResellerAccount, ResellerListing, ResellerSubscriptionPayment
+from app.models.refund import Refund
 from app.models.affiliate import AffiliateAccount, AffiliateEarning, AffiliatePayout, AffiliateReferral
 from app.models.price_alert import PriceAlert
 from app.models.product import Price, Product, ProductImage

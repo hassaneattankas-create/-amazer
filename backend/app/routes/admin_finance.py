@@ -74,9 +74,11 @@ from app.schemas.finance import (
 from app.services import order_event_notifications as order_events
 from app.routes.resellers import compute_earnings as compute_reseller_earnings
 from app.models.reseller import ResellerSubscriptionPayment
+from app.models.refund import Refund
 from app.models.affiliate import AffiliateAccount, AffiliateEarning, AffiliatePayout, AffiliateReferral
 from app.routes.affiliates import compute_affiliate_earnings
 from app.services.order_delivery_service import mark_order_delivered
+from app.services.refund_service import record_refund, settle_refund
 from app.services.affiliate_service import (
     PayoutError,
     add_manual_bonus,
@@ -1307,6 +1309,18 @@ def cancel_order_admin(
         raise ValidationDomainError("Order not found")
     was_paid = order.payment_status == "paid"
     restocked = cancel_order(db, order, by_admin=True)
+    if was_paid:
+        record_refund(
+            db,
+            source="order",
+            source_id=order.id,
+            user_id=order.user_id,
+            customer_name=order.user.full_name if order.user else None,
+            phone=order.delivery_phone or (order.user.whatsapp_phone if order.user else None),
+            method=order.payment_mode,
+            amount=float(order.total_amount or 0),
+            reason="Commande annulée par AMAZER",
+        )
     append_audit_log(
         db,
         event_type="admin_order_cancelled",
@@ -2656,3 +2670,91 @@ def decide_affiliate_payout(
     )
     db.commit()
     return _payout_row(db, payout)
+
+
+class AdminRefund(BaseModel):
+    id: str
+    source: str
+    source_id: str
+    customer_name: str
+    phone: str | None
+    method: str | None
+    amount: float
+    reason: str
+    status: str
+    reference: str | None
+    admin_note: str | None
+    created_at: str
+    processed_at: str | None
+
+
+class AdminRefundDecision(BaseModel):
+    action: Literal["refunded", "not_needed"]
+    reference: str | None = Field(default=None, max_length=120)
+    note: str | None = Field(default=None, max_length=300)
+
+
+def _refund_row(row: Refund) -> AdminRefund:
+    return AdminRefund(
+        id=row.id,
+        source=row.source,
+        source_id=row.source_id,
+        customer_name=row.customer_name,
+        phone=row.phone,
+        method=row.method,
+        amount=float(row.amount),
+        reason=row.reason,
+        status=row.status,
+        reference=row.reference,
+        admin_note=row.admin_note,
+        created_at=_iso_or_none(row.created_at) or "",
+        processed_at=_iso_or_none(row.processed_at),
+    )
+
+
+@router.get("/refunds", response_model=list[AdminRefund])
+def list_refunds(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+    status_filter: Annotated[Literal["to_refund", "refunded", "not_needed", "all"], Query(alias="status")] = "to_refund",
+) -> list[AdminRefund]:
+    """Remboursements a faire (commandes payees puis annulees ou refusees)."""
+    _require_finance_pin(request, admin_user)
+    query = select(Refund).order_by(Refund.created_at.desc()).limit(300)
+    if status_filter != "all":
+        query = query.where(Refund.status == status_filter)
+    return [_refund_row(row) for row in db.scalars(query).all()]
+
+
+@router.post("/refunds/{refund_id}", response_model=AdminRefund)
+def decide_refund(
+    refund_id: str,
+    payload: AdminRefundDecision,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminRefund:
+    """Rembourse (reference du virement obligatoire) ou « pas necessaire » (ex. client rembourse autrement)."""
+    enforce_csrf(request)
+    _require_finance_pin(request, admin_user)
+    row = db.get(Refund, refund_id)
+    if row is None:
+        raise ValidationDomainError("Remboursement introuvable")
+    try:
+        settle_refund(row, admin_id=admin_user.id, refunded=payload.action == "refunded", reference=payload.reference, note=payload.note)
+    except ValueError as exc:
+        raise ValidationDomainError(str(exc)) from exc
+    _audit(db, request, admin_user, "admin_refund_decision", "refund", row.id,
+           {"action": payload.action, "amount": float(row.amount), "reference": payload.reference})
+    if payload.action == "refunded" and row.user_id:
+        NotificationService(db).send_to_user(
+            user_id=row.user_id,
+            payload=NotificationPayload(
+                title="Remboursement effectué",
+                body=f"AMAZER vous a remboursé {int(row.amount)} F (référence {row.reference}).",
+                data={"tag": f"refund-{row.id}", "href": "/dashboard"},
+            ),
+        )
+    db.commit()
+    return _refund_row(row)

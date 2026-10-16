@@ -453,6 +453,33 @@ export async function decideAffiliatePayout(
   return adminProxyRequest<AdminAffiliatePayout>({ url: `/admin/finance/affiliate-payouts/${payoutId}`, method: "POST", data });
 }
 
+export type AdminRefund = {
+  id: string;
+  source: "order" | "restaurant_order";
+  source_id: string;
+  customer_name: string;
+  phone: string | null;
+  method: string | null;
+  amount: number;
+  reason: string;
+  status: "to_refund" | "refunded" | "not_needed";
+  reference: string | null;
+  admin_note: string | null;
+  created_at: string;
+  processed_at: string | null;
+};
+
+export async function listRefunds(status: "to_refund" | "refunded" | "not_needed" | "all" = "to_refund"): Promise<AdminRefund[]> {
+  return adminProxyRequest<AdminRefund[]>({ url: `/admin/finance/refunds?status=${status}`, method: "GET" });
+}
+
+export async function decideRefund(
+  id: string,
+  data: { action: "refunded" | "not_needed"; reference?: string; note?: string }
+): Promise<AdminRefund> {
+  return adminProxyRequest<AdminRefund>({ url: `/admin/finance/refunds/${id}`, method: "POST", data });
+}
+
 export type AdminMessageAudience = "all" | "customers" | "sellers" | "couriers" | "user";
 
 /** Message de l'equipe : notification sur le site + e-mail automatique. */
