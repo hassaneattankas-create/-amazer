@@ -15,6 +15,8 @@ export type HotelRoomType = {
   description: string | null;
   night_price: number;
   capacity: number;
+  /** Hotel : nombre de chambres de ce type (stock, 1 par defaut). */
+  room_count?: number;
   amenities: string[];
   photo_urls: string[];
   deposit_amount: number | null;
@@ -250,6 +252,16 @@ export type HotelBooking = {
   payment_status: "pending" | "paid";
   transaction_reference: string | null;
   special_request: string | null;
-  status: "pending" | "confirmed" | "cancelled";
+  status: HotelBookingStatus;
   created_at: string;
+};
+
+export type HotelBookingStatus = "pending" | "confirmed" | "cancelled" | "checked_in" | "checked_out" | "no_show";
+
+export type RoomAvailability = {
+  check_in_date: string;
+  check_out_date: string;
+  nights: number;
+  /** chambres libres par type pour toute la periode */
+  available: Record<string, number>;
 };

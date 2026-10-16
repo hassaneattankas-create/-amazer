@@ -1,5 +1,6 @@
 "use client";
 
+import { GalleryMediaField } from "@/components/seller/MediaFields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -9,6 +10,10 @@ export type RoomRow = {
   name: string;
   night_price: string;
   capacity: string;
+  /** Hotel : nombre de chambres de ce type (stock). */
+  room_count: string;
+  description: string;
+  photo_urls: string[];
   amenities: string;
   departure_times: string[];
   available_days: string[];
@@ -19,6 +24,9 @@ export function emptyRoomRow(): RoomRow {
     name: "",
     night_price: "",
     capacity: "1",
+    room_count: "1",
+    description: "",
+    photo_urls: [],
     amenities: "",
     departure_times: [],
     available_days: [],
@@ -110,6 +118,27 @@ export function RoomTypesEditor({
                 onChange={(event) => update(index, { capacity: event.target.value })}
               />
             </label>
+            {!isTransport ? (
+              <label className="text-xs text-slate-600">
+                Nombre de chambres de ce type
+                <Input
+                  type="number"
+                  min={1}
+                  value={row.room_count}
+                  onChange={(event) => update(index, { room_count: event.target.value })}
+                />
+              </label>
+            ) : null}
+            {!isTransport ? (
+              <label className="text-xs text-slate-600 sm:col-span-2">
+                Description
+                <Input
+                  value={row.description}
+                  onChange={(event) => update(index, { description: event.target.value })}
+                  placeholder="Lit double, salle de bain privée, vue sur le fleuve…"
+                />
+              </label>
+            ) : null}
             <label className="text-xs text-slate-600 sm:col-span-2">
               Options (separees par virgule)
               <Input
@@ -119,6 +148,17 @@ export function RoomTypesEditor({
               />
             </label>
           </div>
+
+          {!isTransport ? (
+            <div className="mt-3">
+              <GalleryMediaField
+                label="Photos de la chambre"
+                values={row.photo_urls}
+                onChange={(urls) => update(index, { photo_urls: urls })}
+                maxItems={6}
+              />
+            </div>
+          ) : null}
 
           {isTransport ? (
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -208,14 +248,15 @@ export function roomRowsToPayload(rows: RoomRow[]) {
     .map((row, index) => ({
       id: row.id || `room-${index + 1}`,
       name: row.name.trim(),
-      description: null,
+      description: row.description.trim() || null,
       night_price: Number(row.night_price || 0),
       capacity: Math.max(1, Number(row.capacity || 1)),
+      room_count: Math.max(1, Math.round(Number(row.room_count || 1))),
       amenities: row.amenities
         .split(",")
         .map((value) => value.trim())
         .filter(Boolean),
-      photo_urls: [],
+      photo_urls: row.photo_urls.slice(0, 6),
       deposit_amount: null,
       departure_times: row.departure_times.map((time) => time.trim()).filter(Boolean),
       available_days: row.available_days.map((day) => day.trim()).filter(Boolean),
@@ -229,6 +270,9 @@ export function payloadToRoomRows(
     name?: string;
     night_price?: number;
     capacity?: number;
+    room_count?: number;
+    description?: string | null;
+    photo_urls?: string[];
     amenities?: string[];
     departure_times?: string[];
     available_days?: string[];
@@ -239,6 +283,9 @@ export function payloadToRoomRows(
     name: room.name || "",
     night_price: room.night_price != null ? String(room.night_price) : "",
     capacity: room.capacity != null ? String(room.capacity) : "1",
+    room_count: room.room_count != null ? String(room.room_count) : "1",
+    description: room.description || "",
+    photo_urls: room.photo_urls || [],
     amenities: (room.amenities || []).join(", "),
     departure_times: room.departure_times || [],
     available_days: room.available_days || [],

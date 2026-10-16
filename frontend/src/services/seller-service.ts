@@ -2,6 +2,8 @@ import { api } from "@/lib/api";
 import {
   HotelBooking,
   HotelBookingRequest,
+  HotelBookingStatus,
+  RoomAvailability,
   SellerInventoryItem,
   SellerShopOrder,
   SellerShopOrderStatus,
@@ -105,6 +107,14 @@ export async function createHotelBooking(
   return response.data;
 }
 
+/** Chambres libres par type pour des dates (aucune connexion requise). */
+export async function getRoomAvailability(vendorId: string, checkIn: string, checkOut: string): Promise<RoomAvailability> {
+  const response = await api.get<RoomAvailability>(`/api/v1/seller/storefront/${vendorId}/availability`, {
+    params: { check_in: checkIn, check_out: checkOut },
+  });
+  return response.data;
+}
+
 export async function listSellerHotelBookings(): Promise<HotelBooking[]> {
   const response = await api.get<HotelBooking[]>("/api/v1/seller/hotel-bookings");
   return response.data;
@@ -112,7 +122,7 @@ export async function listSellerHotelBookings(): Promise<HotelBooking[]> {
 
 export async function updateSellerHotelBookingStatus(
   bookingId: string,
-  status: "pending" | "confirmed" | "cancelled",
+  status: HotelBookingStatus,
 ): Promise<HotelBooking> {
   const response = await api.patch<HotelBooking>(
     `/api/v1/seller/hotel-bookings/${bookingId}/status`,

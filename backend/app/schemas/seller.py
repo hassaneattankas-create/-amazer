@@ -25,6 +25,8 @@ class HotelRoomTypeSchema(BaseModel):
     night_price: float = Field(gt=0)
     # Jusqu'a 200: couvre les chambres d'hotel comme les places d'un bus (transport).
     capacity: int = Field(default=1, ge=1, le=200)
+    # Hotel : nombre de chambres de ce type (stock) -> pas de surreservation.
+    room_count: int = Field(default=1, ge=1, le=500)
     amenities: list[str] = Field(default_factory=list, max_length=20)
     photo_urls: list[str] = Field(default_factory=list, max_length=20)
     deposit_amount: float | None = Field(default=None, ge=0)
@@ -308,7 +310,7 @@ class HotelBookingCreateRequest(BaseModel):
 class HotelBookingStatusUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: Literal["pending", "confirmed", "cancelled"]
+    status: Literal["pending", "confirmed", "cancelled", "checked_in", "checked_out", "no_show"]
 
 
 class HotelBookingResponse(BaseModel):
@@ -329,5 +331,15 @@ class HotelBookingResponse(BaseModel):
     transaction_reference: str | None
     payment_status: str = "paid"
     special_request: str | None
-    status: Literal["pending", "confirmed", "cancelled"]
+    status: Literal["pending", "confirmed", "cancelled", "checked_in", "checked_out", "no_show"]
     created_at: datetime
+
+
+class RoomAvailabilityResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    check_in_date: date
+    check_out_date: date
+    nights: int
+    # chambres libres par type pour toute la periode
+    available: dict[str, int]

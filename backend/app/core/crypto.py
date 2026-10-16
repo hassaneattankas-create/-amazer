@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import base64
 import hashlib
 import os
@@ -52,13 +53,17 @@ def encrypt_phone_value(value: str | None) -> str | None:
     return encrypt_text_value(normalized)
 
 
+_PLAIN_PHONE = re.compile(r"[+0-9 ()./-]{6,24}")
+
+
 def decrypt_phone_value(value: str | None) -> str | None:
     if not value:
         return None
     try:
         return decrypt_text_value(value)
     except Exception:
-        return value
+        # Ancienne valeur en clair (numero) : on la garde. Valeur chiffree illisible : jamais affichee.
+        return value if _PLAIN_PHONE.fullmatch(value.strip()) else None
 
 
 def payment_code_hash(code: str) -> str:

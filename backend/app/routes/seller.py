@@ -2,10 +2,11 @@ import csv
 import io
 import json
 import re
-from datetime import UTC, datetime, timedelta
+import logging
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Request, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, object_session, selectinload
@@ -22,7 +23,7 @@ from app.models.hospitality import HotelBooking, RestaurantReservation
 from app.models.order import Order, OrderItem
 from app.models.price_history import PriceHistory
 from app.models.product import Price, Product
-from app.services import promo_service, restaurant_service
+from app.services import hotel_service, promo_service, restaurant_service
 from app.models.restaurant import RestaurantMenuItem
 from app.models.seller_profile import SellerProfile
 from app.models.seller_subscription_payment import SellerSubscriptionPayment
@@ -38,6 +39,7 @@ from app.schemas.restaurant import (
 from app.schemas.seller import (
     HotelBookingCreateRequest,
     HotelBookingResponse,
+    RoomAvailabilityResponse,
     HotelBookingStatusUpdateRequest,
     SellerInventoryItemResponse,
     SellerInventoryUpdateRequest,
@@ -75,6 +77,7 @@ from app.services.seller_profile_service import create_or_update_seller_profile
 from app.services.seller_profile_service import resolve_seller_plan_bucket
 from app.services.seller_subscription_reminder_service import run_seller_subscription_reminders_task
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/seller", tags=["seller"])
 settings = get_settings()
 
@@ -1512,6 +1515,15 @@ def create_hotel_booking(
     nights = (payload.check_out_date - payload.check_in_date).days
     if nights <= 0 and not is_transport:
         raise ConflictError("Check-out must be after check-in")
+    if not is_transport:
+        nights = hotel_service.validate_stay(payload.check_in_date, payload.check_out_date)
+        if payload.guest_count > int(room.get("capacity") or 1) * 1:
+            raise ValidationDomainError(f"Cette chambre accueille {int(room.get('capacity') or 1)} personne(s) au maximum.")
+        free = hotel_service.availability(
+            db, vendor_id, [room], payload.check_in_date, payload.check_out_date
+        ).get(str(room.get("id")), 0)
+        if free <= 0:
+            raise ConflictError("Plus de chambre de ce type disponible pour ces dates. Essayez d'autres dates ou une autre chambre.")
     # Le client paie le montant total (prix unitaire x quantite), comme une commande
     # boutique. La reference de paiement est facultative: on ne bloque pas la reservation.
     unit_price = float(room.get("night_price") or 0)
@@ -1539,9 +1551,50 @@ def create_hotel_booking(
         status="pending",
     )
     db.add(booking)
+    db.flush()
+    _notify_booking(
+        db,
+        profile.user_id,
+        "Nouvelle réservation",
+        f"{payload.guest_name} · {room.get('name') or 'Chambre'} · du {payload.check_in_date:%d/%m} au {payload.check_out_date:%d/%m}. À confirmer.",
+        f"booking-new-{booking.id}",
+        "/seller/dashboard#commandes",
+    )
     db.commit()
     db.refresh(booking)
     return _hotel_booking_response(booking)
+
+
+@router.get("/storefront/{vendor_id}/availability", response_model=RoomAvailabilityResponse)
+def room_availability(
+    vendor_id: str,
+    check_in: Annotated[date, Query()],
+    check_out: Annotated[date, Query()],
+    db: Annotated[Session, Depends(get_db)],
+) -> RoomAvailabilityResponse:
+    """Chambres libres par type pour des dates (le client ne voit que ce qu'il peut reserver)."""
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == vendor_id))
+    if profile is None:
+        raise NotFoundError("Storefront not found")
+    nights = hotel_service.validate_stay(check_in, check_out)
+    rooms = [room for room in (profile.room_types or []) if isinstance(room, dict)]
+    return RoomAvailabilityResponse(
+        check_in_date=check_in,
+        check_out_date=check_out,
+        nights=nights,
+        available=hotel_service.availability(db, vendor_id, rooms, check_in, check_out),
+    )
+
+
+def _notify_booking(db: Session, user_id: str | None, title: str, body: str, tag: str, href: str) -> None:
+    if not user_id:
+        return
+    try:
+        NotificationService(db).send_to_user(
+            user_id=user_id, payload=NotificationPayload(title=title, body=body, data={"tag": tag, "href": href})
+        )
+    except Exception:  # noqa: BLE001 - la reservation reste enregistree meme si la notification echoue
+        logger.exception("Notification de reservation impossible (%s).", tag)
 
 
 @router.get("/hotel-bookings", response_model=list[HotelBookingResponse])
@@ -1555,8 +1608,8 @@ def list_seller_hotel_bookings(
     rows = db.scalars(
         select(HotelBooking)
         .where(HotelBooking.vendor_id == profile.vendor_id)
-        .order_by(HotelBooking.created_at.desc())
-        .limit(100)
+        .order_by(HotelBooking.check_in_date.desc(), HotelBooking.created_at.desc())
+        .limit(300)
     ).all()
     return [_hotel_booking_response(row) for row in rows]
 
@@ -1576,10 +1629,20 @@ def update_hotel_booking_status(
     booking = db.get(HotelBooking, booking_id)
     if booking is None or booking.vendor_id != profile.vendor_id:
         raise NotFoundError("Hotel booking not found")
+    hotel_service.check_transition(booking.status, payload.status)
+    changed = booking.status != payload.status
     booking.status = payload.status
     if payload.status == "confirmed":
         # Le vendeur confirme apres avoir constate l'acompte sur son propre compte.
         booking.payment_status = "paid"
+    place = getattr(profile, "business_name", None) or "L'établissement"
+    messages = {
+        "confirmed": ("Réservation confirmée", f"{place} confirme votre réservation du {booking.check_in_date:%d/%m}."),
+        "cancelled": ("Réservation annulée", f"{place} a annulé votre réservation du {booking.check_in_date:%d/%m}."),
+    }
+    if changed and payload.status in messages:
+        title, body = messages[payload.status]
+        _notify_booking(db, booking.user_id, title, body, f"booking-{payload.status}-{booking.id}", "/dashboard")
     db.commit()
     db.refresh(booking)
     return _hotel_booking_response(booking)

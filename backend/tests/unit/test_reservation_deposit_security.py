@@ -25,6 +25,9 @@ def _no_side_effects(monkeypatch):
     monkeypatch.setattr(seller_route, "enforce_csrf", lambda _request: None)
     monkeypatch.setattr(seller_route, "_restaurant_reservation_response", lambda row: row)
     monkeypatch.setattr(seller_route, "_hotel_booking_response", lambda row: row)
+    monkeypatch.setattr(seller_route, "_notify_booking", lambda *_args, **_kwargs: None)
+    # Disponibilite : une chambre libre (le stock est teste dans test_hotel_service).
+    monkeypatch.setattr(seller_route.hotel_service, "availability", lambda _db, _vendor, rooms, *_dates: {str(r["id"]): 1 for r in rooms})
 
 
 def _restaurant_profile(deposit: float) -> SimpleNamespace:
@@ -44,6 +47,7 @@ def _hotel_profile() -> SimpleNamespace:
         storefront_tier="premium",
         accepts_hotel_bookings=True,
         offers_transport=False,
+        user_id="seller-1",
         room_types=[{"id": "room-1", "name": "Standard", "night_price": 20000}],
     )
 
@@ -118,7 +122,9 @@ def test_seller_confirmation_marks_reservation_deposit_paid(status: str, expecte
 
 @pytest.mark.parametrize(("status", "expected"), [("confirmed", "paid"), ("cancelled", "pending")])
 def test_seller_confirmation_marks_hotel_deposit_paid(status: str, expected: str) -> None:
-    booking = SimpleNamespace(vendor_id="vendor-1", status="pending", payment_status="pending")
+    booking = SimpleNamespace(
+        vendor_id="vendor-1", status="pending", payment_status="pending", check_in_date=date.today(), user_id="client-1", id="book-1"
+    )
     db = _db_returning(SimpleNamespace(vendor_id="vendor-1"))
     db.get.return_value = booking
 

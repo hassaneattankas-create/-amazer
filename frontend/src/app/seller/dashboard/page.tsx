@@ -8,6 +8,7 @@ import { Hotel, PlusCircle, Settings2 } from "lucide-react";
 import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { SingleMediaField } from "@/components/seller/MediaFields";
+import { HotelFrontDesk, HotelKpis } from "@/components/seller/hotel/HotelFrontDesk";
 import { RestaurantKitchen } from "@/components/seller/restaurant/RestaurantKitchen";
 import { RestaurantKpis } from "@/components/seller/restaurant/RestaurantKpis";
 import { RestaurantMenuManager, SELLER_MENU_KEY } from "@/components/seller/restaurant/RestaurantMenuManager";
@@ -426,10 +427,11 @@ export default function SellerDashboardPage() {
         <>
           {showProductTools ? <SellerKpis orders={shopOrders} inventory={inventory} /> : null}
           {showRestaurantTools ? <RestaurantKpis orders={restaurantOrders} menu={sellerMenu} /> : null}
+          {showHotelBookingTools && !isTransport ? <HotelKpis bookings={hotelBookings} rooms={profile?.room_types ?? []} /> : null}
           <div className="grid gap-2 sm:grid-cols-3">
             <Button type="button" size="lg" onClick={() => openTab("ajouter")}>
               <PlusCircle className="h-4 w-4" />
-              {showRestaurantTools && !showProductTools ? "Ajouter un plat" : "Ajouter un produit"}
+              {showRestaurantTools && !showProductTools ? "Ajouter un plat" : showHotelBookingTools && !showProductTools ? (isTransport ? "Gérer mes trajets" : "Gérer mes chambres") : "Ajouter un produit"}
             </Button>
             <Button type="button" size="lg" variant="outline" onClick={() => openTab("commandes")}>
               Voir mes commandes
@@ -635,7 +637,9 @@ export default function SellerDashboardPage() {
 
         {tab === "commandes" && showRestaurantReservationTools ? <RestaurantReservations reservations={restaurantReservations} /> : null}
 
-        {tab === "commandes" && showHotelBookingTools ? (
+        {tab === "commandes" && showHotelBookingTools && !isTransport ? <HotelFrontDesk bookings={hotelBookings} /> : null}
+
+        {tab === "commandes" && showHotelBookingTools && isTransport ? (
           <article className="premium-card border border-slate-200 bg-white p-6">
             <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
               <Hotel className="h-5 w-5 text-brand-600" />
@@ -691,9 +695,26 @@ export default function SellerDashboardPage() {
           />
         ) : null}
 
-        {!showProductTools && !showRestaurantTools && !isProfilePending ? (
-          <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
-            Complete d&apos;abord ton profil vendeur pour activer le bon dashboard.
+        {!showProductTools && !showRestaurantTools && showHotelBookingTools && (tab === "produits" || tab === "ajouter") ? (
+          <article className="space-y-3 rounded-card border border-border bg-card p-5">
+            <p className="font-semibold text-ink-900">{isTransport ? "Vos trajets" : "Vos chambres"}</p>
+            <p className="text-sm text-ink-700">
+              {isTransport
+                ? "Ajoutez ou modifiez vos trajets, prix, places et horaires dans Profil et abonnement."
+                : "Ajoutez ou modifiez vos chambres (photos, prix par nuit, nombre de chambres) dans Profil et abonnement."}
+            </p>
+            <Button asChild>
+              <Link href="/seller#chambres">{isTransport ? "Gérer mes trajets" : "Gérer mes chambres"}</Link>
+            </Button>
+          </article>
+        ) : null}
+
+        {!showProductTools && !showRestaurantTools && !showHotelBookingTools && !isProfilePending ? (
+          <article className="rounded-card border border-border bg-card p-6 text-sm text-ink-700">
+            Complétez d&apos;abord votre profil vendeur pour activer votre espace.{" "}
+            <Link href="/seller" className="font-semibold text-brand-700 hover:underline">
+              Compléter mon profil
+            </Link>
           </article>
         ) : null}
 

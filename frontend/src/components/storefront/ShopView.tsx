@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BedDouble, Clock, Hotel, Images, MapPin, Package, Phone, Search, ShieldCheck, Store } from "lucide-react";
+import { Clock, Hotel, Images, MapPin, Package, Phone, Search, ShieldCheck, Store } from "lucide-react";
 
 import { PRODUCT_GRID_CLASS } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
@@ -16,6 +16,7 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import { getProductRoute } from "@/lib/mobile-routes";
 import { resolveImageUrl } from "@/lib/image";
+import { HotelBookingFlow } from "@/components/storefront/HotelBookingFlow";
 import { RestaurantMenu } from "@/components/storefront/RestaurantMenu";
 import { computeRestaurantOrderSummary } from "@/lib/restaurant-order-pricing";
 import { getRestaurantOrderPayRoute, getRestaurantOrderReceiptRoute, getShopRoute } from "@/lib/mobile-routes";
@@ -25,7 +26,7 @@ import { createRestaurantOrder, createRestaurantReservation, getRestaurantReceip
 import { getProductDetailById } from "@/services/product-service";
 import { createHotelBooking, getSellerStorefront } from "@/services/seller-service";
 import { useCartStore } from "@/store/cartStore";
-import type { HotelRoomType, SellerStorefront, SellerStorefrontProduct } from "@/types/seller";
+import type { SellerStorefront, SellerStorefrontProduct } from "@/types/seller";
 import type { RestaurantMenuItem, RestaurantMenuOption } from "@/types/restaurant";
 import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 
@@ -628,9 +629,15 @@ export function ShopView({ vendorId }: { vendorId: string }) {
       {data.activity_type === "hotel" || data.activity_type === "enterprise" || isTransport ? (
         <>
           {!isTransport && (data.activity_type === "hotel" || filteredRooms.length > 0) ? (
-            <HotelRoomSection rooms={filteredRooms} />
+            <HotelBookingFlow
+              vendorId={vendorId}
+              hotelName={data.business_name}
+              rooms={filteredRooms}
+              acceptsBookings={Boolean(data.accepts_hotel_bookings)}
+              payoutPhone={data.payout_phone}
+            />
           ) : null}
-          {data.accepts_hotel_bookings ? (
+          {data.accepts_hotel_bookings && isTransport ? (
             <article className="premium-card border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-5">
               <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
                 <Hotel className="h-5 w-5 text-[#0ea5e9]" />
@@ -1233,51 +1240,4 @@ function RestaurantOrderPanel({
     </section>
   );
 }
-
-function HotelRoomSection({ rooms }: { rooms: HotelRoomType[] }) {
-  if (!rooms.length) {
-    return (
-      <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        Aucune chambre publiee pour cet etablissement pour le moment.
-      </article>
-    );
-  }
-
-  return (
-    <article className="space-y-4">
-      <header className="flex items-center justify-between gap-2">
-        <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-          <BedDouble className="h-5 w-5 text-sky-600" />
-          Types de chambres
-        </h2>
-        <p className="text-xs text-slate-500">{rooms.length} option(s)</p>
-      </header>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {rooms.map((room) => (
-          <div key={room.id || room.name} className="rounded-card border border-sky-200 bg-white p-4">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-base font-semibold text-slate-900">{room.name}</h3>
-              <span className="text-sm font-semibold text-sky-700">{formatXOF(room.night_price)}/nuit</span>
-            </div>
-            {room.description ? <p className="mt-2 text-sm text-slate-600">{room.description}</p> : null}
-            <p className="mt-2 text-xs text-slate-500">Capacite: {room.capacity} personne(s)</p>
-            {room.amenities.length ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {room.amenities.map((amenity) => (
-                  <span
-                    key={`${room.id || room.name}-${amenity}`}
-                    className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-600"
-                  >
-                    {amenity}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ))}
-      </div>
-    </article>
-  );
-}
-
 

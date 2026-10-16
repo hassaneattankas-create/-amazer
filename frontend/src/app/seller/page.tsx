@@ -728,7 +728,7 @@ function SellerPageContent() {
                 </label>
               ) : null}
               {showRoomTypes ? (
-                <div>
+                <div id="chambres" className="scroll-mt-24">
                   <p className="mb-2 text-sm font-medium text-ink-800">{isTransport ? "Vos trajets" : "Vos chambres"}</p>
                   <RoomTypesEditor
                     value={profileForm.room_types_list}
