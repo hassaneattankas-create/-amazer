@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BedDouble, Clock, Hotel, Images, MapPin, Package, Phone, Search, ShieldCheck, Store, UtensilsCrossed } from "lucide-react";
+import { BedDouble, Clock, Hotel, Images, MapPin, Package, Phone, Search, ShieldCheck, Store } from "lucide-react";
 
 import { PRODUCT_GRID_CLASS } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
@@ -16,6 +16,7 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import { getProductRoute } from "@/lib/mobile-routes";
 import { resolveImageUrl } from "@/lib/image";
+import { RestaurantMenu } from "@/components/storefront/RestaurantMenu";
 import { computeRestaurantOrderSummary } from "@/lib/restaurant-order-pricing";
 import { getRestaurantOrderPayRoute, getRestaurantOrderReceiptRoute, getShopRoute } from "@/lib/mobile-routes";
 import { getPublicFinanceSettings } from "@/services/finance-service";
@@ -305,6 +306,14 @@ export function ShopView({ vendorId }: { vendorId: string }) {
     );
   };
 
+  const changeQuantity = (menuItemId: string, delta: number) => {
+    setSelectedItems((prev) =>
+      prev
+        .map((item) => (item.menu_item_id === menuItemId ? { ...item, quantity: Math.min(20, item.quantity + delta) } : item))
+        .filter((item) => item.quantity > 0)
+    );
+  };
+
   const setItemNote = (menuItemId: string, customerNote: string) => {
     setSelectedItems((prev) =>
       prev.map((item) => (item.menu_item_id === menuItemId ? { ...item, customer_note: customerNote } : item))
@@ -341,7 +350,8 @@ export function ShopView({ vendorId }: { vendorId: string }) {
   const showRestaurantSection =
     !isTransport &&
     (isPremiumStore ? Boolean(data?.offers_restaurant) : data?.activity_type === "restaurant");
-  const canOrder = showRestaurantSection && filteredMenu.length > 0;
+  const restaurantOpen = data?.restaurant_is_open ?? true;
+  const canOrder = showRestaurantSection && filteredMenu.length > 0 && restaurantOpen;
   const selectedHotelRoom = data?.room_types?.find(
     (room) => (room.id || room.name) === hotelForm.room_type_id,
   );
@@ -487,9 +497,11 @@ export function ShopView({ vendorId }: { vendorId: string }) {
 
       {showRestaurantSection ? (
         <>
-          <RestaurantMenuSection
+          <RestaurantMenu
             menu={filteredMenu}
             selectedItems={selectedItems}
+            isOpen={restaurantOpen}
+            openLabel={data.restaurant_open_label ?? "Ouvert"}
             onAddDish={addDish}
             onToggleOption={toggleOption}
           />
@@ -605,6 +617,7 @@ export function ShopView({ vendorId }: { vendorId: string }) {
               onDeliveryAddressChange={setDeliveryAddress}
               onPaymentModeChange={setPaymentMode}
               onItemNoteChange={setItemNote}
+              onQuantityChange={changeQuantity}
               onSubmit={submitOrder}
               statusMessage={orderStatus}
             />
@@ -1047,115 +1060,6 @@ function RetailShopContent({
   );
 }
 
-type RestaurantMenuSectionProps = {
-  menu: RestaurantMenuItem[];
-  selectedItems: SelectedMenuItem[];
-  onAddDish: (dish: RestaurantMenuItem) => void;
-  onToggleOption: (menuItemId: string, option: RestaurantMenuOption) => void;
-};
-
-function RestaurantMenuSection({
-  menu,
-  selectedItems,
-  onAddDish,
-  onToggleOption,
-}: RestaurantMenuSectionProps) {
-  if (!menu.length) {
-    return (
-      <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        Aucun plat publie pour ce restaurant pour le moment.
-      </article>
-    );
-  }
-
-  return (
-    <article className="space-y-4">
-      <header className="flex items-center justify-between gap-2">
-        <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-          <UtensilsCrossed className="h-5 w-5 text-brand-600" />
-          Menu digital
-        </h2>
-        <p className="text-xs text-slate-500">{menu.length} plat(s)</p>
-      </header>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {menu.map((dish) => {
-          const selectedItem = selectedItems.find((item) => item.menu_item_id === dish.id);
-          return (
-          <div
-            key={dish.id}
-            className="premium-card hover-lift-glow overflow-hidden border border-orange-200 bg-gradient-to-br from-orange-50 via-amber-50 to-white p-0"
-          >
-            <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100">
-              {dish.image_url ? (
-                <Image
-                  src={resolveImageUrl(dish.image_url) ?? "/images/placeholders/default.svg"}
-                  alt={dish.name}
-                  width={560}
-                  height={420}
-                  loading="lazy"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 384px"
-                  quality={82}
-                  unoptimized
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-slate-400">
-                  <UtensilsCrossed className="h-8 w-8" />
-                </div>
-              )}
-            </div>
-            <div className="space-y-2 p-4">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="line-clamp-2 text-sm font-semibold text-slate-900">{dish.name}</h3>
-                {selectedItem ? (
-                  <span className="rounded-full border border-brand-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-brand-600">
-                    x{selectedItem.quantity}
-                  </span>
-                ) : null}
-              </div>
-              {dish.description ? <p className="line-clamp-3 text-sm text-slate-600">{dish.description}</p> : null}
-              {dish.tags?.length ? <p className="text-xs text-slate-500">{dish.tags.join(" - ")}</p> : null}
-              <p className="text-base font-semibold text-brand-600">{formatXOF(dish.base_price)}</p>
-              {dish.options.length ? (
-                <div className="rounded-xl border border-orange-100 bg-white/70 p-2">
-                  <p className="text-xs font-medium text-slate-700">Options</p>
-                  <div className="mt-1 flex flex-wrap gap-2">
-                    {dish.options.map((option) => {
-                      const isSelected = selectedItem?.selected_options.some((entry) => entry.name === option.name);
-                      return (
-                        <button
-                          key={`${dish.id}-${option.name}`}
-                          type="button"
-                          onClick={() => onToggleOption(dish.id, option)}
-                          className={
-                            isSelected
-                              ? "rounded-full border border-brand-300 bg-brand-600/10 px-2 py-1 text-xs text-brand-600"
-                              : "rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
-                          }
-                        >
-                          {option.name} (+{formatXOF(option.price)})
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-              <Button
-                type="button"
-                onClick={() => onAddDish(dish)}
-                className="primary-glow-btn w-full bg-brand-600 text-white hover:bg-brand-700"
-              >
-                Ajouter au panier repas
-              </Button>
-            </div>
-          </div>
-        );
-        })}
-      </div>
-    </article>
-  );
-}
-
 type RestaurantOrderPanelProps = {
   selectedItems: SelectedMenuItem[];
   total: number;
@@ -1174,6 +1078,7 @@ type RestaurantOrderPanelProps = {
   onDeliveryAddressChange: (value: string) => void;
   onPaymentModeChange: (value: "nita" | "amana") => void;
   onItemNoteChange: (menuItemId: string, note: string) => void;
+  onQuantityChange: (menuItemId: string, delta: number) => void;
   onSubmit: () => void;
 };
 
@@ -1195,87 +1100,137 @@ function RestaurantOrderPanel({
   onDeliveryAddressChange,
   onPaymentModeChange,
   onItemNoteChange,
+  onQuantityChange,
   onSubmit,
 }: RestaurantOrderPanelProps) {
+  const fees = platformCommission + platformServiceFee;
+  const fieldClass = "mt-1 h-11 w-full rounded-field border border-border bg-card px-3 text-sm text-ink-900";
   return (
-    <article className="premium-card border border-slate-200 bg-white p-6">
-      <h2 className="luxury-title text-xl font-semibold">Commander maintenant</h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Ajoute des plats au panier puis renseigne les informations de livraison.
-      </p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <Input value={customerName} onChange={(event) => onCustomerNameChange(event.target.value)} placeholder="Nom complet" />
-        <Input value={customerPhone} onChange={(event) => onCustomerPhoneChange(event.target.value)} placeholder="Telephone" />
-        <Input
-          value={deliveryAddress}
-          onChange={(event) => onDeliveryAddressChange(event.target.value)}
-          placeholder="Adresse livraison"
-          className="sm:col-span-2"
-        />
-        <div className="flex flex-wrap gap-2 sm:col-span-2">
-          {[
-            { value: "nita", label: "Nita" },
-            { value: "amana", label: "Amana" },
-          ].map((entry) => (
-            <Button
-              key={entry.value}
-              type="button"
-              onClick={() => onPaymentModeChange(entry.value as "nita" | "amana")}
-              className={
-                paymentMode === entry.value
-                  ? "border border-brand-300 bg-brand-600/10 text-brand-600"
-                  : "border border-slate-200 bg-white text-slate-700"
-              }
-            >
-              {entry.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-slate-700">
-        <p className="mt-1">Sous-total plats: {formatXOF(total)}</p>
-        <p className="mt-1">Frais de livraison: {formatXOF(deliveryFee)}</p>
-        <p className="mt-1">Commission plateforme: {formatXOF(platformCommission)}</p>
-        <p className="mt-1">Frais de service: {formatXOF(platformServiceFee)}</p>
-        <p className="mt-1 font-semibold text-slate-900">Total a payer: {formatXOF(grandTotal)}</p>
-        <p className="mt-1">Articles: {selectedItems.length}</p>
-      </div>
-
+    <section aria-labelledby="order-title" className="space-y-4 rounded-card border border-border bg-card p-4 sm:p-5">
+      <h2 id="order-title" className="text-xl font-semibold text-ink-900">
+        Votre commande
+      </h2>
       {selectedItems.length ? (
-        <div className="mt-4 space-y-3">
-          {selectedItems.map((item) => (
-            <div key={item.menu_item_id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-slate-900">
-                  {item.name} x{item.quantity}
-                </p>
-                <p className="text-sm font-semibold text-brand-600">{formatXOF(item.base_price * item.quantity)}</p>
-              </div>
-              <textarea
-                value={item.customer_note}
-                onChange={(event) => onItemNoteChange(item.menu_item_id, event.target.value)}
-                className="mt-3 min-h-20 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-                placeholder='Note cuisine ou livraison, ex: "Pas de piment"'
-              />
-            </div>
-          ))}
-        </div>
+        <ul className="divide-y divide-border">
+          {selectedItems.map((item) => {
+            const unit = item.base_price + item.selected_options.reduce((sum, option) => sum + option.price, 0);
+            return (
+              <li key={item.menu_item_id} className="space-y-2 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-ink-900">{item.name}</p>
+                    {item.selected_options.length ? (
+                      <p className="text-xs text-ink-600">{item.selected_options.map((option) => option.name).join(", ")}</p>
+                    ) : null}
+                  </div>
+                  <p className="shrink-0 font-semibold text-ink-900">{formatXOF(unit * item.quantity)}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    aria-label={`Retirer un ${item.name}`}
+                    onClick={() => onQuantityChange(item.menu_item_id, -1)}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-pill border border-border text-lg font-semibold text-ink-900 hover:bg-surface-1"
+                  >
+                    −
+                  </button>
+                  <span className="w-8 text-center font-semibold text-ink-900" aria-live="polite">
+                    {item.quantity}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={`Ajouter un ${item.name}`}
+                    onClick={() => onQuantityChange(item.menu_item_id, 1)}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-pill border border-border text-lg font-semibold text-ink-900 hover:bg-surface-1"
+                  >
+                    +
+                  </button>
+                </div>
+                <input
+                  aria-label={`Note pour ${item.name}`}
+                  value={item.customer_note}
+                  onChange={(event) => onItemNoteChange(item.menu_item_id, event.target.value)}
+                  className="h-11 w-full rounded-field border border-border bg-card px-3 text-sm text-ink-900"
+                  placeholder="Note pour la cuisine (ex. pas de piment)"
+                />
+              </li>
+            );
+          })}
+        </ul>
       ) : (
-        <p className="mt-4 text-sm text-slate-500">Ajoute un plat pour activer la commande.</p>
+        <p className="text-sm text-ink-600">Appuyez sur + à côté d&apos;un plat pour l&apos;ajouter.</p>
       )}
 
-      <Button
-        type="button"
-        disabled={isSubmitting || !selectedItems.length}
-        onClick={onSubmit}
-        className="primary-glow-btn mt-4 bg-brand-600 text-white hover:bg-brand-700"
-      >
-        {isSubmitting ? "Envoi en cours..." : "Valider et payer"}
-      </Button>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block text-sm font-medium text-ink-800">
+          Nom
+          <input className={fieldClass} value={customerName} onChange={(event) => onCustomerNameChange(event.target.value)} autoComplete="name" />
+        </label>
+        <label className="block text-sm font-medium text-ink-800">
+          Téléphone
+          <input
+            className={fieldClass}
+            type="tel"
+            inputMode="tel"
+            value={customerPhone}
+            onChange={(event) => onCustomerPhoneChange(event.target.value)}
+            autoComplete="tel"
+          />
+        </label>
+        <label className="block text-sm font-medium text-ink-800 sm:col-span-2">
+          Adresse de livraison (quartier, repère)
+          <input className={fieldClass} value={deliveryAddress} onChange={(event) => onDeliveryAddressChange(event.target.value)} />
+        </label>
+      </div>
+      <fieldset className="min-w-0">
+        <legend className="text-sm font-medium text-ink-800">Paiement</legend>
+        <div className="mt-1 flex gap-2">
+          {(["nita", "amana"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              aria-pressed={paymentMode === mode}
+              onClick={() => onPaymentModeChange(mode)}
+              className={`min-h-11 flex-1 rounded-field border px-4 text-sm font-semibold ${
+                paymentMode === mode ? "border-ink-900 bg-ink-900 text-white" : "border-border bg-card text-ink-800"
+              }`}
+            >
+              {mode === "nita" ? "Nita" : "Amana"}
+            </button>
+          ))}
+        </div>
+      </fieldset>
 
-      {statusMessage ? <p className="mt-3 text-sm text-slate-700">{statusMessage}</p> : null}
-    </article>
+      <dl className="space-y-1 rounded-field bg-surface-1 p-3 text-sm text-ink-800">
+        <div className="flex justify-between">
+          <dt>Plats</dt>
+          <dd>{formatXOF(total)}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt>Livraison</dt>
+          <dd>{formatXOF(deliveryFee)}</dd>
+        </div>
+        {fees > 0 ? (
+          <div className="flex justify-between">
+            <dt>Frais de service</dt>
+            <dd>{formatXOF(fees)}</dd>
+          </div>
+        ) : null}
+        <div className="flex justify-between border-t border-border pt-1 text-base font-bold text-ink-900">
+          <dt>Total</dt>
+          <dd>{formatXOF(grandTotal)}</dd>
+        </div>
+      </dl>
+
+      <Button type="button" size="lg" className="w-full" disabled={isSubmitting || !selectedItems.length} onClick={onSubmit}>
+        {isSubmitting ? "Envoi…" : selectedItems.length ? `Commander · ${formatXOF(grandTotal)}` : "Ajoutez un plat"}
+      </Button>
+      {statusMessage ? (
+        <p className="text-sm text-ink-800" role="status">
+          {statusMessage}
+        </p>
+      ) : null}
+    </section>
   );
 }
 

@@ -215,6 +215,9 @@ export type SellerStorefront = {
   is_verified: boolean;
   products: SellerStorefrontProduct[];
   restaurant_menu: RestaurantMenuItem[];
+  /** Restaurant ouvert maintenant (horaires + pause) et texte court : « Ouvert jusqu'à 22:00 ». */
+  restaurant_is_open?: boolean;
+  restaurant_open_label?: string;
 };
 
 export type HotelBookingRequest = {

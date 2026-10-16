@@ -30,6 +30,12 @@ class RestaurantMenuItem(Base):
     tags: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
     options: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
     estimated_prep_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
+    # Rubrique du menu (Entrees, Plats, Boissons...), ordre d'affichage, « epuise » (reste visible, non commandable)
+    # et « archive » (supprime par le restaurant : garde pour l'historique des commandes).
+    category: Mapped[str] = mapped_column(String(60), nullable=False, default="Plats", server_default="Plats")
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    sold_out: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

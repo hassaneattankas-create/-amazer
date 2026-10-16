@@ -22,6 +22,7 @@ STATUS_MESSAGES: dict[str, tuple[str, str]] = {
     "preparation": ("Commande en préparation", "La boutique prépare votre commande #{t}."),
     "livraison": ("Commande en route", "Votre commande #{t} est en cours de livraison."),
     "recu": ("Commande livrée", "Votre commande #{t} a été livrée. Merci d'avoir choisi AMAZER !"),
+    "annulee": ("Commande annulée", "Votre commande #{t} a été annulée. Si vous avez payé, AMAZER vous rembourse."),
 }
 
 

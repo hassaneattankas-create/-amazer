@@ -38,7 +38,7 @@ def count_vendor_menu_items(db: Session, vendor_id: str) -> int:
         db.scalar(
             select(func.count())
             .select_from(RestaurantMenuItem)
-            .where(RestaurantMenuItem.vendor_id == vendor_id)
+            .where(RestaurantMenuItem.vendor_id == vendor_id, RestaurantMenuItem.archived.is_(False))
         )
         or 0
     )

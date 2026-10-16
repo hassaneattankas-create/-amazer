@@ -8,11 +8,13 @@ import {
   ReceiptLink,
 } from "@/types/order";
 import {
+  RestaurantDayHours,
   RestaurantMenuItem,
   RestaurantOrder,
   RestaurantOrderRequest,
   RestaurantReservation,
   RestaurantReservationRequest,
+  RestaurantSettings,
   RestaurantStorefront,
 } from "@/types/restaurant";
 
@@ -72,7 +74,7 @@ export async function listSellerRestaurantOrders(): Promise<RestaurantOrder[]> {
 
 export async function updateSellerRestaurantOrderStatus(
   orderId: string,
-  status: "commande" | "preparation" | "livraison" | "recu"
+  status: "commande" | "preparation" | "livraison" | "recu" | "annulee"
 ): Promise<RestaurantOrder> {
   const response = await api.patch<RestaurantOrder>(
     `/api/v1/restaurant/seller/orders/${orderId}/status`,
@@ -90,9 +92,45 @@ export async function createRestaurantMenuItem(payload: {
   tags?: string[];
   options?: Array<{ name: string; price: number }>;
   estimated_prep_minutes?: number;
+  category?: string;
 }): Promise<RestaurantMenuItem> {
   const response = await api.post<RestaurantMenuItem>("/api/v1/restaurant/menu", payload);
   return response.data;
+}
+
+export type RestaurantMenuUpdate = Partial<{
+  name: string;
+  description: string;
+  image_url: string;
+  base_price: number;
+  tags: string[];
+  options: Array<{ name: string; price: number }>;
+  estimated_prep_minutes: number;
+  category: string;
+  sort_order: number;
+  is_available: boolean;
+  sold_out: boolean;
+}>;
+
+/** Modifier un plat : seuls les champs envoyés changent. */
+export async function updateSellerRestaurantMenuItem(menuItemId: string, payload: RestaurantMenuUpdate): Promise<RestaurantMenuItem> {
+  const response = await api.put<RestaurantMenuItem>(`/api/v1/restaurant/seller/menu/${menuItemId}`, payload);
+  return response.data;
+}
+
+export async function deleteSellerRestaurantMenuItem(menuItemId: string): Promise<void> {
+  await api.delete(`/api/v1/restaurant/seller/menu/${menuItemId}`);
+}
+
+export async function getRestaurantSettings(): Promise<RestaurantSettings> {
+  return (await api.get<RestaurantSettings>("/api/v1/restaurant/seller/settings")).data;
+}
+
+export async function updateRestaurantSettings(payload: {
+  weekly_hours: Record<string, RestaurantDayHours> | null;
+  orders_paused: boolean;
+}): Promise<RestaurantSettings> {
+  return (await api.put<RestaurantSettings>("/api/v1/restaurant/seller/settings", payload)).data;
 }
 
 export async function listSellerRestaurantMenu(): Promise<RestaurantMenuItem[]> {

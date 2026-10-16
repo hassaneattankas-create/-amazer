@@ -16,6 +16,20 @@ export type RestaurantMenuItem = {
   options: RestaurantMenuOption[];
   estimated_prep_minutes: number;
   is_available: boolean;
+  /** Rubrique du menu (Entrées, Plats, Boissons…). */
+  category?: string;
+  sort_order?: number;
+  /** Épuisé : reste visible au menu mais ne peut pas être commandé. */
+  sold_out?: boolean;
+};
+
+export type RestaurantDayHours = { open: string; close: string } | null;
+
+export type RestaurantSettings = {
+  weekly_hours: Record<string, RestaurantDayHours> | null;
+  orders_paused: boolean;
+  is_open: boolean;
+  open_label: string;
 };
 
 export type RestaurantOrderRequest = {
@@ -45,7 +59,7 @@ export type RestaurantOrder = {
   payment_mode: "nita" | "amana";
   payment_reference: string | null;
   payment_status: "pending" | "paid";
-  status: "payment_pending" | "commande" | "preparation" | "livraison" | "recu";
+  status: "payment_pending" | "commande" | "preparation" | "livraison" | "recu" | "annulee";
   total_amount: number;
   items_subtotal?: number;
   platform_commission?: number;

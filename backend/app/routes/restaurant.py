@@ -34,14 +34,18 @@ from app.schemas.restaurant import (
     RestaurantMenuAvailabilityUpdateRequest,
     RestaurantMenuCreateRequest,
     RestaurantMenuItemResponse,
+    RestaurantMenuUpdateRequest,
     RestaurantOrderCreateRequest,
     RestaurantOrderItemResponse,
     RestaurantOrderResponse,
     RestaurantOrderStatusUpdateRequest,
+    RestaurantSettingsResponse,
+    RestaurantSettingsSchema,
     RestaurantStorefrontListResponse,
     RestaurantStorefrontResponse,
 )
 from app.services import order_event_notifications as order_events
+from app.services import restaurant_service
 from app.services.listing_limit_service import (
     count_vendor_menu_items,
     is_premium_profile,
@@ -127,7 +131,14 @@ def _menu_response(item: RestaurantMenuItem, vendor_name: str) -> RestaurantMenu
         options=item.options,
         estimated_prep_minutes=item.estimated_prep_minutes,
         is_available=item.is_available,
+        category=getattr(item, "category", None) or "Plats",
+        sort_order=int(getattr(item, "sort_order", 0) or 0),
+        sold_out=bool(getattr(item, "sold_out", False)),
     )
+
+
+def _menu_sort_key(item: RestaurantMenuItem) -> tuple:
+    return ((item.category or "Plats").lower(), int(item.sort_order or 0), item.name.lower())
 
 
 def _order_response(order: RestaurantOrder, vendor_name: str, dish_map: dict[str, str]) -> RestaurantOrderResponse:
@@ -230,7 +241,7 @@ def list_restaurant_storefronts(
 ) -> RestaurantStorefrontListResponse:
     menu_rows = db.scalars(
         select(RestaurantMenuItem)
-        .where(RestaurantMenuItem.is_available.is_(True))
+        .where(RestaurantMenuItem.is_available.is_(True), RestaurantMenuItem.archived.is_(False))
         .order_by(RestaurantMenuItem.created_at.desc())
         .limit(1000)
     ).all()
@@ -312,7 +323,9 @@ def list_restaurant_menu(
     vendor_id: Annotated[str | None, Query(min_length=1, max_length=36)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> list[RestaurantMenuItemResponse]:
-    query = select(RestaurantMenuItem).where(RestaurantMenuItem.is_available.is_(True))
+    query = select(RestaurantMenuItem).where(
+        RestaurantMenuItem.is_available.is_(True), RestaurantMenuItem.archived.is_(False)
+    )
     if vendor_id:
         query = query.where(RestaurantMenuItem.vendor_id == vendor_id)
     rows = db.scalars(query.order_by(RestaurantMenuItem.created_at.desc()).limit(limit)).all()
@@ -387,6 +400,7 @@ def create_restaurant_menu_item(
         options=[{"name": option.name, "price": option.price} for option in payload.options],
         estimated_prep_minutes=payload.estimated_prep_minutes,
         is_available=True,
+        category=restaurant_service.clean_category(payload.category),
     )
     db.add(menu_item)
     db.commit()
@@ -401,7 +415,7 @@ def create_restaurant_menu_item(
 def list_seller_restaurant_menu(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_seller_user)],
-    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    limit: Annotated[int, Query(ge=1, le=300)] = 300,
 ) -> list[RestaurantMenuItemResponse]:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -411,11 +425,10 @@ def list_seller_restaurant_menu(
     vendor_name = vendor.name if vendor else "Restaurant"
     rows = db.scalars(
         select(RestaurantMenuItem)
-        .where(RestaurantMenuItem.vendor_id == profile.vendor_id)
-        .order_by(RestaurantMenuItem.updated_at.desc(), RestaurantMenuItem.created_at.desc())
+        .where(RestaurantMenuItem.vendor_id == profile.vendor_id, RestaurantMenuItem.archived.is_(False))
         .limit(limit)
     ).all()
-    return [_menu_response(row, vendor_name) for row in rows]
+    return [_menu_response(row, vendor_name) for row in sorted(rows, key=_menu_sort_key)]
 
 
 @router.patch("/seller/menu/{menu_item_id}", response_model=RestaurantMenuItemResponse)
@@ -443,6 +456,102 @@ def update_seller_restaurant_menu_availability(
     vendor = db.get(Vendor, profile.vendor_id)
     vendor_name = vendor.name if vendor else "Restaurant"
     return _menu_response(menu_item, vendor_name)
+
+
+def _owned_menu_item(db: Session, user: User, menu_item_id: str) -> tuple[SellerProfile, RestaurantMenuItem]:
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == user.id))
+    if profile is None:
+        raise NotFoundError("Seller profile not found")
+    menu_item = db.get(RestaurantMenuItem, menu_item_id)
+    if menu_item is None or menu_item.vendor_id != profile.vendor_id or menu_item.archived:
+        raise NotFoundError("Menu item not found")
+    return profile, menu_item
+
+
+@router.put("/seller/menu/{menu_item_id}", response_model=RestaurantMenuItemResponse)
+def update_seller_restaurant_menu_item(
+    menu_item_id: str,
+    payload: RestaurantMenuUpdateRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> RestaurantMenuItemResponse:
+    """Modifier un plat (nom, prix, photo, rubrique, options, epuise...)."""
+    enforce_csrf(request)
+    profile, menu_item = _owned_menu_item(db, current_user, menu_item_id)
+    data = payload.model_dump(exclude_unset=True)
+    if "tags" in data:
+        data["tags"] = [tag.strip() for tag in data["tags"] if tag.strip()][:5]
+    if "options" in data:
+        data["options"] = [{"name": option["name"].strip(), "price": float(option["price"])} for option in data["options"]]
+    if "category" in data:
+        data["category"] = restaurant_service.clean_category(data["category"])
+    for key, value in data.items():
+        setattr(menu_item, key, value)
+    db.commit()
+    db.refresh(menu_item)
+    _invalidate_public_marketplace_cache()
+    vendor = db.get(Vendor, profile.vendor_id)
+    return _menu_response(menu_item, vendor.name if vendor else "Restaurant")
+
+
+@router.delete("/seller/menu/{menu_item_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_seller_restaurant_menu_item(
+    menu_item_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> None:
+    """Supprimer un plat du menu (garde en archive pour l'historique des commandes)."""
+    enforce_csrf(request)
+    _profile, menu_item = _owned_menu_item(db, current_user, menu_item_id)
+    menu_item.archived = True
+    menu_item.is_available = False
+    db.commit()
+    _invalidate_public_marketplace_cache()
+
+
+def _settings_response(profile: SellerProfile) -> RestaurantSettingsResponse:
+    state = restaurant_service.open_state(profile.weekly_hours, bool(profile.orders_paused))
+    return RestaurantSettingsResponse(
+        weekly_hours=profile.weekly_hours,
+        orders_paused=bool(profile.orders_paused),
+        is_open=state.is_open,
+        open_label=state.label,
+    )
+
+
+@router.get("/seller/settings", response_model=RestaurantSettingsResponse)
+def get_restaurant_settings(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> RestaurantSettingsResponse:
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        raise NotFoundError("Seller profile not found")
+    return _settings_response(profile)
+
+
+@router.put("/seller/settings", response_model=RestaurantSettingsResponse)
+def update_restaurant_settings(
+    payload: RestaurantSettingsSchema,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> RestaurantSettingsResponse:
+    """Horaires d'ouverture et pause des commandes (« trop de commandes »)."""
+    enforce_csrf(request)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        raise NotFoundError("Seller profile not found")
+    raw = None
+    if payload.weekly_hours is not None:
+        raw = {day: (slot.model_dump() if slot else None) for day, slot in payload.weekly_hours.items()}
+    profile.weekly_hours = restaurant_service.normalize_weekly_hours(raw)
+    profile.orders_paused = payload.orders_paused
+    db.commit()
+    _invalidate_public_marketplace_cache()
+    return _settings_response(profile)
 
 
 def _restaurant_fee_snapshot(order: RestaurantOrder) -> dict[str, float]:
@@ -564,6 +673,9 @@ def create_restaurant_order(
     )
     if not _is_public_restaurant_vendor(vendor, profile):
         raise NotFoundError("Restaurant not found")
+    state = restaurant_service.open_state(getattr(profile, "weekly_hours", None), bool(getattr(profile, "orders_paused", False)))
+    if not state.is_open:
+        raise ValidationDomainError(f"Ce restaurant ne prend pas de commande pour le moment ({state.label}).")
 
     menu_ids = [line.menu_item_id for line in payload.items]
     menu_rows = db.scalars(
@@ -575,6 +687,9 @@ def create_restaurant_order(
     menu_map = {row.id: row for row in menu_rows}
     if len(menu_map) != len(set(menu_ids)):
         raise ValidationDomainError("One or more menu items are invalid for this restaurant")
+    for row in menu_rows:
+        if row.archived or not row.is_available or row.sold_out:
+            raise ValidationDomainError(f"« {row.name} » n'est plus disponible. Retirez-le de votre commande.")
 
     settings_row = _get_or_create_settings(db)
     delivery_fee = float(settings_row.default_delivery_fee or 0)
@@ -614,7 +729,9 @@ def create_restaurant_order(
     items_subtotal = 0.0
     for line in payload.items:
         menu_item = menu_map[line.menu_item_id]
-        options_total = sum(option.price for option in line.selected_options)
+        # Prix des options relus dans le menu : le prix envoye par le client est ignore.
+        options = restaurant_service.priced_options(menu_item.options, [option.name for option in line.selected_options])
+        options_total = sum(option["price"] for option in options)
         unit_price = menu_item.base_price + options_total
         subtotal = unit_price * line.quantity
         items_subtotal += subtotal
@@ -622,7 +739,7 @@ def create_restaurant_order(
             RestaurantOrderItem(
                 menu_item_id=line.menu_item_id,
                 quantity=line.quantity,
-                selected_options=[{"name": option.name, "price": option.price} for option in line.selected_options],
+                selected_options=options,
                 customer_note=getattr(line, "customer_note", None),
                 unit_price=unit_price,
                 subtotal=subtotal,
@@ -698,6 +815,7 @@ def update_seller_restaurant_order_status(
         raise NotFoundError("Order not found")
     if order.payment_status != "paid":
         raise ValidationDomainError("Paiement non confirme: impossible de mettre a jour le statut.")
+    restaurant_service.check_transition(order.status, payload.status)
 
     if order.status != payload.status:
         order_events.notify_order_status(db, order, payload.status)

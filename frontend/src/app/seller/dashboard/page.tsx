@@ -3,12 +3,16 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Clock3, Hotel, PlusCircle, Settings2, UtensilsCrossed } from "lucide-react";
+import { Hotel, PlusCircle, Settings2 } from "lucide-react";
 
-import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { SingleMediaField } from "@/components/seller/MediaFields";
+import { RestaurantKitchen } from "@/components/seller/restaurant/RestaurantKitchen";
+import { RestaurantKpis } from "@/components/seller/restaurant/RestaurantKpis";
+import { RestaurantMenuManager, SELLER_MENU_KEY } from "@/components/seller/restaurant/RestaurantMenuManager";
+import { RestaurantReservations } from "@/components/seller/restaurant/RestaurantReservations";
+import { RestaurantSettingsPanel } from "@/components/seller/restaurant/RestaurantSettingsPanel";
 import { SellerKpis } from "@/components/seller/SellerKpis";
 import { SellerOrderList } from "@/components/seller/SellerOrderList";
 import { SellerProductList } from "@/components/seller/SellerProductList";
@@ -22,13 +26,9 @@ import { deleteMyAccount } from "@/services/auth-service";
 import { notifyLocalOrderEvent } from "@/services/notification-service";
 import { listCatalogCategories } from "@/services/catalog-service";
 import {
-  createRestaurantMenuItem,
   listSellerRestaurantMenu,
   listSellerRestaurantOrders,
   listSellerRestaurantReservations,
-  updateSellerRestaurantMenuAvailability,
-  updateSellerRestaurantOrderStatus,
-  updateSellerRestaurantReservationStatus,
 } from "@/services/restaurant-service";
 import {
   createSellerProduct,
@@ -76,16 +76,6 @@ export default function SellerDashboardPage() {
     description: "",
     main_image_url: "",
   });
-  const [dishForm, setDishForm] = useState({
-    name: "",
-    description: "",
-    image_url: "",
-    base_price: "",
-    prep: "20",
-    tags: "Chaud,Populaire",
-    options: "Boisson:500,Sauce pimentee:250",
-  });
-
   const [tab, setTab] = useState<SellerTab>("accueil");
   useEffect(() => {
     const fromHash = () => {
@@ -140,7 +130,7 @@ export default function SellerDashboardPage() {
     refetchInterval: 5000,
   });
   const { data: sellerMenu = [] } = useQuery({
-    queryKey: ["seller-restaurant-menu-dashboard"],
+    queryKey: SELLER_MENU_KEY,
     queryFn: listSellerRestaurantMenu,
     enabled: showRestaurantTools,
   });
@@ -287,53 +277,6 @@ export default function SellerDashboardPage() {
     onError: () => setStatus("Erreur lors de l'ajout du produit."),
   });
 
-  const dishMutation = useMutation({
-    mutationFn: createRestaurantMenuItem,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["seller-restaurant-menu-dashboard"] });
-      setStatus("Plat restaurant publie.");
-    },
-    onError: () => setStatus("Erreur publication du plat."),
-  });
-
-  const menuAvailabilityMutation = useMutation({
-    mutationFn: ({ menuItemId, isAvailable }: { menuItemId: string; isAvailable: boolean }) =>
-      updateSellerRestaurantMenuAvailability(menuItemId, isAvailable),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["seller-restaurant-menu-dashboard"] });
-      setStatus("Disponibilite du plat mise à jour.");
-    },
-    onError: () => setStatus("Erreur lors de la mise à jour du menu."),
-  });
-
-  const orderStatusMutation = useMutation({
-    mutationFn: ({
-      orderId,
-      status,
-    }: {
-      orderId: string;
-      status: "commande" | "preparation" | "livraison" | "recu";
-    }) => updateSellerRestaurantOrderStatus(orderId, status),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["seller-restaurant-orders"] });
-      setStatus("Commande restaurant mise à jour.");
-    },
-  });
-
-  const reservationStatusMutation = useMutation({
-    mutationFn: ({
-      reservationId,
-      status,
-    }: {
-      reservationId: string;
-      status: "pending" | "confirmed" | "declined";
-    }) => updateSellerRestaurantReservationStatus(reservationId, status),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["seller-restaurant-reservations"] });
-      setStatus("Reservation restaurant mise à jour.");
-    },
-  });
-
   const hotelBookingStatusMutation = useMutation({
     mutationFn: ({
       bookingId,
@@ -363,29 +306,9 @@ export default function SellerDashboardPage() {
     deleteAccountMutation.mutate({ password: deletePassword });
   }
 
-  const parseOptions = (value: string): Array<{ name: string; price: number }> =>
-    value
-      .split(",")
-      .map((entry) => entry.trim())
-      .filter(Boolean)
-      .map((entry) => {
-        const [name, priceText] = entry.split(":");
-        return { name: (name || "").trim(), price: Number(priceText || 0) };
-      })
-      .filter((entry) => entry.name && Number.isFinite(entry.price));
-
   const [showDeleteZone, setShowDeleteZone] = useState(false);
 
   const normalizeImageInput = (raw: string): string | undefined => normalizeImageInputForApi(raw);
-
-  function nextOrderStep(current: string): { label: string; next: "commande" | "preparation" | "livraison" | "recu" } | null {
-    const map: Record<string, { label: string; next: "commande" | "preparation" | "livraison" | "recu" }> = {
-      commande: { label: "Préparer la commande", next: "preparation" },
-      preparation: { label: "Remise au livreur", next: "livraison" },
-      livraison: { label: "Marquer livrée", next: "recu" },
-    };
-    return map[current] ?? null;
-  }
 
   const dashboardTitle =
     sellerMode === "restaurant"
@@ -493,7 +416,7 @@ export default function SellerDashboardPage() {
                 tab === item.key ? "border-brand-600 text-ink-900" : "border-transparent text-ink-600 hover:text-ink-900"
               }`}
             >
-              {item.label}
+              {item.key === "produits" && showRestaurantTools && !showProductTools ? "Menu" : item.label}
             </button>
           ))}
         </div>
@@ -502,16 +425,17 @@ export default function SellerDashboardPage() {
       {tab === "accueil" ? (
         <>
           {showProductTools ? <SellerKpis orders={shopOrders} inventory={inventory} /> : null}
+          {showRestaurantTools ? <RestaurantKpis orders={restaurantOrders} menu={sellerMenu} /> : null}
           <div className="grid gap-2 sm:grid-cols-3">
             <Button type="button" size="lg" onClick={() => openTab("ajouter")}>
               <PlusCircle className="h-4 w-4" />
-              Ajouter un produit
+              {showRestaurantTools && !showProductTools ? "Ajouter un plat" : "Ajouter un produit"}
             </Button>
             <Button type="button" size="lg" variant="outline" onClick={() => openTab("commandes")}>
               Voir mes commandes
             </Button>
             <Button type="button" size="lg" variant="outline" onClick={() => openTab("produits")}>
-              Gérer mes produits
+              {showRestaurantTools && !showProductTools ? "Gérer mon menu" : "Gérer mes produits"}
             </Button>
           </div>
           <p className="text-sm text-ink-600">
@@ -526,6 +450,8 @@ export default function SellerDashboardPage() {
           </p>
         </>
       ) : null}
+
+      {tab === "reglages" && showRestaurantTools ? <RestaurantSettingsPanel /> : null}
 
       {tab === "reglages" && (profile?.storefront_tier === "premium" ||
       profile?.activity_type === "enterprise" ||
@@ -693,157 +619,11 @@ export default function SellerDashboardPage() {
           </article>
         ) : null}
 
-        {tab === "ajouter" && showRestaurantTools ? (
-          <article className="premium-card border border-slate-200 bg-white p-6">
-            <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-              <UtensilsCrossed className="h-5 w-5 text-brand-600" />
-              Ajouter un plat ou une boisson
-            </h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <Input
-                value={dishForm.name}
-                onChange={(event) => setDishForm((prev) => ({ ...prev, name: event.target.value }))}
-                placeholder="Nom du plat"
-              />
-              <Input
-                value={dishForm.base_price}
-                onChange={(event) => setDishForm((prev) => ({ ...prev, base_price: event.target.value }))}
-                placeholder="Prix de base XOF"
-                type="number"
-              />
-              <Input
-                value={dishForm.description}
-                onChange={(event) => setDishForm((prev) => ({ ...prev, description: event.target.value }))}
-                placeholder="Description"
-              />
-              <SingleMediaField
-                label="Photo du plat"
-                value={dishForm.image_url}
-                onChange={(value) => setDishForm((prev) => ({ ...prev, image_url: value }))}
-                emptyMessage="Choisis la photo du plat depuis la galerie."
-              />
-              <Input
-                value={dishForm.tags}
-                onChange={(event) => setDishForm((prev) => ({ ...prev, tags: event.target.value }))}
-                placeholder="Tags (Chaud,Populaire,Promo)"
-              />
-              <Input
-                value={dishForm.prep}
-                onChange={(event) => setDishForm((prev) => ({ ...prev, prep: event.target.value }))}
-                placeholder="Preparation (minutes)"
-                type="number"
-              />
-              <Input
-                value={dishForm.options}
-                onChange={(event) => setDishForm((prev) => ({ ...prev, options: event.target.value }))}
-                placeholder="Options format Nom:Prix,Nom:Prix"
-                className="sm:col-span-2"
-              />
-            </div>
-            <Button
-              type="button"
-              className="primary-glow-btn mt-4 bg-brand-600 text-white hover:bg-brand-700"
-              onClick={() =>
-                dishMutation.mutate({
-                  name: dishForm.name,
-                  description: dishForm.description || undefined,
-                  image_url: normalizeImageInput(dishForm.image_url),
-                  base_price: Number(dishForm.base_price || 0),
-                  currency: "XOF",
-                  tags: dishForm.tags
-                    .split(",")
-                    .map((entry) => entry.trim())
-                    .filter(Boolean),
-                  options: parseOptions(dishForm.options),
-                  estimated_prep_minutes: Number(dishForm.prep || 20),
-                })
-              }
-            >
-              Publier au menu
-            </Button>
-          </article>
-        ) : null}
+        {tab === "ajouter" && showRestaurantTools ? <RestaurantMenuManager startWithForm /> : null}
 
-        {tab === "produits" && showRestaurantTools ? (
-          <article className="premium-card border border-slate-200 bg-white p-6">
-            <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-              <UtensilsCrossed className="h-5 w-5 text-brand-600" />
-              Menu publié
-            </h2>
-            <div className="mt-4 space-y-3">
-              {sellerMenu.map((item) => (
-                <div key={item.id} className="rounded-2xl border border-slate-200 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{item.name}</p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {item.tags.join(" - ") || "Sans tag"} | {formatXOF(item.base_price)}
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      className={
-                        item.is_available
-                          ? "border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
-                          : "border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                      }
-                      onClick={() =>
-                        menuAvailabilityMutation.mutate({
-                          menuItemId: item.id,
-                          isAvailable: !item.is_available,
-                        })
-                      }
-                    >
-                      {item.is_available ? "Retirer du menu" : "Remettre au menu"}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              {!sellerMenu.length ? (
-                <p className="text-sm text-slate-500">Aucun plat ou boisson publie pour le moment.</p>
-              ) : null}
-            </div>
-          </article>
-        ) : null}
+        {tab === "produits" && showRestaurantTools ? <RestaurantMenuManager /> : null}
 
-        {tab === "commandes" && showRestaurantTools ? (
-          <article className="premium-card border border-slate-200 bg-white p-6">
-            <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-              <Clock3 className="h-5 w-5 text-brand-600" />
-              Commandes restaurant en temps reel
-            </h2>
-            <div className="mt-4 space-y-3">
-              {restaurantOrders.map((order) => {
-                const next = nextOrderStep(order.status);
-                return (
-                  <div key={order.id} className="rounded-xl border border-slate-200 p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{order.customer_name} — {order.customer_phone}</p>
-                        <p className="mt-0.5 text-xs text-slate-500">{order.items.map((it) => `${it.dish_name} x${it.quantity}`).join(", ")}</p>
-                        <p className="mt-0.5 text-xs text-slate-500">{order.delivery_address} | {order.payment_mode?.toUpperCase()}</p>
-                        <AnimatedPrice value={order.total_amount} className="mt-1 text-sm font-semibold text-brand-600" />
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600">
-                          {order.status === "commande" ? "Nouvelle" : order.status === "payment_pending" ? "Paiement en attente" : order.status === "preparation" ? "En preparation" : order.status === "livraison" ? "En livraison" : "Livree"}
-                        </span>
-                        {next && order.payment_status === "paid" ? (
-                          <Button size="sm" className="primary-glow-btn bg-brand-600 text-white" onClick={() => orderStatusMutation.mutate({ orderId: order.id, status: next.next })}>
-                            {next.label}
-                          </Button>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              {!restaurantOrders.length ? (
-                <p className="text-sm text-slate-500">Aucune commande restaurant en cours.</p>
-              ) : null}
-            </div>
-          </article>
-        ) : null}
+        {tab === "commandes" && showRestaurantTools ? <RestaurantKitchen orders={restaurantOrders} /> : null}
 
         {tab === "commandes" && showProductTools ? (
           <SellerOrderList
@@ -853,49 +633,7 @@ export default function SellerDashboardPage() {
           />
         ) : null}
 
-        {tab === "commandes" && showRestaurantReservationTools ? (
-          <article className="premium-card border border-slate-200 bg-white p-6">
-            <h2 className="luxury-title inline-flex items-center gap-2 text-xl font-semibold">
-              <CalendarClock className="h-5 w-5 text-brand-600" />
-              Reservations restaurant
-            </h2>
-            <div className="mt-4 space-y-3">
-              {restaurantReservations.map((reservation) => (
-                <div key={reservation.id} className="rounded-2xl border border-slate-200 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900">
-                      {reservation.customer_name} - {reservation.customer_phone}
-                    </p>
-                    <p className="text-xs text-slate-500">{reservation.status}</p>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {reservation.guest_count} personne(s) | {formatDateTime(reservation.reservation_at)}
-                  </p>
-                  {reservation.note ? (
-                    <p className="mt-1 text-xs text-slate-500">Note: {reservation.note}</p>
-                  ) : null}
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {reservation.status !== "confirmed" ? (
-                      <Button size="sm" className="border border-emerald-300 bg-emerald-50 text-emerald-700"
-                        onClick={() => reservationStatusMutation.mutate({ reservationId: reservation.id, status: "confirmed" })}>
-                        Confirmer
-                      </Button>
-                    ) : null}
-                    {reservation.status !== "declined" ? (
-                      <Button size="sm" className="border border-rose-300 bg-rose-50 text-rose-700"
-                        onClick={() => reservationStatusMutation.mutate({ reservationId: reservation.id, status: "declined" })}>
-                        Refuser
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-              {!restaurantReservations.length ? (
-                <p className="text-sm text-slate-500">Aucune reservation restaurant pour le moment.</p>
-              ) : null}
-            </div>
-          </article>
-        ) : null}
+        {tab === "commandes" && showRestaurantReservationTools ? <RestaurantReservations reservations={restaurantReservations} /> : null}
 
         {tab === "commandes" && showHotelBookingTools ? (
           <article className="premium-card border border-slate-200 bg-white p-6">

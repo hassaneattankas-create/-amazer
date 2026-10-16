@@ -242,6 +242,12 @@ def _bootstrap_database_if_needed() -> None:
         "CREATE INDEX IF NOT EXISTS ix_affiliate_earnings_source_user_id ON affiliate_earnings (source_user_id)",
         "CREATE INDEX IF NOT EXISTS ix_affiliate_earnings_payout_id ON affiliate_earnings (payout_id)",
         "CREATE INDEX IF NOT EXISTS ix_affiliate_accounts_device_hash ON affiliate_accounts (device_hash)",
+        "ALTER TABLE restaurant_menu_items ADD COLUMN IF NOT EXISTS category VARCHAR(60) NOT NULL DEFAULT 'Plats'",
+        "ALTER TABLE restaurant_menu_items ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE restaurant_menu_items ADD COLUMN IF NOT EXISTS sold_out BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE restaurant_menu_items ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS weekly_hours JSONB",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS orders_paused BOOLEAN NOT NULL DEFAULT FALSE",
         (
             "CREATE TABLE IF NOT EXISTS media_files ("
             "id VARCHAR(36) PRIMARY KEY, "

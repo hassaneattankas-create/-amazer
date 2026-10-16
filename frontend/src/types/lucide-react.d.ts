@@ -78,6 +78,12 @@ declare module "lucide-react" {
   export const Package: LucideIcon;
   export const PenSquare: LucideIcon;
   export const PlusCircle: LucideIcon;
+  export const Plus: LucideIcon;
+  export const Pause: LucideIcon;
+  export const Play: LucideIcon;
+  export const ChefHat: LucideIcon;
+  export const Bike: LucideIcon;
+  export const Timer: LucideIcon;
   export const QrCode: LucideIcon;
   export const Rocket: LucideIcon;
   export const ScanLine: LucideIcon;

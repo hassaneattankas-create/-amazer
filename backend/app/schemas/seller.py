@@ -284,6 +284,9 @@ class SellerStorefrontResponse(BaseModel):
     is_verified: bool
     products: list[SellerStorefrontProductResponse]
     restaurant_menu: list[RestaurantMenuItemResponse]
+    # Restaurant : ouvert maintenant ? (horaires + pause) et texte court pour le client.
+    restaurant_is_open: bool = True
+    restaurant_open_label: str = "Ouvert"
 
 
 class HotelBookingCreateRequest(BaseModel):

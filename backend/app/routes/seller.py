@@ -22,7 +22,7 @@ from app.models.hospitality import HotelBooking, RestaurantReservation
 from app.models.order import Order, OrderItem
 from app.models.price_history import PriceHistory
 from app.models.product import Price, Product
-from app.services import promo_service
+from app.services import promo_service, restaurant_service
 from app.models.restaurant import RestaurantMenuItem
 from app.models.seller_profile import SellerProfile
 from app.models.seller_subscription_payment import SellerSubscriptionPayment
@@ -584,10 +584,15 @@ def _build_public_storefront(vendor_id: str, db: Session) -> SellerStorefrontRes
     ).all()
     restaurant_menu = db.scalars(
         select(RestaurantMenuItem)
-        .where(RestaurantMenuItem.vendor_id == vendor_id, RestaurantMenuItem.is_available.is_(True))
-        .order_by(RestaurantMenuItem.updated_at.desc())
-        .limit(120)
+        .where(
+            RestaurantMenuItem.vendor_id == vendor_id,
+            RestaurantMenuItem.is_available.is_(True),
+            RestaurantMenuItem.archived.is_(False),
+        )
+        .order_by(RestaurantMenuItem.category, RestaurantMenuItem.sort_order, RestaurantMenuItem.name)
+        .limit(200)
     ).all()
+    open_state = restaurant_service.open_state(getattr(profile, "weekly_hours", None), bool(getattr(profile, "orders_paused", False)))
     finance = build_effective_seller_finance_settings(get_or_create_global_settings(db), profile)
 
     return SellerStorefrontResponse(
@@ -646,9 +651,14 @@ def _build_public_storefront(vendor_id: str, db: Session) -> SellerStorefrontRes
                 options=list(item.options or []),
                 estimated_prep_minutes=item.estimated_prep_minutes,
                 is_available=item.is_available,
+                category=item.category or "Plats",
+                sort_order=int(item.sort_order or 0),
+                sold_out=bool(item.sold_out),
             )
             for item in restaurant_menu
         ],
+        restaurant_is_open=open_state.is_open,
+        restaurant_open_label=open_state.label,
     )
 
 

@@ -59,6 +59,9 @@ class SellerProfile(Base):
     subscription_paid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     subscription_last_payment_reference: Mapped[str | None] = mapped_column(String(180), nullable=True)
     accepts_table_reservations: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Restaurant : horaires structures {jour: {open, close} | None} et pause des commandes (mode « occupe »).
+    weekly_hours: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    orders_paused: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     accepts_hotel_bookings: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # Premium Entreprise (sur devis): debloque import/export, reservations et calendrier d'un coup.
     is_enterprise: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

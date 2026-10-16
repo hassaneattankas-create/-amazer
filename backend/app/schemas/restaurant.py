@@ -22,6 +22,44 @@ class RestaurantMenuCreateRequest(BaseModel):
     tags: list[str] = Field(default_factory=list, max_length=5)
     options: list[MenuOptionSchema] = Field(default_factory=list, max_length=12)
     estimated_prep_minutes: int = Field(default=20, ge=5, le=120)
+    category: str | None = Field(default=None, max_length=60)
+
+
+class RestaurantMenuUpdateRequest(BaseModel):
+    """Modification d'un plat : seuls les champs envoyes changent."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    name: str | None = Field(default=None, min_length=2, max_length=160)
+    description: str | None = Field(default=None, max_length=1200)
+    image_url: str | None = Field(default=None, max_length=1024)
+    base_price: float | None = Field(default=None, gt=0)
+    tags: list[str] | None = Field(default=None, max_length=5)
+    options: list[MenuOptionSchema] | None = Field(default=None, max_length=12)
+    estimated_prep_minutes: int | None = Field(default=None, ge=5, le=120)
+    category: str | None = Field(default=None, max_length=60)
+    sort_order: int | None = Field(default=None, ge=0, le=10000)
+    is_available: bool | None = None
+    sold_out: bool | None = None
+
+
+class DayHoursSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    open: str = Field(pattern=r"^\d{2}:\d{2}$")
+    close: str = Field(pattern=r"^\d{2}:\d{2}$")
+
+
+class RestaurantSettingsSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    weekly_hours: dict[str, DayHoursSchema | None] | None = None
+    orders_paused: bool = False
+
+
+class RestaurantSettingsResponse(RestaurantSettingsSchema):
+    is_open: bool
+    open_label: str
 
 
 class RestaurantMenuItemResponse(BaseModel):
@@ -39,6 +77,9 @@ class RestaurantMenuItemResponse(BaseModel):
     options: list[dict[str, Any]]
     estimated_prep_minutes: int
     is_available: bool
+    category: str = "Plats"
+    sort_order: int = 0
+    sold_out: bool = False
 
 
 class RestaurantMenuAvailabilityUpdateRequest(BaseModel):
@@ -106,7 +147,7 @@ class RestaurantOrderResponse(BaseModel):
 class RestaurantOrderStatusUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: str = Field(pattern="^(commande|preparation|livraison|recu)$")
+    status: str = Field(pattern="^(commande|preparation|livraison|recu|annulee)$")
 
 
 class RestaurantStorefrontResponse(BaseModel):

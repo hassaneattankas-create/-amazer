@@ -244,7 +244,7 @@ function ProductEditor({
           <input inputMode="numeric" className={fieldClass} value={draft.stock} onChange={(e) => set("stock")(digits(e.target.value))} />
         </label>
       </div>
-      <fieldset className="space-y-2 rounded-field border border-border bg-card p-3">
+      <fieldset className="min-w-0 space-y-2 rounded-field border border-border bg-card p-3">
         <legend className="px-1 text-sm font-semibold text-ink-900">Promotion</legend>
         {item.promo_price ? (
           <p className="text-sm text-ink-700">
