@@ -100,13 +100,14 @@ export function ProductDetailView({ productId }: { productId: string }) {
   const isOnPromo = originalPrice !== null && originalPrice > best.amount;
   const currentImage = gallery[activeImage] ?? null;
 
+  const isDigital = Boolean(product.specs?.is_digital);
   const addToCart = () => {
-    addItem({ productId: product.id, name: product.name, offersSnapshot: [best], quantity: 1 });
+    addItem({ productId: product.id, name: product.name, offersSnapshot: [best], quantity: 1, isDigital });
     setCartMessage("Ajouté au panier.");
     window.setTimeout(() => setCartMessage(""), 2400);
   };
   const buyNow = () => {
-    addItem({ productId: product.id, name: product.name, offersSnapshot: [best], quantity: 1 });
+    addItem({ productId: product.id, name: product.name, offersSnapshot: [best], quantity: 1, isDigital });
     router.push("/cart");
   };
 
@@ -261,7 +262,9 @@ export function ProductDetailView({ productId }: { productId: string }) {
             </li>
             <li className="flex items-center gap-2">
               <Truck className="h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
-              Livraison à Niamey, frais affichés avant la commande
+              {isDigital
+                ? "Produit numérique : aucun frais de livraison, le vendeur vous l'envoie après paiement"
+                : "Livraison à Niamey, frais affichés avant la commande"}
             </li>
             <li className="text-xs text-ink-600">
               Protégé seulement si vous payez sur AMAZER et êtes livré par un livreur AMAZER.{" "}

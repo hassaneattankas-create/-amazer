@@ -23,6 +23,7 @@ from app.models.hospitality import HotelBooking, RestaurantReservation
 from app.models.order import Order, OrderItem
 from app.models.price_history import PriceHistory
 from app.models.product import Price, Product
+from app.services.image_service import compress_image_to_limit
 from app.services import (
     hotel_service,
     promo_service,
@@ -659,6 +660,7 @@ def _build_public_storefront(vendor_id: str, db: Session) -> SellerStorefrontRes
                 amount=row.amount,
                 currency=row.currency,
                 main_image_url=_resolve_product_main_image(row.product),
+                is_digital=bool((row.product.specs or {}).get("is_digital")),
             )
             for row in products
         ],
@@ -720,13 +722,13 @@ def create_product_listing(
 
     product = Product(
         name=payload.name,
-        brand=payload.brand,
+        brand=payload.brand.strip() or profile.business_name or "AMAZER",
         description=payload.description,
         main_image_url=payload.main_image_url,
         # Sans choix du vendeur, on range le produit automatiquement (sinon il n'apparait dans aucun filtre).
         category_id=payload.category_id or guess_category_id(db, payload.name, payload.description),
         # Code-barres : permet au client de retrouver le produit en le scannant depuis l'accueil.
-        specs={"barcode": payload.barcode} if payload.barcode else {},
+        specs={**({"barcode": payload.barcode} if payload.barcode else {}), **({"is_digital": True} if payload.is_digital else {})},
     )
     db.add(product)
     db.flush()
@@ -943,32 +945,6 @@ def _clean_photo_product_name(filename: str | None) -> str:
     return base[:200]
 
 
-def _compress_image_to_limit(raw: bytes, *, max_bytes: int = 480_000) -> bytes:
-    """Compresse/redimensionne une image (JPEG) pour tenir sous la limite de stockage
-    (512 KB en base). Les photos brutes de telephone passent ainsi sans rejet.
-    Si Pillow est indisponible, on renvoie l'image telle quelle (le stockage rejettera
-    proprement les images trop lourdes) afin de ne jamais bloquer le demarrage."""
-    try:
-        from PIL import Image
-    except Exception:
-        return raw
-
-    image = Image.open(io.BytesIO(raw))
-    if image.mode != "RGB":
-        image = image.convert("RGB")
-    if max(image.size) > 1280:
-        image.thumbnail((1280, 1280))
-    for quality in (85, 75, 65, 55, 45):
-        buffer = io.BytesIO()
-        image.save(buffer, format="JPEG", quality=quality, optimize=True)
-        if buffer.tell() <= max_bytes:
-            return buffer.getvalue()
-    image.thumbnail((900, 900))
-    buffer = io.BytesIO()
-    image.save(buffer, format="JPEG", quality=45, optimize=True)
-    return buffer.getvalue()
-
-
 async def _store_image_bytes(data: bytes) -> str:
     """Stocke des octets d'image via le provider media actif et renvoie l'URL publique."""
     from starlette.datastructures import Headers
@@ -1023,7 +999,7 @@ async def import_product_photos(
             errors.append(f"{upload.filename or 'fichier'}: vide, ignore.")
             continue
         try:
-            data = _compress_image_to_limit(raw)
+            data = compress_image_to_limit(raw)
         except Exception:
             errors.append(f"{upload.filename or 'fichier'}: image illisible, ignore.")
             continue
@@ -1112,6 +1088,7 @@ def list_inventory(
                 promo_price=promo_price,
                 promo_until=promo_until,
                 regular_amount=promo_service.normal_price(row),
+                is_digital=bool((row.product.specs or {}).get("is_digital")),
             )
         )
     if dirty:
@@ -1273,7 +1250,7 @@ def update_inventory_item(
     if payload.product_name is not None:
         price.product.name = payload.product_name.strip()
     if payload.brand is not None:
-        price.product.brand = payload.brand.strip()
+        price.product.brand = payload.brand.strip() or price.product.brand
     if payload.category_id is not None:
         price.product.category_id = payload.category_id or None
     if payload.barcode is not None:
@@ -1283,6 +1260,11 @@ def update_inventory_item(
             specs.pop("barcode", None)
     if payload.description is not None:
         price.product.description = payload.description.strip() or None
+    if payload.is_digital is not None:
+        if payload.is_digital:
+            specs["is_digital"] = True
+        else:
+            specs.pop("is_digital", None)
     if payload.main_image_url is not None:
         price.product.main_image_url = _normalize_product_image_url(payload.main_image_url)
     if payload.stock_quantity is not None:
@@ -1354,6 +1336,7 @@ def update_inventory_item(
         promo_price=promo_price,
         promo_until=promo_until,
         regular_amount=promo_service.normal_price(price),
+        is_digital=bool((price.product.specs or {}).get("is_digital")),
     )
 
 

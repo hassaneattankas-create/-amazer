@@ -17,6 +17,7 @@ export type InventoryUpdate = {
   promo_amount?: number;
   promo_days?: number;
   clear_promo?: boolean;
+  is_digital?: boolean;
   main_image_url?: string;
   product_name?: string;
   brand?: string;
@@ -216,6 +217,7 @@ function ProductEditor({
     stock: String(item.stock_quantity),
     promo: item.promo_price ? String(item.promo_price) : "",
     days: "",
+    digital: Boolean(item.is_digital),
     image: item.main_image_url ?? "",
   });
   const [promoError, setPromoError] = useState("");
@@ -301,6 +303,10 @@ function ProductEditor({
         <textarea className={`${fieldClass} h-auto min-h-20 py-2`} value={draft.description} onChange={(e) => set("description")(e.target.value)} />
       </label>
       <SingleMediaField label="Photo" value={draft.image} onChange={set("image")} emptyMessage="Choisissez une photo" />
+      <label className="flex min-h-11 items-center gap-2 text-sm font-medium text-ink-800">
+        <input type="checkbox" className="h-5 w-5" checked={draft.digital} onChange={(e) => setDraft((prev) => ({ ...prev, digital: e.target.checked }))} />
+        Produit numérique : pas de frais de livraison
+      </label>
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
@@ -321,6 +327,7 @@ function ProductEditor({
               brand: draft.brand.trim() || undefined,
               description: draft.description.trim() || undefined,
               main_image_url: draft.image !== (item.main_image_url ?? "") ? normalizeImageInputForApi(draft.image) ?? "" : undefined,
+              ...(draft.digital !== Boolean(item.is_digital) ? { is_digital: draft.digital } : {}),
               ...(promo > 0 ? { promo_amount: promo, ...(draft.days ? { promo_days: Number(draft.days) } : {}) } : {}),
               ...(!promo && item.promo_price ? { clear_promo: true } : {}),
             });

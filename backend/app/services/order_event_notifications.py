@@ -118,7 +118,7 @@ def notify_welcome(db: Session, user_id: str, full_name: str | None) -> None:
         db,
         user_id,
         "Bienvenue sur AMAZER",
-        f"Bonjour {first}, votre compte est prêt. Achetez en toute confiance : paiement contrôlé et livraison suivie.".replace(
+        f"Bonjour {first}, votre compte est prêt. Achetez en toute confiance : paiement contrôlé et livraison suivie. Astuce : devenez affilié gratuitement dans « Affiliation » et gagnez de l'argent en partageant AMAZER.".replace(
             "Bonjour , ", "Bonjour, "
         ),
         f"welcome-{user_id}",

@@ -53,6 +53,7 @@ export const useCartStore = create<CartStoreState>()(
                       quantity: entry.quantity + quantity,
                       offersSnapshot: item.offersSnapshot,
                       resellerListingId: item.resellerListingId,
+                      isDigital: item.isDigital,
                     }
                   : entry
               ),
@@ -68,6 +69,7 @@ export const useCartStore = create<CartStoreState>()(
                 quantity,
                 offersSnapshot: item.offersSnapshot,
                 resellerListingId: item.resellerListingId,
+                isDigital: item.isDigital,
               },
             ],
           };

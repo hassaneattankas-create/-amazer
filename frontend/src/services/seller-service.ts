@@ -69,6 +69,7 @@ export async function updateSellerInventory(
     promo_amount?: number;
     promo_days?: number;
     clear_promo?: boolean;
+    is_digital?: boolean;
   },
 ): Promise<SellerInventoryItem> {
   const response = await api.patch<SellerInventoryItem>(

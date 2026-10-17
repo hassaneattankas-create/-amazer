@@ -451,6 +451,7 @@ def checkout(
     total = 0.0
     order_currency: str | None = None
     vendor_ids: set[str] = set()
+    shipped_vendor_ids: set[str] = set()
     for item in payload.items:
         price = db.scalar(
             select(Price)
@@ -478,6 +479,9 @@ def checkout(
         total += line_total
         validated_items.append((price, item.quantity, listing))
         vendor_ids.add(price.vendor_id)
+        # Produit numerique : pas de livraison. Un vendeur n'est facture que s'il a un article physique.
+        if not (getattr(price.product, "specs", None) or {}).get("is_digital"):
+            shipped_vendor_ids.add(price.vendor_id)
     encrypted_code: str | None = None
     code_hash: str | None = None
     payment_status = "pending"
@@ -494,7 +498,7 @@ def checkout(
         raise ValidationDomainError("Devise invalide pour cette commande")
 
     delivery_fee_per_vendor = _resolve_checkout_delivery_fee(db, payload.delivery_type, payload.district)
-    delivery_total = delivery_fee_per_vendor * len(vendor_ids)
+    delivery_total = delivery_fee_per_vendor * len(shipped_vendor_ids)
     items_subtotal = total
     settings_row = get_or_create_global_settings(db)
     commission_fee, service_fee = platform_commission_and_service_fee(

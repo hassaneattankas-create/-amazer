@@ -41,10 +41,10 @@ class LocalMediaStorage(MediaStorage):
                     break
                 size += len(chunk)
                 if size > max_bytes:
-                    raise ValidationDomainError("File too large")
+                    raise ValidationDomainError("Photo trop lourde. Choisissez une autre photo.")
                 handle.write(chunk)
         if size <= 0:
-            raise ValidationDomainError("Empty file")
+            raise ValidationDomainError("La photo est vide. Choisissez une autre photo.")
 
         base_url = get_settings().media_base_url.rstrip("/") or "/media"
         url = f"{base_url}/{filename}"
@@ -75,7 +75,7 @@ class DatabaseMediaStorage(MediaStorage):
                 break
             data += chunk
             if len(data) > self.MAX_BYTES:
-                raise ValidationDomainError("Image trop grande (max 512 KB)")
+                raise ValidationDomainError("Photo trop lourde. Choisissez une autre photo.")
 
         if not data:
             raise ValidationDomainError("Fichier vide")
@@ -134,9 +134,9 @@ class S3MediaStorage(MediaStorage):
         size_bytes = int(file.file.tell())
         file.file.seek(0)
         if size_bytes <= 0:
-            raise ValidationDomainError("Empty file")
+            raise ValidationDomainError("La photo est vide. Choisissez une autre photo.")
         if size_bytes > max_bytes:
-            raise ValidationDomainError("File too large")
+            raise ValidationDomainError("Photo trop lourde. Choisissez une autre photo.")
 
         try:
             self.client.upload_fileobj(
@@ -146,7 +146,7 @@ class S3MediaStorage(MediaStorage):
                 ExtraArgs={"ContentType": file.content_type or "application/octet-stream"},
             )
         except (BotoCoreError, ClientError):
-            raise ValidationDomainError("Media upload failed") from None
+            raise ValidationDomainError("Envoi de la photo impossible. Réessayez dans un instant.") from None
 
         return StoredMedia(
             filename=filename,

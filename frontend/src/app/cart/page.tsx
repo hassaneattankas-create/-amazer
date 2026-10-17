@@ -35,7 +35,9 @@ export default function CartPage() {
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryPhone, setDeliveryPhone] = useState("");
   // Sans adresse ni telephone, le livreur ne peut pas livrer : on les exige avant la commande.
-  const deliveryReady = deliveryAddress.trim().length >= 3 && deliveryPhone.replace(/\D/g, "").length >= 8;
+  // Panier 100 % numerique : pas de livraison, seul le telephone est demande (envoi du produit).
+  const allDigital = items.length > 0 && items.every((item) => item.isDigital);
+  const deliveryReady = (allDigital || deliveryAddress.trim().length >= 3) && deliveryPhone.replace(/\D/g, "").length >= 8;
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const { data: financeSettings } = useQuery({
     queryKey: ["public-finance-settings"],
@@ -116,7 +118,7 @@ export default function CartPage() {
         transaction_code: transactionCode || undefined,
         currency: "XOF",
         district: deliveryType === "standard" && district ? district : undefined,
-        delivery_address: deliveryAddress.trim(),
+        delivery_address: deliveryAddress.trim() || undefined,
         delivery_phone: deliveryPhone.trim(),
         affiliate_code: getActiveAffiliateCode(),
       });
@@ -237,8 +239,13 @@ export default function CartPage() {
           </article>
 
           <article className="rounded-card border border-border bg-card p-5">
-            <h2 className="text-lg font-semibold text-ink-900">Livraison</h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <h2 className="text-lg font-semibold text-ink-900">{allDigital ? "Réception" : "Livraison"}</h2>
+            {allDigital ? (
+              <p className="mt-2 rounded-field bg-surface-1 px-3 py-2 text-sm text-ink-800">
+                Produit numérique : aucun frais de livraison. Le vendeur vous l&apos;envoie (WhatsApp ou e-mail) après le paiement.
+              </p>
+            ) : null}
+            <div className={`mt-3 grid gap-3 sm:grid-cols-2 ${allDigital ? "hidden" : ""}`}>
               <button type="button" aria-pressed={deliveryType === "standard"} onClick={() => setDeliveryType("standard")} className={choiceClass(deliveryType === "standard")}>
                 <p className="font-semibold text-ink-900">Standard</p>
                 <p className="text-xs text-ink-600">Livraison à Niamey sous quelques heures</p>
@@ -256,7 +263,7 @@ export default function CartPage() {
                 <p className="text-xs text-ink-600">Livraison prioritaire en ville</p>
               </button>
             </div>
-            {deliveryType === "standard" && districtFees.length ? (
+            {!allDigital && deliveryType === "standard" && districtFees.length ? (
               <div className="mt-4">
                 <label htmlFor="delivery-district" className="text-sm font-medium text-ink-800">
                   Quartier de livraison
@@ -277,7 +284,7 @@ export default function CartPage() {
               </div>
             ) : null}
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="sm:col-span-2">
+              <div className={`sm:col-span-2 ${allDigital ? "hidden" : ""}`}>
                 <label htmlFor="delivery-address" className="text-sm font-medium text-ink-800">
                   Adresse de livraison
                 </label>

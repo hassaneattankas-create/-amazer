@@ -113,7 +113,8 @@ class SellerProductCreateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     name: str = Field(min_length=2, max_length=200)
-    brand: str = Field(min_length=1, max_length=120)
+    # Facultative : vide -> nom de la boutique.
+    brand: str = Field(default="", max_length=120)
     description: str | None = Field(default=None, max_length=2000)
     main_image_url: str | None = Field(default=None, max_length=1024)
     category_id: str | None = Field(default=None, max_length=36)
@@ -121,6 +122,8 @@ class SellerProductCreateRequest(BaseModel):
     amount: float = Field(gt=0)
     currency: str = Field(default="XOF", min_length=3, max_length=3)
     stock_quantity: int = Field(default=0, ge=0)
+    # Produit numerique (e-book, formation, code...) : aucun frais de livraison.
+    is_digital: bool = False
 class SellerProductCreateResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -147,6 +150,7 @@ class SellerInventoryItemResponse(BaseModel):
     promo_until: datetime | None = None
     # Prix normal (hors promo) : c'est lui qu'on modifie dans « Prix ».
     regular_amount: float | None = None
+    is_digital: bool = False
 
 
 class SellerInventoryUpdateRequest(BaseModel):
@@ -165,6 +169,7 @@ class SellerInventoryUpdateRequest(BaseModel):
     # Duree de la promo en jours (defaut 7) ; clear_promo retire la promo et remet le prix normal.
     promo_days: int | None = Field(default=None, ge=1, le=60)
     clear_promo: bool = False
+    is_digital: bool | None = None
 
 
 class SellerShopOrderItemResponse(BaseModel):
@@ -251,6 +256,7 @@ class SellerStorefrontProductResponse(BaseModel):
     amount: float
     currency: str
     main_image_url: str | None
+    is_digital: bool = False
 
 
 class SellerStorefrontResponse(BaseModel):

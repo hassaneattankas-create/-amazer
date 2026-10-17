@@ -26,4 +26,19 @@ describe("optimizeCart", () => {
     const result = optimizeCart([{ productId: "x", name: "Riz", quantity: 3, offersSnapshot: [offer("a", 5000, 1)] }]);
     expect(result.status).toBe("unavailable_item");
   });
+
+  it("ne facture pas de livraison pour une boutique dont tous les articles sont numériques", () => {
+    const digital = optimizeCart([{ productId: "e", name: "E-book", quantity: 1, offersSnapshot: [offer("a", 3000)], isDigital: true }], {
+      defaultShippingFee: 1500,
+    });
+    expect(digital.shippingFee).toBe(0);
+    const mixed = optimizeCart(
+      [
+        { productId: "e", name: "E-book", quantity: 1, offersSnapshot: [offer("a", 3000)], isDigital: true },
+        { productId: "r", name: "Riz", quantity: 1, offersSnapshot: [offer("a", 5000)] },
+      ],
+      { defaultShippingFee: 1500 }
+    );
+    expect(mixed.shippingFee).toBe(1500);
+  });
 });

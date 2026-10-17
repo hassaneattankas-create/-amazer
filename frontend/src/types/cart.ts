@@ -7,6 +7,8 @@ export type CartItem = {
   offersSnapshot: Offer[];
   /** Achat via la boutique d'un revendeur : le serveur relit le prix de revente. */
   resellerListingId?: string;
+  /** Produit numerique (e-book, formation, code...) : pas de frais de livraison. */
+  isDigital?: boolean;
 };
 
 export type OptimizedPlanItem = {

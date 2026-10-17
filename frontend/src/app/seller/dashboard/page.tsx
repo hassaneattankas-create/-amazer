@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { normalizeImageInputForApi } from "@/lib/image";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { toast } from "@/store/toast-store";
 import { deleteMyAccount } from "@/services/auth-service";
 import { notifyLocalOrderEvent } from "@/services/notification-service";
 import { listCatalogCategories } from "@/services/catalog-service";
@@ -62,7 +63,12 @@ export default function SellerDashboardPage() {
   const seenRestaurantOrderIdsRef = useRef<Set<string>>(new Set());
   const shopOrdersInitializedRef = useRef(false);
   const restaurantOrdersInitializedRef = useRef(false);
-  const [status, setStatus] = useState("");
+  // Chaque message (succes ou erreur) s'affiche en haut de l'ecran, bien visible sur telephone.
+  const setStatus = (text: string) => {
+    if (!text) return;
+    if (/erreur|impossible|échec|echec|invalide|indiquez|refus|trop/i.test(text)) toast.error(text);
+    else toast.success(text);
+  };
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteStatus, setDeleteStatus] = useState("");
   const [productForm, setProductForm] = useState({
@@ -73,6 +79,7 @@ export default function SellerDashboardPage() {
     stock_quantity: "1",
     description: "",
     main_image_url: "",
+    is_digital: false,
   });
   const [tab, setTab] = useState<SellerTab>("accueil");
   useEffect(() => {
@@ -160,6 +167,7 @@ export default function SellerDashboardPage() {
       promo_amount,
       promo_days,
       clear_promo,
+      is_digital,
       main_image_url,
       product_name,
       brand,
@@ -172,6 +180,7 @@ export default function SellerDashboardPage() {
       promo_amount?: number;
       promo_days?: number;
       clear_promo?: boolean;
+      is_digital?: boolean;
       main_image_url?: string;
       product_name?: string;
       brand?: string;
@@ -184,6 +193,7 @@ export default function SellerDashboardPage() {
         promo_amount,
         promo_days,
         clear_promo,
+        is_digital,
         main_image_url,
         product_name,
         brand,
@@ -202,7 +212,7 @@ export default function SellerDashboardPage() {
       void queryClient.invalidateQueries({ queryKey: ["seller-inventory"] });
       setStatus("Produit supprime du catalogue.");
     },
-    onError: () => setStatus("Erreur lors de la suppression du produit."),
+    onError: (error) => setStatus(getApiErrorMessage(error, "Erreur lors de la suppression du produit.")),
   });
 
   const importProductsMutation = useMutation({
@@ -212,7 +222,7 @@ export default function SellerDashboardPage() {
       const errs = result.errors.length ? ` (${result.errors.length} ligne(s) ignoree(s))` : "";
       setStatus(`${result.created} produit(s) importe(s)${errs}.`);
     },
-    onError: () => setStatus("Import impossible. Vérifié le format du fichier CSV."),
+    onError: (error) => setStatus(getApiErrorMessage(error, "Import impossible. Vérifié le format du fichier CSV.")),
   });
 
   const importPhotosMutation = useMutation({
@@ -238,7 +248,7 @@ export default function SellerDashboardPage() {
           "Complete le nom et le prix de chaque article puis active-le.",
       );
     },
-    onError: () => setStatus("Envoi des photos impossible. Reessaie avec moins de photos."),
+    onError: (error) => setStatus(getApiErrorMessage(error, "Envoi des photos impossible. Reessaie avec moins de photos.")),
   });
 
 
@@ -254,14 +264,14 @@ export default function SellerDashboardPage() {
       void queryClient.invalidateQueries({ queryKey: ["seller-shop-orders"] });
       setStatus("Commande boutique mise à jour.");
     },
-    onError: () => setStatus("Erreur lors de la mise à jour de la commande boutique."),
+    onError: (error) => setStatus(getApiErrorMessage(error, "Erreur lors de la mise à jour de la commande boutique.")),
   });
 
   const productMutation = useMutation({
     mutationFn: createSellerProduct,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["seller-inventory"] });
-      setStatus("Produit ajoute au catalogue.");
+      setStatus("Produit ajouté au catalogue.");
       setProductForm({
         name: "",
         brand: "",
@@ -270,9 +280,10 @@ export default function SellerDashboardPage() {
         stock_quantity: "1",
         description: "",
         main_image_url: "",
+        is_digital: false,
       });
     },
-    onError: () => setStatus("Erreur lors de l'ajout du produit."),
+    onError: (error) => setStatus(getApiErrorMessage(error, "Ajout du produit impossible. Réessayez.")),
   });
 
 
@@ -542,7 +553,7 @@ export default function SellerDashboardPage() {
               <Input
                 value={productForm.brand}
                 onChange={(event) => setProductForm((prev) => ({ ...prev, brand: event.target.value }))}
-                placeholder="Marque"
+                placeholder="Marque (facultatif)"
               />
               <select
                 className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900"
@@ -585,24 +596,38 @@ export default function SellerDashboardPage() {
                 }
                 placeholder="Description"
               />
+              <label className="flex min-h-11 items-center gap-2 text-sm font-medium text-ink-800 sm:col-span-2">
+                <input
+                  type="checkbox"
+                  className="h-5 w-5"
+                  checked={productForm.is_digital}
+                  onChange={(event) => setProductForm((prev) => ({ ...prev, is_digital: event.target.checked }))}
+                />
+                Produit numérique (e-book, formation, code…) : pas de frais de livraison
+              </label>
             </div>
             <Button
               type="button"
               className="primary-glow-btn mt-4 bg-brand-600 text-white hover:bg-brand-700"
-              onClick={() =>
+              disabled={productMutation.isPending}
+              onClick={() => {
+                const amount = Number(productForm.amount || 0);
+                if (productForm.name.trim().length < 2) return setStatus("Indiquez le nom du produit (2 caractères minimum).");
+                if (!(amount > 0)) return setStatus("Indiquez un prix supérieur à 0.");
                 productMutation.mutate({
-                  name: productForm.name,
-                  brand: productForm.brand,
+                  name: productForm.name.trim(),
+                  brand: productForm.brand.trim(),
                   amount: Number(productForm.amount || 0),
                   stock_quantity: Number(productForm.stock_quantity || 0),
                   description: productForm.description || undefined,
                   main_image_url: normalizeImageInput(productForm.main_image_url),
                   category_id: productForm.category_id || undefined,
                   currency: "XOF",
-                })
-              }
+                  is_digital: productForm.is_digital,
+                });
+              }}
             >
-              Ajouter au catalogue
+              {productMutation.isPending ? "Ajout en cours…" : "Ajouter au catalogue"}
             </Button>
           </article>
         ) : null}
@@ -661,7 +686,6 @@ export default function SellerDashboardPage() {
           </article>
         ) : null}
 
-        {status ? <p className="text-sm text-slate-700">{status}</p> : null}
       </div>
 
       <div className={tab === "reglages" ? "" : "hidden"}>

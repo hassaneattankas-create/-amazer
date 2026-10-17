@@ -130,6 +130,8 @@ export type SellerProductPayload = {
   amount: number;
   currency: string;
   stock_quantity: number;
+  /** Produit numerique : aucun frais de livraison. */
+  is_digital?: boolean;
 };
 
 export type SellerInventoryItem = {
@@ -148,6 +150,7 @@ export type SellerInventoryItem = {
   promo_until: string | null;
   /** Prix normal (hors promo). Pendant une promo, « amount » vaut le prix promo. */
   regular_amount?: number | null;
+  is_digital?: boolean;
 };
 
 export type SellerShopOrderItem = {
@@ -184,6 +187,7 @@ export type SellerStorefrontProduct = {
   amount: number;
   currency: string;
   main_image_url: string | null;
+  is_digital?: boolean;
 };
 
 export type SellerStorefront = {

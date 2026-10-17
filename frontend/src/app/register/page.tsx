@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+
+import { toast } from "@/store/toast-store";
 import { FormEvent, Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -113,7 +115,12 @@ function RegisterPageContent() {
     const requested = searchParams.get("type");
     return requested === "restaurant" || requested === "enterprise" ? requested : "shop";
   });
-  const [status, setStatus] = useState("");
+  const [status, setStatusText] = useState("");
+  // Message aussi affiche en haut de l'ecran (visible meme si le bas du formulaire est cache).
+  const setStatus = (text: string) => {
+    setStatusText(text);
+    if (text) (/erreur|impossible|invalide|existe|incorrect|indiquez|trop|échec/i.test(text) ? toast.error : toast.info)(text);
+  };
   const [isLoading, setIsLoading] = useState(false);
   const [pendingVerification, setPendingVerification] = useState<{
     channel: string;
@@ -501,6 +508,17 @@ function RegisterPageContent() {
           </Link>
         </p>
         {status ? <p className="mt-3 text-sm text-ink-700">{status}</p> : null}
+
+        <aside className="mt-6 rounded-card border border-brand-500 bg-brand-50 p-4">
+          <p className="font-semibold text-ink-900">Client ou vendeur : gagnez aussi de l&apos;argent avec AMAZER</p>
+          <p className="mt-1 text-sm text-ink-800">
+            Devenez affilié gratuitement : partagez votre lien et touchez une part des abonnements des vendeurs que vous amenez,
+            plus un bonus pour chaque nouveau client. Après l&apos;inscription, ouvrez « Affiliation » dans le menu.
+          </p>
+          <Link href="/affiliation" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 hover:underline">
+            Découvrir l&apos;affiliation
+          </Link>
+        </aside>
       </article>
     </section>
   );

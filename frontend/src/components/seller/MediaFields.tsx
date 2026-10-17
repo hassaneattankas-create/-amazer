@@ -7,6 +7,7 @@ import { ImageOff, ImageUp } from "lucide-react";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { resolveImageUrl } from "@/lib/image";
 import { uploadMedia } from "@/services/media-service";
+import { toast } from "@/store/toast-store";
 
 function dedupeUrls(values: string[]): string[] {
   const seen = new Set<string>();
@@ -47,9 +48,13 @@ function UploadTrigger({ label, multiple = false, onUploaded }: UploadTriggerPro
         uploaded.push(response.url);
       }
       onUploaded(uploaded);
-      setStatus(uploaded.length > 1 ? "Images ajoutees." : "Image ajoutee.");
+      const done = uploaded.length > 1 ? "Photos ajoutées." : "Photo ajoutée.";
+      setStatus(done);
+      toast.success(done);
     } catch (error) {
-      setStatus(getApiErrorMessage(error, "Erreur lors de l'upload."));
+      const message = getApiErrorMessage(error, "Envoi de la photo impossible. Réessayez.");
+      setStatus(message);
+      toast.error(message);
     } finally {
       setIsUploading(false);
       event.target.value = "";
@@ -63,7 +68,7 @@ function UploadTrigger({ label, multiple = false, onUploaded }: UploadTriggerPro
         className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700"
       >
         <ImageUp className="h-3.5 w-3.5 text-brand-600" />
-        {isUploading ? "Upload..." : label}
+        {isUploading ? "Envoi de la photo…" : label}
       </label>
       <input
         id={inputId}

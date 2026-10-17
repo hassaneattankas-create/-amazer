@@ -59,7 +59,8 @@ export function optimizeCart(items: CartItem[], pricingConfig?: PricingConfig): 
       };
     }
     splitPlan.push(formatPlanItem(item, cheapest));
-    if (!splitVendors.has(cheapest.vendor.id)) {
+    // Produit numerique : pas de livraison (le vendeur n'est facture que s'il a un article physique).
+    if (!item.isDigital && !splitVendors.has(cheapest.vendor.id)) {
       splitVendors.set(cheapest.vendor.id, getShippingCost(cheapest, defaultShippingFee));
     }
   }
@@ -104,6 +105,9 @@ export function optimizeCart(items: CartItem[], pricingConfig?: PricingConfig): 
 
     if (!allCovered) {
       continue;
+    }
+    if (items.every((item) => item.isDigital)) {
+      vendorShipping = 0;
     }
 
     const vendorCommission = vendorSubtotal * commissionRate;

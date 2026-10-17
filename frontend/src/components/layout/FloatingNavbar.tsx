@@ -391,7 +391,7 @@ export function FloatingNavbar() {
           {isMenuOpen ? (
             <div
               id="main-menu"
-              className="absolute right-0 top-full z-dropdown mt-2 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-card border border-border bg-card shadow-floating md:left-0 md:right-auto"
+              className="fixed inset-x-4 top-16 z-dropdown overflow-hidden rounded-card border border-border bg-card shadow-floating md:absolute md:inset-x-auto md:left-0 md:top-full md:mt-2 md:w-72"
             >
               <nav aria-label={t("Menu principal")} className="max-h-96 overflow-y-auto p-2">
                 {groupedNavItems.map((item) => (
