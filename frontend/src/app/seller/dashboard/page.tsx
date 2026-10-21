@@ -18,6 +18,7 @@ import { RestaurantSettingsPanel } from "@/components/seller/restaurant/Restaura
 import { SellerStatsPanel } from "@/components/seller/SellerStatsPanel";
 import { SellerReviewsPanel } from "@/components/seller/SellerReviewsPanel";
 import { ServiceStatusPanel } from "@/components/seller/ServiceStatusPanel";
+import { FuelOutletsManager } from "@/components/seller/FuelOutletsManager";
 import { AffiliateShareCard } from "@/components/affiliate/AffiliateShareCard";
 import { SellerKpis } from "@/components/seller/SellerKpis";
 import { SellerOrderList } from "@/components/seller/SellerOrderList";
@@ -423,6 +424,7 @@ export default function SellerDashboardPage() {
       {tab === "accueil" ? (
         <>
           {profile?.service_kind ? <ServiceStatusPanel kind={profile.service_kind} /> : null}
+          {profile?.service_kind === "fuel_station" ? <FuelOutletsManager /> : null}
           {showProductTools ? <SellerKpis orders={shopOrders} inventory={inventory} /> : null}
           {showRestaurantTools ? <RestaurantKpis orders={restaurantOrders} menu={sellerMenu} /> : null}
           {showHotelBookingTools && !isTransport ? <HotelKpis bookings={hotelBookings} rooms={profile?.room_types ?? []} /> : null}

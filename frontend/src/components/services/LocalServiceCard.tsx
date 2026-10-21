@@ -13,6 +13,8 @@ type Props = {
   freshHours: number;
   /** Sur la vitrine elle-même : sans en-tête ni lien « Voir la vitrine ». */
   compact?: boolean;
+  /** Sur la vitrine de la marque : en-tête gardé, sans lien « Voir la vitrine ». */
+  inShop?: boolean;
 };
 
 const FUELS: FuelKey[] = ["super", "gasoil", "gaz"];
@@ -20,7 +22,7 @@ const actionClass =
   "inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-field px-3 text-sm font-semibold transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500";
 
 /** Une pharmacie ou une station : statut en premier, puis Appeler · Itinéraire · Se faire livrer. */
-export function LocalServiceCard({ item, kind, distanceKm, freshHours, compact = false }: Props) {
+export function LocalServiceCard({ item, kind, distanceKm, freshHours, compact = false, inShop = false }: Props) {
   const KindIcon = kind === "pharmacy" ? Pill : Fuel;
   const updated = timeAgo(item.fuel_updated_at);
   const from = `${item.business_name}${item.city ? ` (${item.city})` : ""}`;
@@ -134,7 +136,7 @@ export function LocalServiceCard({ item, kind, distanceKm, freshHours, compact =
             : "Livraison AMAZER bientôt disponible dans cette ville."}
         </p>
       )}
-      {compact ? null : (
+      {compact || inShop ? null : (
         <Link href={`/shop/${item.vendor_id}`} className="mt-3 text-center text-sm font-medium text-brand-700 hover:underline">
           Voir la vitrine
         </Link>

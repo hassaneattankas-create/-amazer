@@ -204,7 +204,7 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
         ) : items.length ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map(({ item, distance }) => (
-              <LocalServiceCard key={item.vendor_id} item={item} kind={kind} distanceKm={distance} freshHours={data?.fresh_hours ?? 6} />
+              <LocalServiceCard key={item.outlet_id ?? item.vendor_id} item={item} kind={kind} distanceKm={distance} freshHours={data?.fresh_hours ?? 6} />
             ))}
           </div>
         ) : (

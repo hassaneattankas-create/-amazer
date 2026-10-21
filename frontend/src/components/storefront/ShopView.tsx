@@ -390,7 +390,18 @@ export function ShopView({ vendorId }: { vendorId: string }) {
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
       <StorefrontHero data={data} />
-      {data.local_service ? (
+      {data.local_outlets?.length ? (
+        <section aria-labelledby="outlets-heading">
+          <h2 id="outlets-heading" className="text-lg font-semibold text-ink-900">
+            Nos stations ({data.local_outlets.length})
+          </h2>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {data.local_outlets.map((outlet) => (
+              <LocalServiceCard key={outlet.outlet_id ?? outlet.business_name} item={outlet} kind="fuel_station" freshHours={6} inShop />
+            ))}
+          </div>
+        </section>
+      ) : data.local_service ? (
         <LocalServiceCard item={data.local_service} kind={data.local_service.service_kind} freshHours={6} compact />
       ) : null}
 

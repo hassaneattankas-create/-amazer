@@ -232,6 +232,8 @@ export type SellerStorefront = {
   rating_count?: number;
   /** Pharmacie / station : garde, disponibilités, itinéraire et livraison AMAZER. */
   local_service?: LocalServiceItem | null;
+  /** Marque de carburant : ses points de vente. */
+  local_outlets?: LocalServiceItem[];
 };
 
 export type SellerStatsWeek = { views: number; contacts: number; orders: number };

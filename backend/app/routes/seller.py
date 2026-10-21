@@ -90,6 +90,7 @@ from app.services.listing_limit_service import (
     max_products_for_basic_tier,
 )
 from app.services.notification_service import NotificationPayload, NotificationService
+from app.routes.local_services import active_outlets, build_outlet_item
 from app.routes.local_services import build_item as build_local_service_item
 from app.services import local_services
 from app.services.seller_finance_service import (
@@ -660,6 +661,14 @@ def _build_public_storefront(vendor_id: str, db: Session) -> SellerStorefrontRes
             build_local_service_item(profile, get_or_create_global_settings(db), datetime.now(UTC))
             if getattr(profile, "service_kind", None) in local_services.SERVICE_KINDS
             else None
+        ),
+        local_outlets=(
+            [
+                build_outlet_item(profile, outlet, get_or_create_global_settings(db), datetime.now(UTC))
+                for outlet in active_outlets(db, [profile.vendor_id]).get(profile.vendor_id, [])
+            ]
+            if getattr(profile, "service_kind", None) == "fuel_station"
+            else []
         ),
         products=[
             SellerStorefrontProductResponse(

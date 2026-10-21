@@ -9,6 +9,9 @@ export type LocalServiceItem = {
   vendor_slug: string;
   service_kind: ServiceKind;
   business_name: string;
+  /** Point de vente d'une marque (ex. « Oriba · Plateau »). */
+  outlet_id?: string | null;
+  brand_name?: string | null;
   city: string | null;
   address: string | null;
   phone: string | null;
@@ -61,5 +64,25 @@ export type ServiceStatusUpdate = {
   latitude?: number;
   longitude?: number;
 };
+
+/** Station d'une marque de carburant, gérée depuis le tableau de bord de la marque. */
+export type FuelOutlet = {
+  id: string;
+  name: string;
+  city: string;
+  address: string | null;
+  phone: string | null;
+  is_active: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  maps_url: string;
+  delivery_phone: string | null;
+  fuel: FuelStatus;
+  fuel_fresh: boolean;
+  fuel_updated_at: string | null;
+};
+
+export type FuelOutletInput = { name: string; city: string; address?: string; phone?: string };
+export type FuelOutletUpdate = Partial<FuelOutletInput> & { is_active?: boolean; fuel?: FuelStatus; latitude?: number; longitude?: number };
 
 export const FUEL_LABELS: Record<FuelKey, string> = { super: "Super", gasoil: "Gasoil", gaz: "Gaz" };

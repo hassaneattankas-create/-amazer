@@ -23,6 +23,9 @@ class LocalServiceItem(BaseModel):
     vendor_slug: str
     service_kind: Literal["pharmacy", "fuel_station"]
     business_name: str
+    # Point de vente d'une marque (ex. « Oriba · Plateau ») : identifiant et nom de la marque.
+    outlet_id: str | None = None
+    brand_name: str | None = None
     city: str | None
     address: str | None
     phone: str | None
@@ -70,6 +73,48 @@ class ServiceStatusUpdate(BaseModel):
     fuel: FuelStatusSchema | None = None
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
+
+
+class FuelOutletCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    name: str = Field(min_length=2, max_length=140)
+    city: str = Field(min_length=2, max_length=80)
+    address: str | None = Field(default=None, max_length=220)
+    phone: str | None = Field(default=None, max_length=40, pattern=r"^[+0-9 ().-]*$")
+
+
+class FuelOutletUpdate(BaseModel):
+    """Champs absents = inchanges. fuel / position : mise a jour en un geste depuis la station."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    name: str | None = Field(default=None, min_length=2, max_length=140)
+    city: str | None = Field(default=None, min_length=2, max_length=80)
+    address: str | None = Field(default=None, max_length=220)
+    phone: str | None = Field(default=None, max_length=40, pattern=r"^[+0-9 ().-]*$")
+    is_active: bool | None = None
+    fuel: FuelStatusSchema | None = None
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+
+
+class FuelOutletResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    city: str
+    address: str | None
+    phone: str | None
+    is_active: bool
+    latitude: float | None
+    longitude: float | None
+    maps_url: str
+    delivery_phone: str | None
+    fuel: FuelStatusSchema
+    fuel_fresh: bool
+    fuel_updated_at: str | None
 
 
 class ServiceStatusResponse(BaseModel):

@@ -303,6 +303,8 @@ class SellerStorefrontResponse(BaseModel):
     rating_count: int = 0
     # Pharmacie / station : garde, disponibilites, itineraire et livraison AMAZER.
     local_service: LocalServiceItem | None = None
+    # Marque de carburant : ses points de vente (une fiche par station).
+    local_outlets: list[LocalServiceItem] = Field(default_factory=list)
 
 
 class StorefrontEventRequest(BaseModel):

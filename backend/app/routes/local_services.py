@@ -16,12 +16,16 @@ from app.core.deps import get_seller_user
 from app.core.exceptions import ForbiddenError, NotFoundError, ValidationDomainError
 from app.core.rate_limit import enforce_rate_limit
 from app.database import get_db
+from app.models.fuel_outlet import FuelOutlet
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.repositories.catalog_repository import active_subscription_clause
 from app.schemas.local_services import (
     CityCount,
+    FuelOutletCreate,
+    FuelOutletResponse,
+    FuelOutletUpdate,
     FuelStatusSchema,
     LocalServiceItem,
     LocalServiceListResponse,
@@ -78,17 +82,66 @@ def build_item(profile: SellerProfile, settings: object, now: datetime) -> Local
     )
 
 
+def build_outlet_item(profile: SellerProfile, outlet: FuelOutlet, settings: object, now: datetime) -> LocalServiceItem:
+    """Une station d'une marque : ses propres ville, adresse, position et disponibilites."""
+    vendor = profile.vendor
+    updated = svc._aware(outlet.fuel_updated_at)
+    return LocalServiceItem(
+        vendor_id=profile.vendor_id,
+        vendor_slug=getattr(vendor, "slug", None) or profile.vendor_id,
+        service_kind="fuel_station",
+        business_name=f"{profile.business_name} · {outlet.name}",
+        outlet_id=outlet.id,
+        brand_name=profile.business_name,
+        city=outlet.city,
+        address=outlet.address,
+        phone=outlet.phone or decrypt_phone_value(profile.phone),
+        whatsapp_contact=profile.whatsapp_contact,
+        logo_url=profile.logo_url,
+        is_verified=bool(profile.is_verified),
+        latitude=outlet.latitude,
+        longitude=outlet.longitude,
+        maps_url=svc.maps_url(outlet),
+        delivery_phone=svc.delivery_phone(outlet, settings, now),
+        fuel=FuelStatusSchema(**svc.clean_fuel_status(outlet.fuel_status)),
+        fuel_fresh=svc.fuel_is_fresh(outlet, now),
+        fuel_updated_at=updated.isoformat() if updated else None,
+    )
+
+
+def active_outlets(db: Session, vendor_ids: list[str]) -> dict[str, list[FuelOutlet]]:
+    grouped: dict[str, list[FuelOutlet]] = {}
+    if not vendor_ids:
+        return grouped
+    rows = db.scalars(
+        select(FuelOutlet)
+        .where(FuelOutlet.vendor_id.in_(vendor_ids), FuelOutlet.is_active.is_(True))
+        .order_by(FuelOutlet.sort_order, FuelOutlet.created_at)
+    ).all()
+    for row in rows:
+        grouped.setdefault(row.vendor_id, []).append(row)
+    return grouped
+
+
 def _list(db: Session, kind: str, city: str | None, keep, sort_key) -> LocalServiceListResponse:
     now = datetime.now(UTC)
     settings = get_or_create_global_settings(db)
     profiles = _visible_profiles(db, kind)
-    counts: dict[str, list] = {}
+    outlets = active_outlets(db, [p.vendor_id for p in profiles]) if kind == "fuel_station" else {}
+    # Une marque avec des points de vente : une fiche par station ; sinon la vitrine elle-meme.
+    entries: list[tuple[str | None, LocalServiceItem]] = []
     for profile in profiles:
-        name = (profile.city or "").strip() or "Niamey"
+        if outlets.get(profile.vendor_id):
+            entries.extend((o.city, build_outlet_item(profile, o, settings, now)) for o in outlets[profile.vendor_id])
+        else:
+            entries.append((profile.city, build_item(profile, settings, now)))
+    counts: dict[str, list] = {}
+    for place, _item in entries:
+        name = (place or "").strip() or "Niamey"
         entry = counts.setdefault(svc.normalize_city(name), [name, 0])
         entry[1] += 1
     wanted = svc.normalize_city(city) if city else None
-    items = [build_item(p, settings, now) for p in profiles if (wanted is None or svc.normalize_city(p.city) == wanted)]
+    items = [item for place, item in entries if (wanted is None or svc.normalize_city(place) == wanted)]
     items = [i for i in items if keep(i)]
     items.sort(key=sort_key)
     return LocalServiceListResponse(
@@ -245,3 +298,126 @@ def update_service_status(
     db.commit()
     invalidate_services_cache()
     return _status(profile, get_or_create_global_settings(db))
+
+
+
+# ---------------------------------------------------------------- points de vente (marques)
+MAX_OUTLETS = 300
+
+
+def _station_profile(db: Session, user: User) -> SellerProfile:
+    profile = _own_profile(db, user)
+    if profile.service_kind != "fuel_station":
+        raise ForbiddenError("Seules les stations-essence peuvent gérer des points de vente.")
+    return profile
+
+
+def _outlet_response(outlet: FuelOutlet, settings: object, now: datetime) -> FuelOutletResponse:
+    updated = svc._aware(outlet.fuel_updated_at)
+    return FuelOutletResponse(
+        id=outlet.id,
+        name=outlet.name,
+        city=outlet.city,
+        address=outlet.address,
+        phone=outlet.phone,
+        is_active=bool(outlet.is_active),
+        latitude=outlet.latitude,
+        longitude=outlet.longitude,
+        maps_url=svc.maps_url(outlet),
+        delivery_phone=svc.delivery_phone(outlet, settings, now),
+        fuel=FuelStatusSchema(**svc.clean_fuel_status(outlet.fuel_status)),
+        fuel_fresh=svc.fuel_is_fresh(outlet, now),
+        fuel_updated_at=updated.isoformat() if updated else None,
+    )
+
+
+def _own_outlet(db: Session, profile: SellerProfile, outlet_id: str) -> FuelOutlet:
+    outlet = db.get(FuelOutlet, outlet_id)
+    if outlet is None or outlet.vendor_id != profile.vendor_id:
+        raise NotFoundError("Point de vente introuvable.")
+    return outlet
+
+
+@router.get("/seller/fuel-outlets", response_model=list[FuelOutletResponse])
+def list_my_outlets(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> list[FuelOutletResponse]:
+    profile = _station_profile(db, current_user)
+    now, settings = datetime.now(UTC), get_or_create_global_settings(db)
+    rows = db.scalars(
+        select(FuelOutlet).where(FuelOutlet.vendor_id == profile.vendor_id).order_by(FuelOutlet.sort_order, FuelOutlet.created_at)
+    ).all()
+    return [_outlet_response(o, settings, now) for o in rows]
+
+
+@router.post("/seller/fuel-outlets", response_model=FuelOutletResponse, status_code=201)
+def create_outlet(
+    payload: FuelOutletCreate,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> FuelOutletResponse:
+    enforce_csrf(request)
+    profile = _station_profile(db, current_user)
+    count = len(db.scalars(select(FuelOutlet.id).where(FuelOutlet.vendor_id == profile.vendor_id)).all())
+    if count >= MAX_OUTLETS:
+        raise ValidationDomainError(f"{MAX_OUTLETS} points de vente au maximum.")
+    outlet = FuelOutlet(
+        vendor_id=profile.vendor_id,
+        name=payload.name,
+        city=payload.city,
+        address=payload.address or None,
+        phone=payload.phone or None,
+        sort_order=count,
+    )
+    db.add(outlet)
+    db.commit()
+    invalidate_services_cache()
+    return _outlet_response(outlet, get_or_create_global_settings(db), datetime.now(UTC))
+
+
+@router.put("/seller/fuel-outlets/{outlet_id}", response_model=FuelOutletResponse)
+def update_outlet(
+    outlet_id: str,
+    payload: FuelOutletUpdate,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> FuelOutletResponse:
+    """Coordonnees, ouverture, disponibilites (en un geste) et position d'un point de vente."""
+    enforce_csrf(request)
+    enforce_rate_limit(request, key=f"fuel-outlet:{current_user.id}", limit=240, window_seconds=600)
+    profile = _station_profile(db, current_user)
+    outlet = _own_outlet(db, profile, outlet_id)
+    now = datetime.now(UTC)
+    for field in ("name", "city", "address", "phone", "is_active"):
+        value = getattr(payload, field)
+        if value is not None:
+            setattr(outlet, field, value or (None if field in ("address", "phone") else value))
+    if payload.fuel is not None:
+        merged = svc.clean_fuel_status(outlet.fuel_status)
+        merged.update({k: v for k, v in payload.fuel.model_dump().items() if v is not None})
+        outlet.fuel_status = svc.clean_fuel_status(merged)
+        outlet.fuel_updated_at = now
+    if payload.latitude is not None or payload.longitude is not None:
+        if not svc.valid_position(payload.latitude, payload.longitude):
+            raise ValidationDomainError("Position introuvable au Niger. Activez la localisation et réessayez sur place.")
+        outlet.latitude, outlet.longitude = payload.latitude, payload.longitude
+    db.commit()
+    invalidate_services_cache()
+    return _outlet_response(outlet, get_or_create_global_settings(db), now)
+
+
+@router.delete("/seller/fuel-outlets/{outlet_id}", status_code=204, response_model=None)
+def delete_outlet(
+    outlet_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> None:
+    enforce_csrf(request)
+    profile = _station_profile(db, current_user)
+    db.delete(_own_outlet(db, profile, outlet_id))
+    db.commit()
+    invalidate_services_cache()

@@ -7,7 +7,7 @@ import { AlertTriangle, CheckCircle2, Fuel, LocateFixed, MapPin, Moon, Pill, Ref
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { timeAgo } from "@/lib/local-services";
-import { getServiceStatus, updateServiceStatus } from "@/services/local-services-service";
+import { getServiceStatus, listMyOutlets, updateServiceStatus } from "@/services/local-services-service";
 import { toast } from "@/store/toast-store";
 import { FUEL_LABELS, type FuelKey, type FuelState, type ServiceKind, type ServiceStatusUpdate } from "@/types/local-services";
 
@@ -27,6 +27,9 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
   const [end, setEnd] = useState("");
   const [locating, setLocating] = useState(false);
   const { data: status, isPending, isError, refetch } = useQuery({ queryKey: ["service-status"], queryFn: getServiceStatus });
+  // Marque avec plusieurs stations : tout se règle par point de vente (gestionnaire en dessous).
+  const { data: outlets = [] } = useQuery({ queryKey: ["fuel-outlets"], queryFn: listMyOutlets, enabled: kind === "fuel_station" });
+  const hasOutlets = kind === "fuel_station" && outlets.length > 0;
 
   const mutation = useMutation({
     mutationFn: (payload: ServiceStatusUpdate & { done?: string }) => {
@@ -151,6 +154,8 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
             </form>
           </div>
         </div>
+      ) : hasOutlets ? (
+        <p className="mt-2 text-sm text-ink-600">Vos disponibilités et positions se règlent station par station, dans « Mes points de vente » ci-dessous.</p>
       ) : (
         <div className="mt-3 space-y-3">
           {FUELS.map((fuel) => {
@@ -215,7 +220,7 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
         </div>
       )}
 
-      <div className="mt-4 border-t border-border pt-4">
+      <div className={`mt-4 border-t border-border pt-4 ${hasOutlets ? "hidden" : ""}`}>
         <p className="flex items-start gap-2 text-sm text-ink-700">
           <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
           {status.latitude != null

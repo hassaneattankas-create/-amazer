@@ -9,14 +9,15 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ForbiddenError, ValidationDomainError
+from app.core.exceptions import ForbiddenError, NotFoundError, ValidationDomainError
 from app.database import Base
+from app.models.fuel_outlet import FuelOutlet
 from app.models.global_settings import GlobalSettings
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.routes import local_services as route
-from app.schemas.local_services import FuelStatusSchema, ServiceStatusUpdate
+from app.schemas.local_services import FuelOutletCreate, FuelOutletUpdate, FuelStatusSchema, ServiceStatusUpdate
 from app.services import local_services as svc
 
 
@@ -89,7 +90,7 @@ def test_position_must_be_in_niger() -> None:
 @pytest.fixture
 def db(monkeypatch):
     engine = create_engine("sqlite://")
-    Base.metadata.create_all(engine, tables=[t.__table__ for t in (User, Vendor, SellerProfile, GlobalSettings)])
+    Base.metadata.create_all(engine, tables=[t.__table__ for t in (User, Vendor, SellerProfile, GlobalSettings, FuelOutlet)])
     monkeypatch.setattr(route, "cache_get_json", lambda _key: None)
     monkeypatch.setattr(route, "cache_set_json", lambda *_a, **_k: None)
     monkeypatch.setattr(route, "invalidate_services_cache", lambda: None)
@@ -188,3 +189,40 @@ def test_admin_chooses_the_delivered_cities() -> None:
     assert svc.delivery_phone(_p(city="MARADI"), settings) == "+227 90 00 00 01"
     assert svc.delivery_phone(_p(city="Tahoua"), settings) is None
     assert svc.delivery_cities(SimpleNamespace(local_delivery_cities="  ")) == ["Niamey"]
+
+
+
+def test_brand_lists_each_outlet_with_its_own_city_fuel_and_gas_delivery(db: Session) -> None:
+    user, _ = shop(db, "oriba", "fuel_station")
+    plateau = route.create_outlet(FuelOutletCreate(name="Plateau", city="Niamey", address="Avenue de la Mairie"), None, db, user)
+    maradi = route.create_outlet(FuelOutletCreate(name="Route de Zinder", city="Maradi"), None, db, user)
+    route.update_outlet(plateau.id, FuelOutletUpdate(fuel=FuelStatusSchema(super="available", gaz="available")), None, db, user)
+    route.update_outlet(maradi.id, FuelOutletUpdate(fuel=FuelStatusSchema(gaz="available")), None, db, user)
+
+    listing = route.list_stations(db, city=None, fuel=None, available=False)
+    names = sorted(i.business_name for i in listing.items)
+    assert names == ["Commerce oriba · Plateau", "Commerce oriba · Route de Zinder"]
+    by_name = {i.business_name: i for i in listing.items}
+    assert by_name["Commerce oriba · Plateau"].delivery_phone == "+227 90 00 00 02"  # Niamey + gaz
+    assert by_name["Commerce oriba · Route de Zinder"].delivery_phone is None  # Maradi pas encore livree
+    assert {c.city for c in listing.cities} == {"Niamey", "Maradi"}
+    assert [i.city for i in route.list_stations(db, city="maradi", fuel=None, available=False).items] == ["Maradi"]
+
+    # Un point de vente ferme disparait de la liste publique.
+    route.update_outlet(maradi.id, FuelOutletUpdate(is_active=False), None, db, user)
+    assert len(route.list_stations(db, city=None, fuel=None, available=False).items) == 1
+
+
+def test_only_the_brand_manages_its_outlets(db: Session) -> None:
+    owner, _ = shop(db, "oriba", "fuel_station")
+    other, _ = shop(db, "autre", "fuel_station")
+    pharma, _ = shop(db, "pharma", "pharmacy")
+    outlet = route.create_outlet(FuelOutletCreate(name="Plateau", city="Niamey"), None, db, owner)
+    with pytest.raises(NotFoundError):
+        route.update_outlet(outlet.id, FuelOutletUpdate(fuel=FuelStatusSchema(gaz="out")), None, db, other)
+    with pytest.raises(ForbiddenError):
+        route.create_outlet(FuelOutletCreate(name="Kouara", city="Niamey"), None, db, pharma)
+    with pytest.raises(ValidationDomainError):
+        route.update_outlet(outlet.id, FuelOutletUpdate(latitude=48.8, longitude=2.3), None, db, owner)
+    route.delete_outlet(outlet.id, None, db, owner)
+    assert route.list_my_outlets(db, owner) == []
