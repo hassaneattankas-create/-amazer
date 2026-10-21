@@ -60,6 +60,8 @@ const dynamicRouteDirs = [
   "order/success/[id]",
   "restaurant/order/pay/[id]",
   "restaurant/order/receipt/[id]",
+  // Vitrine revendeur : l'app utilise la variante /revendeur?u=...
+  "revendeur/[id]",
 ];
 const DEFAULT_MOBILE_BACKEND_ORIGIN = "https://amazer-api.onrender.com";
 const DEFAULT_MOBILE_SITE_URL = "https://amazer.store";
