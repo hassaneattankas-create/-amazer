@@ -644,9 +644,15 @@ function SellerPageContent() {
               >
                 <option value="shop">Boutique (produits)</option>
                 <option value="restaurant">Restaurant (menu)</option>
-                <option value="enterprise">Premium (hôtel, transport, entreprise)</option>
+                <option value="enterprise">Premium (hôtel, transport, pharmacie, station, entreprise)</option>
               </select>
             </label>
+            {isPremium ? (
+              <p className="mt-2 text-sm text-ink-600">
+                Hôtel, transport, pharmacie ou station-essence : AMAZER active la fonction adaptée après vérification de
+                votre établissement. Écrivez-nous sur WhatsApp depuis la page d&apos;aide pour l&apos;activer.
+              </p>
+            ) : null}
           </div>
 
           {isPremium || isRestaurant ? (

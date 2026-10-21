@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.schemas.local_services import LocalServiceItem
 from app.schemas.restaurant import RestaurantMenuItemResponse
 
 
@@ -105,6 +106,8 @@ class SellerProfileResponse(BaseModel):
     offers_transport: bool = False
     offers_shop: bool = False
     offers_restaurant: bool = False
+    # "pharmacy" / "fuel_station" : panneau de garde ou de disponibilites dans le tableau de bord.
+    service_kind: str | None = None
     is_verified: bool
     created_at: datetime
 
@@ -298,6 +301,8 @@ class SellerStorefrontResponse(BaseModel):
     # Avis verifies des clients.
     rating_average: float = 0
     rating_count: int = 0
+    # Pharmacie / station : garde, disponibilites, itineraire et livraison AMAZER.
+    local_service: LocalServiceItem | None = None
 
 
 class StorefrontEventRequest(BaseModel):

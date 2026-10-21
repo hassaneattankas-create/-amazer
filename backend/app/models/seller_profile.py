@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, String, func
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -71,6 +71,19 @@ class SellerProfile(Base):
     offers_restaurant: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # Entreprise de transport: affiche la reservation en mode trajets/billets au lieu de chambres.
     offers_transport: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Services de proximite (vitrine Premium, type choisi par l'admin) : "pharmacy" ou "fuel_station".
+    service_kind: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Pharmacie : de garde maintenant (interrupteur) et/ou sur une periode programmee (dates incluses).
+    on_duty: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    duty_start: Mapped[date | None] = mapped_column(Date, nullable=True)
+    duty_end: Mapped[date | None] = mapped_column(Date, nullable=True)
+    duty_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Station : {"super": "available" | "out", "gasoil": ..., "gaz": ...} et heure de mise a jour.
+    fuel_status: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    fuel_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Position enregistree sur place par le gerant (itineraire Google Maps exact).
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

@@ -17,6 +17,7 @@ import { RestaurantReservations } from "@/components/seller/restaurant/Restauran
 import { RestaurantSettingsPanel } from "@/components/seller/restaurant/RestaurantSettingsPanel";
 import { SellerStatsPanel } from "@/components/seller/SellerStatsPanel";
 import { SellerReviewsPanel } from "@/components/seller/SellerReviewsPanel";
+import { ServiceStatusPanel } from "@/components/seller/ServiceStatusPanel";
 import { SellerKpis } from "@/components/seller/SellerKpis";
 import { SellerOrderList } from "@/components/seller/SellerOrderList";
 import { SellerProductList } from "@/components/seller/SellerProductList";
@@ -420,9 +421,12 @@ export default function SellerDashboardPage() {
 
       {tab === "accueil" ? (
         <>
+          {profile?.service_kind ? <ServiceStatusPanel kind={profile.service_kind} /> : null}
           {showProductTools ? <SellerKpis orders={shopOrders} inventory={inventory} /> : null}
           {showRestaurantTools ? <RestaurantKpis orders={restaurantOrders} menu={sellerMenu} /> : null}
           {showHotelBookingTools && !isTransport ? <HotelKpis bookings={hotelBookings} rooms={profile?.room_types ?? []} /> : null}
+          {/* Pharmacie / station sans boutique : pas de raccourcis produits, seulement la garde ou les disponibilites. */}
+          {!(profile?.service_kind && !showProductTools && !showRestaurantTools && !showHotelBookingTools) ? (
           <div className="grid gap-2 sm:grid-cols-3">
             <Button type="button" size="lg" onClick={() => openTab("ajouter")}>
               <PlusCircle className="h-4 w-4" />
@@ -435,6 +439,7 @@ export default function SellerDashboardPage() {
               {showRestaurantTools && !showProductTools ? "Gérer mon menu" : "Gérer mes produits"}
             </Button>
           </div>
+          ) : null}
           <SellerStatsPanel />
           <SellerReviewsPanel />
           <p className="text-sm text-ink-600">
@@ -677,7 +682,7 @@ export default function SellerDashboardPage() {
           </article>
         ) : null}
 
-        {!showProductTools && !showRestaurantTools && !showHotelBookingTools && !isProfilePending ? (
+        {!showProductTools && !showRestaurantTools && !showHotelBookingTools && !isProfilePending && !profile?.service_kind ? (
           <article className="rounded-card border border-border bg-card p-6 text-sm text-ink-700">
             Complétez d&apos;abord votre profil vendeur pour activer votre espace.{" "}
             <Link href="/seller" className="font-semibold text-brand-700 hover:underline">

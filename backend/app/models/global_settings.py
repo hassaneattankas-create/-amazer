@@ -48,6 +48,9 @@ class GlobalSettings(Base):
     affiliate_hold_days: Mapped[int] = mapped_column(Integer, nullable=False, default=30, server_default="30")
     # Commande « En livraison » sans confirmation du client : passee « Recu » automatiquement apres ce delai (heures).
     auto_receipt_hours: Mapped[int] = mapped_column(Integer, nullable=False, default=72, server_default="72")
+    # Numeros AMAZER a contacter pour se faire livrer depuis une pharmacie ou une station (Niamey pour l'instant).
+    pharmacy_delivery_phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    fuel_delivery_phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     affiliate_min_payout: Mapped[float] = mapped_column(Float, nullable=False, default=2000, server_default="2000")
     affiliate_new_account_monthly_cap: Mapped[float] = mapped_column(Float, nullable=False, default=25000, server_default="25000")
     affiliate_max_referrals_per_day: Mapped[int] = mapped_column(Integer, nullable=False, default=15, server_default="15")

@@ -54,7 +54,7 @@ const SELLER_TYPE_OPTIONS: Array<{
   {
     value: "enterprise",
     title: "Premium",
-    description: "Hôtel, transport, entreprise",
+    description: "Hôtel, transport, pharmacie, station, entreprise",
     icon: Building2,
   },
 ];

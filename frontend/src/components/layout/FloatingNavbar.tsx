@@ -36,17 +36,36 @@ import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cartStore";
 import { useNotificationStore } from "@/store/notification-store";
 
-const clientNavItems = [
-  { href: "/", label: "Accueil" },
-  { href: "/boutiques", label: "Boutiques" },
-  { href: "/restaurant", label: "Restaurant" },
-  { href: "/hotels", label: "Premium" },
-  { href: "/promotions", label: "Promotions" },
-  { href: "/avis", label: "Avis" },
-  { href: "/revendre", label: "Revendre sans stock" },
-  { href: "/affiliation", label: "Affiliation" },
-  { href: "/formations", label: "Formations gratuites" },
+/** Menu simple : trois usages (acheter, réserver, services), puis gagner de l'argent. */
+const clientNavSections: Array<{ title: string | null; items: Array<{ href: string; label: string }> }> = [
+  { title: null, items: [{ href: "/", label: "Accueil" }] },
+  {
+    title: "Acheter",
+    items: [
+      { href: "/boutiques", label: "Boutiques" },
+      { href: "/restaurant", label: "Restaurants" },
+      { href: "/promotions", label: "Promotions" },
+    ],
+  },
+  { title: "Réserver", items: [{ href: "/hotels", label: "Hôtels et transport" }] },
+  {
+    title: "Services",
+    items: [
+      { href: "/pharmacies", label: "Pharmacies de garde" },
+      { href: "/stations", label: "Stations-essence" },
+    ],
+  },
+  {
+    title: "Gagner avec AMAZER",
+    items: [
+      { href: "/affiliation", label: "Affiliation" },
+      { href: "/revendre", label: "Revendre sans stock" },
+      { href: "/formations", label: "Formations gratuites" },
+      { href: "/avis", label: "Avis" },
+    ],
+  },
 ];
+const clientHrefs = new Set(clientNavSections.flatMap((section) => section.items.map((item) => item.href)));
 
 const sellerNavItems = [
   { href: "/seller/dashboard", label: "Ma Boutique" },
@@ -120,13 +139,12 @@ export function FloatingNavbar() {
     ? sellerNavItems
     : [{ href: "/seller", label: "Activer vendeur" }];
   const isAuthenticated = Boolean(user?.id);
-  const groupedNavItems = [
-    ...clientNavItems,
+  const accountNavItems = [
     ...(isAuthenticated ? [{ href: "/dashboard", label: "Tableau de bord" }, { href: "/messages", label: "Messages" }] : []),
     ...(showSellerLink ? sellerNavigationItems : []),
     ...(user?.role === "courier" || showAdminLink ? [{ href: "/livreur", label: "Espace livreur" }] : []),
     ...(showAdminLink ? [{ href: "/admin", label: "Espace Admin" }] : []),
-  ].filter((item, index, array) => array.findIndex((entry) => entry.href === item.href) === index);
+  ].filter((item, index, array) => !clientHrefs.has(item.href) && array.findIndex((entry) => entry.href === item.href) === index);
 
   useEffect(() => {
     if (!isClient) {
@@ -394,7 +412,20 @@ export function FloatingNavbar() {
               className="fixed inset-x-4 top-16 z-dropdown overflow-hidden rounded-card border border-border bg-card shadow-floating md:absolute md:inset-x-auto md:left-0 md:top-full md:mt-2 md:w-72"
             >
               <nav aria-label={t("Menu principal")} className="max-h-96 overflow-y-auto p-2">
-                {groupedNavItems.map((item) => (
+                {clientNavSections.map((section) => (
+                  <div key={section.title ?? "main"} className={section.title ? "mt-2" : undefined}>
+                    {section.title ? (
+                      <p className="px-3 pb-1 pt-2 text-2xs font-semibold uppercase tracking-label text-ink-500">{t(section.title)}</p>
+                    ) : null}
+                    {section.items.map((item) => (
+                      <Link key={item.href} href={item.href} onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>
+                        {t(item.label)}
+                      </Link>
+                    ))}
+                  </div>
+                ))}
+                {accountNavItems.length ? <div className="my-2 border-t border-border" /> : null}
+                {accountNavItems.map((item) => (
                   <Link key={item.href} href={item.href} onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>
                     {t(item.label)}
                   </Link>

@@ -18,6 +18,7 @@ import { getProductRoute } from "@/lib/mobile-routes";
 import { resolveImageUrl } from "@/lib/image";
 import { TransportBookingFlow } from "@/components/storefront/TransportBookingFlow";
 import { HotelBookingFlow } from "@/components/storefront/HotelBookingFlow";
+import { LocalServiceCard } from "@/components/services/LocalServiceCard";
 import { Stars, VendorReviews } from "@/components/storefront/VendorReviews";
 import { trackStorefrontContact, trackStorefrontView } from "@/lib/storefront-stats";
 import { RestaurantMenu } from "@/components/storefront/RestaurantMenu";
@@ -389,6 +390,9 @@ export function ShopView({ vendorId }: { vendorId: string }) {
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
       <StorefrontHero data={data} />
+      {data.local_service ? (
+        <LocalServiceCard item={data.local_service} kind={data.local_service.service_kind} freshHours={6} compact />
+      ) : null}
 
       <article className="premium-card border border-slate-200 bg-white p-4">
         <div className="relative">

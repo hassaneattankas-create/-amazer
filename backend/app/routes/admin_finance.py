@@ -197,6 +197,8 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
         ambassador_tier3_shops=int(getattr(settings, "ambassador_tier3_shops", 25) if getattr(settings, "ambassador_tier3_shops", None) is not None else 25),
         ambassador_tier3_percent=float(getattr(settings, "ambassador_tier3_percent", 30) if getattr(settings, "ambassador_tier3_percent", None) is not None else 30),
         ambassador_monthly_top_bonus=float(getattr(settings, "ambassador_monthly_top_bonus", 10000) if getattr(settings, "ambassador_monthly_top_bonus", None) is not None else 10000),
+        pharmacy_delivery_phone=getattr(settings, "pharmacy_delivery_phone", None),
+        fuel_delivery_phone=getattr(settings, "fuel_delivery_phone", None),
         support_email=settings.support_email,
         support_phone=settings.support_phone,
         support_whatsapp=settings.support_whatsapp,
@@ -257,6 +259,7 @@ def _build_admin_seller_response(
         storefront_tier=profile.storefront_tier or "basic",
         is_enterprise=bool(getattr(profile, "is_enterprise", False)),
         offers_transport=bool(getattr(profile, "offers_transport", False)),
+        service_kind=getattr(profile, "service_kind", None),
         subscription_paid_until=profile.subscription_paid_until.isoformat() if profile.subscription_paid_until else None,
         commission_rate_override=profile.commission_rate_override,
         service_fee_override=profile.service_fee_override,
@@ -541,6 +544,8 @@ def update_finance_settings(
     settings_row.support_email = payload.support_email
     settings_row.support_phone = payload.support_phone
     settings_row.support_whatsapp = payload.support_whatsapp
+    settings_row.pharmacy_delivery_phone = (payload.pharmacy_delivery_phone or "").strip() or None
+    settings_row.fuel_delivery_phone = (payload.fuel_delivery_phone or "").strip() or None
     append_audit_log(
         db,
         event_type="admin_finance_settings_updated",
@@ -1688,6 +1693,45 @@ def set_seller_transport(
     db.commit()
     db.refresh(profile)
     _invalidate_public_marketplace_cache()
+    vendor = db.get(Vendor, profile.vendor_id)
+    return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
+
+
+@router.post("/sellers/{profile_id}/service-kind", response_model=AdminSellerResponse)
+def set_seller_service_kind(
+    profile_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+    kind: Annotated[Literal["pharmacy", "fuel_station", "none"], Query()],
+) -> AdminSellerResponse:
+    """Fait d'une vitrine Premium une pharmacie ou une station-essence (ou la remet en vitrine normale)."""
+    enforce_csrf(request)
+    _require_finance_pin(request, admin_user)
+    profile = db.get(SellerProfile, profile_id)
+    if profile is None:
+        raise ValidationDomainError("Profil vendeur introuvable")
+    profile.service_kind = None if kind == "none" else kind
+    if kind != "none":
+        # Service de proximite = vitrine Premium (reutilise l'abonnement et la vitrine existants).
+        profile.storefront_tier = "premium"
+        profile.is_enterprise = True
+        if profile.activity_type not in ("enterprise", "hotel"):
+            profile.activity_type = "enterprise"
+    append_audit_log(
+        db,
+        event_type="admin_seller_service_kind_set",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="seller_profile",
+        entity_id=profile.id,
+        details={"service_kind": kind},
+    )
+    db.commit()
+    db.refresh(profile)
+    _invalidate_public_marketplace_cache()
+    cache_delete_prefixes("services:")
     vendor = db.get(Vendor, profile.vendor_id)
     return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
 

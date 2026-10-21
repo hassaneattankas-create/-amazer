@@ -5,6 +5,8 @@ import {
   Armchair,
   BadgeCheck,
   BedDouble,
+  Fuel,
+  Pill,
   LayoutGrid,
   Laptop,
   Search,
@@ -246,6 +248,22 @@ export default function HomePage() {
                 <BedDouble className="h-6 w-6" aria-hidden="true" />
               </span>
               {t("Premium")}
+            </Link>
+          </li>
+          <li className="shrink-0">
+            <Link href="/pharmacies" className={tileClass(false)}>
+              <span className={tileIconClass(false)}>
+                <Pill className="h-6 w-6" aria-hidden="true" />
+              </span>
+              {t("Pharmacies")}
+            </Link>
+          </li>
+          <li className="shrink-0">
+            <Link href="/stations" className={tileClass(false)}>
+              <span className={tileIconClass(false)}>
+                <Fuel className="h-6 w-6" aria-hidden="true" />
+              </span>
+              {t("Stations")}
             </Link>
           </li>
         </ul>

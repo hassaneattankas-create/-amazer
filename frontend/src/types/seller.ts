@@ -1,3 +1,4 @@
+import type { LocalServiceItem, ServiceKind } from "@/types/local-services";
 import type { RestaurantMenuItem } from "@/types/restaurant";
 
 export type SellerActivityType = "shop" | "restaurant" | "hotel" | "enterprise" | "transport";
@@ -63,6 +64,8 @@ export type SellerProfile = {
   offers_transport?: boolean;
   offers_shop?: boolean;
   offers_restaurant?: boolean;
+  /** Pharmacie ou station-essence (choisi par l'admin) : panneau de garde / disponibilités. */
+  service_kind?: ServiceKind | null;
   is_verified: boolean;
   created_at: string;
 };
@@ -227,6 +230,8 @@ export type SellerStorefront = {
   /** Avis verifies des clients */
   rating_average?: number;
   rating_count?: number;
+  /** Pharmacie / station : garde, disponibilités, itinéraire et livraison AMAZER. */
+  local_service?: LocalServiceItem | null;
 };
 
 export type SellerStatsWeek = { views: number; contacts: number; orders: number };

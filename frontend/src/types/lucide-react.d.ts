@@ -107,4 +107,11 @@ declare module "lucide-react" {
   export const UtensilsCrossed: LucideIcon;
   export const X: LucideIcon;
   export const Zap: LucideIcon;
+  export const Fuel: LucideIcon;
+  export const LocateFixed: LucideIcon;
+  export const Moon: LucideIcon;
+  export const Navigation: LucideIcon;
+  export const Pill: LucideIcon;
+  export const RefreshCw: LucideIcon;
+  export const XCircle: LucideIcon;
 }

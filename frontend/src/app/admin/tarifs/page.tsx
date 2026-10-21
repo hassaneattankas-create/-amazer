@@ -25,6 +25,7 @@ import {
   permanentlyDeleteAdminSeller,
   replaceAdminDistrictFees,
   restoreAdminSeller,
+  setAdminSellerServiceKind,
   setAdminSellerTransport,
   toggleLaunchMode,
   updateAdminFinanceSettings,
@@ -244,6 +245,22 @@ export default function AdminTarifsPage() {
       );
     },
     onError: () => setStatus("Impossible de changer la fonction Transport."),
+  });
+  const serviceKindMutation = useMutation({
+    mutationFn: ({ profileId, kind }: { profileId: string; kind: "pharmacy" | "fuel_station" | "none" }) =>
+      setAdminSellerServiceKind(profileId, kind),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
+      setStatus(
+        vars.kind === "pharmacy"
+          ? "Vitrine marquée Pharmacie : elle peut indiquer ses gardes."
+          : vars.kind === "fuel_station"
+            ? "Vitrine marquée Station-essence : elle peut indiquer ses disponibilités."
+            : "Vitrine remise en vitrine normale.",
+      );
+    },
+    onError: () => setStatus("Impossible de changer le type de service."),
   });
   const permanentDeleteSellerMutation = useMutation({
     mutationFn: permanentlyDeleteAdminSeller,
@@ -799,6 +816,30 @@ export default function AdminTarifsPage() {
               />
             </div>
           </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <p className="text-sm font-medium text-slate-800">Livraison depuis les pharmacies (numéro AMAZER)</p>
+              <p className="text-xs text-slate-500">Bouton « Se faire livrer » des pharmacies de Niamey. Vide = bouton masqué.</p>
+              <input
+                value={effective.pharmacy_delivery_phone ?? ""}
+                onChange={(event) => setDraft({ ...effective, pharmacy_delivery_phone: event.target.value || null })}
+                className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+                placeholder="+227 xx xx xx xx"
+                inputMode="tel"
+              />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-800">Livraison depuis les stations (numéro AMAZER)</p>
+              <p className="text-xs text-slate-500">Bouton « Se faire livrer » des stations de Niamey (gaz, carburant). Vide = bouton masqué.</p>
+              <input
+                value={effective.fuel_delivery_phone ?? ""}
+                onChange={(event) => setDraft({ ...effective, fuel_delivery_phone: event.target.value || null })}
+                className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+                placeholder="+227 xx xx xx xx"
+                inputMode="tel"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -939,6 +980,11 @@ export default function AdminTarifsPage() {
                         Transport
                       </span>
                     ) : null}
+                    {seller.service_kind ? (
+                      <span className="ml-1 rounded-full border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                        {seller.service_kind === "pharmacy" ? "Pharmacie" : "Station"}
+                      </span>
+                    ) : null}
                     {" | "}
                     {seller.subscription_paid_until ? (
                       <span className={new Date(seller.subscription_paid_until) > new Date() ? "text-green-600" : "text-rose-600"}>
@@ -1024,6 +1070,23 @@ export default function AdminTarifsPage() {
                       Marquer Transport
                     </Button>
                   )}
+                  <select
+                    aria-label="Service de proximité"
+                    title="Pharmacie ou station-essence"
+                    value={seller.service_kind ?? "none"}
+                    disabled={serviceKindMutation.isPending}
+                    onChange={(event) =>
+                      serviceKindMutation.mutate({
+                        profileId: seller.profile_id,
+                        kind: event.target.value as "pharmacy" | "fuel_station" | "none",
+                      })
+                    }
+                    className="h-8 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-700"
+                  >
+                    <option value="none">Ni pharmacie ni station</option>
+                    <option value="pharmacy">Pharmacie</option>
+                    <option value="fuel_station">Station-essence</option>
+                  </select>
                   <select
                     aria-label="Type d'activité du vendeur"
                     title="Type d'activité"

@@ -13,6 +13,9 @@ export type FinanceSettings = {
   support_email: string | null;
   support_phone: string | null;
   support_whatsapp: string | null;
+  /** Numéros AMAZER de livraison depuis les pharmacies / stations (vide = bouton masqué). */
+  pharmacy_delivery_phone?: string | null;
+  fuel_delivery_phone?: string | null;
   /** Essai gratuit a l'inscription vendeur, en jours (0 = desactive). */
   seller_trial_days?: number;
   /** Revente sans stock : abonnement mensuel du revendeur (XOF) et part AMAZER sur la marge (%). */
@@ -137,6 +140,7 @@ export type AdminSeller = {
   storefront_tier: string;
   is_enterprise: boolean;
   offers_transport: boolean;
+  service_kind?: "pharmacy" | "fuel_station" | null;
   subscription_paid_until: string | null;
   commission_rate_override: number | null;
   service_fee_override: number | null;

@@ -277,6 +277,15 @@ export async function setAdminSellerTransport(profileId: string, enabled: boolea
   });
 }
 
+/** Pharmacie, station-essence ou vitrine normale (« none »). */
+export async function setAdminSellerServiceKind(profileId: string, kind: "pharmacy" | "fuel_station" | "none"): Promise<AdminSeller> {
+  return adminProxyRequest<AdminSeller>({
+    url: `/admin/finance/sellers/${profileId}/service-kind`,
+    method: "POST",
+    params: { kind },
+  });
+}
+
 export async function grantAdminSellerSubscription(profileId: string, months = 1): Promise<AdminSeller> {
   return adminProxyRequest<AdminSeller>({
     url: `/admin/finance/sellers/${profileId}/grant-subscription`,

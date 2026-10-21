@@ -90,6 +90,8 @@ from app.services.listing_limit_service import (
     max_products_for_basic_tier,
 )
 from app.services.notification_service import NotificationPayload, NotificationService
+from app.routes.local_services import build_item as build_local_service_item
+from app.services import local_services
 from app.services.seller_finance_service import (
     build_effective_seller_finance_settings,
     get_or_create_global_settings,
@@ -259,6 +261,7 @@ def _profile_response(profile: SellerProfile, db: Session) -> SellerProfileRespo
         offers_transport=bool(getattr(profile, "offers_transport", False)),
         offers_shop=bool(getattr(profile, "offers_shop", False)),
         offers_restaurant=bool(getattr(profile, "offers_restaurant", False)),
+        service_kind=getattr(profile, "service_kind", None),
         is_verified=profile.is_verified,
         created_at=profile.created_at,
     )
@@ -650,6 +653,11 @@ def _build_public_storefront(vendor_id: str, db: Session) -> SellerStorefrontRes
         offers_shop=bool(getattr(profile, "offers_shop", False)),
         offers_restaurant=bool(getattr(profile, "offers_restaurant", False)),
         is_verified=profile.is_verified,
+        local_service=(
+            build_local_service_item(profile, get_or_create_global_settings(db), datetime.now(UTC))
+            if getattr(profile, "service_kind", None) in local_services.SERVICE_KINDS
+            else None
+        ),
         products=[
             SellerStorefrontProductResponse(
                 price_id=row.id,

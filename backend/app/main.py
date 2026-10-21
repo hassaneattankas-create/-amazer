@@ -47,6 +47,7 @@ from app.routes.admin_moderation import router as admin_moderation_router
 from app.routes.courier import router as courier_router
 from app.routes.assistant import router as assistant_router
 from app.routes.maintenance import router as maintenance_router
+from app.routes.local_services import router as local_services_router
 from app.services.security_log_service import log_security_event
 
 settings = get_settings()
@@ -210,6 +211,18 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_commission DOUBLE PRECISION NOT NULL DEFAULT 0",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_hold_days INTEGER NOT NULL DEFAULT 30",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS auto_receipt_hours INTEGER NOT NULL DEFAULT 72",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS pharmacy_delivery_phone VARCHAR(40)",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS fuel_delivery_phone VARCHAR(40)",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS service_kind VARCHAR(20)",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS on_duty BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS duty_start DATE",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS duty_end DATE",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS duty_updated_at TIMESTAMPTZ",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS fuel_status JSONB",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS fuel_updated_at TIMESTAMPTZ",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION",
+        "CREATE INDEX IF NOT EXISTS ix_seller_profiles_service_kind ON seller_profiles (service_kind)",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_min_payout DOUBLE PRECISION NOT NULL DEFAULT 2000",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_new_account_monthly_cap DOUBLE PRECISION NOT NULL DEFAULT 25000",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_max_referrals_per_day INTEGER NOT NULL DEFAULT 15",
@@ -553,6 +566,7 @@ app.include_router(resellers_router, prefix=settings.api_prefix)
 app.include_router(affiliates_router, prefix=settings.api_prefix)
 app.include_router(assistant_router, prefix=settings.api_prefix)
 app.include_router(maintenance_router, prefix=settings.api_prefix)
+app.include_router(local_services_router, prefix=settings.api_prefix)
 
 
 @app.middleware("http")
