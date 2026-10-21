@@ -69,7 +69,7 @@ def build_item(profile: SellerProfile, settings: object, now: datetime) -> Local
         latitude=profile.latitude,
         longitude=profile.longitude,
         maps_url=svc.maps_url(profile),
-        delivery_phone=svc.delivery_phone(profile, settings),
+        delivery_phone=svc.delivery_phone(profile, settings, now),
         on_duty=svc.is_on_duty(profile, now),
         duty_label=svc.duty_label(profile, now),
         fuel=FuelStatusSchema(**svc.clean_fuel_status(profile.fuel_status)),
@@ -178,7 +178,7 @@ def _status(profile: SellerProfile, settings: object) -> ServiceStatusResponse:
         latitude=profile.latitude,
         longitude=profile.longitude,
         maps_url=svc.maps_url(profile),
-        delivery_phone=svc.delivery_phone(profile, settings),
+        delivery_phone=svc.delivery_phone(profile, settings, now),
     )
 
 

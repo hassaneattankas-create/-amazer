@@ -23,7 +23,12 @@ const actionClass =
 export function LocalServiceCard({ item, kind, distanceKm, freshHours, compact = false }: Props) {
   const KindIcon = kind === "pharmacy" ? Pill : Fuel;
   const updated = timeAgo(item.fuel_updated_at);
-  const deliveryMessage = `Bonjour AMAZER, je souhaite une livraison depuis ${item.business_name}${item.city ? ` (${item.city})` : ""}.`;
+  const from = `${item.business_name}${item.city ? ` (${item.city})` : ""}`;
+  // Stations : seul le gaz s'achète et se livre.
+  const deliveryMessage =
+    kind === "fuel_station"
+      ? `Bonjour AMAZER, je souhaite commander du gaz livré depuis ${from}. Taille de bouteille : `
+      : `Bonjour AMAZER, je souhaite une livraison depuis ${from}.`;
   const logo = item.logo_url ? resolveImageUrl(item.logo_url) : null;
 
   return (
@@ -120,10 +125,14 @@ export function LocalServiceCard({ item, kind, distanceKm, freshHours, compact =
           className={`${actionClass} mt-2 bg-brand-600 text-white hover:bg-brand-700`}
         >
           <Bike className="h-4 w-4" aria-hidden="true" />
-          Se faire livrer par AMAZER
+          {kind === "fuel_station" ? "Commander du gaz (livraison AMAZER)" : "Se faire livrer par AMAZER"}
         </a>
       ) : (
-        <p className="mt-2 text-center text-xs text-ink-500">Livraison AMAZER bientôt disponible dans cette ville.</p>
+        <p className="mt-2 text-center text-xs text-ink-500">
+          {kind === "fuel_station"
+            ? "Livraison de gaz possible quand la station en a, dans les villes desservies."
+            : "Livraison AMAZER bientôt disponible dans cette ville."}
+        </p>
       )}
       {compact ? null : (
         <Link href={`/shop/${item.vendor_id}`} className="mt-3 text-center text-sm font-medium text-brand-700 hover:underline">

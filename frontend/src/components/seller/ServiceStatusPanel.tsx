@@ -232,9 +232,11 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
           </a>
         </div>
         <p className="mt-3 text-xs text-ink-600">
-          {status.delivery_phone
-            ? "Les clients peuvent se faire livrer depuis chez vous par AMAZER."
-            : "La livraison AMAZER n'est pas encore disponible dans votre ville."}
+          {kind === "fuel_station"
+            ? "Quand vous indiquez du gaz disponible, les clients peuvent en commander avec livraison AMAZER (le carburant ne se vend pas en ligne)."
+            : status.delivery_phone
+              ? "Les clients peuvent se faire livrer depuis chez vous par AMAZER."
+              : "La livraison AMAZER n'est pas encore disponible dans votre ville."}
         </p>
       </div>
     </section>

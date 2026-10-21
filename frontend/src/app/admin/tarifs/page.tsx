@@ -733,8 +733,8 @@ export default function AdminTarifsPage() {
               />
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-800">Livraison depuis les stations (numéro AMAZER)</p>
-              <p className="text-xs text-slate-500">Bouton « Se faire livrer » des stations (gaz, carburant). Vide = bouton masqué.</p>
+              <p className="text-sm font-medium text-slate-800">Commandes de gaz depuis les stations (numéro AMAZER)</p>
+              <p className="text-xs text-slate-500">Bouton « Commander du gaz » : seul le gaz se livre, et seulement quand la station en indique. Vide = bouton masqué.</p>
               <input
                 value={effective.fuel_delivery_phone ?? ""}
                 onChange={(event) => setDraft({ ...effective, fuel_delivery_phone: event.target.value || null })}

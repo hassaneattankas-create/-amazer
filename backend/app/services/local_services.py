@@ -113,12 +113,18 @@ def delivery_cities(settings: object | None) -> list[str]:
     return parse_cities(raw) or parse_cities(DEFAULT_DELIVERY_CITIES)
 
 
-def delivery_phone(profile: SellerProfile, settings: object | None) -> str | None:
-    """Numero AMAZER de livraison pour ce commerce, ou None si la ville n'est pas encore desservie."""
+def delivery_phone(profile: SellerProfile, settings: object | None, now: datetime | None = None) -> str | None:
+    """Numero AMAZER de livraison pour ce commerce, ou None si la ville n'est pas encore desservie.
+
+    Stations : seul le gaz s'achete et se livre ; le numero n'est donne que si la station
+    indique du gaz disponible, avec une information recente.
+    """
     served = {normalize_city(name) for name in delivery_cities(settings)}
     if normalize_city(getattr(profile, "city", None)) not in served:
         return None
     kind = getattr(profile, "service_kind", None)
+    if kind == "fuel_station" and not has_fuel(profile, "gaz", now):
+        return None
     field = "pharmacy_delivery_phone" if kind == "pharmacy" else "fuel_delivery_phone" if kind == "fuel_station" else None
     value = (getattr(settings, field, None) if field and settings is not None else None) or None
     return value.strip() if isinstance(value, str) and value.strip() else None

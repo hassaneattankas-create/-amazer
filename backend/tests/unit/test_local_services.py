@@ -68,7 +68,11 @@ def test_itinerary_opens_google_maps_on_the_exact_position_or_searches_the_addre
 def test_delivery_number_only_in_served_cities_and_per_service() -> None:
     settings = SimpleNamespace(pharmacy_delivery_phone="+227 90 00 00 01", fuel_delivery_phone="+227 90 00 00 02")
     assert svc.delivery_phone(_p(city=" NIAMEY "), settings) == "+227 90 00 00 01"
-    assert svc.delivery_phone(_p(service_kind="fuel_station"), settings) == "+227 90 00 00 02"
+    gas = _p(service_kind="fuel_station", fuel_status={"gaz": "available"}, fuel_updated_at=datetime.now(UTC))
+    assert svc.delivery_phone(gas, settings) == "+227 90 00 00 02"
+    # Stations : seul le gaz se livre (pas de numero sans gaz disponible et recent).
+    assert svc.delivery_phone(_p(service_kind="fuel_station", fuel_status={"gaz": "out", "super": "available"}, fuel_updated_at=datetime.now(UTC)), settings) is None
+    assert svc.delivery_phone(_p(service_kind="fuel_station", fuel_status={"gaz": "available"}, fuel_updated_at=datetime.now(UTC) - timedelta(hours=8)), settings) is None
     assert svc.delivery_phone(_p(city="Maradi"), settings) is None
     assert svc.delivery_phone(_p(), SimpleNamespace(pharmacy_delivery_phone="  ", fuel_delivery_phone=None)) is None
 
@@ -157,7 +161,9 @@ def test_station_updates_fuel_and_only_fresh_available_stations_are_listed(db: S
     assert route.list_stations(db, city=None, fuel="gaz", available=True).items == []
     everything = route.list_stations(db, city=None, fuel=None, available=False)
     assert [i.business_name for i in everything.items] == ["Commerce station-a", "Commerce station-b"]
-    assert everything.items[0].delivery_phone == "+227 90 00 00 02"
+    assert everything.items[0].delivery_phone is None  # gaz en rupture : pas de livraison
+    route.update_service_status(ServiceStatusUpdate(fuel=FuelStatusSchema(gaz="available")), None, db, user)
+    assert route.list_stations(db, city=None, fuel="gaz", available=True).items[0].delivery_phone == "+227 90 00 00 02"
 
 
 def test_wrong_service_or_position_is_refused(db: Session) -> None:

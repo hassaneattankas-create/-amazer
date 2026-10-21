@@ -55,7 +55,7 @@ const PLANS: Plan[] = [
       "Hôtel : réservation des chambres en ligne",
       "Transport : billets et places avec QR code",
       "Pharmacie : vos gardes visibles par tout le Niger",
-      "Station-essence : Super, gasoil et gaz disponibles",
+      "Station-essence : disponibilités et commandes de gaz livrées",
       "Itinéraire Google Maps et livraison AMAZER à Niamey",
       "Site vitrine complet et badge vérifié",
       "Statistiques sur 30 jours et mise en avant Premium",
