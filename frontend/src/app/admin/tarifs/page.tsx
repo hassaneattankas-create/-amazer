@@ -881,6 +881,18 @@ export default function AdminTarifsPage() {
                   >
                     Activer 12 mois
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      grantSubscriptionMutation.mutate({
+                        profileId: seller.profile_id,
+                        months: 1,
+                      })
+                    }
+                  >
+                    Offrir 1 mois
+                  </Button>
                   {seller.storefront_tier !== "premium" ? (
                     <Button
                       size="sm"
