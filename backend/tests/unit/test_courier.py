@@ -122,3 +122,31 @@ def test_release_puts_order_back_for_other_couriers() -> None:
     route.release_order("order-1", _request(), _db(order), COURIER)
     assert order.courier_user_id is None
     assert order.status == "preparation"
+
+
+def test_courier_sees_public_shop_info_but_never_the_payment_number() -> None:
+    from datetime import timedelta
+
+    db = _db(_order())
+    profile = SimpleNamespace(vendor_id="v1", business_name="Boutique Une", address="Grand marché", city="Niamey", phone=None,
+                              whatsapp_contact="+22791111111", payout_phone="+22799999999", opening_hours="8 h – 20 h",
+                              latitude=13.5137, longitude=2.1098)
+    product = SimpleNamespace(id="p1", name="Riz 5 kg")
+    db.scalars.side_effect = lambda query: SimpleNamespace(all=lambda: [profile] if "seller_profiles" in str(query) else [product])
+    paid_at = datetime(2026, 10, 21, 10, 0, tzinfo=UTC)
+    order = _order(
+        fulfillments=[SimpleNamespace(vendor_id="v1", status="livraison")],
+        fee_breakdown={"delivery_fee": 1500},
+        payment_confirmed_at=paid_at,
+        estimated_minutes=180,
+        courier_user_id=COURIER.id,
+    )
+    item = route._build(db, order, COURIER)
+    pickup = item.pickups[0]
+    assert pickup.phone == "+22791111111" and "+22799999999" not in str(item.model_dump())
+    assert pickup.maps_url.endswith("destination=13.513700,2.109800")
+    assert pickup.opening_hours == "8 h – 20 h" and pickup.status_label == "Prête / remise au livreur"
+    assert item.delivery_fee == 1500 and item.deliver_before == paid_at + timedelta(minutes=180)
+    assert item.customer_maps_url and "Rue%2012" in item.customer_maps_url
+    # Avant la prise en charge, ni adresse ni itineraire client.
+    assert route._build(db, _order(), COURIER).customer_maps_url is None

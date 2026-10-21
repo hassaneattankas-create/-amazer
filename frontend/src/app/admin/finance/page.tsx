@@ -3,34 +3,26 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AxiosError } from "axios";
 
+import { AdminOrdersPanel } from "@/components/admin/AdminOrdersPanel";
+import { AdminPendingSellersPanel } from "@/components/admin/AdminPendingSellersPanel";
 import { AnimatedPrice } from "@/components/AnimatedPrice";
-import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
-import {
-  getAdminFinanceDataError,
-  buildAdminFinanceVerifyPayload,
-  getAdminFinanceVerifyError,
-} from "@/lib/admin-finance-verification";
+import { requestAdminPin } from "@/lib/admin-pin";
+import { getAdminFinanceDataError } from "@/lib/admin-finance-verification";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import { notifyLocalOrderEvent } from "@/services/notification-service";
 import {
-  createAdminTransfer,
   decideAdminSellerSubscriptionPayment,
-  cancelAdminOrder,
-  dispatchAdminOrder,
   getAdminFinanceSummary,
   listAdminOrders,
   listAdminSellerSubscriptionPayments,
   getAdminTreasuryHistory,
   getAdminWalletSummary,
   resetAdminFinanceCounters,
-  verifyAdminFinancePin,
 } from "@/services/finance-service";
-import { hasAdminFinanceVerified } from "@/lib/api";
 
 const AdminRevenueChart = dynamic(
   () => import("@/components/admin/AdminRevenueChart").then((m) => m.AdminRevenueChart),
@@ -46,12 +38,8 @@ export default function AdminFinancePage() {
   const seenSellerPaymentIdsRef = useRef<Set<string>>(new Set());
   const adminOrdersInitializedRef = useRef(false);
   const sellerPaymentsInitializedRef = useRef(false);
-  const [pinStatus, setPinStatus] = useState("");
-  const [pin, setPin] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [pinVerified, setPinVerified] = useState(() => hasAdminFinanceVerified());
-  const [transferAmount, setTransferAmount] = useState("");
-  const [bankName, setBankName] = useState<"BOA" | "SONIBANK">("BOA");
+  // Le PIN est vérifié une seule fois par la mise en page admin.
+  const pinVerified = true;
   const [transferStatus, setTransferStatus] = useState("");
   const [paymentDecisionNote, setPaymentDecisionNote] = useState("");
   const [resetStatus, setResetStatus] = useState("");
@@ -86,7 +74,7 @@ export default function AdminFinancePage() {
     queryFn: getAdminTreasuryHistory,
     enabled: pinVerified,
   });
-  const { data: adminOrders, isError: isOrdersError, error: ordersError } = useQuery({
+  const { data: adminOrders, error: ordersError } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: () => listAdminOrders(30),
     enabled: pinVerified,
@@ -99,49 +87,6 @@ export default function AdminFinancePage() {
     refetchInterval: 8000,
   });
 
-  const pinMutation = useMutation({
-    mutationFn: verifyAdminFinancePin,
-    onSuccess: () => {
-      setPinVerified(true);
-      setPinStatus("Vérification admin valide. Acces autorise.");
-      setPin("");
-      setBirthDate("");
-    },
-    onError: (error) => setPinStatus(getAdminFinanceVerifyError(error)),
-  });
-
-
-  const transferMutation = useMutation({
-    mutationFn: createAdminTransfer,
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["admin-wallet-summary"] });
-      setTransferStatus(
-        `Virement simule vers ${result.bank_name}: ${formatXOF(result.amount)} (${result.status}).`
-      );
-      setTransferAmount("");
-    },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      setTransferStatus(error.response?.data?.detail ?? "Erreur pendant le virement simule.");
-    },
-  });
-  const dispatchMutation = useMutation({
-    mutationFn: ({ orderId, status }: { orderId: string; status: "livraison" | "recu" }) =>
-      dispatchAdminOrder(orderId, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-      setTransferStatus("Statut client mis a jour.");
-    },
-  });
-  const cancelOrderMutation = useMutation({
-    mutationFn: (orderId: string) => cancelAdminOrder(orderId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-      setTransferStatus("Commande annulée. Si elle etait payee, le stock est remis et le remboursement reste a faire.");
-    },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      setTransferStatus(error.response?.data?.detail ?? "Annulation impossible.");
-    },
-  });
   const sellerPaymentDecisionMutation = useMutation({
     mutationFn: ({
       paymentId,
@@ -258,48 +203,6 @@ export default function AdminFinancePage() {
     );
   }, [sellerPayments, pinVerified]);
 
-  if (!pinVerified) {
-    return (
-      <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
-        <article className="premium-card border border-slate-200 bg-white p-6">
-          <h1 className="luxury-title text-2xl font-semibold">Dashboard Trésorerie Admin</h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Acces prive: saisissez le secret admin et la cle secondaire pour consulter les fonds.
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Si tu inverses la date et le PIN, l&apos;app corrige automatiquement.
-          </p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <PasswordInput
-              value={pin}
-              onChange={(event) => setPin(event.target.value)}
-              placeholder="PIN admin"
-              masking="password"
-              wrapperClassName="min-w-0 flex-1"
-            />
-            <PasswordInput
-              value={birthDate}
-              onChange={(event) => setBirthDate(event.target.value)}
-              placeholder="Date secondaire JJ/MM/AA"
-              masking="text"
-              autoComplete="off"
-              wrapperClassName="min-w-0 flex-1"
-            />
-            <Button
-              type="button"
-              onClick={() => pinMutation.mutate(buildAdminFinanceVerifyPayload(pin, birthDate))}
-              disabled={!pin || !birthDate || pinMutation.isPending}
-              className="primary-glow-btn bg-brand-600 text-white hover:bg-brand-700"
-            >
-              Verifier
-            </Button>
-          </div>
-          {pinStatus ? <p className="mt-3 text-sm text-slate-700">{pinStatus}</p> : null}
-        </article>
-      </section>
-    );
-  }
-
   if (
     isSummaryPending ||
     isWalletPending ||
@@ -312,7 +215,7 @@ export default function AdminFinancePage() {
             <h1 className="text-xl font-semibold text-rose-700">Finance admin indisponible</h1>
             <p className="mt-2 text-sm text-rose-700">{criticalPageError}</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Button type="button" onClick={() => setPinVerified(false)}>
+              <Button type="button" onClick={requestAdminPin}>
                 Revalider le PIN
               </Button>
               <Button type="button" variant="outline" onClick={() => window.location.assign("/login?next=/admin/finance")}>
@@ -332,6 +235,17 @@ export default function AdminFinancePage() {
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-14 sm:px-6">
+      <header>
+        <h1 className="text-2xl font-semibold text-ink-900">Commandes et paiements</h1>
+        <p className="mt-1 text-sm text-ink-600">Valider les paiements, suivre les livraisons, puis la trésorerie et l&apos;historique.</p>
+      </header>
+      <AdminOrdersPanel />
+      <AdminPendingSellersPanel />
+      {transferStatus ? (
+        <p className="rounded-field bg-surface-1 px-3 py-2 text-sm text-ink-800" role="status">
+          {transferStatus}
+        </p>
+      ) : null}
       {secondaryErrors.length ? (
         <article className="premium-card border border-amber-200 bg-amber-50 p-4">
           <h2 className="text-sm font-semibold text-amber-800">Certaines sections admin sont indisponibles</h2>
@@ -342,19 +256,6 @@ export default function AdminFinancePage() {
           </div>
         </article>
       ) : null}
-      <header className="premium-card border border-slate-200 bg-white p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="luxury-title text-3xl font-semibold">Admin Finance</h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Wallet, virements, paiements vendeurs et historique transactions.
-            </p>
-          </div>
-          <Button type="button" size="sm" variant="outline" onClick={() => setPinVerified(false)}>
-            Verrouiller
-          </Button>
-        </div>
-      </header>
 
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -406,8 +307,8 @@ export default function AdminFinancePage() {
         </article>
       </div>
 
-      <article className="premium-card border border-slate-200 bg-white p-6">
-        <h2 className="luxury-title text-lg font-semibold">Réinitialisation des compteurs</h2>
+      <details className="rounded-card border border-border bg-card p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-ink-800">Zone sensible : remise à zéro des compteurs</summary>
         <p className="mt-2 text-sm text-slate-600">
           Remet a zero les compteurs finances et clics pub sans supprimer l&apos;historique des commandes.
         </p>
@@ -420,45 +321,7 @@ export default function AdminFinancePage() {
           {resetCountersMutation.isPending ? "Reinitialisation..." : "Remettre les compteurs a zero"}
         </Button>
         {resetStatus ? <p className="mt-3 text-sm text-slate-700">{resetStatus}</p> : null}
-      </article>
-
-      <article className="premium-card border border-slate-200 bg-white p-6">
-        <h2 className="luxury-title text-lg font-semibold">Virement Simule (BOA / SONIBANK)</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          Simulation interne uniquement. Aucun transfert bancaire reel n est execute.
-        </p>
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-          <select
-            value={bankName}
-            onChange={(event) => setBankName(event.target.value as "BOA" | "SONIBANK")}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="BOA">BOA</option>
-            <option value="SONIBANK">SONIBANK</option>
-          </select>
-          <input
-            value={transferAmount}
-            onChange={(event) => setTransferAmount(event.target.value)}
-            placeholder="Montant XOF"
-            inputMode="numeric"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-          />
-          <Button
-            type="button"
-            disabled={transferMutation.isPending || !transferAmount}
-            onClick={() =>
-              transferMutation.mutate({
-                bank_name: bankName,
-                amount: Number(transferAmount),
-              })
-            }
-            className="primary-glow-btn bg-brand-600 text-white hover:bg-brand-700"
-          >
-            Virement
-          </Button>
-        </div>
-        {transferStatus ? <p className="mt-3 text-sm text-slate-700">{transferStatus}</p> : null}
-      </article>
+      </details>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="luxury-title text-lg font-semibold">Validations paiements vendeurs</h2>
@@ -549,8 +412,7 @@ export default function AdminFinancePage() {
                 <th className="pb-2">Source</th>
                 <th className="pb-2">Paiement</th>
                 <th className="pb-2">Montant</th>
-                <th className="pb-2">Code Dechiffre</th>
-                <th className="pb-2">Code Chiffre</th>
+                <th className="pb-2">Référence</th>
               </tr>
             </thead>
             <tbody>
@@ -563,9 +425,6 @@ export default function AdminFinancePage() {
                   <td className="py-2 text-slate-700">{row.payment_mode}</td>
                   <td className="py-2 font-medium text-slate-900">{formatXOF(row.amount)}</td>
                   <td className="py-2 text-slate-700">{row.decrypted_transaction_code ?? "-"}</td>
-                  <td className="py-2 font-mono text-xs text-slate-600">
-                    {row.encrypted_transaction_code ?? "-"}
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -574,74 +433,6 @@ export default function AdminFinancePage() {
         ) : null}
       </article>
 
-      <article className="premium-card border border-slate-200 bg-white p-6">
-        <h2 className="luxury-title text-lg font-semibold">Suivi des commandes</h2>
-        <p className="mt-2 text-sm text-slate-600">Un seul bouton fait avancer chaque commande a l&apos;étape suivante.</p>
-        {isOrdersError ? <p className="mt-4 text-sm text-amber-700">{getAdminFinanceDataError(ordersError)}</p> : null}
-        <div className="mt-4 space-y-2">
-          {(adminOrders ?? []).slice(0, 12).map((order) => {
-            const label =
-              order.status === "annulee"
-                ? "Annulee"
-                : order.status === "recu" || order.status === "CLAIMED"
-                ? "Livree"
-                : order.status === "livraison"
-                  ? "En livraison"
-                  : order.status === "preparation"
-                    ? "En preparation"
-                    : "Nouvelle";
-            const isClosed = order.status === "recu" || order.status === "CLAIMED" || order.status === "annulee";
-            const nextAction =
-              order.status === "livraison"
-                ? { label: "Marquer livree", to: "recu" as const }
-                : isClosed
-                  ? null
-                  : { label: "Envoyer en livraison", to: "livraison" as const };
-            return (
-              <div key={order.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 p-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-900">
-                    {order.customer_name} <span className="text-xs text-slate-400">#{order.id.slice(0, 8)}</span>
-                  </p>
-                  <p className="mt-0.5 text-sm font-semibold text-brand-600">{formatXOF(order.total_amount)}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600">{label}</span>
-                  {nextAction ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={dispatchMutation.isPending}
-                      onClick={() => dispatchMutation.mutate({ orderId: order.id, status: nextAction.to })}
-                      className="primary-glow-btn bg-brand-600 text-white hover:bg-brand-700"
-                    >
-                      {nextAction.label}
-                    </Button>
-                  ) : null}
-                  {!isClosed ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={cancelOrderMutation.isPending}
-                      onClick={() => {
-                        if (window.confirm("Annuler cette commande ? Si elle est payee, le remboursement se fait hors plateforme.")) {
-                          cancelOrderMutation.mutate(order.id);
-                        }
-                      }}
-                    >
-                      Annuler
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
-          {!(adminOrders ?? []).length ? (
-            <p className="text-sm text-slate-500">Aucune commande pour le moment.</p>
-          ) : null}
-        </div>
-      </article>
     </section>
   );
 }

@@ -4,39 +4,28 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { PasswordInput } from "@/components/PasswordInput";
 import { Button } from "@/components/ui/button";
-import {
-  getAdminFinanceDataError,
-  buildAdminFinanceVerifyPayload,
-  getAdminFinanceVerifyError,
-} from "@/lib/admin-finance-verification";
+import { requestAdminPin } from "@/lib/admin-pin";
+import { getAdminFinanceDataError } from "@/lib/admin-finance-verification";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import {
-  decideAdminPendingSeller,
-  deleteAdminSeller,
   downloadAuditCsv,
   getAdminFinanceSettings,
   grantAdminSellerSubscription,
   listAdminDistrictFees,
   listAdminAuditHistory,
-  listAdminPendingSellers,
   listAdminSellers,
-  permanentlyDeleteAdminSeller,
   replaceAdminDistrictFees,
-  restoreAdminSeller,
   setAdminSellerServiceKind,
   setAdminSellerTransport,
   toggleLaunchMode,
   updateAdminFinanceSettings,
   updateAdminSellerPricing,
   updateAdminSellerType,
-  verifyAdminFinancePin,
   verifyAdminSeller,
 } from "@/services/finance-service";
-import { hasAdminFinanceVerified } from "@/lib/api";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { AdminPendingSeller, FinanceSettings } from "@/types/finance";
+import { FinanceSettings } from "@/types/finance";
 
 function parseNonNegativeNumber(value: string, fallback: number) {
   const normalized = value.replace(",", ".").trim();
@@ -129,26 +118,14 @@ function AdminNumberField({
 
 export default function AdminTarifsPage() {
   const queryClient = useQueryClient();
-  const [pin, setPin] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [pinVerified, setPinVerified] = useState(() => hasAdminFinanceVerified());
+  // Le PIN est vérifié une seule fois par la mise en page admin.
+  const pinVerified = true;
   const [status, setStatus] = useState("");
   const [draft, setDraft] = useState<FinanceSettings | null>(null);
   const [districtDraft, setDistrictDraft] = useState<string | null>(null);
   const [sellerPricingDrafts, setSellerPricingDrafts] = useState<
     Record<string, { commission: string; serviceFee: string; subscriptionFee: string }>
   >({});
-
-  const pinMutation = useMutation({
-    mutationFn: verifyAdminFinancePin,
-    onSuccess: () => {
-      setPinVerified(true);
-      setStatus("Vérification admin valide. Acces tarifs autorise.");
-      setPin("");
-      setBirthDate("");
-    },
-    onError: (error) => setStatus(getAdminFinanceVerifyError(error)),
-  });
 
   const { data: settings, isPending, isError: isSettingsError, error: settingsError } = useQuery({
     queryKey: ["admin-tarifs-settings"],
@@ -214,24 +191,6 @@ export default function AdminTarifsPage() {
     onError: () => setStatus("Erreur enregistrement frais quartiers."),
   });
 
-  const deleteSellerMutation = useMutation({
-    mutationFn: deleteAdminSeller,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
-      setStatus("Vendeur retiré (désactivé). Tu peux le remettre en ligne a tout moment.");
-    },
-    onError: (error) => setStatus(getApiErrorMessage(error, "Retrait du vendeur impossible.")),
-  });
-  const restoreSellerMutation = useMutation({
-    mutationFn: restoreAdminSeller,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
-      setStatus("Vendeur remis en ligne.");
-    },
-    onError: () => setStatus("Remise en ligne impossible."),
-  });
   const transportMutation = useMutation({
     mutationFn: ({ profileId, enabled }: { profileId: string; enabled: boolean }) =>
       setAdminSellerTransport(profileId, enabled),
@@ -262,16 +221,6 @@ export default function AdminTarifsPage() {
     },
     onError: () => setStatus("Impossible de changer le type de service."),
   });
-  const permanentDeleteSellerMutation = useMutation({
-    mutationFn: permanentlyDeleteAdminSeller,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
-      setStatus("Vendeur supprime définitivement. Son email est de nouveau disponible.");
-    },
-    onError: (error) => setStatus(getApiErrorMessage(error, "Suppression definitive impossible.")),
-  });
-
   const verifySellerMutation = useMutation({
     mutationFn: ({ profileId, verified }: { profileId: string; verified: boolean }) =>
       verifyAdminSeller(profileId, verified),
@@ -291,25 +240,6 @@ export default function AdminTarifsPage() {
       setStatus("Abonnement accorde. La boutique est maintenant visible.");
     },
     onError: (error) => setStatus(getApiErrorMessage(error, "Impossible d'accorder l'abonnement.")),
-  });
-
-  const { data: pendingSellers } = useQuery({
-    queryKey: ["admin-pending-sellers"],
-    queryFn: () => listAdminPendingSellers("pending"),
-    enabled: pinVerified,
-    refetchInterval: 30000,
-  });
-
-  const pendingSellerDecisionMutation = useMutation({
-    mutationFn: ({ regId, decision, adminNote }: { regId: string; decision: "approved" | "rejected"; adminNote?: string }) =>
-      decideAdminPendingSeller(regId, { decision, admin_note: adminNote }),
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["admin-pending-sellers"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
-      setStatus(result.status === "approved" ? "Compte vendeur cree et boutique activee." : "Demande rejetee.");
-    },
-    onError: (error) => setStatus(getApiErrorMessage(error, "Impossible de traiter la demande.")),
   });
 
   const sellerTypeMutation = useMutation({
@@ -414,44 +344,6 @@ export default function AdminTarifsPage() {
     );
   }
 
-  if (!pinVerified) {
-    return (
-      <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
-        <article className="premium-card border border-slate-200 bg-white p-6">
-          <h1 className="luxury-title text-2xl font-semibold">Panneau Tarifs Admin</h1>
-          <p className="mt-2 text-sm text-slate-600">Acces protege par MFA + secret admin + cle secondaire.</p>
-          <p className="mt-1 text-xs text-slate-500">
-            Si tu inverses la date et le PIN, l&apos;app corrige automatiquement.
-          </p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <PasswordInput
-              value={pin}
-              onChange={(event) => setPin(event.target.value)}
-              placeholder="PIN admin"
-              masking="password"
-              wrapperClassName="min-w-0 flex-1"
-            />
-            <PasswordInput
-              value={birthDate}
-              onChange={(event) => setBirthDate(event.target.value)}
-              placeholder="Date secondaire JJ/MM/AA"
-              masking="text"
-              autoComplete="off"
-              wrapperClassName="min-w-0 flex-1"
-            />
-            <Button
-              onClick={() => pinMutation.mutate(buildAdminFinanceVerifyPayload(pin, birthDate))}
-              disabled={!pin || !birthDate}
-            >
-              Vérifier
-            </Button>
-          </div>
-          {status ? <p className="mt-2 text-sm text-slate-700">{status}</p> : null}
-        </article>
-      </section>
-    );
-  }
-
   if (isPending || !effective) {
     if (isSettingsError && criticalPageError) {
       return (
@@ -460,7 +352,7 @@ export default function AdminTarifsPage() {
             <h1 className="text-xl font-semibold text-rose-700">Chargement admin impossible</h1>
             <p className="mt-2 text-sm text-rose-700">{criticalPageError}</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Button type="button" onClick={() => setPinVerified(false)}>
+              <Button type="button" onClick={requestAdminPin}>
                 Revalider le PIN
               </Button>
               <Button type="button" variant="outline" onClick={() => window.location.assign("/login?next=/admin/tarifs")}>
@@ -492,29 +384,15 @@ export default function AdminTarifsPage() {
       ) : null}
       <header className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="luxury-title text-3xl font-semibold">Controle Admin</h1>
-        <p className="mt-2 text-sm text-slate-600">Commission, frais, abonnements, vendeurs et inscriptions.</p>
+        <p className="mt-2 text-sm text-slate-600">Commission, frais, abonnements et vendeurs. Les inscriptions à valider sont dans « Commandes et paiements ».</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <a href="#tarifs" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Tarifs & Frais</a>
-          <a href="#inscriptions" className="rounded-md border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs text-brand-600 font-medium hover:bg-orange-100">
-            Inscriptions en attente {pendingSellers?.length ? `(${pendingSellers.length})` : ""}
-          </a>
           <a href="#vendeurs" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">
             Vendeurs {sellers?.length ? `(${sellers.length})` : ""}
           </a>
           <a href="#quartiers" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Frais quartiers</a>
           <a href="#audit" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Historique</a>
-          <Link href="/admin/catalog" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Catégories</Link>
-          <Link href="/admin/sections" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Sections</Link>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="mt-3"
-          onClick={() => setPinVerified(false)}
-        >
-          Verrouiller
-        </Button>
       </header>
 
       <article id="tarifs" className="premium-card border border-slate-200 bg-white p-6">
@@ -890,66 +768,6 @@ export default function AdminTarifsPage() {
         </div>
       </article>
 
-      {(pendingSellers ?? []).length > 0 && (
-        <article id="inscriptions" className="premium-card border border-orange-200 bg-orange-50 p-6">
-          <h2 className="text-lg font-semibold text-slate-900">
-            Inscriptions en attente{" "}
-            <span className="ml-1 rounded-full bg-brand-600 px-2 py-0.5 text-xs text-white">
-              {pendingSellers!.length}
-            </span>
-          </h2>
-          <p className="mt-1 text-xs text-slate-500">
-            Verifiez le paiement sur votre Nita (+227 96 95 31 63) avant de confirmer.
-          </p>
-          <div className="mt-3 space-y-3">
-            {pendingSellers!.map((reg: AdminPendingSeller) => (
-              <div key={reg.id} className="rounded-lg border border-orange-200 bg-white p-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{reg.business_name || reg.full_name}</p>
-                    <p className="mt-0.5 text-xs text-slate-600">
-                      {reg.full_name} &middot; {reg.identifier}
-                    </p>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Type : {reg.activity_type} &middot; {reg.months} mois &middot; {reg.payment_mode?.toUpperCase()}
-                    </p>
-                    {reg.transaction_reference ? (
-                      <p className="mt-0.5 text-xs font-medium text-slate-700">
-                        Ref : {reg.transaction_reference}
-                      </p>
-                    ) : (
-                      <p className="mt-0.5 text-xs text-amber-600">Aucune référence fournie</p>
-                    )}
-                    <p className="mt-0.5 text-xs text-slate-400">
-                      {new Date(reg.submitted_at).toLocaleString("fr-FR")}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      className="bg-green-600 text-white hover:bg-green-700"
-                      disabled={pendingSellerDecisionMutation.isPending}
-                      onClick={() => pendingSellerDecisionMutation.mutate({ regId: reg.id, decision: "approved" })}
-                    >
-                      Confirmer paiement
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-red-300 text-red-600 hover:bg-red-50"
-                      disabled={pendingSellerDecisionMutation.isPending}
-                      onClick={() => pendingSellerDecisionMutation.mutate({ regId: reg.id, decision: "rejected" })}
-                    >
-                      Rejeter
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </article>
-      )}
-
       <article id="vendeurs" className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-slate-900">Vendeurs</h2>
         <div className="mt-3 space-y-2">
@@ -1116,43 +934,15 @@ export default function AdminTarifsPage() {
                     <option value="restaurant">Restaurant</option>
                     <option value="enterprise">Premium</option>
                   </select>
-                  {seller.is_active ? (
-                    <Button
-                      size="sm"
-                      className="border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                      disabled={deleteSellerMutation.isPending}
-                      onClick={() => deleteSellerMutation.mutate(seller.profile_id)}
-                    >
-                      Retirer
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        size="sm"
-                        className="border border-green-300 bg-green-50 text-green-800 hover:bg-green-100"
-                        disabled={restoreSellerMutation.isPending}
-                        onClick={() => restoreSellerMutation.mutate(seller.profile_id)}
-                      >
-                        Remettre en ligne
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
-                        disabled={permanentDeleteSellerMutation.isPending}
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Supprimer DEFINITIVEMENT "${seller.business_name}" ?\n\nLe compte sera anonymise et son email libere. L'historique des commandes est conserve. Action irréversible.`,
-                            )
-                          ) {
-                            permanentDeleteSellerMutation.mutate(seller.profile_id);
-                          }
-                        }}
-                      >
-                        Supprimer definitivement
-                      </Button>
-                    </>
-                  )}
+                  {!seller.is_active ? (
+                    <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">Hors ligne</span>
+                  ) : null}
+                  <Link
+                    href={`/admin/users?q=${encodeURIComponent(seller.email ?? seller.business_name)}`}
+                    className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    Gérer le compte
+                  </Link>
                 </div>
               </div>
               <div className="mt-3 grid gap-3 md:grid-cols-3">

@@ -111,6 +111,11 @@ export type AdminOrderTracking = {
   total_amount: number;
   tracking_code: string | null;
   created_at: string;
+  payment_status?: "pending" | "paid" | string;
+  /** Référence Nita envoyée par le client, tant que le paiement est à valider. */
+  client_reference?: string | null;
+  delivery_district?: string | null;
+  item_count?: number;
 };
 
 export type DistrictFeeItem = {
@@ -143,6 +148,8 @@ export type AdminSeller = {
   is_enterprise: boolean;
   offers_transport: boolean;
   service_kind?: "pharmacy" | "fuel_station" | null;
+  /** E-mail du compte (actions sur le compte dans « Utilisateurs »). */
+  email?: string | null;
   subscription_paid_until: string | null;
   commission_rate_override: number | null;
   service_fee_override: number | null;

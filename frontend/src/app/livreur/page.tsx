@@ -2,11 +2,13 @@
 
 import { useCallback, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Truck } from "lucide-react";
+import Link from "next/link";
+import { Fuel, Pill, Truck } from "lucide-react";
 
 import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 import { DeliveryCard } from "@/components/courier/DeliveryCard";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useNow } from "@/hooks/use-now";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
   listAvailableDeliveries,
@@ -25,6 +27,7 @@ export default function CourierPage() {
   const [tab, setTab] = useState<Tab>("available");
   const [message, setMessage] = useState("");
   const allowed = user?.role === "courier" || user?.role === "admin";
+  const now = useNow();
 
   const available = useQuery({
     queryKey: ["courier-available"],
@@ -96,12 +99,50 @@ export default function CourierPage() {
   }
 
   const list = tab === "available" ? available : mine;
-  const orders = list.data ?? [];
+  // Express d'abord, puis la plus ancienne (la plus urgente).
+  const orders = [...(list.data ?? [])].sort(
+    (a, b) =>
+      Number(b.delivery_type === "express_niamey") - Number(a.delivery_type === "express_niamey") ||
+      (tab === "available" ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime() : 0)
+  );
   const activeMine = (mine.data ?? []).filter((order) => order.status === "livraison").length;
+  const today = new Date(now).toDateString();
+  const deliveredToday = (mine.data ?? []).filter((order) => order.delivered_at && new Date(order.delivered_at).toDateString() === today).length;
+  const quickLink =
+    "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-pill border border-border bg-card px-4 text-sm font-medium text-ink-800 hover:border-ink-400";
 
   return (
     <section className="mx-auto max-w-3xl px-gutter pb-16 pt-4">
       <h1 className="text-2xl font-semibold text-ink-900">Espace livreur</h1>
+
+      <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+        {(
+          [
+            ["À prendre", available.data?.length ?? 0],
+            ["En cours", activeMine],
+            ["Livrées aujourd'hui", deliveredToday],
+          ] as const
+        ).map(([label, value]) => (
+          <div key={label} className="rounded-card border border-border bg-card px-2 py-3">
+            <dd className="text-2xl font-semibold text-ink-900">{value}</dd>
+            <dt className="text-xs text-ink-600">{label}</dt>
+          </div>
+        ))}
+      </dl>
+
+      <nav className="-mx-gutter mt-3 overflow-x-auto px-gutter" aria-label="Raccourcis livreur">
+        <div className="flex gap-2">
+          <Link href="/stations" className={quickLink}>
+            <Fuel className="h-4 w-4 text-brand-600" aria-hidden="true" />
+            Où trouver de l&apos;essence
+          </Link>
+          <Link href="/pharmacies" className={quickLink}>
+            <Pill className="h-4 w-4 text-brand-600" aria-hidden="true" />
+            Pharmacies de garde
+          </Link>
+          <WhatsAppButton variant="outline" label="Contacter AMAZER" message="Bonjour AMAZER, je suis livreur et j'ai besoin d'aide." />
+        </div>
+      </nav>
 
       <div className="mt-4 grid grid-cols-2 gap-2 rounded-pill bg-surface-3 p-1" role="tablist">
         {(

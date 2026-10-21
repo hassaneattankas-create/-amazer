@@ -3,15 +3,10 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
-import {
-  getAdminFinanceDataError,
-  buildAdminFinanceVerifyPayload,
-  getAdminFinanceVerifyError,
-} from "@/lib/admin-finance-verification";
-import { clearAdminFinanceVerified, hasAdminFinanceVerified } from "@/lib/api";
+import { requestAdminPin } from "@/lib/admin-pin";
+import { getAdminFinanceDataError } from "@/lib/admin-finance-verification";
 import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
 import {
   getAdminUserStats,
@@ -20,25 +15,24 @@ import {
   removeAdminUser,
   restoreAdminUser,
   updateAdminUserRole,
-  verifyAdminFinancePin,
   type AdminUserRole,
 } from "@/services/finance-service";
 
 export default function AdminUsersPage() {
   const queryClient = useQueryClient();
-  const [pin, setPin] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [pinVerified, setPinVerified] = useState(() => hasAdminFinanceVerified());
-  const [pinStatus, setPinStatus] = useState("");
+  // Le PIN est vérifié une seule fois par la mise en page admin.
+  const pinVerified = true;
   const [actionStatus, setActionStatus] = useState("");
-  const [searchDraft, setSearchDraft] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+  // « Gérer le compte » depuis la liste des vendeurs : /admin/users?q=e-mail
+  const initialSearch = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("q") ?? "";
+  const [searchDraft, setSearchDraft] = useState(initialSearch);
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [showInactive, setShowInactive] = useState(false);
 
+  // PIN expiré ou refusé : la mise en page admin redemande le PIN.
   const resetAdminVerification = (message: string) => {
-    clearAdminFinanceVerified();
-    setPinVerified(false);
-    setPinStatus(message);
+    void message;
+    requestAdminPin();
   };
 
   const buildAdminActionMessage = (error: unknown, fallback: string) => {
@@ -56,21 +50,6 @@ export default function AdminUsersPage() {
 
     return message;
   };
-
-  const pinMutation = useMutation({
-    mutationFn: verifyAdminFinancePin,
-    onSuccess: () => {
-      setPinVerified(true);
-      setPinStatus("Vérification admin valide. Gestion utilisateurs activee.");
-      setPin("");
-      setBirthDate("");
-    },
-    onError: (error) => {
-      clearAdminFinanceVerified();
-      setPinVerified(false);
-      setPinStatus(getAdminFinanceVerifyError(error));
-    },
-  });
 
   const {
     data: stats,
@@ -156,59 +135,6 @@ export default function AdminUsersPage() {
     () => (usersError ? getAdminFinanceDataError(usersError) : ""),
     [usersError]
   );
-  const statsPageError = useMemo(
-    () => (statsError ? getAdminFinanceDataError(statsError) : ""),
-    [statsError]
-  );
-  const pinGateMessage = useMemo(() => {
-    const adminError = usersPageError || (isStatsError ? statsPageError : "");
-    if (adminError.includes("Revalidez le PIN") || adminError.includes("Reconnectez-vous")) {
-      return adminError;
-    }
-    return pinVerified ? "" : pinStatus;
-  }, [isStatsError, pinStatus, pinVerified, statsPageError, usersPageError]);
-
-  if (!pinVerified || Boolean(pinGateMessage)) {
-    return (
-      <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
-        <article className="premium-card border border-slate-200 bg-white p-6">
-          <h1 className="luxury-title text-2xl font-semibold">Admin Utilisateurs</h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Verification requise pour gerer les comptes clients, vendeurs et administrateur.
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Si tu inverses la date et le PIN, l&apos;app corrige automatiquement.
-          </p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <PasswordInput
-              value={pin}
-              onChange={(event) => setPin(event.target.value)}
-              placeholder="PIN admin"
-              masking="password"
-              wrapperClassName="min-w-0 flex-1"
-            />
-            <PasswordInput
-              value={birthDate}
-              onChange={(event) => setBirthDate(event.target.value)}
-              placeholder="Date secondaire JJ/MM/AA"
-              masking="text"
-              autoComplete="off"
-              wrapperClassName="min-w-0 flex-1"
-            />
-            <Button
-              type="button"
-              onClick={() => pinMutation.mutate(buildAdminFinanceVerifyPayload(pin, birthDate))}
-              disabled={!pin || !birthDate || pinMutation.isPending}
-              className="primary-glow-btn bg-brand-600 text-white hover:bg-brand-700"
-            >
-              Verifier
-            </Button>
-          </div>
-          {pinGateMessage ? <p className="mt-3 text-sm text-slate-700">{pinGateMessage}</p> : null}
-        </article>
-      </section>
-    );
-  }
 
   if (isUsersPending || (isStatsPending && !users)) {
     return (
@@ -225,7 +151,7 @@ export default function AdminUsersPage() {
           <h1 className="text-xl font-semibold text-rose-700">Utilisateurs admin indisponibles</h1>
           <p className="mt-2 text-sm text-rose-700">{usersPageError}</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button type="button" onClick={() => setPinVerified(false)}>
+            <Button type="button" onClick={requestAdminPin}>
               Revalider le PIN
             </Button>
             <Button

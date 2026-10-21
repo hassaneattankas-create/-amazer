@@ -6,14 +6,16 @@ la commande) ; l'adresse exacte n'apparait qu'au livreur qui a pris la commande.
 """
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.crypto import decrypt_phone_value
 from app.core.csrf import enforce_csrf
 from app.core.deps import get_current_user
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
@@ -28,6 +30,7 @@ from app.services.order_delivery_service import mark_order_delivered
 from app.services.audit_log_service import append_audit_log
 from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.order_fulfillment_service import sync_fulfillments
+from app.services.local_services import maps_url
 
 logger = logging.getLogger(__name__)
 
@@ -37,13 +40,30 @@ router = APIRouter(prefix="/courier", tags=["courier"])
 _AVAILABLE_STATUSES = ("commande", "preparation")
 
 
+# Etat de la part d'une boutique, dit au livreur avant de se deplacer.
+PICKUP_LABELS = {
+    "commande": "Commande reçue par la boutique",
+    "preparation": "En préparation",
+    "livraison": "Prête / remise au livreur",
+    "recu": "Livrée",
+    "annulee": "Annulée",
+}
+
+
 class PickupPoint(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     shop_name: str
     address: str | None
     city: str | None
+    # Numero public de la boutique (jamais son numero de paiement).
     phone: str | None
+    whatsapp: str | None = None
+    opening_hours: str | None = None
+    # Itineraire Google Maps (position exacte si la boutique l'a enregistree).
+    maps_url: str | None = None
+    status: str = "commande"
+    status_label: str = PICKUP_LABELS["commande"]
     items: list[str]
 
 
@@ -59,11 +79,16 @@ class CourierOrder(BaseModel):
     total_amount: float
     payment_status: str
     item_count: int
+    # Frais de livraison payes par le client (deja encaisses par AMAZER).
+    delivery_fee: float = 0
+    # Heure limite indicative : paiement confirme + delai annonce au client.
+    deliver_before: datetime | None = None
     pickups: list[PickupPoint]
     customer_name: str
     # Visibles uniquement par le livreur charge de la commande.
     customer_phone: str | None
     delivery_address: str | None
+    customer_maps_url: str | None = None
     assigned_to_me: bool
     courier_assigned_at: datetime | None
     delivered_at: datetime | None
@@ -90,15 +115,24 @@ def _build(db: Session, order: Order, courier: User) -> CourierOrder:
     names = {
         product.id: product.name for product in db.scalars(select(Product).where(Product.id.in_(product_ids))).all()
     }
+    states = {row.vendor_id: row.status for row in (getattr(order, "fulfillments", None) or [])}
     pickups: list[PickupPoint] = []
     for vendor_id in sorted(vendor_ids):
         profile = profiles.get(vendor_id)
+        public_phone = decrypt_phone_value(getattr(profile, "phone", None)) if profile else None
+        whatsapp = getattr(profile, "whatsapp_contact", None) if profile else None
+        state = states.get(vendor_id) or (order.status if order.status in PICKUP_LABELS else "commande")
         pickups.append(
             PickupPoint(
                 shop_name=profile.business_name if profile else "Boutique",
                 address=profile.address if profile else None,
                 city=profile.city if profile else None,
-                phone=(profile.whatsapp_contact or profile.payout_phone) if profile else None,
+                phone=public_phone or whatsapp,
+                whatsapp=whatsapp,
+                opening_hours=getattr(profile, "opening_hours", None) if profile else None,
+                maps_url=maps_url(profile) if profile else None,
+                status=state,
+                status_label=PICKUP_LABELS.get(state, PICKUP_LABELS["commande"]),
                 items=[
                     f"{item.quantity} × {names.get(item.product_id, 'Article')}"
                     for item in order.items
@@ -107,6 +141,15 @@ def _build(db: Session, order: Order, courier: User) -> CourierOrder:
             )
         )
     customer = order.user
+    fees = getattr(order, "fee_breakdown", None) or {}
+    start = getattr(order, "payment_confirmed_at", None) or order.created_at
+    minutes = int(getattr(order, "estimated_minutes", 0) or 0)
+    deliver_before = start + timedelta(minutes=minutes) if start is not None and minutes > 0 else None
+    address = order.delivery_address if mine else None
+    customer_maps = None
+    if address:
+        query = ", ".join(part for part in (address, order.delivery_district, "Niger") if part)
+        customer_maps = f"https://www.google.com/maps/search/?api=1&query={quote(query)}"
     return CourierOrder(
         id=order.id,
         tracking_code=order.tracking_code,
@@ -117,10 +160,13 @@ def _build(db: Session, order: Order, courier: User) -> CourierOrder:
         total_amount=float(order.total_amount),
         payment_status=order.payment_status,
         item_count=sum(int(item.quantity) for item in order.items),
+        delivery_fee=round(float(fees.get("delivery_fee", 0) or 0), 2) if isinstance(fees, dict) else 0,
+        deliver_before=deliver_before,
         pickups=pickups,
         customer_name=(customer.full_name if mine and customer else _first_name(customer.full_name if customer else None)),
         customer_phone=order.delivery_phone or (customer.whatsapp_phone if customer else None),
-        delivery_address=order.delivery_address if mine else None,
+        delivery_address=address,
+        customer_maps_url=customer_maps,
         assigned_to_me=mine,
         courier_assigned_at=order.courier_assigned_at,
         delivered_at=order.delivered_at,

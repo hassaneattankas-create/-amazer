@@ -187,6 +187,11 @@ class AdminOrderTrackingResponse(BaseModel):
     total_amount: float
     tracking_code: str | None
     created_at: str
+    payment_status: str = "paid"
+    # Reference Nita saisie par le client, a comparer avec le releve operateur avant de valider.
+    client_reference: str | None = None
+    delivery_district: str | None = None
+    item_count: int = 0
 
 
 class AdminOrderStatusUpdateRequest(BaseModel):
@@ -231,6 +236,8 @@ class AdminSellerResponse(BaseModel):
     is_enterprise: bool = False
     offers_transport: bool = False
     service_kind: str | None = None
+    # E-mail du compte : lien direct vers « Utilisateurs » pour les actions sur le compte.
+    email: str | None = None
     subscription_paid_until: str | None = None
     commission_rate_override: float | None = None
     service_fee_override: float | None = None

@@ -262,6 +262,7 @@ def _build_admin_seller_response(
         is_enterprise=bool(getattr(profile, "is_enterprise", False)),
         offers_transport=bool(getattr(profile, "offers_transport", False)),
         service_kind=getattr(profile, "service_kind", None),
+        email=getattr(getattr(profile, "user", None), "email", None),
         subscription_paid_until=profile.subscription_paid_until.isoformat() if profile.subscription_paid_until else None,
         commission_rate_override=profile.commission_rate_override,
         service_fee_override=profile.service_fee_override,
@@ -911,16 +912,14 @@ def list_admin_orders(
 ) -> list[AdminOrderTrackingResponse]:
     _require_finance_pin(request, admin_user)
     _audit_admin_access(db, request, admin_user, "admin_orders_read")
-    settings_row = _get_or_create_settings(db)
-    reset_at = _finance_counters_reset_at(settings_row)
+    # Toutes les commandes recentes : la remise a zero des compteurs ne doit jamais masquer
+    # une commande a payer ou a livrer.
     orders_query = (
         select(Order)
         .options(selectinload(Order.user), selectinload(Order.items))
         .order_by(Order.created_at.desc())
     )
-    if reset_at is not None:
-        orders_query = orders_query.where(Order.created_at >= reset_at)
-    orders = db.scalars(orders_query.limit(limit)).all()
+    orders = db.scalars(orders_query.limit(max(1, min(limit, 200)))).all()
     has_auto_updates = False
     for order in orders:
         if _auto_finalize_order_without_qr(db, order, request, admin_user):
@@ -938,9 +937,23 @@ def list_admin_orders(
                 total_amount=order.total_amount,
                 tracking_code=order.tracking_code,
                 created_at=order.created_at.isoformat(),
+                payment_status=order.payment_status,
+                client_reference=_client_reference(order),
+                delivery_district=order.delivery_district,
+                item_count=sum(int(item.quantity or 0) for item in order.items),
             )
         )
     return payload
+
+
+def _client_reference(order: Order) -> str | None:
+    """Reference Nita envoyee par le client (dechiffree), seulement tant que le paiement est a valider."""
+    if order.payment_status == "paid" or not order.transaction_code:
+        return None
+    try:
+        return decrypt_payment_code(order.transaction_code)
+    except Exception:  # noqa: BLE001 - reference illisible : l'admin verifie sur le releve
+        return None
 
 
 @router.post("/orders/{order_id}/dispatch", response_model=AdminOrderTrackingResponse)
@@ -957,6 +970,9 @@ def dispatch_order_to_delivery(
     if order is None:
         raise ValidationDomainError("Order not found")
     ensure_not_cancelled(order)
+    if payload.status in ("livraison", "recu", "CLAIMED") and order.payment_status != "paid":
+        # Sinon le vendeur serait credite (et l'affilie aussi) pour une commande jamais payee.
+        raise ValidationDomainError("Paiement non confirmé : validez d'abord le paiement de cette commande.")
     previous_status = order.status
     if payload.status == "recu":
         mark_order_delivered(db, order, source="admin")
