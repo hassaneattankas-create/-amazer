@@ -95,6 +95,7 @@ from app.services.audit_log_service import append_audit_log
 from app.services.order_cancellation_service import cancel_order, ensure_not_cancelled, notify_order_cancelled
 from app.services.order_fulfillment_service import sync_fulfillments
 from app.services.notification_service import NotificationPayload, NotificationService
+from app.services.local_services import parse_cities
 from app.services.seller_finance_service import (
     auto_receipt_hours,
     build_effective_seller_finance_settings,
@@ -199,6 +200,7 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
         ambassador_monthly_top_bonus=float(getattr(settings, "ambassador_monthly_top_bonus", 10000) if getattr(settings, "ambassador_monthly_top_bonus", None) is not None else 10000),
         pharmacy_delivery_phone=getattr(settings, "pharmacy_delivery_phone", None),
         fuel_delivery_phone=getattr(settings, "fuel_delivery_phone", None),
+        local_delivery_cities=getattr(settings, "local_delivery_cities", None) or "Niamey",
         support_email=settings.support_email,
         support_phone=settings.support_phone,
         support_whatsapp=settings.support_whatsapp,
@@ -546,6 +548,8 @@ def update_finance_settings(
     settings_row.support_whatsapp = payload.support_whatsapp
     settings_row.pharmacy_delivery_phone = (payload.pharmacy_delivery_phone or "").strip() or None
     settings_row.fuel_delivery_phone = (payload.fuel_delivery_phone or "").strip() or None
+    settings_row.local_delivery_cities = ", ".join(parse_cities(payload.local_delivery_cities)) or "Niamey"
+    cache_delete_prefixes("services:", "catalog:")
     append_audit_log(
         db,
         event_type="admin_finance_settings_updated",

@@ -455,6 +455,7 @@ def upsert_profile(
                 "Une demande de paiement vendeur est deja en attente. "
                 "Terminez-la avant de changer de formule."
             )
+    is_new_shop = profile is None
     profile = create_or_update_seller_profile(
         db,
         user=current_user,
@@ -464,6 +465,8 @@ def upsert_profile(
     vendor = db.get(Vendor, profile.vendor_id)
     if vendor is not None:
         vendor.is_active = _has_active_subscription(profile)
+    if is_new_shop:
+        order_events.notify_seller_welcome(db, current_user.id, profile.vendor_id)
     db.commit()
     db.refresh(profile)
     _invalidate_public_marketplace_cache()

@@ -178,6 +178,20 @@ def notify_order_status(db: Session, order, status: str) -> None:
 
 
 @_safe
+def notify_seller_welcome(db: Session, user_id: str, vendor_id: str) -> None:
+    """Nouvelle boutique : l'inviter a partager son lien (avec son code d'affilie) pour vendre et gagner plus."""
+    _send(
+        db,
+        user_id,
+        "Votre boutique est en ligne",
+        "Partagez son lien sur WhatsApp, Facebook et TikTok : plus de visites, plus de ventes. "
+        "Votre lien contient votre code d'affilié : chaque nouveau client qui achète grâce à lui vous rapporte aussi un bonus.",
+        f"seller-welcome-{vendor_id}",
+        "/seller/dashboard",
+    )
+
+
+@_safe
 def notify_welcome(db: Session, user_id: str, full_name: str | None) -> None:
     first = (full_name or "").strip().split(" ")[0]
     _send(

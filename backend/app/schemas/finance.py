@@ -27,6 +27,7 @@ class FinanceSettingsResponse(BaseModel):
     support_whatsapp: str | None = None
     pharmacy_delivery_phone: str | None = None
     fuel_delivery_phone: str | None = None
+    local_delivery_cities: str = "Niamey"
     seller_trial_days: int = 0
     seller_launch_discount_percent: float = 0
     reseller_subscription_fee: float = 500
@@ -71,6 +72,8 @@ class FinanceSettingsUpdateRequest(BaseModel):
     # Numeros AMAZER de livraison depuis les pharmacies / stations (vide = bouton masque).
     pharmacy_delivery_phone: str | None = Field(default=None, max_length=40, pattern=r"^[+0-9 ().-]*$")
     fuel_delivery_phone: str | None = Field(default=None, max_length=40, pattern=r"^[+0-9 ().-]*$")
+    # Villes livrees depuis les pharmacies / stations (« Niamey, Maradi, Zinder »).
+    local_delivery_cities: str = Field(default="Niamey", max_length=400)
     # Essai gratuit a l'inscription vendeur (0 = desactive) et reduction de lancement en %.
     seller_trial_days: int = Field(default=0, ge=0, le=365)
     seller_launch_discount_percent: float = Field(default=0, ge=0, le=100)

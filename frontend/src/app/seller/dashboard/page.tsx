@@ -18,6 +18,7 @@ import { RestaurantSettingsPanel } from "@/components/seller/restaurant/Restaura
 import { SellerStatsPanel } from "@/components/seller/SellerStatsPanel";
 import { SellerReviewsPanel } from "@/components/seller/SellerReviewsPanel";
 import { ServiceStatusPanel } from "@/components/seller/ServiceStatusPanel";
+import { AffiliateShareCard } from "@/components/affiliate/AffiliateShareCard";
 import { SellerKpis } from "@/components/seller/SellerKpis";
 import { SellerOrderList } from "@/components/seller/SellerOrderList";
 import { SellerProductList } from "@/components/seller/SellerProductList";
@@ -440,6 +441,7 @@ export default function SellerDashboardPage() {
             </Button>
           </div>
           ) : null}
+          {profile?.vendor_id ? <AffiliateShareCard variant="seller" vendorId={profile.vendor_id} shopName={profile.business_name} /> : null}
           <SellerStatsPanel />
           <SellerReviewsPanel />
           <p className="text-sm text-ink-600">

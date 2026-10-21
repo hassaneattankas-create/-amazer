@@ -51,6 +51,8 @@ class GlobalSettings(Base):
     # Numeros AMAZER a contacter pour se faire livrer depuis une pharmacie ou une station (Niamey pour l'instant).
     pharmacy_delivery_phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     fuel_delivery_phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # Villes ou AMAZER livre depuis les pharmacies / stations, separees par des virgules.
+    local_delivery_cities: Mapped[str] = mapped_column(String(400), nullable=False, default="Niamey", server_default="Niamey")
     affiliate_min_payout: Mapped[float] = mapped_column(Float, nullable=False, default=2000, server_default="2000")
     affiliate_new_account_monthly_cap: Mapped[float] = mapped_column(Float, nullable=False, default=25000, server_default="25000")
     affiliate_max_referrals_per_day: Mapped[int] = mapped_column(Integer, nullable=False, default=15, server_default="15")

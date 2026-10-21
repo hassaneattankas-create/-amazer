@@ -94,7 +94,7 @@ def _list(db: Session, kind: str, city: str | None, keep, sort_key) -> LocalServ
     return LocalServiceListResponse(
         items=items,
         cities=[CityCount(city=name, count=n) for name, n in sorted(counts.values(), key=lambda e: (-e[1], e[0]))],
-        delivery_cities=[c.title() for c in svc.DELIVERY_CITIES],
+        delivery_cities=svc.delivery_cities(settings),
         fresh_hours=svc.FUEL_FRESH_HOURS,
     )
 

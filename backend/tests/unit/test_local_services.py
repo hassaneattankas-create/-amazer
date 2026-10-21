@@ -174,3 +174,11 @@ def test_wrong_service_or_position_is_refused(db: Session) -> None:
         route.update_service_status(ServiceStatusUpdate(latitude=48.85, longitude=2.35), None, db, station)
     placed = route.update_service_status(ServiceStatusUpdate(latitude=13.5137, longitude=2.1098), None, db, station)
     assert placed.maps_url.endswith("destination=13.513700,2.109800")
+
+
+def test_admin_chooses_the_delivered_cities() -> None:
+    assert svc.parse_cities(" Niamey, maradi ;Zinder,, niamey ") == ["Niamey", "maradi", "Zinder"]
+    settings = SimpleNamespace(pharmacy_delivery_phone="+227 90 00 00 01", fuel_delivery_phone=None, local_delivery_cities="Niamey, Maradi")
+    assert svc.delivery_phone(_p(city="MARADI"), settings) == "+227 90 00 00 01"
+    assert svc.delivery_phone(_p(city="Tahoua"), settings) is None
+    assert svc.delivery_cities(SimpleNamespace(local_delivery_cities="  ")) == ["Niamey"]

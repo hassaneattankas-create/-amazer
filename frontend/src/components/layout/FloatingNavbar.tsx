@@ -36,7 +36,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cartStore";
 import { useNotificationStore } from "@/store/notification-store";
 
-/** Menu simple : trois usages (acheter, réserver, services), puis gagner de l'argent. */
+/** Menu simple : quelques liens directs et des sections qui se déroulent au toucher. */
 const clientNavSections: Array<{ title: string | null; items: Array<{ href: string; label: string }> }> = [
   { title: null, items: [{ href: "/", label: "Accueil" }] },
   {
@@ -47,10 +47,10 @@ const clientNavSections: Array<{ title: string | null; items: Array<{ href: stri
       { href: "/promotions", label: "Promotions" },
     ],
   },
-  { title: "Réserver", items: [{ href: "/hotels", label: "Hôtels et transport" }] },
   {
-    title: "Services",
+    title: "Premium",
     items: [
+      { href: "/hotels", label: "Hôtels, transport et entreprises" },
       { href: "/pharmacies", label: "Pharmacies de garde" },
       { href: "/stations", label: "Stations-essence" },
     ],
@@ -61,9 +61,9 @@ const clientNavSections: Array<{ title: string | null; items: Array<{ href: stri
       { href: "/affiliation", label: "Affiliation" },
       { href: "/revendre", label: "Revendre sans stock" },
       { href: "/formations", label: "Formations gratuites" },
-      { href: "/avis", label: "Avis" },
     ],
   },
+  { title: null, items: [{ href: "/avis", label: "Avis" }] },
 ];
 const clientHrefs = new Set(clientNavSections.flatMap((section) => section.items.map((item) => item.href)));
 
@@ -89,6 +89,8 @@ export function FloatingNavbar() {
   const { data: user } = useCurrentUser();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // Section dépliée dans le menu (une seule à la fois).
+  const [openSection, setOpenSection] = useState<string | null>(null);
   const [pendingPreReg, setPendingPreReg] = useState<PendingSellerPreReg | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const appMode = useAuthStore((state) => state.appMode);
@@ -412,18 +414,40 @@ export function FloatingNavbar() {
               className="fixed inset-x-4 top-16 z-dropdown overflow-hidden rounded-card border border-border bg-card shadow-floating md:absolute md:inset-x-auto md:left-0 md:top-full md:mt-2 md:w-72"
             >
               <nav aria-label={t("Menu principal")} className="max-h-96 overflow-y-auto p-2">
-                {clientNavSections.map((section) => (
-                  <div key={section.title ?? "main"} className={section.title ? "mt-2" : undefined}>
-                    {section.title ? (
-                      <p className="px-3 pb-1 pt-2 text-2xs font-semibold uppercase tracking-label text-ink-500">{t(section.title)}</p>
-                    ) : null}
-                    {section.items.map((item) => (
+                {clientNavSections.map((section, index) => {
+                  if (!section.title) {
+                    return section.items.map((item) => (
                       <Link key={item.href} href={item.href} onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>
                         {t(item.label)}
                       </Link>
-                    ))}
-                  </div>
-                ))}
+                    ));
+                  }
+                  const open = openSection === section.title;
+                  const panelId = `menu-section-${index}`;
+                  return (
+                    <div key={section.title}>
+                      <button
+                        type="button"
+                        aria-expanded={open}
+                        aria-controls={panelId}
+                        onClick={() => setOpenSection(open ? null : section.title)}
+                        className={`${menuLinkClass} flex w-full items-center justify-between text-left font-semibold`}
+                      >
+                        {t(section.title)}
+                        <ChevronDown className={`h-4 w-4 text-ink-500 transition-transform duration-fast ${open ? "rotate-180" : ""}`} aria-hidden="true" />
+                      </button>
+                      {open ? (
+                        <div id={panelId} className="mb-1 ml-3 border-l border-border pl-2">
+                          {section.items.map((item) => (
+                            <Link key={item.href} href={item.href} onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>
+                              {t(item.label)}
+                            </Link>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
                 {accountNavItems.length ? <div className="my-2 border-t border-border" /> : null}
                 {accountNavItems.map((item) => (
                   <Link key={item.href} href={item.href} onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>

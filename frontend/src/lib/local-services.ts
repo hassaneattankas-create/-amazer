@@ -2,6 +2,9 @@
 
 export type GeoPoint = { lat: number; lng: number };
 
+/** Chefs-lieux des 8 régions du Niger : toujours proposés dans le choix de la ville. */
+export const NIGER_REGION_CITIES = ["Niamey", "Agadez", "Diffa", "Dosso", "Maradi", "Tahoua", "Tillabéri", "Zinder"];
+
 /** Distance à vol d'oiseau en km (formule de haversine). */
 export function distanceKm(a: GeoPoint, b: GeoPoint): number {
   const rad = (deg: number) => (deg * Math.PI) / 180;

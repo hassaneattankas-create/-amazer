@@ -819,7 +819,7 @@ export default function AdminTarifsPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <p className="text-sm font-medium text-slate-800">Livraison depuis les pharmacies (numéro AMAZER)</p>
-              <p className="text-xs text-slate-500">Bouton « Se faire livrer » des pharmacies de Niamey. Vide = bouton masqué.</p>
+              <p className="text-xs text-slate-500">Bouton « Se faire livrer » des pharmacies. Vide = bouton masqué.</p>
               <input
                 value={effective.pharmacy_delivery_phone ?? ""}
                 onChange={(event) => setDraft({ ...effective, pharmacy_delivery_phone: event.target.value || null })}
@@ -830,13 +830,25 @@ export default function AdminTarifsPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-slate-800">Livraison depuis les stations (numéro AMAZER)</p>
-              <p className="text-xs text-slate-500">Bouton « Se faire livrer » des stations de Niamey (gaz, carburant). Vide = bouton masqué.</p>
+              <p className="text-xs text-slate-500">Bouton « Se faire livrer » des stations (gaz, carburant). Vide = bouton masqué.</p>
               <input
                 value={effective.fuel_delivery_phone ?? ""}
                 onChange={(event) => setDraft({ ...effective, fuel_delivery_phone: event.target.value || null })}
                 className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
                 placeholder="+227 xx xx xx xx"
                 inputMode="tel"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <p className="text-sm font-medium text-slate-800">Villes où AMAZER livre (pharmacies et stations)</p>
+              <p className="text-xs text-slate-500">
+                Séparées par des virgules, par exemple : Niamey, Maradi, Zinder. Ailleurs, le bouton « Se faire livrer » reste masqué.
+              </p>
+              <input
+                value={effective.local_delivery_cities ?? "Niamey"}
+                onChange={(event) => setDraft({ ...effective, local_delivery_cities: event.target.value })}
+                className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+                placeholder="Niamey, Maradi, Zinder"
               />
             </div>
           </div>

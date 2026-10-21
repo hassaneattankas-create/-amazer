@@ -51,6 +51,8 @@ const mocks = [
   [/\/seller\/storefront\/ph1$/, storefront],
   [/\/seller\/profile$/, { id: "sp1", vendor_id: "ph1", business_name: "Pharmacie du Fleuve", activity_type: "enterprise", storefront_tier: "premium", service_kind: "pharmacy", offers_shop: false, room_types: [], city: "Niamey" }],
   [/\/categories/, { items: [] }],
+  [/\/affiliates\/me$/, { code: "AW7K2P", tier: "affiliate", status: "active", seller_share_percent: 20, seller_share_months: 12, customer_bonus: 250, hold_days: 30, min_payout: 2000, clicks: 0, referred_sellers: 0, referred_customers: 0, earnings: {}, ambassador: null, ambassador_applied: false, payouts: [] }],
+  [/\/orders\/me$/, []],
 ];
 const browser = await puppeteer.launch({ headless: true });
 const page = await browser.newPage();
@@ -68,7 +70,7 @@ await page.setCookie({ name: "access_token", value: "fake", url: base });
 await page.goto(base, { waitUntil: "domcontentloaded", timeout: 180000 });
 await page.evaluate(() => localStorage.setItem("amazer_access_token", "fake"));
 await page.setViewport({ width: 390, height: 1900 });
-for (const [name, path] of [["gerant", "/seller/dashboard"], ["vendre", "/vendre"]]) {
+for (const [name, path] of [["client", "/dashboard"], ["stations", "/stations"]]) {
   await page.goto("about:blank");
   await page.goto(`${base}${path}`, { waitUntil: "networkidle2", timeout: 180000 });
   await new Promise((r) => setTimeout(r, 4000));
@@ -86,5 +88,8 @@ await page.goto(`${base}/pharmacies`, { waitUntil: "networkidle2", timeout: 1800
 await new Promise((r) => setTimeout(r, 3000));
 await page.evaluate(() => document.querySelector('button[aria-label="Menu"]')?.click());
 await new Promise((r) => setTimeout(r, 1000));
+await page.evaluate(() => [...document.querySelectorAll('#main-menu button')].find((b) => b.textContent.trim().startsWith('Premium'))?.click());
+await new Promise((r) => setTimeout(r, 800));
+console.log('villes:', await page.evaluate(() => 0));
 await page.screenshot({ path: `${out}/menu.png` });
 await browser.close();

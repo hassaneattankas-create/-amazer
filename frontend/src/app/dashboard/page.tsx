@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Package, Settings, UserRound } from "lucide-react";
 
 import { MyBookings } from "@/components/account/MyBookings";
+import { AffiliateShareCard } from "@/components/affiliate/AffiliateShareCard";
 import { NotificationSettings } from "@/components/account/NotificationSettings";
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 import { MobileBuildStamp } from "@/components/MobileBuildStamp";
@@ -69,6 +70,8 @@ export default function DashboardPage() {
           {memberSince ? <p className="text-sm text-ink-600">Membre depuis le {memberSince}</p> : null}
         </div>
       </header>
+
+      {user?.id ? <AffiliateShareCard variant="client" /> : null}
 
       <article className={cardClass}>
         <h2 className="flex items-center gap-2 text-lg font-semibold text-ink-900">

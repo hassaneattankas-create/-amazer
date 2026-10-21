@@ -21,8 +21,8 @@ SERVICE_KINDS = ("pharmacy", "fuel_station")
 FUELS = ("super", "gasoil", "gaz")
 FUEL_STATES = ("available", "out")
 FUEL_FRESH_HOURS = 6
-# Villes ou AMAZER livre aujourd'hui (comparaison sans accents ni majuscules).
-DELIVERY_CITIES = ("niamey",)
+# Villes livrees par defaut ; l'admin regle la liste dans Tarifs (local_delivery_cities).
+DEFAULT_DELIVERY_CITIES = "Niamey"
 
 
 def _aware(value: datetime | None) -> datetime | None:
@@ -97,9 +97,26 @@ def maps_url(profile: SellerProfile) -> str:
     return f"https://www.google.com/maps/search/?api=1&query={quote(query)}"
 
 
+def parse_cities(raw: str | None) -> list[str]:
+    """« Niamey, maradi ;Zinder » -> ["Niamey", "maradi", "Zinder"] (sans vides ni doublons)."""
+    seen: dict[str, str] = {}
+    for part in (raw or "").replace(";", ",").split(","):
+        name = " ".join(part.split())
+        if name and normalize_city(name) not in seen:
+            seen[normalize_city(name)] = name
+    return list(seen.values())
+
+
+def delivery_cities(settings: object | None) -> list[str]:
+    """Villes livrees reglees par l'admin (Niamey par defaut)."""
+    raw = getattr(settings, "local_delivery_cities", None) if settings is not None else None
+    return parse_cities(raw) or parse_cities(DEFAULT_DELIVERY_CITIES)
+
+
 def delivery_phone(profile: SellerProfile, settings: object | None) -> str | None:
     """Numero AMAZER de livraison pour ce commerce, ou None si la ville n'est pas encore desservie."""
-    if normalize_city(getattr(profile, "city", None)) not in DELIVERY_CITIES:
+    served = {normalize_city(name) for name in delivery_cities(settings)}
+    if normalize_city(getattr(profile, "city", None)) not in served:
         return None
     kind = getattr(profile, "service_kind", None)
     field = "pharmacy_delivery_phone" if kind == "pharmacy" else "fuel_delivery_phone" if kind == "fuel_station" else None

@@ -108,6 +108,7 @@ declare module "lucide-react" {
   export const X: LucideIcon;
   export const Zap: LucideIcon;
   export const Fuel: LucideIcon;
+  export const Gift: LucideIcon;
   export const LocateFixed: LucideIcon;
   export const Moon: LucideIcon;
   export const Navigation: LucideIcon;

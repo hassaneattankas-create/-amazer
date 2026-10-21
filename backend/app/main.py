@@ -213,6 +213,7 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS auto_receipt_hours INTEGER NOT NULL DEFAULT 72",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS pharmacy_delivery_phone VARCHAR(40)",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS fuel_delivery_phone VARCHAR(40)",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS local_delivery_cities VARCHAR(400) NOT NULL DEFAULT 'Niamey'",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS service_kind VARCHAR(20)",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS on_duty BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS duty_start DATE",

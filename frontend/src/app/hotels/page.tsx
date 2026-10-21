@@ -67,7 +67,16 @@ export default function PremiumPage() {
     <section className="mx-auto w-full max-w-7xl px-gutter pb-14 pt-4">
       <header className="rounded-card bg-ink-900 px-4 py-6 text-white sm:px-8 sm:py-8">
         <h1 className="text-display-sm font-semibold tracking-display">Premium</h1>
-        <p className="mt-1 max-w-2xl text-sm text-white/80">Hôtels, transport, restaurants et entreprises de confiance.</p>
+        <p className="mt-1 max-w-2xl text-sm text-white/80">
+          Hôtels, transport, restaurants, pharmacies, stations-essence et entreprises de confiance.{" "}
+          <Link href="/pharmacies" className="font-semibold text-brand-400 hover:underline">
+            Pharmacies de garde
+          </Link>{" "}
+          ·{" "}
+          <Link href="/stations" className="font-semibold text-brand-400 hover:underline">
+            Stations-essence
+          </Link>
+        </p>
         <div className="relative mt-4">
           <label htmlFor="premium-search" className="sr-only">
             Rechercher un établissement premium

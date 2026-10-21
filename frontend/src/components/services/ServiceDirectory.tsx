@@ -7,7 +7,7 @@ import { Fuel, LocateFixed, Pill, Share2 } from "lucide-react";
 
 import { LocalServiceCard } from "@/components/services/LocalServiceCard";
 import { Button } from "@/components/ui/button";
-import { distanceKm, type GeoPoint } from "@/lib/local-services";
+import { NIGER_REGION_CITIES, distanceKm, type GeoPoint } from "@/lib/local-services";
 import { listPharmacies, listStations } from "@/services/local-services-service";
 import { toast } from "@/store/toast-store";
 import { FUEL_LABELS, type FuelKey, type ServiceKind } from "@/types/local-services";
@@ -72,12 +72,14 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
     return position ? [...rows].sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity)) : rows;
   }, [data, position]);
 
+  // Toutes les régions, puis les autres villes où des établissements sont inscrits.
   const cities = useMemo(() => {
-    const names = new Set((data?.cities ?? []).map((c) => c.city));
-    names.add("Niamey");
-    if (city) names.add(city);
-    return [...names];
+    const known = new Set(NIGER_REGION_CITIES.map((name) => name.toLowerCase()));
+    const extra = (data?.cities ?? []).map((c) => c.city).filter((name) => !known.has(name.toLowerCase()));
+    if (city && !known.has(city.toLowerCase()) && !extra.includes(city)) extra.push(city);
+    return [...NIGER_REGION_CITIES, ...extra.sort((a, b) => a.localeCompare(b, "fr"))];
   }, [data, city]);
+  const deliveryCities = data?.delivery_cities ?? [];
 
   const locate = () => {
     if (!("geolocation" in navigator)) {
@@ -182,6 +184,7 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
           ? "Appelez avant de vous déplacer. AMAZER ne vend pas de médicaments."
           : `Informations données par les stations. Au-delà de ${data?.fresh_hours ?? 6} h, appelez pour confirmer.`}
         {refreshedAt ? ` Actualisé à ${refreshedAt}.` : null}
+        {deliveryCities.length ? ` Livraison AMAZER : ${deliveryCities.join(", ")}.` : null}
       </p>
 
       <div className="mt-4">

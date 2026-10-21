@@ -16,6 +16,8 @@ export type FinanceSettings = {
   /** Numéros AMAZER de livraison depuis les pharmacies / stations (vide = bouton masqué). */
   pharmacy_delivery_phone?: string | null;
   fuel_delivery_phone?: string | null;
+  /** Villes livrées depuis les pharmacies / stations, séparées par des virgules. */
+  local_delivery_cities?: string;
   /** Essai gratuit a l'inscription vendeur, en jours (0 = desactive). */
   seller_trial_days?: number;
   /** Revente sans stock : abonnement mensuel du revendeur (XOF) et part AMAZER sur la marge (%). */
