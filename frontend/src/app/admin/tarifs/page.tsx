@@ -121,6 +121,11 @@ export default function AdminTarifsPage() {
   // Le PIN est vérifié une seule fois par la mise en page admin.
   const pinVerified = true;
   const [status, setStatus] = useState("");
+  // Trois onglets au lieu d'une longue page : Vendeurs (par défaut), Réglages, Historique. ?vue= ouvre un onglet.
+  const [view, setView] = useState<"vendeurs" | "reglages" | "historique">(() => {
+    const requested = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("vue");
+    return requested === "reglages" || requested === "historique" ? requested : "vendeurs";
+  });
   const [draft, setDraft] = useState<FinanceSettings | null>(null);
   const [districtDraft, setDistrictDraft] = useState<string | null>(null);
   const [sellerPricingDrafts, setSellerPricingDrafts] = useState<
@@ -382,19 +387,40 @@ export default function AdminTarifsPage() {
           </div>
         </article>
       ) : null}
-      <header className="premium-card border border-slate-200 bg-white p-6">
-        <h1 className="luxury-title text-3xl font-semibold">Controle Admin</h1>
-        <p className="mt-2 text-sm text-slate-600">Commission, frais, abonnements et vendeurs. Les inscriptions à valider sont dans « Commandes et paiements ».</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <a href="#tarifs" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Tarifs & Frais</a>
-          <a href="#vendeurs" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">
-            Vendeurs {sellers?.length ? `(${sellers.length})` : ""}
-          </a>
-          <a href="#quartiers" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Frais quartiers</a>
-          <a href="#audit" className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">Historique</a>
+      <header>
+        <h1 className="text-2xl font-semibold text-ink-900">Vendeurs et tarifs</h1>
+        <p className="mt-1 text-sm text-ink-600">Les inscriptions et paiements à valider sont dans « Commandes et paiements ».</p>
+        <div className="mt-3 flex flex-wrap gap-2" role="tablist" aria-label="Rubriques">
+          {(
+            [
+              ["vendeurs", `Vendeurs${sellers?.length ? ` (${sellers.length})` : ""}`],
+              ["reglages", "Tarifs, frais et réglages"],
+              ["historique", "Historique"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={view === key}
+              onClick={() => setView(key)}
+              className={`min-h-10 rounded-pill border px-4 text-sm font-medium ${
+                view === key ? "border-ink-900 bg-ink-900 text-white" : "border-border bg-card text-ink-700 hover:border-ink-400"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </header>
+      {status ? (
+        <p className="rounded-field bg-surface-1 px-3 py-2 text-sm text-ink-800" role="status">
+          {status}
+        </p>
+      ) : null}
 
+      {view === "reglages" ? (
+        <>
       <article id="tarifs" className="premium-card border border-slate-200 bg-white p-6">
         <div className="space-y-5">
           <div className="grid gap-4 lg:grid-cols-2">
@@ -767,7 +793,10 @@ export default function AdminTarifsPage() {
           </p>
         </div>
       </article>
+        </>
+      ) : null}
 
+      {view === "vendeurs" ? (
       <article id="vendeurs" className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-slate-900">Vendeurs</h2>
         <div className="mt-3 space-y-2">
@@ -1047,7 +1076,9 @@ export default function AdminTarifsPage() {
           ))}
         </div>
       </article>
+      ) : null}
 
+      {view === "historique" ? (
       <article id="audit" className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-slate-900">Historique des modifications</h2>
         <div className="mt-2">
@@ -1071,8 +1102,8 @@ export default function AdminTarifsPage() {
           ))}
         </div>
       </article>
+      ) : null}
 
-      {status ? <p className="text-sm text-slate-700">{status}</p> : null}
     </section>
   );
 }
