@@ -103,10 +103,10 @@ export default function AdminMessagesPage() {
           <textarea
             className={`${fieldClass} min-h-32 py-2`}
             value={body}
-            maxLength={600}
+            maxLength={2000}
             onChange={(e) => setBody(e.target.value)}
           />
-          <span className="mt-1 block text-xs text-ink-600">{body.length}/600</span>
+          <span className="mt-1 block text-xs text-ink-600">{body.length}/2000</span>
         </label>
         <label className="block text-sm font-medium text-ink-800">
           Lien sur le site (facultatif)

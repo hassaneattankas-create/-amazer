@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useId, useState } from "react";
-import { ImageOff, ImageUp } from "lucide-react";
+import { Camera, ImageOff, ImageUp } from "lucide-react";
 
 import { getApiErrorMessage } from "@/lib/api-error";
 import { resolveImageUrl } from "@/lib/image";
@@ -31,6 +31,7 @@ type UploadTriggerProps = {
 
 function UploadTrigger({ label, multiple = false, onUploaded }: UploadTriggerProps) {
   const inputId = useId();
+  const cameraId = useId();
   const [status, setStatus] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
@@ -70,6 +71,15 @@ function UploadTrigger({ label, multiple = false, onUploaded }: UploadTriggerPro
         <ImageUp className="h-3.5 w-3.5 text-brand-600" />
         {isUploading ? "Envoi de la photo…" : label}
       </label>
+      {/* capture : ouvre directement l'appareil photo ; dans l'application Android, c'est ce qui declenche la demande d'autorisation */}
+      <label
+        htmlFor={cameraId}
+        className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700"
+      >
+        <Camera className="h-3.5 w-3.5 text-brand-600" />
+        Prendre une photo
+      </label>
+      <input id={cameraId} type="file" accept="image/*" capture="environment" onChange={handleUpload} className="sr-only" />
       <input
         id={inputId}
         type="file"

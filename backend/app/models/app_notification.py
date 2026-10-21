@@ -20,7 +20,7 @@ class AppNotification(Base):
         index=True,
     )
     title: Mapped[str] = mapped_column(String(160), nullable=False)
-    body: Mapped[str] = mapped_column(String(500), nullable=False)
+    body: Mapped[str] = mapped_column(String(2000), nullable=False)
     tag: Mapped[str] = mapped_column(String(160), nullable=False, index=True)
     href: Mapped[str | None] = mapped_column(String(260), nullable=True)
     data: Mapped[dict | None] = mapped_column(JSON, nullable=True)

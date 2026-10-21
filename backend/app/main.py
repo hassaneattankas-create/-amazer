@@ -209,6 +209,7 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_user_id VARCHAR(36)",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_commission DOUBLE PRECISION NOT NULL DEFAULT 0",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_hold_days INTEGER NOT NULL DEFAULT 30",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS auto_receipt_hours INTEGER NOT NULL DEFAULT 72",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_min_payout DOUBLE PRECISION NOT NULL DEFAULT 2000",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_new_account_monthly_cap DOUBLE PRECISION NOT NULL DEFAULT 25000",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_max_referrals_per_day INTEGER NOT NULL DEFAULT 15",
@@ -283,6 +284,8 @@ def _bootstrap_database_if_needed() -> None:
             ")"
         ),
         "CREATE INDEX IF NOT EXISTS ix_seller_pending_reg_status ON seller_pending_registrations (status)",
+        # Messages de l'equipe jusqu'a 2000 caracteres (500 provoquait une erreur a l'envoi).
+        "ALTER TABLE app_notifications ALTER COLUMN body TYPE VARCHAR(2000)",
         (
             "UPDATE global_settings SET "
             "seller_subscription_fee_shop = COALESCE(seller_subscription_fee_shop, seller_subscription_fee, 5000), "

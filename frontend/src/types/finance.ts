@@ -24,6 +24,8 @@ export type FinanceSettings = {
   affiliate_customer_bonus?: number;
   /** Securite des gains : delai avant paiement (jours), minimum de retrait, plafond des nouveaux comptes, inscriptions/jour. */
   affiliate_hold_days?: number;
+  /** Commande en livraison non confirmee : passee « Recu » automatiquement apres ce delai (heures). */
+  auto_receipt_hours?: number;
   affiliate_min_payout?: number;
   affiliate_new_account_monthly_cap?: number;
   affiliate_max_referrals_per_day?: number;

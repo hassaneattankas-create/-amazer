@@ -46,6 +46,8 @@ class GlobalSettings(Base):
     # Securite des gains : delai avant paiement, minimum de retrait, plafond des nouveaux comptes (3 premiers mois),
     # nombre d'inscriptions par jour au-dela duquel les parrainages sont a verifier.
     affiliate_hold_days: Mapped[int] = mapped_column(Integer, nullable=False, default=30, server_default="30")
+    # Commande « En livraison » sans confirmation du client : passee « Recu » automatiquement apres ce delai (heures).
+    auto_receipt_hours: Mapped[int] = mapped_column(Integer, nullable=False, default=72, server_default="72")
     affiliate_min_payout: Mapped[float] = mapped_column(Float, nullable=False, default=2000, server_default="2000")
     affiliate_new_account_monthly_cap: Mapped[float] = mapped_column(Float, nullable=False, default=25000, server_default="25000")
     affiliate_max_referrals_per_day: Mapped[int] = mapped_column(Integer, nullable=False, default=15, server_default="15")

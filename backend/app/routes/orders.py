@@ -63,14 +63,13 @@ from app.services.payment_gateway_service import (
     create_amana_payment,
     get_amana_payment_status,
 )
-from app.services.seller_finance_service import get_or_create_global_settings
+from app.services.seller_finance_service import auto_receipt_hours, get_or_create_global_settings
 from app.services.security_log_service import log_security_event
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 settings = get_settings()
-AUTO_RECEIPT_TIMEOUT_HOURS = 24
 
 
 def _notify_new_order(db: Session, *, order: Order, customer: User) -> None:
@@ -95,12 +94,19 @@ def _notify_new_order(db: Session, *, order: Order, customer: User) -> None:
     seller_profiles = db.scalars(
         select(SellerProfile).where(SellerProfile.vendor_id.in_(vendor_ids))
     ).all()
+    shares = order_events.vendor_amounts(order)
+    paid = order.payment_status == "paid"
     for profile in seller_profiles:
+        share = shares.get(profile.vendor_id, amount)
         notif.send_to_user(
             user_id=profile.user_id,
             payload=NotificationPayload(
-                title="Nouvelle commande pour ta boutique",
-                body=f"Commande #{tracking} — {amount} XOF. Prepare la livraison.",
+                title="Nouvelle commande pour votre boutique",
+                body=(
+                    f"Commande #{tracking} : {share} XOF pour vous. Paiement confirmé, vous pouvez la préparer."
+                    if paid
+                    else f"Commande #{tracking} : {share} XOF pour vous. Paiement en cours de vérification : attendez la confirmation avant de préparer."
+                ),
                 data={"tag": f"seller-order-{order.id}-{profile.vendor_id[:6]}", "href": "/seller/dashboard", "kind": "new_order"},
             ),
         )
@@ -279,7 +285,8 @@ def _auto_finalize_order_without_qr(
     reference_time = _latest_dispatch_marker(db, order.id) or order.created_at
     if reference_time.tzinfo is None:
         reference_time = reference_time.replace(tzinfo=UTC)
-    if datetime.now(UTC) - reference_time < timedelta(hours=AUTO_RECEIPT_TIMEOUT_HOURS):
+    timeout_hours = auto_receipt_hours(db)
+    if datetime.now(UTC) - reference_time < timedelta(hours=timeout_hours):
         return False
     vendor_ids = {item.vendor_id for item in order.items}
     resolved_vendor_id = next(iter(vendor_ids)) if len(vendor_ids) == 1 else None
@@ -298,7 +305,7 @@ def _auto_finalize_order_without_qr(
         event_type="order_auto_receipt_timeout",
         ip_address=request.client.host if request and request.client else None,
         path=str(request.url.path) if request else None,
-        details={"order_id": order.id, "timeout_hours": AUTO_RECEIPT_TIMEOUT_HOURS},
+        details={"order_id": order.id, "timeout_hours": timeout_hours},
     )
     return True
 

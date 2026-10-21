@@ -737,6 +737,20 @@ export default function AdminTarifsPage() {
                 helper={field.helper}
               />
             ))}
+            <AdminNumberField
+              label="Livraisons : réception confirmée automatiquement après"
+              value={effective.auto_receipt_hours ?? 72}
+              suffix="heures"
+              min={24}
+              step="12"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  auto_receipt_hours: Math.max(24, Math.min(336, Math.round(parseNonNegativeNumber(value, effective.auto_receipt_hours ?? 72)))),
+                })
+              }
+              helper="Si le client ne confirme pas, la commande « En livraison » passe « Reçu » après ce délai. Prévoyez assez pour les livraisons hors de Niamey (24 h à 14 jours)."
+            />
           </div>
           <div className="grid gap-3 sm:grid-cols-1">
             <div>

@@ -33,6 +33,7 @@ class FinanceSettingsResponse(BaseModel):
     affiliate_seller_share_months: int = 12
     affiliate_customer_bonus: float = 250
     affiliate_hold_days: int = 30
+    auto_receipt_hours: int = 72
     affiliate_min_payout: float = 2000
     affiliate_new_account_monthly_cap: float = 25000
     affiliate_max_referrals_per_day: int = 15
@@ -77,6 +78,8 @@ class FinanceSettingsUpdateRequest(BaseModel):
     affiliate_customer_bonus: float = Field(default=250, ge=0)
     # Securite des gains et ambassadeurs (voir affiliate_service).
     affiliate_hold_days: int = Field(default=30, ge=0, le=180)
+    # De 24 h a 14 jours : laisse le temps aux livraisons hors de Niamey.
+    auto_receipt_hours: int = Field(default=72, ge=24, le=336)
     affiliate_min_payout: float = Field(default=2000, ge=0)
     affiliate_new_account_monthly_cap: float = Field(default=25000, ge=0)
     affiliate_max_referrals_per_day: int = Field(default=15, ge=1, le=10000)
@@ -370,8 +373,8 @@ class AdminBroadcastRequest(BaseModel):
     audience: Literal["all", "customers", "sellers", "couriers", "user"]
     user_email: str | None = Field(default=None, max_length=320)
     title: str = Field(min_length=3, max_length=80)
-    body: str = Field(min_length=3, max_length=600)
-    href: str | None = Field(default=None, max_length=300, pattern=r"^/[^\s]*$")
+    body: str = Field(min_length=3, max_length=2000)
+    href: str | None = Field(default=None, max_length=260, pattern=r"^/[^\s]*$")
 
 
 class AdminBroadcastResponse(BaseModel):

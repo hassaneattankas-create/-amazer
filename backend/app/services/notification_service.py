@@ -14,6 +14,11 @@ from app.services.notification_relay_service import relay_notification
 from app.services.push_delivery_service import send_fcm_push
 
 
+def _fit(value: str, limit: int) -> str:
+  value = value or ""
+  return value if len(value) <= limit else value[: limit - 1].rstrip() + "…"
+
+
 @dataclass(frozen=True)
 class NotificationPayload:
   title: str
@@ -64,12 +69,13 @@ class NotificationService:
     tag: str,
     href: str | None = None,
   ) -> AppNotification:
+    # Les longueurs suivent les colonnes : un texte trop long est raccourci au lieu de faire echouer l'envoi.
     row = AppNotification(
       user_id=user_id,
-      title=payload.title,
-      body=payload.body,
-      tag=tag,
-      href=href,
+      title=_fit(payload.title, 160),
+      body=_fit(payload.body, 2000),
+      tag=_fit(tag, 160),
+      href=href if href and len(href) <= 260 else None,
       data=payload.data or None,
       unread=True,
     )

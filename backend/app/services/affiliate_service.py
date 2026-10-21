@@ -12,6 +12,7 @@ Tous les taux et seuils se reglent dans Admin > Tarifs.
 
 import hashlib
 import hmac
+import logging
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -291,7 +292,32 @@ def _add_earning(
     )
     db.add(earning)
     db.flush()
+    if status != "cancelled":
+        _notify_new_earning(db, affiliate_id, earning.amount, terms.hold_days, earning.reference)
     return earning
+
+
+def _notify_new_earning(db: Session, user_id: str, amount: float, hold_days: int, reference: str) -> None:
+    """Un nouveau gain previent l'affilie ; un echec d'envoi ne bloque jamais l'inscription du gain."""
+    try:
+        # Point de sauvegarde : si l'envoi echoue, seul lui est annule, pas le gain.
+        with db.begin_nested():
+            _send_earning_notice(db, user_id, amount, hold_days, reference)
+    except Exception:  # noqa: BLE001
+        logging.getLogger(__name__).exception("Notification de gain impossible (%s).", reference)
+
+
+def _send_earning_notice(db: Session, user_id: str, amount: float, hold_days: int, reference: str) -> None:
+    from app.services.notification_service import NotificationPayload, NotificationService
+
+    NotificationService(db).send_to_user(
+        user_id=user_id,
+        payload=NotificationPayload(
+            title="Nouveau gain d'affiliation",
+            body=f"+{int(round(amount))} XOF grâce à votre lien. Payable dans {hold_days} jours si l'achat ou l'abonnement n'est pas annulé.",
+            data={"tag": f"affiliate-earning-{reference}"[:160], "href": "/affiliation"},
+        ),
+    )
 
 
 def credit_subscription_share(

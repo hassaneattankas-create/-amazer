@@ -19,6 +19,12 @@ class EffectiveSellerFinanceSettings:
     subscription_overridden: bool
 
 
+def auto_receipt_hours(db: Session) -> int:
+    """Delai (heures) apres lequel une commande en livraison non confirmee passe « Recu » (reglable par l'admin)."""
+    value = getattr(get_or_create_global_settings(db), "auto_receipt_hours", None)
+    return min(max(int(72 if value is None else value), 24), 336)
+
+
 def get_or_create_global_settings(db: Session) -> GlobalSettings:
     row = db.scalar(select(GlobalSettings).order_by(GlobalSettings.id.asc()))
     if row is None:

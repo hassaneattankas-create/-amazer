@@ -96,13 +96,13 @@ from app.services.order_cancellation_service import cancel_order, ensure_not_can
 from app.services.order_fulfillment_service import sync_fulfillments
 from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.seller_finance_service import (
+    auto_receipt_hours,
     build_effective_seller_finance_settings,
     get_or_create_global_settings,
 )
 
 router = APIRouter(prefix="/admin/finance", tags=["admin-finance"])
 settings = get_settings()
-AUTO_RECEIPT_TIMEOUT_HOURS = 24
 
 
 def _looks_like_birth_date(value: str) -> bool:
@@ -187,6 +187,7 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
         affiliate_seller_share_months=int(getattr(settings, "affiliate_seller_share_months", 12) or 12),
         affiliate_customer_bonus=float(getattr(settings, "affiliate_customer_bonus", 250) or 0),
         affiliate_hold_days=int(getattr(settings, "affiliate_hold_days", 30) if getattr(settings, "affiliate_hold_days", None) is not None else 30),
+        auto_receipt_hours=int(getattr(settings, "auto_receipt_hours", 72) if getattr(settings, "auto_receipt_hours", None) is not None else 72),
         affiliate_min_payout=float(getattr(settings, "affiliate_min_payout", 2000) if getattr(settings, "affiliate_min_payout", None) is not None else 2000),
         affiliate_new_account_monthly_cap=float(getattr(settings, "affiliate_new_account_monthly_cap", 25000) if getattr(settings, "affiliate_new_account_monthly_cap", None) is not None else 25000),
         affiliate_max_referrals_per_day=int(getattr(settings, "affiliate_max_referrals_per_day", 15) if getattr(settings, "affiliate_max_referrals_per_day", None) is not None else 15),
@@ -407,7 +408,8 @@ def _auto_finalize_order_without_qr(
     if reference_time.tzinfo is None:
         reference_time = reference_time.replace(tzinfo=UTC)
     elapsed = datetime.now(UTC) - reference_time
-    if elapsed < timedelta(hours=AUTO_RECEIPT_TIMEOUT_HOURS):
+    timeout_hours = auto_receipt_hours(db)
+    if elapsed < timedelta(hours=timeout_hours):
         return False
 
     mark_order_delivered(db, order, source="auto")
@@ -433,7 +435,7 @@ def _auto_finalize_order_without_qr(
         details={
             "status": "recu",
             "reason": "qr_missing_timeout",
-            "timeout_hours": AUTO_RECEIPT_TIMEOUT_HOURS,
+            "timeout_hours": timeout_hours,
         },
     )
     return True
@@ -526,6 +528,7 @@ def update_finance_settings(
     settings_row.affiliate_seller_share_months = payload.affiliate_seller_share_months
     settings_row.affiliate_customer_bonus = payload.affiliate_customer_bonus
     settings_row.affiliate_hold_days = payload.affiliate_hold_days
+    settings_row.auto_receipt_hours = payload.auto_receipt_hours
     settings_row.affiliate_min_payout = payload.affiliate_min_payout
     settings_row.affiliate_new_account_monthly_cap = payload.affiliate_new_account_monthly_cap
     settings_row.affiliate_max_referrals_per_day = payload.affiliate_max_referrals_per_day
