@@ -112,6 +112,9 @@ export type AdminOrderTracking = {
   tracking_code: string | null;
   created_at: string;
   payment_status?: "pending" | "paid" | string;
+  /** « restaurant » : le restaurant prépare et livre ; l'admin ne valide que le paiement. */
+  kind?: "shop" | "restaurant";
+  place_name?: string | null;
   /** Référence Nita envoyée par le client, tant que le paiement est à valider. */
   client_reference?: string | null;
   delivery_district?: string | null;

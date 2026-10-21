@@ -9,6 +9,7 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import { cancelAdminOrder, dispatchAdminOrder, listAdminOrders } from "@/services/finance-service";
 import { confirmPayment } from "@/services/order-service";
+import { confirmRestaurantPayment } from "@/services/restaurant-service";
 import { toast } from "@/store/toast-store";
 import type { AdminOrderTracking } from "@/types/finance";
 
@@ -41,8 +42,8 @@ export function AdminOrdersPanel() {
   const onError = (err: unknown) => toast.error(getApiErrorMessage(err, "Action impossible. Réessayez."));
 
   const confirm = useMutation({
-    mutationFn: ({ id, reference }: { id: string; reference?: string }) =>
-      confirmPayment(id, reference ? { provider_reference: reference } : {}),
+    mutationFn: ({ id, reference, restaurant }: { id: string; reference?: string; restaurant?: boolean }) =>
+      (restaurant ? confirmRestaurantPayment : confirmPayment)(id, reference ? { provider_reference: reference } : {}),
     onSuccess: (result) => {
       if (result.payment_status === "paid") toast.success("Paiement validé : le vendeur et les livreurs sont prévenus.");
       else toast.info(result.message || "Paiement toujours en attente.");
@@ -70,7 +71,8 @@ export function AdminOrdersPanel() {
   const groups = useMemo(
     () => ({
       valider: orders.filter((o) => !isPaid(o) && o.status !== "annulee"),
-      livrer: orders.filter((o) => isPaid(o) && !isClosed(o)),
+      // Les restaurants livrent eux-mêmes : seules les commandes boutiques sont à suivre ici.
+      livrer: orders.filter((o) => isPaid(o) && !isClosed(o) && o.kind !== "restaurant"),
       toutes: orders,
     }),
     [orders]
@@ -112,7 +114,8 @@ export function AdminOrdersPanel() {
       <div className="mt-4 space-y-2">
         {visible.map((order) => {
           const paid = isPaid(order);
-          const closed = isClosed(order);
+          const restaurant = order.kind === "restaurant";
+          const closed = isClosed(order) || restaurant;
           const next = !paid || closed ? null : order.status === "livraison" ? { label: "Marquer livrée", to: "recu" as const } : { label: "Envoyer en livraison", to: "livraison" as const };
           const reference = refs[order.id] ?? order.client_reference ?? "";
           return (
@@ -122,6 +125,9 @@ export function AdminOrdersPanel() {
                   <p className="text-sm font-semibold text-ink-900">
                     {order.customer_name} <span className="font-normal text-ink-500">#{order.tracking_code ?? order.id.slice(0, 8)}</span>
                   </p>
+                  {restaurant ? (
+                    <p className="text-xs font-semibold text-brand-700">Restaurant{order.place_name ? ` · ${order.place_name}` : ""} (prépare et livre lui-même)</p>
+                  ) : null}
                   <p className="text-xs text-ink-600">
                     {new Date(order.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
                     {order.delivery_district ? ` · ${order.delivery_district}` : ""}
@@ -140,7 +146,7 @@ export function AdminOrdersPanel() {
                 order.payment_mode === "amana" ? (
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <p className="text-xs text-ink-600">Amana se valide tout seul dès que le client confirme dans AmanaTa.</p>
-                    <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => confirm.mutate({ id: order.id })}>
+                    <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => confirm.mutate({ id: order.id, restaurant })}>
                       Vérifier maintenant
                     </Button>
                   </div>
@@ -153,7 +159,7 @@ export function AdminOrdersPanel() {
                         toast.error("Saisissez la référence Nita lue sur votre relevé.");
                         return;
                       }
-                      confirm.mutate({ id: order.id, reference: reference.trim() });
+                      confirm.mutate({ id: order.id, reference: reference.trim(), restaurant });
                     }}
                   >
                     <label className="min-w-0 flex-1 text-xs font-medium text-ink-700">

@@ -188,6 +188,9 @@ class AdminOrderTrackingResponse(BaseModel):
     tracking_code: str | None
     created_at: str
     payment_status: str = "paid"
+    # "shop" (boutiques, livrees par AMAZER) ou "restaurant" (le restaurant prepare et livre).
+    kind: str = "shop"
+    place_name: str | None = None
     # Reference Nita saisie par le client, a comparer avec le releve operateur avant de valider.
     client_reference: str | None = None
     delivery_district: str | None = None

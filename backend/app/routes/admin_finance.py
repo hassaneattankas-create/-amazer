@@ -943,7 +943,40 @@ def list_admin_orders(
                 item_count=sum(int(item.quantity or 0) for item in order.items),
             )
         )
-    return payload
+    payload.extend(_restaurant_orders_for_admin(db, limit))
+    payload.sort(key=lambda row: row.created_at, reverse=True)
+    return payload[: max(1, min(limit, 200))]
+
+
+def _restaurant_orders_for_admin(db: Session, limit: int) -> list[AdminOrderTrackingResponse]:
+    """Commandes restaurant : leurs paiements Nita se valident aussi ici (le restaurant gere la suite)."""
+    rows = db.scalars(
+        select(RestaurantOrder)
+        .options(selectinload(RestaurantOrder.items))
+        .order_by(RestaurantOrder.created_at.desc())
+        .limit(max(1, min(limit, 200)))
+    ).all()
+    names = {
+        profile.vendor_id: profile.business_name
+        for profile in db.scalars(select(SellerProfile).where(SellerProfile.vendor_id.in_({r.vendor_id for r in rows}))).all()
+    } if rows else {}
+    return [
+        AdminOrderTrackingResponse(
+            id=r.id,
+            customer_name=r.customer_name or "Client AMAZER",
+            status=r.status,
+            payment_mode=r.payment_mode,
+            total_amount=r.total_amount,
+            tracking_code=r.payment_reference,
+            created_at=r.created_at.isoformat(),
+            payment_status=r.payment_status,
+            kind="restaurant",
+            place_name=names.get(r.vendor_id),
+            client_reference=_client_reference(r),
+            item_count=sum(int(item.quantity or 0) for item in r.items),
+        )
+        for r in rows
+    ]
 
 
 def _client_reference(order: Order) -> str | None:

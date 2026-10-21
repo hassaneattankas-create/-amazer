@@ -53,7 +53,7 @@ export default function AdminHomePage() {
       hint: "Suivi jusqu'à la livraison.",
       icon: Truck,
       count: orders.isSuccess
-        ? allOrders.filter((o) => (o.payment_status ?? "paid") === "paid" && !["recu", "CLAIMED", "annulee"].includes(o.status)).length
+        ? allOrders.filter((o) => o.kind !== "restaurant" && (o.payment_status ?? "paid") === "paid" && !["recu", "CLAIMED", "annulee"].includes(o.status)).length
         : null,
     },
     { href: "/admin/finance", label: "Inscriptions vendeurs à valider", hint: "Vérifier le paiement, puis créer la boutique.", icon: UserPlus, count: count(preRegs), urgent: true },
