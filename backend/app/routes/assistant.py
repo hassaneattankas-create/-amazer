@@ -39,9 +39,20 @@ SYSTEM_PROMPT = (
     "- Livraison a Niamey (standard ou express) par un livreur AMAZER ; frais par boutique, affiches "
     "avant la commande. Suivi dans le tableau de bord ; le client peut annuler une commande non payee.\n"
     "- Ecrire a une boutique (bouton « Ecrire a la boutique », page Messages).\n"
-    "- Reserver une table ou une chambre ; l'acompte est verifie par le commercant.\n"
+    "- Restaurants : commander un repas livre (paye a AMAZER) ou reserver une table.\n"
+    "- Hotels et transport (Premium) : reserver une chambre ou un billet ; le paiement se fait directement a "
+    "l'etablissement, qui confirme la reservation.\n"
+    "- Pharmacies : page Pharmacies (pharmacies de garde maintenant, appel, itineraire). AMAZER ne vend pas "
+    "de medicaments.\n"
+    "- Stations-essence : page Stations (super, gasoil, gaz disponibles) ; le gaz peut etre commande avec "
+    "livraison AMAZER dans les villes desservies.\n"
+    "- Revendre sans stock : page Revendre (choisir des produits, fixer son prix, garder la marge).\n"
+    "- Affiliation : page Affiliation (gagner sur les abonnements des vendeurs amenes et un bonus par nouveau "
+    "client).\n"
     "- Mot de passe oublie : page « Mot de passe oublie », code envoye par e-mail ou WhatsApp.\n"
-    "- Vendre : page « Devenir vendeur », choisir une formule, publier ses produits.\n"
+    "- Vendre : page « Devenir vendeur », choisir une formule (Boutique, Restaurant ou Premium), publier ses "
+    "produits. Le vendeur recoit le prix entier de ses articles ; la commission et les frais AMAZER sont payes "
+    "par le client.\n"
     "- Aide complete : page « Comment ca marche ? ».\n"
     "\n"
     "REGLES :\n"
@@ -82,8 +93,16 @@ _FAQ = [
      "Les promotions du moment sont sur la page Promotions."),
     (("abonnement", "renouveler", "expire"),
      "L'abonnement vendeur se règle depuis l'espace vendeur ; la boutique reste visible tant qu'il est actif."),
-    (("reservation", "reserver", "table", "chambre", "hotel", "acompte"),
-     "Réservez depuis la page du restaurant ou de l'hôtel. L'acompte éventuel est vérifié par le commerçant."),
+    (("pharmacie", "de garde", "medicament"),
+     "Ouvrez la page « Pharmacies » : les pharmacies de garde maintenant, avec appel et itinéraire. AMAZER ne vend pas de médicaments."),
+    (("essence", "carburant", "station", "gasoil", "gaz"),
+     "Ouvrez la page « Stations » : super, gasoil et gaz disponibles maintenant. Le gaz peut être livré par AMAZER dans les villes desservies."),
+    (("revendre", "revente", "dropshipping", "sans stock"),
+     "Ouvrez la page « Revendre » : choisissez des produits, fixez votre prix et gardez la marge après livraison."),
+    (("affiliation", "affilie", "parrain", "ambassadeur"),
+     "Ouvrez la page « Affiliation » : partagez votre lien et gagnez sur les abonnements des vendeurs amenés et un bonus par nouveau client."),
+    (("reservation", "reserver", "table", "chambre", "hotel", "acompte", "billet", "trajet"),
+     "Réservez depuis la page du restaurant, de l'hôtel ou de la compagnie. Vous payez directement l'établissement, qui confirme la réservation."),
     (("contact", "aide", "support", "probleme", "litige", "rembours", "humain", "whatsapp"),
      "Pour un cas particulier, écrivez au support AMAZER sur WhatsApp : il vous répondra."),
     (("bonjour", "salut", "bonsoir", "coucou", "hello", "merci"), _DEFAULT_REPLY),

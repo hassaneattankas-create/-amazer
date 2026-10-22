@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy import delete, desc, func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.rate_limit import enforce_rate_limit
 from app.core.cache import build_cache_key, cache_get_json, cache_set_json
 from app.core.csrf import enforce_csrf
 from app.core.deps import get_admin_user
@@ -501,6 +502,8 @@ def track_ad_click(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
 ) -> dict[str, str]:
+    # Statistique publique : on limite les clics d'un meme appareil (pas de chiffres gonfles).
+    enforce_rate_limit(request, key="ad-click", limit=60, window_seconds=600)
     db.add(
         AdClick(
             product_id=payload.product_id,

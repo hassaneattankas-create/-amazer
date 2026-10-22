@@ -12,6 +12,8 @@ lazy par /ping, appele toutes les 14 min par le workflow keep-alive.
 """
 from __future__ import annotations
 
+import hmac
+
 from datetime import UTC, datetime
 from typing import Annotated
 
@@ -35,7 +37,7 @@ def _require_cron_secret(x_cron_secret: str | None) -> None:
     expected = (settings.cron_secret or "").strip()
     if not expected:
         raise HTTPException(status_code=503, detail="Maintenance cron not configured")
-    if not x_cron_secret or x_cron_secret.strip() != expected:
+    if not x_cron_secret or not hmac.compare_digest(x_cron_secret.strip(), expected):
         raise HTTPException(status_code=401, detail="Invalid cron secret")
 
 

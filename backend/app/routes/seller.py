@@ -1975,8 +1975,11 @@ def update_hotel_booking_status(
 @router.post("/leads", response_model=SellerLeadResponse, status_code=status.HTTP_201_CREATED)
 def create_seller_lead(
     payload: SellerLeadCreateRequest,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
 ) -> SellerLeadResponse:
+    # Formulaire public : limite anti-spam par appareil.
+    enforce_rate_limit(request, key="seller-lead", limit=5, window_seconds=600)
     lead = SellerLead(
         shop_name=payload.shop_name,
         district=payload.district,
