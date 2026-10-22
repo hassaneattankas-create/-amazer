@@ -104,7 +104,7 @@ export function SingleMediaField({
   label,
   value,
   onChange,
-  emptyMessage = "Aucune image selectionnee.",
+  emptyMessage = "Aucune image sélectionnée.",
 }: SingleMediaFieldProps) {
   const [imgError, setImgError] = useState(false);
   const previewUrl = resolveImageUrl(value) ?? value;

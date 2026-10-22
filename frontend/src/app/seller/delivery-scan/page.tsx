@@ -7,6 +7,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { BarcodeScannerDrawer } from "@/components/BarcodeScannerDrawer";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
+import Link from "next/link";
+import { useAdminMe } from "@/hooks/use-admin-me";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { getSellerProfile } from "@/services/seller-service";
 import { verifyReceipt } from "@/services/order-service";
@@ -36,8 +38,10 @@ function SellerDeliveryScanContent() {
     staleTime: 60_000,
   });
   const vendorId = sellerProfile?.vendor_id ?? "";
+  const { data: adminMe } = useAdminMe(Boolean(currentUser?.id));
   // Vendeur, livreur ou admin : le serveur verifie les droits sur la commande.
-  const canVerify = Boolean(vendorId) || currentUser?.role === "courier" || currentUser?.role === "admin";
+  const canVerify =
+    Boolean(vendorId) || currentUser?.role === "courier" || currentUser?.role === "admin" || Boolean(adminMe?.is_admin);
 
   const mutation = useMutation({
     mutationFn: verifyReceipt,
@@ -60,7 +64,15 @@ function SellerDeliveryScanContent() {
         <h1 className="text-2xl font-semibold text-ink-900">Confirmer une livraison</h1>
         <p className="mt-1 text-sm text-ink-600">Scannez le QR code du reçu du client au moment de la remise.</p>
         {!currentUser ? (
-          <p className="mt-2 text-sm text-danger">Connectez-vous avec un compte vendeur, livreur ou admin.</p>
+          <p className="mt-2 text-sm text-danger">
+            Connectez-vous avec un compte vendeur, livreur ou admin.{" "}
+            <Link
+              href={`/login?next=${encodeURIComponent(`/seller/delivery-scan${queryToken ? `?token=${encodeURIComponent(queryToken)}` : ""}`)}`}
+              className="font-semibold underline"
+            >
+              Se connecter
+            </Link>
+          </p>
         ) : !canVerify ? (
           <p className="mt-2 text-sm text-warning">Ce compte ne peut pas confirmer de livraison.</p>
         ) : null}

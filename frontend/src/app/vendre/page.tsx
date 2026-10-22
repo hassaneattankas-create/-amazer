@@ -49,13 +49,14 @@ const PLANS: Plan[] = [
     audience: "Hôtels, transport, pharmacies, stations-essence, entreprises",
     price: (p) => p.seller_subscription_fee_premium,
     highlighted: true,
-    features: () => [
+    features: (p) => [
       "Produits illimités et boutique en ligne",
       "Restaurant : menu et commandes en ligne",
       "Hôtel : réservation des chambres en ligne",
       "Transport : billets et places avec QR code",
       "Pharmacie : vos gardes visibles par tout le Niger",
-      "Station-essence : disponibilités et commandes de gaz livrées",
+      `Stations-essence : ${p.fuel_included_outlets ?? 3} stations incluses, puis ${formatXOF(p.fuel_tier1_price ?? 2000)} par station (prix dégressif)`,
+      "Stations : disponibilités, statistiques et commandes de gaz livrées",
       "Itinéraire Google Maps et livraison AMAZER à Niamey",
       "Site vitrine complet et badge vérifié",
       "Statistiques sur 30 jours et mise en avant Premium",
@@ -163,15 +164,16 @@ export default function VendrePage() {
       {pricing ? (
         <article className="mt-6 rounded-card border border-border bg-card p-5">
           <h2 className="font-semibold text-ink-900">Frais transparents</h2>
+          <p className="mt-1 text-sm text-ink-700">Vous recevez le prix entier de vos articles : les frais AMAZER sont payés par le client.</p>
           <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
             <div>
-              <dt className="text-ink-600">Commission par vente</dt>
+              <dt className="text-ink-600">Commission AMAZER (payée par le client)</dt>
               <dd className="font-semibold text-ink-900">
                 {pricing.launch_mode_zero_commission ? "0 % (lancement)" : `${Number((pricing.commission_rate * 100).toFixed(1)).toLocaleString("fr-FR")} %`}
               </dd>
             </div>
             <div>
-              <dt className="text-ink-600">Frais de service par commande</dt>
+              <dt className="text-ink-600">Frais de service (payés par le client)</dt>
               <dd className="font-semibold text-ink-900">{formatXOF(pricing.service_fee)}</dd>
             </div>
             <div>

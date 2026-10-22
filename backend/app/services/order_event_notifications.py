@@ -122,7 +122,10 @@ def vendor_amounts(order) -> dict[str, int]:
     for item in getattr(order, "items", None) or []:
         amounts[item.vendor_id] = amounts.get(item.vendor_id, 0.0) + float(item.unit_price or 0) * int(item.quantity or 1)
     if not amounts and getattr(order, "vendor_id", None):
-        amounts[order.vendor_id] = float(order.total_amount or 0)
+        # Restaurant : la part du restaurant = les plats (sans livraison ni frais AMAZER payes par le client).
+        breakdown = getattr(order, "fee_breakdown", None) or {}
+        subtotal = breakdown.get("items_subtotal") if isinstance(breakdown, dict) else None
+        amounts[order.vendor_id] = float(subtotal if subtotal is not None else order.total_amount or 0)
     return {vendor_id: int(round(value)) for vendor_id, value in amounts.items()}
 
 

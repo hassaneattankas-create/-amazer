@@ -979,11 +979,12 @@ def verify_receipt_scan(
         )
         db.commit()
         db.refresh(scan)
-        used_iso = used_at.isoformat() if used_at else "date inconnue"
+        # Heure de Niamey (UTC+1), lisible par le livreur.
+        used_iso = (used_at + timedelta(hours=1)).strftime("%d/%m/%Y à %H:%M") if used_at else "date inconnue"
         return ReceiptVerifyResponse(
             order_id=order.id,
             status="blocked",
-            message=f"RECU DEJA UTILISE le {used_iso}",
+            message=f"Reçu déjà utilisé (livraison confirmée le {used_iso}).",
             scanned_at=scan.scanned_at,
         )
 
@@ -995,6 +996,6 @@ def verify_receipt_scan(
     return ReceiptVerifyResponse(
         order_id=order.id,
         status="claimed",
-        message="QR VALIDE. COMMANDE MARQUEE COMME LIVREE.",
+        message="QR valide : commande marquée comme livrée.",
         scanned_at=scan.scanned_at,
     )

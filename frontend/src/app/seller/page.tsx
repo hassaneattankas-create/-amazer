@@ -201,14 +201,14 @@ function SellerPageContent() {
     queryKey: ["seller-profile"],
     queryFn: getSellerProfile,
     enabled: Boolean(user),
-    refetchInterval: 5_000,
+    refetchInterval: 30_000,
     refetchOnWindowFocus: true,
   });
   const { data: subscriptionStatus } = useQuery({
     queryKey: ["seller-subscription-status"],
     queryFn: getSellerSubscriptionStatus,
     enabled: Boolean(user),
-    refetchInterval: 5_000,
+    refetchInterval: 30_000,
     refetchOnWindowFocus: true,
   });
   const { data: subscriptionPaymentRequests = [] } = useQuery({
@@ -216,7 +216,7 @@ function SellerPageContent() {
     queryFn: listSellerSubscriptionPaymentRequests,
     enabled: Boolean(user),
     staleTime: 0,
-    refetchInterval: 5_000,
+    refetchInterval: 30_000,
     refetchOnWindowFocus: true,
   });
   useEffect(() => {
@@ -319,7 +319,7 @@ function SellerPageContent() {
       queryClient.invalidateQueries({ queryKey: ["seller-subscription-status"] });
       queryClient.invalidateQueries({ queryKey: ["seller-subscription-payment-requests"] });
       setSubscriptionForm((prev) => ({ ...prev, transaction_reference: "" }));
-      setStatus("Demande envoyee. Tu recevras une notification des que le paiement est accepte ou refusé.");
+      setStatus("Paiement envoyé. Vous serez prévenu dès qu'AMAZER l'aura vérifié.");
     },
     onError: (error) => setStatus(getApiErrorMessage(error, "Paiement vendeur impossible.")),
   });
@@ -375,14 +375,10 @@ function SellerPageContent() {
   };
   const welcomeMessage =
     searchParams.get("welcome") === "1"
-      ? "Compte vendeur créé. Les informations de base sont enregistrées. Active maintenant l'abonnement mensuel pour publier."
+      ? "Compte vendeur créé. Complétez votre boutique ci-dessous."
       : "";
   const latestSubscriptionPayment = subscriptionPaymentRequests[0] ?? null;
-  const paymentDestination =
-    publicFinance?.platform_wallet_phone ||
-    publicFinance?.support_phone ||
-    publicFinance?.support_whatsapp ||
-    "";
+  const paymentDestination = publicFinance?.platform_wallet_phone || "";
   const selectedSubscriptionMonths = Math.max(1, Math.min(12, Number(subscriptionForm.months || 1)));
   const selectedSubscriptionAmount = visibleMonthlyFee * selectedSubscriptionMonths;
 
@@ -464,9 +460,9 @@ function SellerPageContent() {
           </p>
         </div>
         <p className="mt-2 text-xs text-ink-600">
-          Commission sur les ventes :{" "}
-          {pricingSnapshot.commissionRate !== null ? `${Number((pricingSnapshot.commissionRate * 100).toFixed(2))} %` : "—"} · frais de
-          service : {pricingSnapshot.serviceFee !== null ? formatXOF(pricingSnapshot.serviceFee) : "—"} par commande (payés par le client)
+          Vous recevez le prix entier de vos articles. Commission AMAZER{" "}
+          {pricingSnapshot.commissionRate !== null ? `${Number((pricingSnapshot.commissionRate * 100).toFixed(2))} %` : "—"} et frais de
+          service {pricingSnapshot.serviceFee !== null ? formatXOF(pricingSnapshot.serviceFee) : "—"} : ajoutés au prix payé par le client.
         </p>
         {latestSubscriptionPayment?.status === "rejected" ? (
           <p className="mt-3 rounded-field bg-surface-1 px-3 py-2 text-sm text-danger">
@@ -522,8 +518,14 @@ function SellerPageContent() {
               </div>
             </div>
             <div className="rounded-field bg-surface-1 p-3 text-sm text-ink-800">
-              Envoyez <span className="text-lg font-bold text-ink-900">{formatXOF(selectedSubscriptionAmount)}</span> au{" "}
-              <span className="text-lg font-bold text-ink-900">{paymentDestination || "numéro AMAZER"}</span>
+              {paymentDestination ? (
+                <>
+                  Envoyez <span className="text-lg font-bold text-ink-900">{formatXOF(selectedSubscriptionAmount)}</span> au{" "}
+                  <span className="text-lg font-bold text-ink-900">{paymentDestination}</span>
+                </>
+              ) : (
+                <>Le numéro de paiement AMAZER n&apos;est pas encore affiché : contactez le support avant de payer.</>
+              )}
             </div>
             <label className={labelClass}>
               Référence du paiement (reçue par SMS)

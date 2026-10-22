@@ -107,7 +107,10 @@ export function RestaurantKitchen({ orders }: { orders: RestaurantOrder[] }) {
                       il y a {waited} min{late ? " · en retard" : ""}
                     </p>
                   </div>
-                  <p className="text-base font-bold text-ink-900">{formatXOF(order.total_amount)}</p>
+                  <p className="text-base font-bold text-ink-900">
+                    {/* Part du restaurant : les plats (livraison et frais AMAZER sont payés par le client). */}
+                    {formatXOF(order.items_subtotal ?? order.items.reduce((sum, item) => sum + item.subtotal, 0))}
+                  </p>
                 </div>
                 <ul className="mt-2 space-y-1 text-sm text-ink-800">
                   {order.items.map((item) => (
