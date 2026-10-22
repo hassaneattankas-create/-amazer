@@ -20,7 +20,7 @@ from app.core.rate_limit import enforce_rate_limit
 from app.database import get_db
 from app.models.order import Order, OrderItem
 from app.models.product import Price
-from app.models.reseller import ResellerListing, ResellerSubscriptionPayment
+from app.models.reseller import ResellerListing, ResellerPayout, ResellerSubscriptionPayment
 from app.services.reseller_account_service import ensure_account, reseller_terms, subscription_active
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
@@ -103,6 +103,9 @@ class EarningsResponse(BaseModel):
     pending: float
     orders_delivered: int
     orders_pending: int
+    # Deja verse par AMAZER, et reste a recevoir (gagne - verse).
+    paid: float = 0
+    to_pay: float = 0
 
 
 def _first_name(full_name: str | None) -> str:
@@ -275,9 +278,12 @@ def compute_earnings(db: Session, user_id: str) -> EarningsResponse:
     ).all()
     earned = sum(float(total or 0) for _id, status, total in rows if status in DELIVERED)
     pending = sum(float(total or 0) for _id, status, total in rows if status not in DELIVERED)
+    paid = float(db.scalar(select(func.sum(ResellerPayout.amount)).where(ResellerPayout.user_id == user_id)) or 0)
     return EarningsResponse(
         earned=round(earned, 2),
         pending=round(pending, 2),
+        paid=round(paid, 2),
+        to_pay=round(max(earned - paid, 0.0), 2),
         orders_delivered=sum(1 for _id, status, _t in rows if status in DELIVERED),
         orders_pending=sum(1 for _id, status, _t in rows if status not in DELIVERED),
     )

@@ -54,3 +54,15 @@ class ResellerSubscriptionPayment(Base):
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
 
+
+class ResellerPayout(Base):
+    """Versement d'une marge a un revendeur (Nita / Amana), enregistre par l'admin."""
+
+    __tablename__ = "reseller_payouts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    reference: Mapped[str | None] = mapped_column(String(180), nullable=True)
+    created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)

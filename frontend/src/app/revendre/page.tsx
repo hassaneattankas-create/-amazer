@@ -137,6 +137,9 @@ export default function RevendrePage() {
                 Gagné net (commandes livrées)
               </p>
               <p className="mt-1 text-2xl font-bold text-ink-900">{formatXOF(earnings?.earned ?? 0)}</p>
+              <p className="mt-1 text-xs text-ink-600">
+                Déjà reçu {formatXOF(earnings?.paid ?? 0)} · à recevoir {formatXOF(earnings?.to_pay ?? earnings?.earned ?? 0)}
+              </p>
             </div>
             <div className="rounded-card border border-border bg-card p-4">
               <p className="text-sm text-ink-600">En attente de livraison</p>

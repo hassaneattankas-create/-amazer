@@ -343,7 +343,17 @@ export type AdminResellerEarning = {
   earned: number;
   pending: number;
   orders_delivered: number;
+  paid?: number;
+  to_pay?: number;
 };
+
+export async function recordResellerPayout(userId: string, amount: number, reference: string): Promise<AdminResellerEarning> {
+  return adminProxyRequest<AdminResellerEarning>({
+    url: `/admin/finance/resellers/${userId}/payouts`,
+    method: "POST",
+    data: { amount, reference: reference || null },
+  });
+}
 
 export async function listResellerEarnings(): Promise<AdminResellerEarning[]> {
   return adminProxyRequest<AdminResellerEarning[]>({ url: "/admin/finance/reseller-earnings", method: "GET" });

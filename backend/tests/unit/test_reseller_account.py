@@ -105,3 +105,37 @@ def test_admin_sees_every_reseller_even_without_sales(monkeypatch) -> None:
     assert set(rows) == {"a", "b"}  # c n'est pas revendeur
     assert (rows["a"].listings_active, rows["a"].listings_total, rows["a"].subscription, rows["a"].has_paid) == (1, 2, "active", True)
     assert (rows["b"].subscription, rows["b"].has_paid) == ("none", False)
+
+
+def test_admin_records_a_payout_and_amount_due_drops(monkeypatch) -> None:
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from app.core.exceptions import ValidationDomainError
+    from app.database import Base
+    from app.models.reseller import ResellerPayout
+    from app.models.user import User
+    from app.routes import admin_finance
+
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine, tables=[User.__table__, ResellerPayout.__table__])
+    monkeypatch.setattr(admin_finance, "_require_finance_pin", lambda *_a, **_k: None)
+    monkeypatch.setattr(admin_finance, "enforce_csrf", lambda _r: None)
+    monkeypatch.setattr(admin_finance, "append_audit_log", lambda *_a, **_k: None)
+    monkeypatch.setattr(admin_finance, "NotificationService", lambda _db: SimpleNamespace(send_to_user=lambda **_k: None))
+
+    def earnings(db, uid):
+        # 5 000 gagnes ; le verse vient de la vraie table.
+        from sqlalchemy import func, select
+        paid = float(db.scalar(select(func.sum(ResellerPayout.amount)).where(ResellerPayout.user_id == uid)) or 0)
+        return route.EarningsResponse(earned=5000, pending=0, orders_delivered=2, orders_pending=0, paid=paid, to_pay=5000 - paid)
+
+    monkeypatch.setattr(admin_finance, "compute_reseller_earnings", earnings)
+    req = SimpleNamespace(client=None, url=SimpleNamespace(path="/x"))
+    with Session(engine) as db:
+        db.add(User(id="r1", email="r1@t.ne", full_name="Rev", hashed_password="x"))
+        db.commit()
+        row = admin_finance.record_reseller_payout("r1", admin_finance.AdminResellerPayoutCreate(amount=3000, reference="NT-1"), req, db, SimpleNamespace(id="admin"))
+        assert (row.paid, row.to_pay) == (3000, 2000)
+        with pytest.raises(ValidationDomainError, match="trop élevé"):
+            admin_finance.record_reseller_payout("r1", admin_finance.AdminResellerPayoutCreate(amount=2500), req, db, SimpleNamespace(id="admin"))

@@ -3,7 +3,7 @@ from app.models.media_file import MediaFile
 from app.models.app_notification import AppNotification
 from app.models.category import Category
 from app.models.price_history import PriceHistory
-from app.models.reseller import ResellerAccount, ResellerListing, ResellerSubscriptionPayment
+from app.models.reseller import ResellerAccount, ResellerListing, ResellerPayout, ResellerSubscriptionPayment
 from app.models.refund import Refund
 from app.models.storefront_stat import StorefrontDailyStat
 from app.models.fuel_outlet import FuelOutlet

@@ -6,9 +6,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 import { getAdminFinanceDataError } from "@/lib/admin-finance-verification";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
-import { decideResellerPayment, listAllResellers, listResellerEarnings, listResellerPayments, type AdminResellerRow } from "@/services/finance-service";
+import {
+  decideResellerPayment,
+  listAllResellers,
+  listResellerEarnings,
+  listResellerPayments,
+  recordResellerPayout,
+  type AdminResellerEarning,
+  type AdminResellerRow,
+} from "@/services/finance-service";
 
 const SUBSCRIPTION_LABELS: Record<AdminResellerRow["subscription"], { label: string; className: string }> = {
   free: { label: "Gratuit", className: "bg-surface-2 text-ink-700" },
@@ -107,13 +116,39 @@ function AllResellers() {
 export default function AdminResellersPage() {
   const { data = [], isPending, error } = useQuery({ queryKey: ["admin-reseller-earnings"], queryFn: listResellerEarnings, retry: false });
   const errorText = error ? getAdminFinanceDataError(error) || "Chargement impossible." : "";
-  const totalDue = data.reduce((sum, row) => sum + row.earned, 0);
+  const totalDue = data.reduce((sum, row) => sum + (row.to_pay ?? row.earned), 0);
+  const [payoutStatus, setPayoutStatus] = useState("");
   const queryClient = useQueryClient();
   const { data: payments = [] } = useQuery({ queryKey: ["admin-reseller-payments"], queryFn: listResellerPayments, retry: false });
   const decide = useMutation({
     mutationFn: ({ id, decision }: { id: string; decision: "approved" | "rejected" }) => decideResellerPayment(id, decision),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-reseller-payments"] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin-reseller-payments"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-resellers"] });
+    },
   });
+  const payout = useMutation({
+    mutationFn: ({ row, amount, reference }: { row: AdminResellerEarning; amount: number; reference: string }) =>
+      recordResellerPayout(row.user_id, amount, reference),
+    onSuccess: (row) => {
+      setPayoutStatus(`Versement enregistré pour ${row.full_name}. Reste à verser : ${formatXOF(row.to_pay ?? 0)}.`);
+      void queryClient.invalidateQueries({ queryKey: ["admin-reseller-earnings"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-resellers"] });
+    },
+    onError: (error) => setPayoutStatus(getApiErrorMessage(error, "Versement non enregistré.")),
+  });
+  const askPayout = (row: AdminResellerEarning) => {
+    const due = row.to_pay ?? row.earned;
+    const typed = window.prompt(`Montant versé à ${row.full_name} par Nita / Amana (reste ${formatXOF(due)}) :`, String(Math.round(due)));
+    if (typed === null) return;
+    const amount = Number(typed.replace(/\s/g, "").replace(",", "."));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setPayoutStatus("Montant invalide.");
+      return;
+    }
+    const reference = window.prompt("Référence de la transaction (facultatif) :", "") ?? "";
+    payout.mutate({ row, amount, reference: reference.trim() });
+  };
 
   return (
     <section className="space-y-4">
@@ -168,15 +203,24 @@ export default function AdminResellersPage() {
       <AllResellers />
 
       <h2 className="text-lg font-semibold text-ink-900">Gains à verser</h2>
+      <p className="text-sm text-ink-600">
+        Versez la marge par Nita / Amana, puis cliquez « Enregistrer un versement » : le reste à verser baisse et le revendeur est prévenu.
+      </p>
+      {payoutStatus ? (
+        <p className="rounded-field bg-surface-1 p-3 text-sm text-ink-800" role="status">
+          {payoutStatus}
+        </p>
+      ) : null}
       {isPending ? (
         <div className="h-24 animate-pulse rounded-card bg-surface-3" aria-busy="true" />
       ) : data.length ? (
         <div className="overflow-x-auto rounded-card border border-border bg-card">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full min-w-[720px] text-sm">
             <thead className="bg-surface-1 text-left text-ink-600">
               <tr>
                 <th className="px-3 py-2 font-medium">Revendeur</th>
-                <th className="px-3 py-2 font-medium">Gagné</th>
+                <th className="px-3 py-2 font-medium">Reste à verser</th>
+                <th className="px-3 py-2 font-medium">Déjà versé</th>
                 <th className="px-3 py-2 font-medium">En attente</th>
                 <th className="px-3 py-2 font-medium">Livrées</th>
                 <th className="px-3 py-2 font-medium">Contact</th>
@@ -189,7 +233,20 @@ export default function AdminResellersPage() {
                     <span className="block font-medium text-ink-900">{row.full_name}</span>
                     <span className="text-xs text-ink-600">{row.contact}</span>
                   </td>
-                  <td className="px-3 py-2 font-semibold text-success">{formatXOF(row.earned)}</td>
+                  <td className="px-3 py-2">
+                    <span className="block font-semibold text-success">{formatXOF(row.to_pay ?? row.earned)}</span>
+                    {(row.to_pay ?? row.earned) > 0 ? (
+                      <button
+                        type="button"
+                        disabled={payout.isPending}
+                        onClick={() => askPayout(row)}
+                        className="mt-1 text-xs font-medium text-brand-700 hover:underline disabled:opacity-50"
+                      >
+                        Enregistrer un versement
+                      </button>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-2 text-ink-700">{formatXOF(row.paid ?? 0)}</td>
                   <td className="px-3 py-2 text-ink-700">{formatXOF(row.pending)}</td>
                   <td className="px-3 py-2 text-ink-700">{row.orders_delivered}</td>
                   <td className="px-3 py-2">
@@ -198,7 +255,7 @@ export default function AdminResellersPage() {
                         phone={row.whatsapp_phone}
                         variant="link"
                         label="WhatsApp"
-                        message={`Bonjour ${row.full_name}, votre gain AMAZER de ${formatXOF(row.earned)} est prêt à être versé.`}
+                        message={`Bonjour ${row.full_name}, votre gain AMAZER de ${formatXOF(row.to_pay ?? row.earned)} est prêt à être versé.`}
                       />
                     ) : (
                       <span className="text-xs text-ink-600">—</span>

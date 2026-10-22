@@ -73,7 +73,7 @@ from app.schemas.finance import (
 )
 from app.services import order_event_notifications as order_events
 from app.routes.resellers import compute_earnings as compute_reseller_earnings
-from app.models.reseller import ResellerAccount, ResellerListing, ResellerSubscriptionPayment
+from app.models.reseller import ResellerAccount, ResellerListing, ResellerPayout, ResellerSubscriptionPayment
 from app.models.refund import Refund
 from app.models.affiliate import AffiliateAccount, AffiliateEarning, AffiliatePayout, AffiliateReferral
 from app.routes.affiliates import compute_affiliate_earnings
@@ -2348,6 +2348,13 @@ class AdminResellerEarning(BaseModel):
     earned: float
     pending: float
     orders_delivered: int
+    paid: float = 0
+    to_pay: float = 0
+
+
+class AdminResellerPayoutCreate(BaseModel):
+    amount: float = Field(gt=0, le=100_000_000)
+    reference: str | None = Field(default=None, max_length=180)
 
 
 @router.get("/reseller-earnings", response_model=list[AdminResellerEarning])
@@ -2378,9 +2385,65 @@ def list_reseller_earnings(
                 earned=totals.earned,
                 pending=totals.pending,
                 orders_delivered=totals.orders_delivered,
+                paid=totals.paid,
+                to_pay=totals.to_pay,
             )
         )
-    return sorted(rows, key=lambda row: row.earned, reverse=True)
+    return sorted(rows, key=lambda row: (row.to_pay, row.earned), reverse=True)
+
+
+@router.post("/resellers/{user_id}/payouts", response_model=AdminResellerEarning)
+def record_reseller_payout(
+    user_id: str,
+    payload: AdminResellerPayoutCreate,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminResellerEarning:
+    """Enregistre un versement de marge (fait hors plateforme par Nita / Amana) : le reste a verser baisse d'autant."""
+    enforce_csrf(request)
+    _require_finance_pin(request, admin_user)
+    user = db.get(User, user_id)
+    if user is None:
+        raise ValidationDomainError("Revendeur introuvable")
+    totals = compute_reseller_earnings(db, user_id)
+    amount = round(float(payload.amount), 2)
+    if amount > totals.to_pay + 0.01:
+        raise ValidationDomainError(f"Montant trop élevé : il reste {totals.to_pay:.0f} XOF à verser.")
+    payout = ResellerPayout(user_id=user_id, amount=amount, reference=(payload.reference or "").strip() or None, created_by=admin_user.id)
+    db.add(payout)
+    db.flush()
+    NotificationService(db).send_to_user(
+        user_id=user_id,
+        payload=NotificationPayload(
+            title="Gain revendeur versé",
+            body=f"AMAZER vous a versé {amount:.0f} XOF.",
+            data={"tag": f"reseller-payout-{payout.id}", "href": "/revendre"},
+        ),
+    )
+    append_audit_log(
+        db,
+        event_type="admin_reseller_payout_recorded",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="reseller_payout",
+        entity_id=payout.id,
+        details={"user_id": user_id, "amount": amount, "reference": payout.reference},
+    )
+    db.commit()
+    totals = compute_reseller_earnings(db, user_id)
+    return AdminResellerEarning(
+        user_id=user.id,
+        full_name=user.full_name or "Revendeur",
+        contact=user.email,
+        whatsapp_phone=user.whatsapp_phone,
+        earned=totals.earned,
+        pending=totals.pending,
+        orders_delivered=totals.orders_delivered,
+        paid=totals.paid,
+        to_pay=totals.to_pay,
+    )
 
 
 class AdminResellerRow(BaseModel):
