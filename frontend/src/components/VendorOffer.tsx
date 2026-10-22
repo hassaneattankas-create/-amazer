@@ -5,6 +5,7 @@ import { Store } from "lucide-react";
 
 import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { Button } from "@/components/ui/button";
+import { getShopRoute } from "@/lib/mobile-routes";
 import { Offer } from "@/types/product";
 
 type VendorOfferProps = {
@@ -21,7 +22,7 @@ export function VendorOffer({ offer }: VendorOfferProps) {
             {offer.vendor.name}
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            Stock: {offer.stock_quantity > 0 ? offer.stock_quantity : "Rupture"}
+            Stock : {offer.stock_quantity > 0 ? offer.stock_quantity : "rupture"}
           </p>
         </div>
 
@@ -32,7 +33,7 @@ export function VendorOffer({ offer }: VendorOfferProps) {
             size="sm"
             className="mt-2 border border-brand-300 bg-brand-600/10 text-brand-600 hover:bg-brand-600/15"
           >
-            <Link href={`/shop/${offer.vendor.id}`}>Voir l&apos;offre</Link>
+            <Link href={getShopRoute(offer.vendor.id)}>Voir l&apos;offre</Link>
           </Button>
         </div>
       </div>

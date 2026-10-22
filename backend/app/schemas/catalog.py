@@ -28,6 +28,8 @@ class VendorStorefrontResponse(BaseModel):
     business_name: str | None
     activity_type: str | None
     storefront_tier: str | None
+    # Pharmacie / station : annuaire dedie, pas une boutique de produits.
+    service_kind: str | None = None
     city: str | None
     phone: str | None
     address: str | None

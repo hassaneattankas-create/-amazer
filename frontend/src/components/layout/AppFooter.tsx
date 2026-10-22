@@ -2,10 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 
 import { ADMIN_EMAIL } from "@/lib/admin";
 import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 import { useT } from "@/lib/i18n";
+import { getPublicContactInfo } from "@/services/finance-service";
 
 const COLUMNS = [
   {
@@ -14,6 +16,9 @@ const COLUMNS = [
       { href: "/boutiques", label: "Boutiques" },
       { href: "/promotions", label: "Promotions" },
       { href: "/restaurant", label: "Restaurants" },
+      { href: "/hotels", label: "Premium : hôtels, transport, entreprises" },
+      { href: "/pharmacies", label: "Pharmacies" },
+      { href: "/stations", label: "Stations-essence" },
       { href: "/comment-ca-marche", label: "Comment ça marche ?" },
     ],
   },
@@ -42,6 +47,9 @@ const COLUMNS = [
 
 export function AppFooter() {
   const t = useT();
+  // E-mail support réglé par l'admin (Réglages) ; à défaut, l'adresse AMAZER.
+  const { data: contact } = useQuery({ queryKey: ["public-contact-info"], queryFn: getPublicContactInfo, staleTime: 10 * 60_000 });
+  const supportEmail = contact?.support_email || ADMIN_EMAIL;
   return (
     <footer className="mt-12 border-t border-border bg-card">
       <div className="mx-auto grid w-full max-w-7xl gap-8 px-gutter py-10 sm:grid-cols-2 lg:grid-cols-4">
@@ -61,8 +69,8 @@ export function AppFooter() {
           />
           <p className="mt-3 text-sm text-ink-700">
             {t("Support :")}{" "}
-            <a href={`mailto:${ADMIN_EMAIL}`} className="font-medium text-brand-700 hover:underline">
-              {ADMIN_EMAIL}
+            <a href={`mailto:${supportEmail}`} className="font-medium text-brand-700 hover:underline">
+              {supportEmail}
             </a>
           </p>
         </div>

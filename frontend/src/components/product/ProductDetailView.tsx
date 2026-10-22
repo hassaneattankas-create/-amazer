@@ -94,7 +94,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
   }
 
   const { product, offers } = data;
-  const best = offers[0];
+  const best = offers.find((offer) => offer.stock_quantity > 0) ?? offers[0];
   const inStock = best.stock_quantity > 0;
   const originalPrice = typeof product.specs?.original_price === "number" ? (product.specs.original_price as number) : null;
   const isOnPromo = originalPrice !== null && originalPrice > best.amount;

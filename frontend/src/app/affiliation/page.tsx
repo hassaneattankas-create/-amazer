@@ -11,7 +11,7 @@ import { WhatsAppIcon } from "@/components/contact/WhatsAppButton";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { withAffiliateRef } from "@/lib/affiliate";
-import { getMobileSiteOriginFromEnv } from "@/lib/backend-origin";
+import { publicSiteOrigin } from "@/lib/backend-origin";
 import { formatXOF } from "@/lib/currency";
 import { getMyAffiliate } from "@/services/affiliate-service";
 
@@ -22,9 +22,7 @@ const STEPS = [
   { title: "Vous gagnez", text: "sur leurs abonnements et leur 1re commande" },
 ];
 
-function siteOrigin(): string {
-  return getMobileSiteOriginFromEnv() || (typeof window !== "undefined" ? window.location.origin : "https://amazer.store");
-}
+const siteOrigin = publicSiteOrigin;
 
 /** Programme d'affiliation (modele Amazon Partenaires / Jumia) : simple, sans stock ni abonnement. */
 export default function AffiliationPage() {

@@ -6,12 +6,14 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.csrf import enforce_csrf
 from app.core.deps import get_current_user
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.database import get_db
+from app.models.order import Order, OrderItem
 from app.models.product import Product
 from app.models.review import Review
 from app.models.user import User
 from app.schemas.review import ReviewCreateRequest, ReviewResponse
+from app.services.vendor_review_service import public_name
 
 router = APIRouter(prefix="/products", tags=["reviews"])
 
@@ -33,7 +35,7 @@ def list_reviews(
             id=review.id,
             product_id=review.product_id,
             user_id=review.user_id,
-            user_name=review.user.full_name,
+            user_name=public_name(review.user),
             rating=review.rating,
             comment=review.comment,
             photo_url=review.photo_url,
@@ -59,6 +61,17 @@ def create_review(
     product = db.get(Product, product_id)
     if product is None:
         raise NotFoundError("Product not found")
+    # Avis verifies, comme pour les boutiques : seulement apres avoir recu ce produit, une fois.
+    received = db.scalar(
+        select(Order.id)
+        .join(OrderItem, OrderItem.order_id == Order.id)
+        .where(Order.user_id == current_user.id, OrderItem.product_id == product.id, Order.status.in_(("recu", "CLAIMED")))
+        .limit(1)
+    )
+    if not received:
+        raise ForbiddenError("Seuls les clients qui ont reçu ce produit peuvent laisser un avis.")
+    if db.scalar(select(Review.id).where(Review.product_id == product.id, Review.user_id == current_user.id).limit(1)):
+        raise ConflictError("Vous avez déjà donné votre avis sur ce produit.")
 
     review = Review(
         product_id=product.id,
@@ -74,7 +87,7 @@ def create_review(
         id=review.id,
         product_id=review.product_id,
         user_id=review.user_id,
-        user_name=current_user.full_name,
+        user_name=public_name(current_user),
         rating=review.rating,
         comment=review.comment,
         photo_url=review.photo_url,

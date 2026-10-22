@@ -193,11 +193,11 @@ export function FloatingNavbar() {
     }
     if (preRegStatus.status === "approved") {
       void notifyLocalOrderEvent({
-        title: "Votre compte est pret !",
+        title: "Votre compte est prêt !",
         body:
-          `Felicitations ! Votre compte vendeur` +
-          (pendingPreReg.businessName ? ` "${pendingPreReg.businessName}"` : "") +
-          ` est active. Connectez-vous pour commencer a utiliser AMAZER.`,
+          `Félicitations ! Votre compte vendeur` +
+          (pendingPreReg.businessName ? ` « ${pendingPreReg.businessName} »` : "") +
+          ` est activé. Connectez-vous pour commencer à utiliser AMAZER.`,
         tag: `prereg-approved-${pendingPreReg.id}`,
         href: `/login?next=${encodeURIComponent("/seller/dashboard")}`,
       });
@@ -206,8 +206,8 @@ export function FloatingNavbar() {
       setPendingPreReg((prev) => (prev ? { ...prev, notified: true } : prev));
     } else if (preRegStatus.status === "rejected") {
       void notifyLocalOrderEvent({
-        title: "Demande vendeur refusee",
-        body: "Votre demande n'a pas ete validee. Contactez le support AMAZER.",
+        title: "Demande vendeur refusée",
+        body: "Votre demande n'a pas été validée. Contactez le support AMAZER.",
         tag: `prereg-rejected-${pendingPreReg.id}`,
       });
       clearPendingSellerPreReg();
@@ -471,11 +471,6 @@ export function FloatingNavbar() {
                       {t("Devenir vendeur")}
                     </Link>
                   )}
-                  {showAdminLink ? (
-                    <Link href="/admin" onClick={() => setIsMenuOpen(false)} className={menuLinkClass}>
-                      {t("Espace Admin")}
-                    </Link>
-                  ) : null}
                   {isAuthenticated ? (
                     <button
                       type="button"

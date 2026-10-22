@@ -47,3 +47,8 @@ export function getBackendOriginFromEnv(): string {
     return DEFAULT_BACKEND_ORIGIN;
   }
 }
+
+/** Adresse publique du site pour les liens partagés (dans l'application, jamais l'adresse interne). */
+export function publicSiteOrigin(): string {
+  return getMobileSiteOriginFromEnv() || (typeof window !== "undefined" ? window.location.origin : DEFAULT_MOBILE_SITE_ORIGIN);
+}

@@ -54,7 +54,7 @@ function PayoutNotice({
   if (!payoutPhone) {
     return (
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-        Le vendeur n&apos;a pas encore renseigné son numéro de versement. Contacte-le avant de payer.
+        Le vendeur n&apos;a pas encore renseigné son numéro de paiement. Contactez-le avant de payer.
       </div>
     );
   }
@@ -62,11 +62,11 @@ function PayoutNotice({
     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-slate-800">
       <p className="font-semibold text-slate-900">Comment payer</p>
       <p className="mt-1">
-        1. Envoie {amount && amount > 0 ? <span className="font-semibold">{formatXOF(amount)}</span> : "le montant"} via{" "}
-        <span className="font-semibold uppercase">{method}</span> au numero{" "}
+        1. Envoyez {amount && amount > 0 ? <span className="font-semibold">{formatXOF(amount)}</span> : "le montant"} via{" "}
+        <span className="font-semibold uppercase">{method}</span> au numéro{" "}
         <span className="font-semibold text-brand-600">{payoutPhone}</span>.
       </p>
-      <p className="mt-1">2. Reviens ici et valide ci-dessous (la référence est facultative).</p>
+      <p className="mt-1">2. Revenez ici et validez ci-dessous (la référence est facultative).</p>
     </div>
   );
 }
@@ -139,7 +139,7 @@ export function ShopView({ vendorId }: { vendorId: string }) {
         transaction_reference: reservationForm.transaction_reference || undefined,
       }),
     onSuccess: () => {
-      setStatus("Reservation de table envoyee au restaurateur.");
+      setStatus("Réservation de table envoyée au restaurant.");
       setReservationForm({
         customer_name: "",
         customer_phone: "",
@@ -152,7 +152,7 @@ export function ShopView({ vendorId }: { vendorId: string }) {
       queryClient.invalidateQueries({ queryKey: ["seller-storefront", vendorId] });
     },
     onError: (error) =>
-      setStatus(getApiErrorMessage(error, "Impossible d'envoyer la reservation de table.")),
+      setStatus(getApiErrorMessage(error, "Impossible d'envoyer la réservation de table.")),
   });
 
   const orderMutation = useMutation({
@@ -164,8 +164,8 @@ export function ShopView({ vendorId }: { vendorId: string }) {
         title: "Commande restaurant",
         body:
           order.payment_status === "paid"
-            ? "Paiement déjà confirme avec code transaction."
-            : "Finalise le paiement sur la page securisee.",
+            ? "Paiement déjà confirmé."
+            : "Finalisez le paiement sur la page sécurisée.",
         tag: `restaurant-order-${order.id}`,
         href:
           order.payment_status === "paid"
@@ -181,7 +181,7 @@ export function ShopView({ vendorId }: { vendorId: string }) {
     },
     onError: (error) =>
       setOrderStatus(
-        getApiErrorMessage(error, "Échec envoi commande. Vérifie les champs et reconnecte-toi.")
+        getApiErrorMessage(error, "La commande n'a pas pu être envoyée. Vérifiez les champs, puis réessayez.")
       ),
   });
 
@@ -206,7 +206,7 @@ export function ShopView({ vendorId }: { vendorId: string }) {
           router.push("/cart");
           return;
         }
-        setCartMessage("Produit ajoute au panier.");
+        setCartMessage("Produit ajouté au panier.");
         window.setTimeout(() => setCartMessage(""), 2400);
       },
       onError: () => {
@@ -336,14 +336,14 @@ export function ShopView({ vendorId }: { vendorId: string }) {
 
   const submitOrder = () => {
     if (!selectedItems.length) {
-      setOrderStatus("Ajoute au moins un plat avant de commander.");
+      setOrderStatus("Ajoutez au moins un plat avant de commander.");
       return;
     }
     if (!requireSession()) {
       return;
     }
     if (!customerName.trim() || !customerPhone.trim() || !deliveryAddress.trim()) {
-      setOrderStatus("Renseigne ton nom, ton téléphone et l'adresse de livraison.");
+      setOrderStatus("Indiquez votre nom, votre téléphone et l'adresse de livraison.");
       return;
     }
     orderMutation.mutate({
@@ -380,7 +380,7 @@ export function ShopView({ vendorId }: { vendorId: string }) {
         <article className="premium-card border border-rose-200 bg-rose-50 p-6">
           <h1 className="text-xl font-semibold text-rose-700">Boutique introuvable</h1>
           <p className="mt-2 text-sm text-rose-700">
-            Cette boutique n&apos;est pas disponible ou a ete desactivee.
+            Cette boutique n&apos;est pas disponible pour le moment.
           </p>
         </article>
       </section>
@@ -405,6 +405,7 @@ export function ShopView({ vendorId }: { vendorId: string }) {
         <LocalServiceCard item={data.local_service} kind={data.local_service.service_kind} freshHours={6} compact />
       ) : null}
 
+      {data.products.length || data.restaurant_menu.length || data.room_types.length ? (
       <article className="premium-card border border-slate-200 bg-white p-4">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-600" />
@@ -412,10 +413,12 @@ export function ShopView({ vendorId }: { vendorId: string }) {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={`Rechercher chez ${data.business_name}…`}
+            aria-label={`Rechercher chez ${data.business_name}`}
             className="h-11 rounded-xl border-slate-200 bg-white pl-9 text-sm text-slate-900 placeholder:text-slate-400"
           />
         </div>
       </article>
+      ) : null}
 
       {data.service_offerings.length ? (
         <article className="premium-card border border-slate-200 bg-white p-5">
@@ -448,16 +451,17 @@ export function ShopView({ vendorId }: { vendorId: string }) {
           />
           {data.accepts_table_reservations ? (
             <article className="premium-card border border-orange-200 bg-gradient-to-br from-orange-50 to-white p-5">
-              <h2 className="luxury-title text-xl font-semibold">Reservation de table</h2>
+              <h2 className="text-xl font-semibold text-ink-900">Réservation de table</h2>
               {data.deposit_amount && data.deposit_amount > 0 ? (
                 <p className="mt-2 text-sm text-slate-600">
-                  Frais de reservation de {formatXOF(data.deposit_amount)} via{" "}
+                  Frais de réservation de {formatXOF(data.deposit_amount)} via{" "}
                   {data.deposit_payment_method?.toUpperCase() || "Nita/Amana"} : paiement
-                  obligatoire pour valider la reservation.
+                  obligatoire pour valider la réservation.
                 </p>
               ) : null}
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <Input
+                  aria-label="Nom"
                   placeholder="Nom"
                   value={reservationForm.customer_name}
                   onChange={(event) =>
@@ -465,13 +469,16 @@ export function ShopView({ vendorId }: { vendorId: string }) {
                   }
                 />
                 <Input
-                  placeholder="Telephone"
+                  aria-label="Téléphone"
+                  type="tel"
+                  placeholder="Téléphone"
                   value={reservationForm.customer_phone}
                   onChange={(event) =>
                     setReservationForm((prev) => ({ ...prev, customer_phone: event.target.value }))
                   }
                 />
                 <Input
+                  aria-label="Date et heure"
                   type="datetime-local"
                   value={reservationForm.reservation_at}
                   onChange={(event) =>
@@ -485,13 +492,15 @@ export function ShopView({ vendorId }: { vendorId: string }) {
                   onChange={(event) =>
                     setReservationForm((prev) => ({ ...prev, guest_count: event.target.value }))
                   }
+                  aria-label="Nombre de personnes"
                   placeholder="Nombre de personnes"
                 />
                 <textarea
                   value={reservationForm.note}
                   onChange={(event) => setReservationForm((prev) => ({ ...prev, note: event.target.value }))}
                   className="min-h-24 rounded-md border border-slate-300 px-3 py-2 text-sm md:col-span-2"
-                  placeholder="Demande speciale"
+                  aria-label="Demande spéciale"
+                  placeholder="Demande spéciale (facultatif)"
                 />
                 {data.deposit_amount && data.deposit_amount > 0 ? (
                   <>
@@ -517,6 +526,7 @@ export function ShopView({ vendorId }: { vendorId: string }) {
                       <option value="amana">Amana</option>
                     </select>
                     <Input
+                      aria-label="Référence de paiement"
                       placeholder="Référence de paiement"
                       value={reservationForm.transaction_reference}
                       onChange={(event) =>
@@ -536,7 +546,7 @@ export function ShopView({ vendorId }: { vendorId: string }) {
                   reservationMutation.mutate();
                 }}
               >
-                {data.deposit_amount && data.deposit_amount > 0 ? "J'ai paye - reserver" : "Reserver"}
+                {data.deposit_amount && data.deposit_amount > 0 ? "J'ai payé, réserver" : "Réserver"}
               </Button>
             </article>
           ) : null}
@@ -682,7 +692,12 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
               ) : null}
             </div>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-ink-600">
-              {activityLabels[data.activity_type]} · {data.city ?? "Niamey"}
+              {data.local_outlets?.length || data.local_service?.service_kind === "fuel_station"
+                ? "Station-essence"
+                : data.local_service?.service_kind === "pharmacy"
+                  ? "Pharmacie"
+                  : activityLabels[data.activity_type]}
+              {data.city ? ` · ${data.city}` : ""}
               {data.rating_count ? (
                 <a href="#reviews-title" className="inline-flex items-center gap-1 font-medium text-ink-800 hover:underline">
                   <Stars value={data.rating_average ?? 0} size="h-3.5 w-3.5" />
@@ -769,7 +784,7 @@ function RetailShopContent({
   if (!products.length) {
     return (
       <article className="premium-card border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        Aucun article publie dans cette boutique pour le moment.
+        Aucun article publié dans cette boutique pour le moment.
       </article>
     );
   }

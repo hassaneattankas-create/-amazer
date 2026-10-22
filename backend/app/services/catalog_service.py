@@ -106,6 +106,7 @@ class CatalogService:
                     storefront_tier=self._norm_optional_str(
                         getattr(getattr(vendor, "seller_profile", None), "storefront_tier", None)
                     ),
+                    service_kind=getattr(getattr(vendor, "seller_profile", None), "service_kind", None),
                     city=getattr(getattr(vendor, "seller_profile", None), "city", None),
                     phone=decrypt_phone_value(getattr(getattr(vendor, "seller_profile", None), "phone", None)),
                     address=getattr(getattr(vendor, "seller_profile", None), "address", None),

@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   Armchair,
   BadgeCheck,
-  BedDouble,
+  Crown,
   Fuel,
   Pill,
   LayoutGrid,
@@ -37,7 +37,6 @@ import { listCatalogCategories, listPromotions, listStorefronts } from "@/servic
 import type { SearchSort } from "@/types/product";
 
 const DEBOUNCE_MS = 250;
-const HOME_STATE_DRAFT_KEY = "amazer_home_state_draft";
 const PAGE_SIZE = 24;
 const MAX_ITEMS = 96;
 
@@ -144,14 +143,6 @@ export default function HomePage() {
     window.history.replaceState(window.history.state, "", url.pathname + url.search);
   }, [debouncedQuery]);
 
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(HOME_STATE_DRAFT_KEY, JSON.stringify({ query, barcode, category }));
-    } catch {
-      // Stockage indisponible (navigation privee) : sans consequence.
-    }
-  }, [barcode, category, query]);
-
   const resetAll = () => {
     setQuery("");
     setBarcode("");
@@ -245,7 +236,7 @@ export default function HomePage() {
           <li className="shrink-0">
             <Link href="/hotels" className={tileClass(false)}>
               <span className={tileIconClass(false)}>
-                <BedDouble className="h-6 w-6" aria-hidden="true" />
+                <Crown className="h-6 w-6" aria-hidden="true" />
               </span>
               {t("Premium")}
             </Link>

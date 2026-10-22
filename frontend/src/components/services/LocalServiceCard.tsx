@@ -4,6 +4,7 @@ import { AlertTriangle, BadgeCheck, Bike, CheckCircle2, Fuel, MapPin, Moon, Navi
 
 import { formatDistance, telHref, timeAgo, whatsappHref } from "@/lib/local-services";
 import { resolveImageUrl } from "@/lib/image";
+import { getShopRoute } from "@/lib/mobile-routes";
 import { recordOutletEvent } from "@/services/local-services-service";
 import { FUEL_LABELS, type FuelKey, type LocalServiceItem, type ServiceKind } from "@/types/local-services";
 
@@ -144,7 +145,7 @@ export function LocalServiceCard({ item, kind, distanceKm, freshHours, compact =
         </p>
       )}
       {compact || inShop ? null : (
-        <Link href={`/shop/${item.vendor_id}`} className="mt-3 text-center text-sm font-medium text-brand-700 hover:underline">
+        <Link href={getShopRoute(item.vendor_id)} className="mt-3 text-center text-sm font-medium text-brand-700 hover:underline">
           {(item.brand_outlets ?? 0) > 1 ? `Voir les ${item.brand_outlets} stations ${item.brand_name ?? ""}`.trim() : "Voir la vitrine"}
         </Link>
       )}

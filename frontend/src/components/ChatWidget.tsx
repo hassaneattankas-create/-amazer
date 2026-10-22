@@ -138,7 +138,8 @@ export function ChatWidget() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSend();
               }}
-              placeholder="Écris ta question…"
+              aria-label="Votre question"
+              placeholder="Écrivez votre question…"
               className="h-11 flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-brand-500"
             />
             <button

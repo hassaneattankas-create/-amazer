@@ -26,7 +26,9 @@ export default function BoutiquesPage() {
   const visibleStores = useMemo(() => {
     const copy = stores.filter(
       (store) =>
-        !["restaurant", "hotel", "transport"].includes(store.activity_type ?? "") && (!verifiedOnly || store.is_verified)
+        !["restaurant", "hotel", "transport"].includes(store.activity_type ?? "") &&
+        !store.service_kind &&
+        (!verifiedOnly || store.is_verified)
     );
     copy.sort((a, b) => {
       const byProducts = b.product_count - a.product_count;
@@ -63,6 +65,7 @@ export default function BoutiquesPage() {
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          aria-label="Rechercher une boutique"
           placeholder="Rechercher une boutique…"
           className="mt-5"
         />

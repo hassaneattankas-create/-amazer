@@ -6,6 +6,7 @@ import { Star } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { createReview, listReviews } from "@/services/review-service";
 
 type ReviewSystemProps = {
@@ -17,6 +18,7 @@ export function ReviewSystem({ productId }: ReviewSystemProps) {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   const { data: reviews = [] } = useQuery({
     queryKey: ["product-reviews", productId],
@@ -30,7 +32,10 @@ export function ReviewSystem({ productId }: ReviewSystemProps) {
         comment,
         photo_url: photoUrl || undefined,
       }),
+    onError: (error) =>
+      setMessage({ ok: false, text: getApiErrorMessage(error, "Avis impossible pour le moment. Connectez-vous puis réessayez.") }),
     onSuccess: () => {
+      setMessage({ ok: true, text: "Merci ! Votre avis est publié." });
       setComment("");
       setPhotoUrl("");
       queryClient.invalidateQueries({ queryKey: ["product-reviews", productId] });
@@ -39,7 +44,8 @@ export function ReviewSystem({ productId }: ReviewSystemProps) {
 
   return (
     <article className="premium-card border border-slate-200 bg-white p-6">
-      <h2 className="luxury-title text-lg font-semibold">Avis clients & photos</h2>
+      <h2 className="text-lg font-semibold text-ink-900">Avis clients</h2>
+      <p className="mt-1 text-sm text-ink-600">Seuls les clients qui ont reçu ce produit peuvent le noter.</p>
       <div className="mt-4 rounded-2xl border border-slate-200 p-4">
         <p className="text-sm text-slate-600">Votre note</p>
         <div className="mt-2 flex items-center gap-1">
@@ -47,7 +53,14 @@ export function ReviewSystem({ productId }: ReviewSystemProps) {
             const current = index + 1;
             const active = current <= rating;
             return (
-              <button key={current} type="button" onClick={() => setRating(current)}>
+              <button
+                key={current}
+                type="button"
+                aria-label={`${current} étoile${current > 1 ? "s" : ""}`}
+                aria-pressed={current === rating}
+                onClick={() => setRating(current)}
+                className="inline-flex h-11 w-11 items-center justify-center"
+              >
                 <Star className={`h-5 w-5 transition ${active ? "fill-[#FFB200] text-[#FFB200]" : "text-slate-300"}`} />
               </button>
             );
@@ -57,13 +70,15 @@ export function ReviewSystem({ productId }: ReviewSystemProps) {
           value={comment}
           onChange={(event) => setComment(event.target.value)}
           className="mt-3"
+          aria-label="Votre commentaire"
           placeholder="Votre commentaire"
         />
         <Input
           value={photoUrl}
           onChange={(event) => setPhotoUrl(event.target.value)}
           className="mt-2"
-          placeholder="URL photo (optionnel)"
+          aria-label="Lien vers une photo (facultatif)"
+          placeholder="Lien vers une photo (facultatif)"
         />
         <Button
           type="button"
@@ -71,8 +86,13 @@ export function ReviewSystem({ productId }: ReviewSystemProps) {
           onClick={() => mutation.mutate()}
           className="primary-glow-btn mt-3 bg-brand-600 text-white hover:bg-brand-700"
         >
-          {mutation.isPending ? "Publication..." : "Publier mon avis"}
+          {mutation.isPending ? "Publication…" : "Publier mon avis"}
         </Button>
+        {message ? (
+          <p className={`mt-2 text-sm ${message.ok ? "text-success" : "text-danger"}`} role="status">
+            {message.text}
+          </p>
+        ) : null}
       </div>
 
       <div className="mt-4 space-y-3">

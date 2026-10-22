@@ -7,6 +7,7 @@ export type VendorStorefront = {
   business_name: string | null;
   activity_type: string | null;
   storefront_tier: string | null;
+  service_kind?: "pharmacy" | "fuel_station" | null;
   city: string | null;
   phone: string | null;
   address: string | null;

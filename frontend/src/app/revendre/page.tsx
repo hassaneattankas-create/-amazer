@@ -13,7 +13,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useProductSearch } from "@/hooks/use-product-search";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { getMobileSiteOriginFromEnv } from "@/lib/backend-origin";
+import { publicSiteOrigin } from "@/lib/backend-origin";
 import { formatXOF } from "@/lib/currency";
 import { getResellerShopRoute } from "@/lib/mobile-routes";
 import { resolveProductImageUrl } from "@/lib/product-image";
@@ -38,9 +38,7 @@ function suggestedPrice(amount: number): number {
   return Math.ceil((amount * 1.15) / 50) * 50;
 }
 
-function siteOrigin(): string {
-  return getMobileSiteOriginFromEnv() || (typeof window !== "undefined" ? window.location.origin : "https://amazer.store");
-}
+const siteOrigin = publicSiteOrigin;
 
 export default function RevendrePage() {
   const queryClient = useQueryClient();

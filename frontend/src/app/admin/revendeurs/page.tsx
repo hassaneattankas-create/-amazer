@@ -8,6 +8,7 @@ import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 import { getAdminFinanceDataError } from "@/lib/admin-finance-verification";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
+import { getResellerShopRoute } from "@/lib/mobile-routes";
 import { Button } from "@/components/ui/button";
 import {
   decideResellerPayment,
@@ -92,7 +93,7 @@ function AllResellers() {
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <Link href={`/revendeur/${row.user_id}`} className="text-sm font-medium text-brand-700 hover:underline">
+                  <Link href={getResellerShopRoute(row.user_id)} className="text-sm font-medium text-brand-700 hover:underline">
                     Voir sa boutique
                   </Link>
                   {row.whatsapp_phone ? (

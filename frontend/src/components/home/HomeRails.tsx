@@ -7,7 +7,7 @@ import { BadgeCheck, ChevronRight, Store, Tag } from "lucide-react";
 import { useConvertedPrice } from "@/hooks/use-converted-price";
 import { formatXOF } from "@/lib/currency";
 import { useT } from "@/lib/i18n";
-import { getShopRoute } from "@/lib/mobile-routes";
+import { getProductRoute, getShopRoute } from "@/lib/mobile-routes";
 import { resolveImageUrl } from "@/lib/image";
 import { resolveProductImageUrl } from "@/lib/product-image";
 import type { PromotionItem, VendorStorefront } from "@/types/catalog";
@@ -45,7 +45,7 @@ export function PromotionsRail({ items }: { items: PromotionItem[] }) {
           return (
             <li key={promo.product_id} className="w-36 shrink-0 snap-start sm:w-44">
               <Link
-                href={`/product/${promo.product_id}`}
+                href={getProductRoute(promo.product_id)}
                 className="group block overflow-hidden rounded-card border border-border bg-card"
               >
                 <div className="relative aspect-square bg-surface-1">
@@ -78,7 +78,7 @@ export function PromotionsRail({ items }: { items: PromotionItem[] }) {
 export function FeaturedShopsRail({ shops }: { shops: VendorStorefront[] }) {
   const t = useT();
   const featured = shops
-    .filter((shop) => shop.is_verified || shop.storefront_tier === "premium")
+    .filter((shop) => !shop.service_kind && (shop.is_verified || shop.storefront_tier === "premium"))
     .sort((a, b) => b.product_count - a.product_count)
     .slice(0, 12);
   if (!featured.length) return null;

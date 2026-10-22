@@ -5,6 +5,7 @@ import { Share2 } from "lucide-react";
 
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { withAffiliateRef } from "@/lib/affiliate";
+import { publicSiteOrigin } from "@/lib/backend-origin";
 import { getMyAffiliate } from "@/services/affiliate-service";
 
 /**
@@ -16,7 +17,8 @@ export function ShareAndEarn({ title }: { title: string }) {
   const [status, setStatus] = useState("");
 
   const share = async () => {
-    let link = window.location.href;
+    // Dans l'application, window.location est une adresse interne : on partage l'adresse publique.
+    let link = `${publicSiteOrigin()}${window.location.pathname}${window.location.search}`;
     if (user?.id) {
       try {
         const me = await getMyAffiliate();

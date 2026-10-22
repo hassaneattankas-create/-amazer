@@ -28,7 +28,7 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: "AMAZER",
-  description: "AMAZER marketplace: boutique, restaurant, premium et livraison.",
+  description: "AMAZER : boutiques, restaurants, pharmacies, stations et services premium au Niger, avec paiement contrôlé et livraison.",
   metadataBase: siteUrl,
   alternates: {
     canonical: "/",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   openGraph: {
     title: "AMAZER",
-    description: "AMAZER marketplace: boutique, restaurant, premium et livraison.",
+    description: "AMAZER : boutiques, restaurants, pharmacies, stations et services premium au Niger, avec paiement contrôlé et livraison.",
     url: siteUrl,
     siteName: "AMAZER",
     locale: "fr_NE",
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "AMAZER",
-    description: "AMAZER marketplace: boutique, restaurant, premium et livraison.",
+    description: "AMAZER : boutiques, restaurants, pharmacies, stations et services premium au Niger, avec paiement contrôlé et livraison.",
   },
   icons: {
     icon: [

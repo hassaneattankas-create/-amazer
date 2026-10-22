@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { getOrderSuccessRoute } from "@/lib/mobile-routes";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { ManualPaymentCard } from "@/components/order/ManualPaymentCard";
@@ -26,7 +27,7 @@ export default function OrderPayPage() {
       if (result.payment_status !== "paid") {
         return;
       }
-      window.setTimeout(() => router.push(`/order/success/${orderId}`), 600);
+      window.setTimeout(() => router.push(getOrderSuccessRoute(orderId)), 600);
     },
   });
   const startMutation = useMutation({ mutationFn: () => startAmanaPayment(orderId) });

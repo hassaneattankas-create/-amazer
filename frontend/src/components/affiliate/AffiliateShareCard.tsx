@@ -6,7 +6,7 @@ import { Copy, Gift, Share2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { withAffiliateRef } from "@/lib/affiliate";
-import { getMobileSiteOriginFromEnv } from "@/lib/backend-origin";
+import { publicSiteOrigin } from "@/lib/backend-origin";
 import { formatXOF } from "@/lib/currency";
 import { getMyAffiliate } from "@/services/affiliate-service";
 import { toast } from "@/store/toast-store";
@@ -17,9 +17,7 @@ type Props =
   /** Client : son lien AMAZER personnel. */
   | { variant: "client" };
 
-function siteOrigin(): string {
-  return getMobileSiteOriginFromEnv() || (typeof window !== "undefined" ? window.location.origin : "https://amazer.store");
-}
+const siteOrigin = publicSiteOrigin;
 
 /** Encourage à partager : boutique (vendeur) ou AMAZER (client), toujours avec le code d'affilié. */
 export function AffiliateShareCard(props: Props) {
