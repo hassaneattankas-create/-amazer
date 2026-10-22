@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BarChart3, CreditCard, Flag, FolderTree, Layers, Lock, QrCode, RotateCcw, Send, Share2, SlidersHorizontal, Users, Wallet, type LucideIcon } from "lucide-react";
+import { BarChart3, ChevronDown, CreditCard, Flag, FolderTree, Layers, Lock, QrCode, RotateCcw, Send, Share2, SlidersHorizontal, Users, Wallet, type LucideIcon } from "lucide-react";
 
 import { AdminPinGate } from "@/components/admin/AdminPinGate";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
@@ -99,9 +99,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  return (
-    <section className="mx-auto w-full max-w-7xl gap-5 px-gutter pb-14 sm:grid sm:grid-cols-[260px_minmax(0,1fr)]">
-      <aside className="h-fit rounded-card border border-border bg-card p-4 sm:sticky sm:top-24">
+  const currentLabel = NAV_GROUPS.flatMap((group) => group.items).find((item) => item.href === pathname)?.label ?? "Admin";
+  const asideBody = (
+    <>
         <p className="text-2xs font-semibold uppercase tracking-label text-ink-500">Admin</p>
         <p className="mt-1 truncate text-sm font-semibold text-ink-900">{user.email}</p>
         <nav className="mt-3 space-y-4" aria-label="Menu admin">
@@ -140,6 +140,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             Verrouiller
           </button>
         ) : null}
+    </>
+  );
+
+  return (
+    <section className="mx-auto w-full max-w-7xl gap-5 px-gutter pb-14 sm:grid sm:grid-cols-[260px_minmax(0,1fr)]">
+      <aside className="h-fit rounded-card border border-border bg-card p-4 sm:sticky sm:top-24">
+        {/* Téléphone : menu replié pour voir tout de suite le contenu ; ordinateur : menu ouvert. */}
+        <details key={pathname} className="sm:hidden">
+          <summary className="flex min-h-10 cursor-pointer items-center justify-between text-sm font-semibold text-ink-900">
+            Menu admin · {currentLabel}
+            <ChevronDown className="h-4 w-4 text-ink-500" aria-hidden="true" />
+          </summary>
+          <div className="mt-2">{asideBody}</div>
+        </details>
+        <div className="hidden sm:block">{asideBody}</div>
       </aside>
       <div className="mt-5 min-w-0 sm:mt-0">{pinValid ? children : <AdminPinGate onVerified={() => setPinOk(true)} />}</div>
     </section>

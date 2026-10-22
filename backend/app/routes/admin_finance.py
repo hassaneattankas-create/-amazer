@@ -1750,6 +1750,64 @@ def set_seller_transport(
     return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
 
 
+SELLER_ACTIVITIES = ("shop", "restaurant", "premium", "transport", "pharmacy", "fuel_station")
+
+
+def apply_seller_activity(profile: SellerProfile, activity: str) -> None:
+    """Un seul choix d'activite, applique de facon coherente (les anciennes options sont retirees).
+
+    Boutique et Restaurant : formule de base. Entreprise, Transport, Pharmacie, Station : Premium.
+    """
+    profile.service_kind = activity if activity in ("pharmacy", "fuel_station") else None
+    profile.offers_transport = activity == "transport"
+    if activity in ("shop", "restaurant"):
+        profile.activity_type = activity
+        profile.storefront_tier = "basic"
+        profile.is_enterprise = False
+        return
+    profile.storefront_tier = "premium"
+    profile.is_enterprise = True
+    if profile.activity_type not in ("enterprise", "hotel"):
+        profile.activity_type = "enterprise"
+    if activity in ("premium", "transport"):
+        # Entreprise / transport : reservations (chambres, trajets, tables) debloquees.
+        profile.accepts_hotel_bookings = True
+        profile.accepts_table_reservations = profile.accepts_table_reservations or activity == "premium"
+
+
+@router.post("/sellers/{profile_id}/activity", response_model=AdminSellerResponse)
+def set_seller_activity(
+    profile_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+    activity: Annotated[Literal["shop", "restaurant", "premium", "transport", "pharmacy", "fuel_station"], Query()],
+) -> AdminSellerResponse:
+    """Choix unique de l'activite d'un vendeur (remplace types, Premium, transport et services separes)."""
+    enforce_csrf(request)
+    _require_finance_pin(request, admin_user)
+    profile = db.get(SellerProfile, profile_id)
+    if profile is None:
+        raise ValidationDomainError("Profil vendeur introuvable")
+    apply_seller_activity(profile, activity)
+    append_audit_log(
+        db,
+        event_type="admin_seller_activity_set",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="seller_profile",
+        entity_id=profile.id,
+        details={"activity": activity},
+    )
+    db.commit()
+    db.refresh(profile)
+    _invalidate_public_marketplace_cache()
+    cache_delete_prefixes("services:")
+    vendor = db.get(Vendor, profile.vendor_id)
+    return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
+
+
 @router.post("/sellers/{profile_id}/service-kind", response_model=AdminSellerResponse)
 def set_seller_service_kind(
     profile_id: str,

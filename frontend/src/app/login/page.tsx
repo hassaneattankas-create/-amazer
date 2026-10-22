@@ -29,7 +29,8 @@ function LoginPageContent() {
 
   const rawNext = searchParams.get("next") || "/";
   const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
-  const sellerRegisterHref = "/register?next=/seller&seller=1";
+  // Le vendeur choisit d'abord sa formule (Boutique, Restaurant ou Premium) sur /vendre.
+  const sellerRegisterHref = "/vendre";
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

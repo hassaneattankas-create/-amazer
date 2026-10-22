@@ -51,7 +51,7 @@ const clientNavSections: Array<{ title: string | null; items: Array<{ href: stri
     title: "Premium",
     items: [
       { href: "/hotels", label: "Hôtels, transport et entreprises" },
-      { href: "/pharmacies", label: "Pharmacies de garde" },
+      { href: "/pharmacies", label: "Pharmacies" },
       { href: "/stations", label: "Stations-essence" },
     ],
   },
@@ -383,7 +383,7 @@ export function FloatingNavbar() {
   return (
     <header
       ref={menuRef}
-      className="sticky top-0 z-sticky w-full border-b border-border bg-background/95 backdrop-blur"
+      className="sticky top-0 z-dropdown w-full border-b border-border bg-background/95 backdrop-blur"
     >
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-gutter sm:h-16 sm:gap-3">
         <Link href="/" className="mr-auto inline-flex shrink-0 items-center gap-2 md:mr-2" aria-label="AMAZER, accueil">

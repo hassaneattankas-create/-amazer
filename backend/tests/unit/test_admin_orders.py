@@ -56,3 +56,22 @@ def test_restaurant_nita_orders_reach_the_admin_with_client_reference() -> None:
     [item] = route._restaurant_orders_for_admin(db, 40)
     assert (item.kind, item.place_name, item.client_reference, item.item_count, item.payment_status) == (
         "restaurant", "Chez Mariama", "NITA-55", 3, "pending")
+
+
+@pytest.mark.parametrize(
+    "activity, expected",
+    [
+        ("shop", ("shop", "basic", None, False)),
+        ("restaurant", ("restaurant", "basic", None, False)),
+        ("premium", ("enterprise", "premium", None, False)),
+        ("transport", ("enterprise", "premium", None, True)),
+        ("pharmacy", ("enterprise", "premium", "pharmacy", False)),
+        ("fuel_station", ("enterprise", "premium", "fuel_station", False)),
+    ],
+)
+def test_single_activity_choice_is_coherent(activity, expected) -> None:
+    # Une ancienne station marquee transport : le nouveau choix retire les options precedentes.
+    profile = SimpleNamespace(activity_type="shop", storefront_tier="basic", is_enterprise=False, service_kind="fuel_station",
+                              offers_transport=True, accepts_hotel_bookings=False, accepts_table_reservations=False)
+    route.apply_seller_activity(profile, activity)
+    assert (profile.activity_type, profile.storefront_tier, profile.service_kind, profile.offers_transport) == expected

@@ -16,16 +16,14 @@ import {
   listAdminAuditHistory,
   listAdminSellers,
   replaceAdminDistrictFees,
-  setAdminSellerServiceKind,
-  setAdminSellerTransport,
+  setAdminSellerActivity,
   toggleLaunchMode,
   updateAdminFinanceSettings,
   updateAdminSellerPricing,
-  updateAdminSellerType,
   verifyAdminSeller,
 } from "@/services/finance-service";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { FinanceSettings } from "@/types/finance";
+import { type AdminSeller, FinanceSettings } from "@/types/finance";
 
 function parseNonNegativeNumber(value: string, fallback: number) {
   const normalized = value.replace(",", ".").trim();
@@ -116,6 +114,24 @@ function AdminNumberField({
   );
 }
 
+type SellerActivity = "shop" | "restaurant" | "premium" | "transport" | "pharmacy" | "fuel_station";
+/** Un seul choix d'activité ; Entreprise, Transport, Pharmacie et Station sont des formules Premium. */
+const ACTIVITY_OPTIONS: Array<[SellerActivity, string]> = [
+  ["shop", "Boutique"],
+  ["restaurant", "Restaurant"],
+  ["premium", "Premium · Entreprise / Hôtel"],
+  ["transport", "Premium · Transport"],
+  ["pharmacy", "Premium · Pharmacie"],
+  ["fuel_station", "Premium · Station-essence"],
+];
+const activityLabel = (value: SellerActivity) => ACTIVITY_OPTIONS.find(([key]) => key === value)?.[1] ?? "Boutique";
+function sellerActivity(seller: AdminSeller): SellerActivity {
+  if (seller.service_kind === "pharmacy" || seller.service_kind === "fuel_station") return seller.service_kind;
+  if (seller.offers_transport) return "transport";
+  if (seller.storefront_tier === "premium" || seller.activity_type === "enterprise" || seller.activity_type === "hotel") return "premium";
+  return seller.activity_type === "restaurant" ? "restaurant" : "shop";
+}
+
 export default function AdminTarifsPage() {
   const queryClient = useQueryClient();
   // Le PIN est vérifié une seule fois par la mise en page admin.
@@ -196,35 +212,14 @@ export default function AdminTarifsPage() {
     onError: () => setStatus("Erreur enregistrement frais quartiers."),
   });
 
-  const transportMutation = useMutation({
-    mutationFn: ({ profileId, enabled }: { profileId: string; enabled: boolean }) =>
-      setAdminSellerTransport(profileId, enabled),
+  const activityMutation = useMutation({
+    mutationFn: ({ profileId, activity }: { profileId: string; activity: SellerActivity }) => setAdminSellerActivity(profileId, activity),
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
       queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
-      setStatus(
-        vars.enabled
-          ? "Entreprise marquee Transport : reservation de trajets activee."
-          : "Fonction Transport retiree.",
-      );
+      setStatus(`Activité mise à jour : ${activityLabel(vars.activity)}.`);
     },
-    onError: () => setStatus("Impossible de changer la fonction Transport."),
-  });
-  const serviceKindMutation = useMutation({
-    mutationFn: ({ profileId, kind }: { profileId: string; kind: "pharmacy" | "fuel_station" | "none" }) =>
-      setAdminSellerServiceKind(profileId, kind),
-    onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
-      setStatus(
-        vars.kind === "pharmacy"
-          ? "Vitrine marquée Pharmacie : elle peut indiquer ses gardes."
-          : vars.kind === "fuel_station"
-            ? "Vitrine marquée Station-essence : elle peut indiquer ses disponibilités."
-            : "Vitrine remise en vitrine normale.",
-      );
-    },
-    onError: () => setStatus("Impossible de changer le type de service."),
+    onError: (error) => setStatus(getApiErrorMessage(error, "Impossible de changer l'activité.")),
   });
   const verifySellerMutation = useMutation({
     mutationFn: ({ profileId, verified }: { profileId: string; verified: boolean }) =>
@@ -247,16 +242,6 @@ export default function AdminTarifsPage() {
     onError: (error) => setStatus(getApiErrorMessage(error, "Impossible d'accorder l'abonnement.")),
   });
 
-  const sellerTypeMutation = useMutation({
-    mutationFn: ({ profileId, activityType, storefrontTier }: { profileId: string; activityType: string; storefrontTier: string }) =>
-      updateAdminSellerType(profileId, { activity_type: activityType, storefront_tier: storefrontTier }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
-      setStatus("Type de boutique mis a jour.");
-    },
-    onError: () => setStatus("Impossible de changer le type de boutique."),
-  });
 
   const sellerPricingMutation = useMutation({
     mutationFn: ({
@@ -801,191 +786,74 @@ export default function AdminTarifsPage() {
         <h2 className="text-lg font-semibold text-slate-900">Vendeurs</h2>
         <div className="mt-3 space-y-2">
           {(sellers ?? []).slice(0, 120).map((seller) => (
-            <div key={seller.profile_id} className="rounded-lg border border-slate-200 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">
-                    {seller.business_name}
-                    <span className="ml-2 text-xs font-normal text-slate-500">
-                      {seller.is_verified ? "Vérifié" : "Non vérifié"} &middot;{" "}
-                      {seller.is_active ? "Actif" : "Désactivé"}
-                    </span>
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-500">
+            <div key={seller.profile_id} className="rounded-field border border-border p-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-ink-900">{seller.business_name}</p>
+                  <p className="mt-0.5 text-xs text-ink-600">
                     {seller.city}
                     {seller.phone ? ` · ${seller.phone}` : ""}
-                    {seller.created_at
-                      ? ` · Créé le ${new Date(seller.created_at).toLocaleDateString("fr-FR", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}`
-                      : ""}
+                    {seller.created_at ? ` · inscrit le ${new Date(seller.created_at).toLocaleDateString("fr-FR")}` : ""}
                   </p>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    Commission {(seller.effective_commission_rate * 100).toFixed(2)}% | Frais{" "}
-                    {seller.effective_service_fee} XOF | Abonnement {seller.effective_seller_subscription_fee} XOF
-                  </p>
-                  <p className="mt-0.5 text-xs font-medium text-slate-600">
-                    Type: <span className="text-brand-600">{seller.activity_type}</span> | Tier:{" "}
-                    <span className="text-brand-600">{seller.storefront_tier}</span>
-                    {seller.is_enterprise ? (
-                      <span className="ml-1 rounded-full border border-indigo-300 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">
-                        Entreprise
-                      </span>
-                    ) : null}
-                    {seller.offers_transport ? (
-                      <span className="ml-1 rounded-full border border-cyan-300 bg-cyan-50 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-700">
-                        Transport
-                      </span>
-                    ) : null}
-                    {seller.service_kind ? (
-                      <span className="ml-1 rounded-full border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
-                        {seller.service_kind === "pharmacy" ? "Pharmacie" : "Station"}
-                      </span>
-                    ) : null}
-                    {" | "}
-                    {seller.subscription_paid_until ? (
-                      <span className={new Date(seller.subscription_paid_until) > new Date() ? "text-green-600" : "text-rose-600"}>
-                        Abonnement{" "}
-                        {new Date(seller.subscription_paid_until) > new Date() ? "actif jusqu'au " : "expiré le "}
-                        {new Date(seller.subscription_paid_until).toLocaleDateString("fr-FR")}
+                  <div className="mt-1 flex flex-wrap gap-1 text-xs">
+                    <span className="rounded-pill bg-brand-50 px-2 py-0.5 font-semibold text-brand-700">{activityLabel(sellerActivity(seller))}</span>
+                    {seller.is_verified ? <span className="rounded-pill bg-success/10 px-2 py-0.5 font-semibold text-success">Vérifié</span> : null}
+                    {!seller.is_active ? <span className="rounded-pill bg-warning/15 px-2 py-0.5 font-semibold text-ink-800">Hors ligne</span> : null}
+                    {seller.subscription_paid_until && new Date(seller.subscription_paid_until) > new Date() ? (
+                      <span className="rounded-pill bg-surface-2 px-2 py-0.5 text-ink-700">
+                        Abonné jusqu&apos;au {new Date(seller.subscription_paid_until).toLocaleDateString("fr-FR")}
                       </span>
                     ) : (
-                      <span className="font-semibold text-rose-600">Aucun abonnement actif</span>
+                      <span className="rounded-pill bg-danger/10 px-2 py-0.5 font-semibold text-danger">
+                        {seller.subscription_paid_until ? `Abonnement expiré le ${new Date(seller.subscription_paid_until).toLocaleDateString("fr-FR")}` : "Aucun abonnement"}
+                      </span>
                     )}
-                  </p>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      verifySellerMutation.mutate({
-                        profileId: seller.profile_id,
-                        verified: !seller.is_verified,
-                      })
-                    }
-                  >
-                    {seller.is_verified ? "Retirer badge" : "Vérifier"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="border border-green-300 bg-green-50 text-green-800 hover:bg-green-100"
-                    onClick={() =>
-                      grantSubscriptionMutation.mutate({
-                        profileId: seller.profile_id,
-                        months: 12,
-                      })
-                    }
-                  >
-                    Activer 12 mois
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      grantSubscriptionMutation.mutate({
-                        profileId: seller.profile_id,
-                        months: 1,
-                      })
-                    }
-                  >
-                    Offrir 1 mois
-                  </Button>
-                  {seller.storefront_tier !== "premium" ? (
-                    <Button
-                      size="sm"
-                      className="border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                      onClick={() =>
-                        sellerTypeMutation.mutate({
-                          profileId: seller.profile_id,
-                          activityType: "enterprise",
-                          storefrontTier: "premium",
-                        })
-                      }
-                    >
-                      Passer Premium
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      className="border border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                      onClick={() =>
-                        sellerTypeMutation.mutate({
-                          profileId: seller.profile_id,
-                          activityType: "shop",
-                          storefrontTier: "basic",
-                        })
-                      }
-                    >
-                      Rétrograder Basic
-                    </Button>
-                  )}
-                  {seller.offers_transport ? (
-                    <Button
-                      size="sm"
-                      className="border border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                      disabled={transportMutation.isPending}
-                      onClick={() => transportMutation.mutate({ profileId: seller.profile_id, enabled: false })}
-                    >
-                      Retirer Transport
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      className="border border-cyan-300 bg-cyan-50 text-cyan-800 hover:bg-cyan-100"
-                      disabled={transportMutation.isPending}
-                      onClick={() => transportMutation.mutate({ profileId: seller.profile_id, enabled: true })}
-                    >
-                      Marquer Transport
-                    </Button>
-                  )}
-                  <select
-                    aria-label="Service de proximité"
-                    title="Pharmacie ou station-essence"
-                    value={seller.service_kind ?? "none"}
-                    disabled={serviceKindMutation.isPending}
-                    onChange={(event) =>
-                      serviceKindMutation.mutate({
-                        profileId: seller.profile_id,
-                        kind: event.target.value as "pharmacy" | "fuel_station" | "none",
-                      })
-                    }
-                    className="h-8 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-700"
-                  >
-                    <option value="none">Ni pharmacie ni station</option>
-                    <option value="pharmacy">Pharmacie</option>
-                    <option value="fuel_station">Station-essence</option>
-                  </select>
-                  <select
-                    aria-label="Type d'activité du vendeur"
-                    title="Type d'activité"
-                    value={seller.activity_type}
-                    onChange={(event) =>
-                      sellerTypeMutation.mutate({
-                        profileId: seller.profile_id,
-                        activityType: event.target.value,
-                        storefrontTier: seller.storefront_tier,
-                      })
-                    }
-                    className="h-8 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-700"
-                  >
-                    <option value="shop">Boutique</option>
-                    <option value="restaurant">Restaurant</option>
-                    <option value="enterprise">Premium</option>
-                  </select>
-                  {!seller.is_active ? (
-                    <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">Hors ligne</span>
-                  ) : null}
-                  <Link
-                    href={`/admin/users?q=${encodeURIComponent(seller.email ?? seller.business_name)}`}
-                    className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    Gérer le compte
-                  </Link>
-                </div>
+                <Link
+                  href={`/admin/users?q=${encodeURIComponent(seller.email ?? seller.business_name)}`}
+                  className="rounded-field border border-border px-3 py-1.5 text-xs font-medium text-ink-700 hover:bg-surface-1"
+                >
+                  Gérer le compte
+                </Link>
               </div>
+              <div className="mt-3 flex flex-wrap items-end gap-2">
+                <label className="text-xs font-medium text-ink-700">
+                  Activité
+                  <select
+                    value={sellerActivity(seller)}
+                    disabled={activityMutation.isPending}
+                    onChange={(event) =>
+                      activityMutation.mutate({ profileId: seller.profile_id, activity: event.target.value as SellerActivity })
+                    }
+                    className="mt-1 block h-9 rounded-field border border-border bg-card px-2 text-sm text-ink-900"
+                  >
+                    {ACTIVITY_OPTIONS.map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => verifySellerMutation.mutate({ profileId: seller.profile_id, verified: !seller.is_verified })}
+                >
+                  {seller.is_verified ? "Retirer le badge" : "Vérifier"}
+                </Button>
+                <Button size="sm" onClick={() => grantSubscriptionMutation.mutate({ profileId: seller.profile_id, months: 12 })}>
+                  Activer 12 mois
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => grantSubscriptionMutation.mutate({ profileId: seller.profile_id, months: 1 })}>
+                  Offrir 1 mois
+                </Button>
+              </div>
+              <details className="mt-3">
+                <summary className="cursor-pointer text-xs font-medium text-ink-600">
+                  Tarif personnalisé · commission {(seller.effective_commission_rate * 100).toFixed(2)} %, frais {seller.effective_service_fee} XOF,
+                  abonnement {seller.effective_seller_subscription_fee} XOF
+                </summary>
               <div className="mt-3 grid gap-3 md:grid-cols-3">
                 <input
                   type="number"
@@ -1084,6 +952,7 @@ export default function AdminTarifsPage() {
                   Revenir au tarif global
                 </Button>
               </div>
+              </details>
             </div>
           ))}
         </div>

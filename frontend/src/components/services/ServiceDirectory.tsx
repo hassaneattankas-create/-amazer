@@ -48,7 +48,8 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
   const copy = COPY[kind];
   const Icon = kind === "pharmacy" ? Pill : Fuel;
   const [city, setCity] = useState("");
-  const [onlyActive, setOnlyActive] = useState(true);
+  // Stations : toutes par défaut ; pharmacies : celles de garde par défaut.
+  const [onlyActive, setOnlyActive] = useState(kind === "pharmacy");
   const [fuel, setFuel] = useState<FuelKey | "">("");
   const [position, setPosition] = useState<GeoPoint | null>(null);
   const [locating, setLocating] = useState(false);
@@ -163,21 +164,35 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
 
       <div className="-mx-gutter mt-4 overflow-x-auto px-gutter">
         <div className="flex gap-2" role="group" aria-label="Filtres">
-          <button type="button" aria-pressed={onlyActive} onClick={() => setOnlyActive(true)} className={pillClass(onlyActive)}>
-            {copy.onlyLabel}
-          </button>
-          <button type="button" aria-pressed={!onlyActive} onClick={() => setOnlyActive(false)} className={pillClass(!onlyActive)}>
-            {copy.allLabel}
-          </button>
-          {kind === "fuel_station"
-            ? (["", "super", "gasoil", "gaz"] as const).map((key) => (
-                <button key={key || "all"} type="button" aria-pressed={fuel === key} onClick={() => setFuel(key)} className={pillClass(fuel === key)}>
-                  {key ? FUEL_LABELS[key] : "Tous carburants"}
-                </button>
-              ))
-            : null}
+          {/* Stations : « Toutes » d'abord ; pharmacies : « De garde » d'abord. */}
+          {(kind === "fuel_station" ? [false, true] : [true, false]).map((only) => (
+            <button key={String(only)} type="button" aria-pressed={onlyActive === only} onClick={() => setOnlyActive(only)} className={pillClass(onlyActive === only)}>
+              {only ? copy.onlyLabel : copy.allLabel}
+            </button>
+          ))}
         </div>
       </div>
+      {kind === "fuel_station" ? (
+        <div className="-mx-gutter mt-2 overflow-x-auto px-gutter">
+          {/* Sous-choix : le carburant précise la liste choisie au-dessus. */}
+          <div className="ml-2 flex items-center gap-2 border-l-2 border-border pl-3" role="group" aria-label="Carburant">
+            <span className="shrink-0 text-xs font-medium text-ink-600">Carburant :</span>
+            {(["", "super", "gasoil", "gaz"] as const).map((key) => (
+              <button
+                key={key || "all"}
+                type="button"
+                aria-pressed={fuel === key}
+                onClick={() => setFuel(key)}
+                className={`inline-flex min-h-10 shrink-0 items-center rounded-pill border px-3 text-xs font-medium transition-colors duration-fast ${
+                  fuel === key ? "border-brand-600 bg-brand-50 text-brand-700" : "border-border bg-card text-ink-700 hover:border-ink-400"
+                }`}
+              >
+                {key ? FUEL_LABELS[key] : "Tous"}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <p className="mt-3 text-xs text-ink-600">
         {kind === "pharmacy"

@@ -402,7 +402,7 @@ export default function SellerDashboardPage() {
         </div>
       </header>
 
-      <nav className="sticky top-14 z-dropdown -mx-gutter border-b border-border bg-background/95 px-gutter backdrop-blur sm:top-16" aria-label="Sections vendeur">
+      <nav className="sticky top-14 z-sticky -mx-gutter border-b border-border bg-background/95 px-gutter backdrop-blur sm:top-16" aria-label="Sections vendeur">
         <div className="flex gap-1 overflow-x-auto" role="tablist">
           {SELLER_TABS.filter((item) => item.key !== "commandes" || showProductTools || showRestaurantTools || showHotelBookingTools).map((item) => (
             <button

@@ -277,6 +277,18 @@ export async function setAdminSellerTransport(profileId: string, enabled: boolea
   });
 }
 
+/** Choix unique de l'activité (Boutique, Restaurant, ou Premium : entreprise, transport, pharmacie, station). */
+export async function setAdminSellerActivity(
+  profileId: string,
+  activity: "shop" | "restaurant" | "premium" | "transport" | "pharmacy" | "fuel_station"
+): Promise<AdminSeller> {
+  return adminProxyRequest<AdminSeller>({
+    url: `/admin/finance/sellers/${profileId}/activity`,
+    method: "POST",
+    params: { activity },
+  });
+}
+
 /** Pharmacie, station-essence ou vitrine normale (« none »). */
 export async function setAdminSellerServiceKind(profileId: string, kind: "pharmacy" | "fuel_station" | "none"): Promise<AdminSeller> {
   return adminProxyRequest<AdminSeller>({
