@@ -12,7 +12,7 @@ export default function AccountDeletionPage() {
           <p>
             Connectez-vous, ouvrez{" "}
             <Link href="/dashboard" className="font-medium text-brand-700 hover:underline">
-              Mon compte
+              votre tableau de bord
             </Link>
             , puis « Supprimer mon compte ». Votre mot de passe vous est demandé pour confirmer.
           </p>

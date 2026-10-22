@@ -3,7 +3,7 @@ export default function PrivacyPolicyPage() {
     <section className="mx-auto w-full max-w-4xl px-gutter pb-16 pt-4">
       <article className="rounded-card border border-border bg-card p-6">
         <h1 className="text-3xl font-semibold text-ink-900">Politique de confidentialité</h1>
-        <p className="mt-3 text-sm text-ink-600">Dernière mise à jour : 16/10/2026</p>
+        <p className="mt-3 text-sm text-ink-600">Dernière mise à jour : 22/10/2026</p>
 
         <div className="mt-6 space-y-4 text-sm text-ink-700">
           <p>
@@ -18,19 +18,20 @@ export default function PrivacyPolicyPage() {
           <h2 className="pt-2 text-base font-semibold text-ink-900">Notifications</h2>
           <p>
             Les notifications du site (commandes, paiements, messages, livraisons) sont aussi envoyées par e-mail. Vous
-            pouvez couper ce canal à tout moment dans « Mon compte ».
+            pouvez couper ce canal à tout moment dans votre « Tableau de bord ».
           </p>
           <h2 className="pt-2 text-base font-semibold text-ink-900">Partage</h2>
           <p>
             Vos données ne sont jamais revendues. Le livreur qui prend votre commande voit votre nom, votre téléphone et
-            votre adresse de livraison ; la boutique voit le contenu de la commande. Pour une réservation, l&apos;hôtel ou le
+            votre adresse de livraison ; la boutique voit votre nom et le contenu de la commande (un restaurant voit aussi le téléphone et l&apos;adresse de livraison). Pour une réservation, l&apos;hôtel ou le
             transporteur voit votre nom, votre téléphone, vos dates et le nombre de personnes. Rien d&apos;autre n&apos;est
             partagé.
           </p>
           <h2 className="pt-2 text-base font-semibold text-ink-900">Avis</h2>
           <p>
             Un avis que vous publiez sur un établissement apparaît avec votre prénom et l&apos;initiale de votre nom,
-            jamais votre nom complet, votre e-mail ou votre téléphone.
+            jamais votre nom complet, votre e-mail ou votre téléphone. Il en va de même pour un avis sur un produit. Sur la
+            page « Avis », votre avis apparaît avec le nom que vous saisissez ; votre e-mail n&apos;est jamais affiché.
           </p>
           <h2 className="pt-2 text-base font-semibold text-ink-900">Sécurité et prévention de la fraude</h2>
           <p>
@@ -40,18 +41,18 @@ export default function PrivacyPolicyPage() {
           </p>
           <h2 className="pt-2 text-base font-semibold text-ink-900">Statistiques des vitrines</h2>
           <p>
-            Les visites des pages des établissements et les clics sur « Appeler » ou « WhatsApp » sont comptés de façon
+            Les visites des pages des établissements et les clics sur « Appeler », « WhatsApp », « Itinéraire » ou « Commander du gaz » sont comptés de façon
             anonyme (un simple nombre par jour) pour donner des statistiques aux vendeurs. Aucune information sur vous
             n&apos;est transmise à l&apos;établissement.
           </p>
           <h2 className="pt-2 text-base font-semibold text-ink-900">Caméra</h2>
           <p>
-            La caméra n&apos;est demandée que pour scanner un code-barres ou le QR code d&apos;un reçu. Elle n&apos;est
-            pas nécessaire pour les autres fonctions.
+            La caméra n&apos;est demandée que pour scanner un code-barres, le QR code d&apos;un reçu ou d&apos;un billet, ou
+            pour photographier un produit. Elle n&apos;est pas nécessaire pour les autres fonctions.
           </p>
           <h2 className="pt-2 text-base font-semibold text-ink-900">Suppression</h2>
           <p>
-            Vous pouvez supprimer votre compte depuis « Mon compte ». Les informations d&apos;identification sont alors
+            Vous pouvez supprimer votre compte depuis votre « Tableau de bord ». Les informations d&apos;identification sont alors
             effacées ou anonymisées. Certaines données peuvent être conservées de façon limitée lorsque la sécurité, la
             prévention de la fraude ou la loi l&apos;exigent.
           </p>

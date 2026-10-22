@@ -72,7 +72,7 @@ const SECTIONS: Section[] = [
         id: "commander",
         question: "Comment passer une commande ?",
         steps: [
-          "Ajoutez les produits depuis leur fiche avec « Ajouter au panier intelligent ».",
+          "Ajoutez les produits depuis leur fiche avec « Ajouter au panier ».",
           <>
             Ouvrez le{" "}
             <Link className={linkClass} href="/cart">
@@ -90,7 +90,7 @@ const SECTIONS: Section[] = [
         question: "Comment payer ma commande ?",
         steps: [
           "Amana Transfert : sur la page de paiement, cliquez « Démarrer le paiement Amana », validez le montant exact dans l'application AmanaTa, puis cliquez « Vérifier le paiement ». La commande est confirmée dès qu'Amana valide la transaction.",
-          "Nita Transfert : envoyez le montant au numéro AMAZER indiqué sur la page de paiement, en mentionnant la référence de paiement. Saisissez ensuite la référence de votre transaction et cliquez « J'ai payé - envoyer la référence ».",
+          "Nita Transfert : envoyez le montant au numéro AMAZER indiqué sur la page de paiement, en mentionnant la référence de paiement. Saisissez ensuite la référence de votre transaction et cliquez « J'ai payé, envoyer la référence ».",
           "Pour Nita, la commande reste « Paiement en attente » jusqu'à ce que l'équipe AMAZER ait vérifié la transaction : la saisie de la référence ne suffit pas à confirmer le paiement.",
         ],
         note: "Ne communiquez jamais un code reçu par SMS, e-mail ou WhatsApp à une personne qui vous le demande, même au nom d'AMAZER.",
@@ -106,7 +106,8 @@ const SECTIONS: Section[] = [
             </Link>
             .
           </>,
-          "Chaque commande affiche son avancement : Commande, Préparation, En livraison, Reçu.",
+          "Chaque commande affiche son avancement : Commande, Préparation, En livraison, Reçue. Vos commandes restaurant y figurent aussi.",
+          "Une commande pas encore payée ? Cliquez « Payer ou envoyer la référence » pour terminer le paiement.",
           "Si votre commande contient des produits de plusieurs boutiques, l'avancement de chaque boutique est indiqué séparément.",
           "À la réception, cliquez « J'ai reçu ma commande ».",
         ],
@@ -137,11 +138,11 @@ const SECTIONS: Section[] = [
       },
       {
         id: "reserver",
-        question: "Comment réserver une table ou une chambre ?",
+        question: "Comment réserver une table, une chambre ou un trajet ?",
         steps: [
-          "Sur la page d'un restaurant ou d'un hôtel qui accepte les réservations, remplissez le formulaire de réservation.",
-          "Si un acompte est demandé, il se paie directement au numéro du commerçant indiqué sur la page.",
-          "Votre réservation est confirmée par le commerçant après vérification de l'acompte.",
+          "Sur la page d'un restaurant, d'un hôtel ou d'une compagnie de transport qui accepte les réservations, remplissez le formulaire.",
+          "Le paiement (acompte de table, séjour ou billet) se fait directement au numéro de l'établissement indiqué sur la page.",
+          "L'établissement confirme votre réservation après vérification ; vous êtes prévenu par notification. Vos réservations et billets sont dans votre tableau de bord.",
         ],
       },
     ],
@@ -159,9 +160,9 @@ const SECTIONS: Section[] = [
             <Link className={linkClass} href="/vendre">
               Devenir vendeur
             </Link>{" "}
-            et cliquez « Ouvrir mon espace vendeur ».
+            et choisissez votre formule : Boutique, Restaurant ou Premium.
           </>,
-          "Créez votre compte (ou connectez-vous), puis choisissez votre profil : boutique, restaurant ou premium entreprise.",
+          "Créez votre compte : votre boutique est en ligne tout de suite, avec la période d'essai gratuite quand elle est proposée.",
           "Renseignez votre boutique : nom, ville, adresse, logo, description, horaires et numéro WhatsApp.",
           "Les conditions d'abonnement en vigueur sont indiquées dans votre espace vendeur.",
         ],
@@ -172,12 +173,12 @@ const SECTIONS: Section[] = [
         steps: [
           <>
             Depuis votre{" "}
-            <Link className={linkClass} href="/seller">
+            <Link className={linkClass} href="/seller/dashboard#ajouter">
               espace vendeur
             </Link>
-            , cliquez « Ajouter un produit » : nom, prix, stock, description et photos.
+            , ouvrez l&apos;onglet « Ajouter » : nom, prix, stock, description et photo.
           </>,
-          "Vous pouvez modifier à tout moment le prix, le stock et la description dans votre inventaire.",
+          "Modifiez à tout moment le prix, le stock, la photo ou une promotion depuis l'onglet « Produits ».",
           "Le stock diminue automatiquement lorsqu'une commande est payée.",
         ],
       },
@@ -205,7 +206,8 @@ const SECTIONS: Section[] = [
             .
           </>,
           "Une commande « Paiement en attente » ne peut pas encore être traitée : attendez la confirmation du paiement.",
-          "Une fois payée, faites-la avancer : Préparation, puis En livraison.",
+          "Une fois payée, faites-la avancer : « Préparer la commande », puis « Remise au livreur ».",
+          "Vous recevez le prix entier de vos articles : la commission et les frais AMAZER sont payés par le client.",
           "Dans une commande partagée avec d'autres boutiques, vous ne faites avancer que votre partie.",
           "Les questions de vos clients arrivent dans Messages ; répondez depuis la même page.",
         ],

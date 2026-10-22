@@ -23,6 +23,7 @@ const SECTIONS: Section[] = [
     title: "2. Commandes en boutique et au restaurant",
     paragraphs: [
       "Les commandes en boutique et au restaurant sont payées à AMAZER par Nita ou Amana. La commande n'est traitée qu'une fois le paiement vérifié. Le prix affiché au moment de la commande (y compris une promotion en cours) est celui que vous payez.",
+      "Le total comprend le prix des articles, la livraison et les frais AMAZER (commission et frais de service). Chaque montant est détaillé avant que vous confirmiez la commande.",
       "Un restaurant peut refuser une commande (plat épuisé, cuisine fermée, trop de commandes). Il peut aussi suspendre les commandes ou n'en accepter que pendant ses horaires.",
       "La commande est confirmée livrée lorsque le livreur, l'établissement ou vous-même le confirmez, ou lorsque le QR code de votre reçu est scanné. Vérifiez votre commande à la réception.",
     ],
@@ -31,7 +32,7 @@ const SECTIONS: Section[] = [
     id: "remboursements",
     title: "3. Annulations et remboursements (paiements faits à AMAZER)",
     paragraphs: [
-      "Vous pouvez annuler vous-même une commande non payée tant qu'elle n'est pas en livraison.",
+      "Vous pouvez annuler vous-même une commande non payée tant qu'elle n'est pas en préparation (depuis votre tableau de bord).",
       "Si une commande déjà payée à AMAZER est annulée par AMAZER ou refusée par le restaurant, AMAZER vous rembourse sur le numéro Nita ou Amana utilisé, dans les meilleurs délais. Vous recevez une notification avec la référence du remboursement.",
       "Pour toute réclamation (produit non conforme, commande incomplète), contactez AMAZER dans les 24 heures après la livraison, avec votre numéro de commande.",
     ],
@@ -58,7 +59,7 @@ const SECTIONS: Section[] = [
     id: "avis",
     title: "6. Avis clients",
     paragraphs: [
-      "Seul un client ayant eu une commande livrée, un séjour ou un voyage avec un établissement peut donner son avis sur cet établissement, une seule fois (il peut le modifier). Votre avis est publié avec votre prénom et l'initiale de votre nom.",
+      "Seul un client ayant eu une commande livrée, un séjour ou un voyage avec un établissement peut donner son avis sur cet établissement, une seule fois (il peut le modifier). Votre avis est publié avec votre prénom et l'initiale de votre nom. Un avis sur un produit n'est possible qu'après l'avoir reçu, une seule fois.",
       "Un avis doit être honnête et respectueux. Sont interdits : insultes, menaces, propos discriminatoires, informations personnelles, publicité, faux avis ou avis rémunérés. AMAZER peut masquer un avis qui ne respecte pas ces règles.",
       "L'établissement peut répondre publiquement aux avis. Il ne peut ni les modifier ni les supprimer.",
     ],
@@ -69,6 +70,7 @@ const SECTIONS: Section[] = [
     paragraphs: [
       "L'ouverture d'un espace vendeur est soumise à un abonnement, avec une période d'essai gratuite. Les tarifs en vigueur sont affichés lors de l'inscription et dans « Profil et abonnement ». Sans paiement à la fin de la période, l'espace peut être suspendu.",
       "L'établissement s'engage à publier des informations exactes (prix, stock, chambres disponibles, horaires de départ, places), à traiter rapidement les commandes et réservations, et à respecter les clients. Les hôtels et transporteurs remboursent eux-mêmes leurs clients en cas d'annulation de leur fait.",
+      "Pharmacies et stations-essence : les gardes et disponibilités affichées sont déclarées par l'établissement, qui les tient à jour. Au-delà de quelques heures sans mise à jour, elles sont signalées « à confirmer ».",
       "AMAZER peut suspendre un espace en cas de fraude, de plaintes répétées, d'informations trompeuses ou de non-paiement.",
     ],
   },
@@ -115,7 +117,7 @@ export default function TermsPage() {
       <article className="space-y-6 rounded-card border border-border bg-card p-5 sm:p-6">
         <header>
           <h1 className="text-3xl font-semibold text-ink-900">Conditions d&apos;utilisation AMAZER</h1>
-          <p className="mt-2 text-sm text-ink-600">Dernière mise à jour : 16/10/2026</p>
+          <p className="mt-2 text-sm text-ink-600">Dernière mise à jour : 22/10/2026</p>
         </header>
 
         <nav aria-label="Sommaire" className="rounded-field bg-surface-1 p-4">
