@@ -92,6 +92,7 @@ from app.services.affiliate_service import (
 from app.services.reseller_account_service import ensure_account as ensure_reseller_account
 from app.services.reseller_account_service import extend_subscription as extend_reseller_subscription
 from app.services.reseller_account_service import reseller_terms
+from app.services.vendor_visibility import reactivate_vendor_listings
 from app.services.audit_log_service import append_audit_log
 from app.services.order_cancellation_service import cancel_order, ensure_not_cancelled, notify_order_cancelled
 from app.services.order_fulfillment_service import sync_fulfillments
@@ -1141,6 +1142,17 @@ def export_audit_history_csv(
     )
 
 
+def _not_deleted_user():
+    return or_(User.email.is_(None), User.email.notlike("%@users.deleted.amazer.ne"))
+
+
+def _subscription_running(profile: SellerProfile, now: datetime) -> bool:
+    paid_until = profile.subscription_paid_until
+    if paid_until is not None and paid_until.tzinfo is None:
+        paid_until = paid_until.replace(tzinfo=UTC)
+    return profile.onboarding_fee_paid_at is not None and paid_until is not None and paid_until > now
+
+
 @router.get("/users/stats", response_model=AdminUserStatsResponse)
 def get_admin_user_stats(
     request: Request,
@@ -1153,16 +1165,23 @@ def get_admin_user_stats(
     since_7_days = now - timedelta(days=7)
     since_30_days = now - timedelta(days=30)
 
-    total_users = int(db.scalar(select(func.count(User.id))) or 0)
-    active_users = int(db.scalar(select(func.count(User.id)).where(User.is_active.is_(True))) or 0)
+    # Les comptes supprimes (anonymises) ne comptent plus : memes chiffres que la liste.
+    kept = _not_deleted_user()
+    total_users = int(db.scalar(select(func.count(User.id)).where(kept)) or 0)
+    active_users = int(db.scalar(select(func.count(User.id)).where(kept, User.is_active.is_(True))) or 0)
     inactive_users = max(total_users - active_users, 0)
-    seller_accounts = int(db.scalar(select(func.count(SellerProfile.id))) or 0)
-    client_only_accounts = max(total_users - seller_accounts, 0)
+    seller_accounts = int(
+        db.scalar(
+            select(func.count(SellerProfile.id)).join(User, User.id == SellerProfile.user_id).where(kept, User.is_active.is_(True))
+        )
+        or 0
+    )
+    client_only_accounts = max(active_users - seller_accounts, 0)
     admin_accounts = int(
         db.scalar(select(func.count(User.id)).where(func.lower(User.email) == settings.admin_email.lower())) or 0
     )
-    new_users_last_7_days = int(db.scalar(select(func.count(User.id)).where(User.created_at >= since_7_days)) or 0)
-    new_users_last_30_days = int(db.scalar(select(func.count(User.id)).where(User.created_at >= since_30_days)) or 0)
+    new_users_last_7_days = int(db.scalar(select(func.count(User.id)).where(kept, User.created_at >= since_7_days)) or 0)
+    new_users_last_30_days = int(db.scalar(select(func.count(User.id)).where(kept, User.created_at >= since_30_days)) or 0)
 
     return AdminUserStatsResponse(
         total_users=total_users,
@@ -1196,10 +1215,12 @@ def list_users_admin(
     if query:
         needle = query.strip().lower()
         if needle:
+            digits = needle.replace(" ", "")
             stmt = stmt.where(
                 or_(
                     func.lower(User.email).contains(needle),
                     func.lower(User.full_name).contains(needle),
+                    func.replace(func.coalesce(User.whatsapp_phone, ""), " ", "").contains(digits),
                 )
             )
     users = db.scalars(stmt).all()
@@ -1310,9 +1331,10 @@ def restore_user_admin(
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == target.id))
     if profile is not None:
         vendor = db.get(Vendor, profile.vendor_id)
-        if vendor is not None:
+        # Abonnement expire : le compte revient, la boutique reste hors ligne jusqu'au paiement.
+        if vendor is not None and _subscription_running(profile, datetime.now(UTC)):
             vendor.is_active = True
-            db.execute(update(Price).where(Price.vendor_id == vendor.id).values(is_active=True))
+            reactivate_vendor_listings(db, vendor.id)
     append_audit_log(
         db,
         event_type="admin_user_restored",
@@ -1554,16 +1576,11 @@ def restore_seller(
     profile = db.get(SellerProfile, profile_id)
     if profile is None:
         raise ValidationDomainError("Seller profile not found")
-    now = datetime.now(UTC)
-    # S'assurer que l'abonnement est valide pour que _has_active_subscription() retourne True
-    if profile.onboarding_fee_paid_at is None:
-        profile.onboarding_fee_paid_at = now
-    if profile.subscription_paid_until is None or profile.subscription_paid_until <= now:
-        profile.subscription_paid_until = now + timedelta(days=30)
+    # Meme regle que « Restaurer » dans Utilisateurs : pour offrir du temps, utiliser « Offrir 1 mois ».
     vendor = db.get(Vendor, profile.vendor_id)
-    if vendor is not None:
+    if vendor is not None and _subscription_running(profile, datetime.now(UTC)):
         vendor.is_active = True
-        db.execute(update(Price).where(Price.vendor_id == vendor.id).values(is_active=True))
+        reactivate_vendor_listings(db, vendor.id)
     user = db.get(User, profile.user_id)
     if user is not None:
         user.is_active = True
@@ -1598,6 +1615,9 @@ def grant_seller_subscription(
     profile = db.get(SellerProfile, profile_id)
     if profile is None:
         raise ValidationDomainError("Profil vendeur introuvable")
+    owner = db.get(User, profile.user_id)
+    if owner is not None and not owner.is_active:
+        raise ValidationDomainError("Ce compte est retiré : restaurez-le d'abord dans Utilisateurs.")
     now = datetime.now(UTC)
     if profile.onboarding_fee_paid_at is None:
         profile.onboarding_fee_paid_at = now
@@ -1607,10 +1627,7 @@ def grant_seller_subscription(
     vendor = db.get(Vendor, profile.vendor_id)
     if vendor is not None:
         vendor.is_active = True
-        db.execute(update(Price).where(Price.vendor_id == vendor.id).values(is_active=True))
-    user = db.get(User, profile.user_id)
-    if user is not None:
-        user.is_active = True
+        reactivate_vendor_listings(db, vendor.id)
     append_audit_log(
         db,
         event_type="admin_seller_subscription_granted",
@@ -1972,7 +1989,7 @@ def decide_seller_subscription_payment(
         if vendor is not None:
             vendor.is_active = True
             # Activer aussi tous les prix du vendeur pour qu ils apparaissent dans le catalogue.
-            db.execute(update(Price).where(Price.vendor_id == vendor.id).values(is_active=True))
+            reactivate_vendor_listings(db, vendor.id)
         credit_subscription_share(db, row.seller_user_id, float(row.amount_claimed or 0), f"seller-sub:{row.id}", row.months)
     seller_user = db.get(User, row.seller_user_id)
 
@@ -2166,7 +2183,7 @@ def decide_seller_pre_registration(
             vendor = db.get(_Vendor, profile.vendor_id)
             if vendor is not None:
                 vendor.is_active = True
-                db.execute(update(Price).where(Price.vendor_id == vendor.id).values(is_active=True))
+                reactivate_vendor_listings(db, vendor.id)
             if reg.business_name:
                 profile.business_name = reg.business_name
             if reg.activity_type:

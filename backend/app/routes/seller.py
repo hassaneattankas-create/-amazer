@@ -1296,6 +1296,10 @@ def update_inventory_item(
                 "Ce produit a ete masque par l'equipe AMAZER. Contactez le support pour le reafficher."
             )
         price.is_active = payload.is_active
+        if payload.is_active:
+            specs.pop("seller_paused", None)
+        else:
+            specs["seller_paused"] = True
     price.product.specs = specs
     if payload.amount is not None or payload.promo_amount is not None or payload.clear_promo:
         promo_service.apply_price_and_promo(

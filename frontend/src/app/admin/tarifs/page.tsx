@@ -85,6 +85,62 @@ const AFFILIATE_SECURITY_FIELDS: Array<{
   { key: "ambassador_monthly_top_bonus", label: "Ambassadeurs : prime du n°1 du mois", suffix: "XOF", fallback: 10000, min: 0, max: 100_000_000, step: "1000", helper: "Affichée dans le classement. Versée par l'admin (page Affiliés) si le mois a rapporté plus." },
 ];
 
+type SellerFilter = "tous" | "abonnes" | "sans-abonnement" | "hors-ligne" | "non-verifies";
+
+const SELLER_FILTERS: Array<[SellerFilter, string]> = [
+  ["tous", "Tous"],
+  ["abonnes", "Abonnés"],
+  ["sans-abonnement", "Sans abonnement / expiré"],
+  ["hors-ligne", "Hors ligne"],
+  ["non-verifies", "Non vérifiés"],
+];
+
+/** Libellés lisibles de l'historique ; un code inconnu reste affiché tel quel. */
+const AUDIT_LABELS: Record<string, string> = {
+  admin_seller_subscription_granted: "Abonnement offert / activé",
+  admin_seller_restored: "Vendeur restauré",
+  admin_seller_disabled: "Vendeur retiré",
+  admin_seller_permanently_deleted: "Vendeur supprimé définitivement",
+  admin_seller_verification_updated: "Badge vendeur modifié",
+  admin_seller_pricing_updated: "Tarif personnalisé modifié",
+  admin_seller_activity_set: "Activité du vendeur changée",
+  admin_seller_subscription_payment_decision: "Paiement d'abonnement validé / refusé",
+  admin_pre_registration_approved: "Inscription vendeur validée",
+  admin_pre_registration_rejected: "Inscription vendeur refusée",
+  admin_district_fees_updated: "Frais par quartier modifiés",
+  admin_launch_mode_toggled: "Mode lancement (0 % commission) changé",
+  admin_order_status_updated: "Statut de commande changé",
+  admin_order_cancelled: "Commande annulée",
+  admin_fund_transfer_created: "Versement enregistré",
+  admin_message_sent: "Message envoyé",
+  admin_finance_pin_verified: "Connexion admin (PIN)",
+  admin_user_deactivated: "Compte retiré",
+  admin_user_restored: "Compte restauré",
+  admin_user_permanently_deleted: "Compte supprimé définitivement",
+  admin_user_role_changed: "Rôle modifié",
+  admin_finance_settings_updated: "Tarifs et réglages modifiés",
+};
+
+function subscriptionRunning(paidUntil: string | null | undefined): boolean {
+  return Boolean(paidUntil && new Date(paidUntil) > new Date());
+}
+
+function filterSellers(list: AdminSeller[], filter: SellerFilter, search: string): AdminSeller[] {
+  const needle = search.trim().toLowerCase();
+  const digits = needle.replace(/\s/g, "");
+  return list.filter((seller) => {
+    if (filter === "abonnes" && !subscriptionRunning(seller.subscription_paid_until)) return false;
+    if (filter === "sans-abonnement" && subscriptionRunning(seller.subscription_paid_until)) return false;
+    if (filter === "hors-ligne" && seller.is_active) return false;
+    if (filter === "non-verifies" && seller.is_verified) return false;
+    if (!needle) return true;
+    return (
+      [seller.business_name, seller.city, seller.email ?? ""].some((value) => (value ?? "").toLowerCase().includes(needle)) ||
+      (digits.length > 0 && (seller.phone ?? "").replace(/\s/g, "").includes(digits))
+    );
+  });
+}
+
 function AdminNumberField({
   label,
   value,
@@ -152,6 +208,11 @@ export default function AdminTarifsPage() {
     const requested = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("vue");
     return requested === "reglages" || requested === "historique" ? requested : "vendeurs";
   });
+  // « Fiche vendeur » depuis Utilisateurs : /admin/tarifs?q=e-mail
+  const [sellerSearch, setSellerSearch] = useState(() =>
+    typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("q") ?? ""
+  );
+  const [sellerFilter, setSellerFilter] = useState<SellerFilter>("tous");
   const [draft, setDraft] = useState<FinanceSettings | null>(null);
   const [districtDraft, setDistrictDraft] = useState<string | null>(null);
   const [sellerPricingDrafts, setSellerPricingDrafts] = useState<
@@ -247,7 +308,9 @@ export default function AdminTarifsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
       queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
-      setStatus("Abonnement accorde. La boutique est maintenant visible.");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-stats"] });
+      setStatus("Abonnement accordé. La boutique est maintenant visible.");
     },
     onError: (error) => setStatus(getApiErrorMessage(error, "Impossible d'accorder l'abonnement.")),
   });
@@ -293,6 +356,7 @@ export default function AdminTarifsPage() {
   }
 
   const effective = useMemo(() => draft ?? settings ?? null, [draft, settings]);
+  const visibleSellers = useMemo(() => filterSellers(sellers ?? [], sellerFilter, sellerSearch), [sellers, sellerFilter, sellerSearch]);
   const criticalPageError = useMemo(() => {
     return settingsError ? getAdminFinanceDataError(settingsError) : "";
   }, [settingsError]);
@@ -794,8 +858,39 @@ export default function AdminTarifsPage() {
       {view === "vendeurs" ? (
       <article id="vendeurs" className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-slate-900">Vendeurs</h2>
+        <p className="mt-1 text-sm text-ink-600">
+          Activité, badge, abonnement et tarif. Retirer, restaurer ou supprimer un compte : « Gérer le compte » (page Utilisateurs).
+        </p>
+        <label className="mt-3 block">
+          <span className="sr-only">Rechercher un vendeur</span>
+          <input
+            type="search"
+            value={sellerSearch}
+            onChange={(event) => setSellerSearch(event.target.value)}
+            placeholder="Boutique, ville, téléphone ou e-mail"
+            className="h-10 w-full rounded-field border border-border bg-card px-3 text-sm"
+          />
+        </label>
+        <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Filtrer les vendeurs">
+          {SELLER_FILTERS.map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={sellerFilter === key}
+              onClick={() => setSellerFilter(key)}
+              className={`min-h-9 rounded-pill border px-3 text-xs font-medium ${
+                sellerFilter === key ? "border-ink-900 bg-ink-900 text-white" : "border-border bg-card text-ink-700 hover:border-ink-400"
+              }`}
+            >
+              {label} ({filterSellers(sellers ?? [], key, "").length})
+            </button>
+          ))}
+        </div>
         <div className="mt-3 space-y-2">
-          {(sellers ?? []).slice(0, 120).map((seller) => (
+          {visibleSellers.length === 0 ? (
+            <p className="rounded-field border border-border p-4 text-sm text-ink-600">Aucun vendeur ne correspond.</p>
+          ) : null}
+          {visibleSellers.map((seller) => (
             <div key={seller.profile_id} className="rounded-field border border-border p-3">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -821,7 +916,7 @@ export default function AdminTarifsPage() {
                   </div>
                 </div>
                 <Link
-                  href={`/admin/users?q=${encodeURIComponent(seller.email ?? seller.business_name)}`}
+                  href={`/admin/users?q=${encodeURIComponent(seller.email ?? seller.phone ?? seller.business_name)}`}
                   className="rounded-field border border-border px-3 py-1.5 text-xs font-medium text-ink-700 hover:bg-surface-1"
                 >
                   Gérer le compte
@@ -852,10 +947,27 @@ export default function AdminTarifsPage() {
                 >
                   {seller.is_verified ? "Retirer le badge" : "Vérifier"}
                 </Button>
-                <Button size="sm" onClick={() => grantSubscriptionMutation.mutate({ profileId: seller.profile_id, months: 12 })}>
+                <Button
+                  size="sm"
+                  disabled={grantSubscriptionMutation.isPending}
+                  onClick={() => {
+                    if (window.confirm(`Activer 12 mois d'abonnement pour ${seller.business_name} sans paiement en ligne (payé à part) ?`)) {
+                      grantSubscriptionMutation.mutate({ profileId: seller.profile_id, months: 12 });
+                    }
+                  }}
+                >
                   Activer 12 mois
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => grantSubscriptionMutation.mutate({ profileId: seller.profile_id, months: 1 })}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={grantSubscriptionMutation.isPending}
+                  onClick={() => {
+                    if (window.confirm(`Offrir 1 mois gratuit à ${seller.business_name} ?`)) {
+                      grantSubscriptionMutation.mutate({ profileId: seller.profile_id, months: 1 });
+                    }
+                  }}
+                >
                   Offrir 1 mois
                 </Button>
               </div>
@@ -986,7 +1098,7 @@ export default function AdminTarifsPage() {
         <div className="mt-3 space-y-2">
           {(auditHistory ?? []).map((item) => (
             <div key={item.id} className="rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
-              <p className="font-medium">{item.event_type}</p>
+              <p className="font-medium">{AUDIT_LABELS[item.event_type] ?? item.event_type}</p>
               <p>
                 {new Date(item.created_at).toLocaleString("fr-FR")} | {item.actor_email ?? "system"} | IP {item.ip_address ?? "-"}
               </p>

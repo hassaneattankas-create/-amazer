@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -79,6 +80,7 @@ export default function AdminUsersPage() {
       setActionStatus("Compte retiré de l'application (désactivé).");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: ["admin-user-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
     },
     onError: (error) => {
       setActionStatus(buildAdminActionMessage(error, "Impossible de retirer cet utilisateur."));
@@ -88,9 +90,12 @@ export default function AdminUsersPage() {
   const restoreMutation = useMutation({
     mutationFn: restoreAdminUser,
     onSuccess: () => {
-      setActionStatus("Compte restaure avec succes.");
+      setActionStatus(
+        "Compte restauré. Pour un vendeur dont l'abonnement a expiré, la boutique reste hors ligne jusqu'au paiement (ou « Offrir 1 mois » dans Vendeurs et tarifs)."
+      );
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: ["admin-user-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
     },
     onError: (error) => {
       setActionStatus(buildAdminActionMessage(error, "Impossible de restaurer cet utilisateur."));
@@ -103,6 +108,7 @@ export default function AdminUsersPage() {
       setActionStatus("Compte supprimé définitivement.");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: ["admin-user-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
     },
     onError: (error) => {
       setActionStatus(buildAdminActionMessage(error, "Impossible de supprimer cet utilisateur."));
@@ -180,30 +186,29 @@ export default function AdminUsersPage() {
         </article>
       ) : null}
       <header className="premium-card border border-slate-200 bg-white p-6">
-        <h1 className="luxury-title text-3xl font-semibold">Gestion Complete Des Utilisateurs</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Vous suivez ici l&apos;activite globale de l&apos;application et vous pouvez retirer/restaurer n&apos;importe quel compte
-          (sauf le compte administrateur protege). Pour retirer un utilisateur, utilisez <strong>Retirer</strong> ici — ce
-          n&apos;est pas la suppression depuis le tableau de bord client.
+        <h1 className="text-2xl font-semibold text-ink-900">Utilisateurs</h1>
+        <p className="mt-2 text-sm text-ink-600">
+          Tous les comptes : clients, vendeurs, livreurs et admins. C&apos;est ici qu&apos;on retire, restaure ou supprime un compte,
+          et qu&apos;on donne un rôle. Pour l&apos;activité, l&apos;abonnement et le tarif d&apos;un vendeur : « Fiche vendeur ».
         </p>
       </header>
 
       {!isStatsError && stats ? (
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <article className="premium-card border border-slate-200 bg-white p-4">
-          <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Total Utilisateurs</p>
+          <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Comptes</p>
           <p className="mt-2 text-2xl font-semibold text-slate-900">{stats.total_users}</p>
         </article>
         <article className="premium-card border border-slate-200 bg-white p-4">
-          <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Comptes Actifs</p>
+          <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Actifs</p>
           <p className="mt-2 text-2xl font-semibold text-emerald-700">{stats.active_users}</p>
         </article>
         <article className="premium-card border border-slate-200 bg-white p-4">
-          <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Nouveaux 7 Jours</p>
+          <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Nouveaux (7 jours)</p>
           <p className="mt-2 text-2xl font-semibold text-brand-600">{stats.new_users_last_7_days}</p>
         </article>
         <article className="premium-card border border-slate-200 bg-white p-4">
-          <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Comptes Vendeurs</p>
+          <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Vendeurs actifs</p>
           <p className="mt-2 text-2xl font-semibold text-slate-900">{stats.seller_accounts}</p>
         </article>
       </div>
@@ -213,26 +218,31 @@ export default function AdminUsersPage() {
       <article className="premium-card border border-slate-200 bg-white p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Liste Des Comptes</h2>
-            <p className="text-sm text-slate-600">
-              Client, vendeur ou admin: vous pouvez desactiver ou restaurer l&apos;acces a l&apos;app.
-            </p>
+            <h2 className="text-lg font-semibold text-slate-900">Liste des comptes</h2>
+            <p className="text-sm text-slate-600">{rows.length} compte{rows.length > 1 ? "s" : ""} affiché{rows.length > 1 ? "s" : ""}</p>
           </div>
-          <div className="flex w-full gap-2 sm:w-auto">
+          <form
+            className="flex w-full gap-2 sm:w-auto"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setSearchTerm(searchDraft.trim());
+            }}
+          >
+            <label className="sr-only" htmlFor="admin-user-search">
+              Rechercher un compte
+            </label>
             <input
+              id="admin-user-search"
+              type="search"
               value={searchDraft}
               onChange={(event) => setSearchDraft(event.target.value)}
-              placeholder="Rechercher email ou nom"
+              placeholder="Nom, e-mail ou téléphone"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm sm:w-72"
             />
-            <Button
-              type="button"
-              className="bg-slate-900 text-white hover:bg-slate-800"
-              onClick={() => setSearchTerm(searchDraft.trim())}
-            >
+            <Button type="submit" className="bg-slate-900 text-white hover:bg-slate-800">
               Rechercher
             </Button>
-          </div>
+          </form>
           <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
             <input
               type="checkbox"
@@ -244,129 +254,130 @@ export default function AdminUsersPage() {
           </label>
         </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium text-slate-600">Nom</th>
-                <th className="px-3 py-2 text-left font-medium text-slate-600">Email / WhatsApp</th>
-                <th className="px-3 py-2 text-left font-medium text-slate-600">Type</th>
-                <th className="px-3 py-2 text-left font-medium text-slate-600">Inscription</th>
-                <th className="px-3 py-2 text-left font-medium text-slate-600">État</th>
-                <th className="px-3 py-2 text-left font-medium text-slate-600">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rows.map((user) => (
-                <tr key={user.id}>
-                  <td className="px-3 py-2 text-slate-900">{user.full_name}</td>
-                  <td className="px-3 py-2 text-slate-700">
-                    <p>{user.email}</p>
-                    {user.whatsapp_phone ? (
-                      <p className="text-xs text-slate-500">{user.whatsapp_phone}</p>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-2 text-slate-700">
+        {actionStatus ? (
+          <p className="mt-3 rounded-field bg-surface-1 p-3 text-sm text-ink-800" role="status">
+            {actionStatus}
+          </p>
+        ) : null}
+        <ul className="mt-4 divide-y divide-border rounded-card border border-border">
+          {rows.map((user) => (
+            <li key={user.id} className="flex flex-wrap items-start gap-3 p-3 text-sm">
+              <div className="min-w-0 flex-1 basis-64">
+                <p className="flex flex-wrap items-center gap-2 font-semibold text-ink-900">
+                  {user.full_name}
+                  <span className="rounded-pill bg-surface-2 px-2 py-0.5 text-xs font-medium text-ink-700">
                     {user.is_admin ? "Admin" : user.role === "courier" ? "Livreur" : user.is_seller ? "Vendeur" : "Client"}
-                  </td>
-                  <td className="px-3 py-2 text-xs text-slate-500">
-                    {user.created_at
-                      ? new Date(user.created_at).toLocaleDateString("fr-FR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })
-                      : "-"}
-                  </td>
-                  <td className="px-3 py-2">
-                    <span
-                      className={`rounded-full px-2 py-1 text-xs ${
-                        user.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-700"
-                      }`}
+                  </span>
+                  <span
+                    className={`rounded-pill px-2 py-0.5 text-xs font-medium ${
+                      user.is_active ? "bg-success/10 text-success" : "bg-surface-2 text-ink-700"
+                    }`}
+                  >
+                    {user.is_active ? "Actif" : "Retiré"}
+                  </span>
+                </p>
+                <p className="mt-0.5 break-all text-xs text-ink-600">
+                  {user.email}
+                  {user.whatsapp_phone ? ` · ${user.whatsapp_phone}` : ""}
+                </p>
+                <p className="mt-0.5 text-xs text-ink-600">
+                  Inscrit le {user.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "—"}
+                  {user.is_seller ? (
+                    <>
+                      {" · "}
+                      <Link href={`/admin/tarifs?q=${encodeURIComponent(user.email)}`} className="font-medium text-brand-700 hover:underline">
+                        Fiche vendeur
+                      </Link>
+                    </>
+                  ) : null}
+                </p>
+              </div>
+              <div>
+                {user.is_admin ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-ink-600">Compte protégé</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={isBusy}
+                      onClick={() => roleMutation.mutate({ userId: user.id, role: "user" })}
                     >
-                      {user.is_active ? "Actif" : "Retire"}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2">
-                    {user.is_admin ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-slate-500">Compte protege</span>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={isBusy}
-                          onClick={() => roleMutation.mutate({ userId: user.id, role: "user" })}
-                        >
-                          Retirer admin
-                        </Button>
-                      </div>
-                    ) : user.is_active ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="bg-rose-600 text-white hover:bg-rose-500"
-                          disabled={isBusy}
-                          onClick={() => removeMutation.mutate(user.id)}
-                        >
-                          Retirer
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={isBusy}
-                          onClick={() => roleMutation.mutate({ userId: user.id, role: "admin" })}
-                        >
-                          Nommer admin
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={isBusy}
-                          onClick={() =>
-                            roleMutation.mutate({ userId: user.id, role: user.role === "courier" ? "user" : "courier" })
-                          }
-                        >
-                          {user.role === "courier" ? "Retirer livreur" : "Nommer livreur"}
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="bg-emerald-600 text-white hover:bg-emerald-500"
-                          disabled={isBusy}
-                          onClick={() => restoreMutation.mutate(user.id)}
-                        >
-                          Restaurer
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="border-danger text-danger"
-                          disabled={isBusy}
-                          onClick={() => {
-                            if (window.confirm(`Supprimer définitivement ${user.email} ? Action irréversible.`)) {
-                              deleteMutation.mutate(user.id);
-                            }
-                          }}
-                        >
-                          Supprimer
-                        </Button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {actionStatus ? <p className="mt-3 text-sm text-slate-700">{actionStatus}</p> : null}
+                      Retirer admin
+                    </Button>
+                  </div>
+                ) : user.is_active ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="bg-rose-600 text-white hover:bg-rose-500"
+                      disabled={isBusy}
+                      onClick={() => {
+                        const shop = user.is_seller ? " Sa boutique sera aussi mise hors ligne." : "";
+                        if (window.confirm(`Retirer le compte de ${user.full_name} ? Il ne pourra plus se connecter.${shop}`)) {
+                          removeMutation.mutate(user.id);
+                        }
+                      }}
+                    >
+                      Retirer
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={isBusy}
+                      onClick={() => {
+                        if (window.confirm(`Donner à ${user.full_name} tous les droits administrateur (argent, comptes, tarifs) ?`)) {
+                          roleMutation.mutate({ userId: user.id, role: "admin" });
+                        }
+                      }}
+                    >
+                      Nommer admin
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={isBusy}
+                      onClick={() =>
+                        roleMutation.mutate({ userId: user.id, role: user.role === "courier" ? "user" : "courier" })
+                      }
+                    >
+                      {user.role === "courier" ? "Retirer livreur" : "Nommer livreur"}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="bg-emerald-600 text-white hover:bg-emerald-500"
+                      disabled={isBusy}
+                      onClick={() => restoreMutation.mutate(user.id)}
+                    >
+                      Restaurer
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="border-danger text-danger"
+                      disabled={isBusy}
+                      onClick={() => {
+                        if (window.confirm(`Supprimer définitivement ${user.email} ? Action irréversible.`)) {
+                          deleteMutation.mutate(user.id);
+                        }
+                      }}
+                    >
+                      Supprimer
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
       </article>
       ) : null}
     </section>
