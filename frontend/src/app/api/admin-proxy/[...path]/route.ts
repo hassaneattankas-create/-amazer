@@ -9,7 +9,10 @@ export const runtime = "nodejs";
 
 async function forward(request: NextRequest, context: { params: Promise<{ path: string[] }> }): Promise<Response> {
   const { path } = await context.params;
-  if (!path.length || path[0] !== "admin") {
+  // Routes admin uniquement : /admin/… et la modération des avis (/seller/admin/reviews, /seller/reviews/{id}/hide).
+  const isReviewModeration =
+    path[0] === "seller" && (path[1] === "admin" || (path[1] === "reviews" && path.length === 4 && path[3] === "hide"));
+  if (!path.length || (path[0] !== "admin" && !isReviewModeration)) {
     return Response.json({ detail: "Forbidden admin proxy path" }, { status: 403 });
   }
 

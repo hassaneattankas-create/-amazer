@@ -22,7 +22,10 @@ function isPrivateIpv4(hostname: string): boolean {
     first === 0 ||
     (first === 169 && second === 254) ||
     (first === 172 && second >= 16 && second <= 31) ||
-    (first === 192 && second === 168)
+    (first === 192 && second === 168) ||
+    // Reseau partage des operateurs (CGNAT) et plages reservees.
+    (first === 100 && second >= 64 && second <= 127) ||
+    first >= 224
   );
 }
 
@@ -32,6 +35,10 @@ function isBlockedHostname(hostname: string): boolean {
     LOCAL_HOSTS.has(normalized) ||
     normalized.endsWith(".local") ||
     normalized.endsWith(".internal") ||
+    normalized.endsWith(".localhost") ||
+    // Adresse IPv6 ecrite en clair ([::1], [fe80::…], [::ffff:127.0.0.1]…) : jamais une image publique.
+    normalized.startsWith("[") ||
+    normalized === "metadata.google.internal" ||
     isPrivateIpv4(normalized)
   );
 }
@@ -61,18 +68,42 @@ export async function GET(request: NextRequest): Promise<Response> {
     return jsonError("Blocked host", 403);
   }
 
-  const upstream = await fetch(targetUrl, {
-    headers: {
-      Accept: "image/*,*/*;q=0.8",
-      "User-Agent": "AMAZER Image Proxy",
-    },
-    redirect: "follow",
-    next: { revalidate: 60 * 60 * 24 },
-  });
-
-  const finalUrl = upstream.url ? new URL(upstream.url) : targetUrl;
-  if (isBlockedHostname(finalUrl.hostname)) {
-    return jsonError("Blocked redirect host", 403);
+  // Redirections suivies une par une : chaque adresse est verifiee AVANT d'etre contactee.
+  let upstream: Response | null = null;
+  let current = targetUrl;
+  for (let hop = 0; hop < 4; hop += 1) {
+    let response: Response;
+    try {
+      response = await fetch(current, {
+        headers: {
+          Accept: "image/*,*/*;q=0.8",
+          "User-Agent": "AMAZER Image Proxy",
+        },
+        redirect: "manual",
+        signal: AbortSignal.timeout(10_000),
+        next: { revalidate: 60 * 60 * 24 },
+      });
+    } catch {
+      return jsonError("Upstream image unavailable", 404);
+    }
+    const location = response.status >= 300 && response.status < 400 ? response.headers.get("location") : null;
+    if (!location) {
+      upstream = response;
+      break;
+    }
+    let next: URL;
+    try {
+      next = new URL(location, current);
+    } catch {
+      return jsonError("Invalid redirect", 400);
+    }
+    if (!["http:", "https:"].includes(next.protocol) || isBlockedHostname(next.hostname)) {
+      return jsonError("Blocked redirect host", 403);
+    }
+    current = next;
+  }
+  if (!upstream) {
+    return jsonError("Too many redirects", 400);
   }
 
   if (!upstream.ok) {

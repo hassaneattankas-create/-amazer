@@ -45,7 +45,8 @@ export function BarcodeScannerDrawer({
   const [isStarting, setIsStarting] = useState(false);
   const [status, setStatus] = useState("Prêt à scanner");
   const scannerId = `scanner-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
-  const title = mode === "qr" ? "Scanner le QR code du reçu" : "Scanner un code-barres";
+  // Titre du scanner : celui du bouton (« Scanner un billet », « Scanner le reçu du client »…).
+  const title = mode === "qr" ? (triggerLabel !== "Scan" ? triggerLabel : "Scanner le QR code") : "Scanner un code-barres";
 
   const disposeScanner = useCallback(async () => {
     const scanner = scannerRef.current;
