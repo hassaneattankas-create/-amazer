@@ -37,7 +37,7 @@ export default function AffiliationPage() {
   if (me && productUrl.trim()) {
     try {
       const parsed = new URL(productUrl.trim());
-      customLink = /amazer\.store$|localhost/.test(parsed.hostname) ? withAffiliateRef(parsed.toString(), me.code) : "";
+      customLink = /(^|\.)amazer\.store$|^localhost$/.test(parsed.hostname) ? withAffiliateRef(parsed.toString(), me.code) : "";
     } catch {
       customLink = "";
     }

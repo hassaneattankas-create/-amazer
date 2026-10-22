@@ -32,6 +32,25 @@ export type AdminVendorReview = {
   is_hidden: boolean;
 };
 
+export type AdminPlatformFeedback = {
+  id: string;
+  full_name: string;
+  email: string | null;
+  message: string;
+  rating: number;
+  created_at: string;
+  is_visible: boolean;
+};
+
+/** Avis de la page publique « Avis » (sur AMAZER), visibles ou masqués. */
+export async function listPlatformFeedbackAdmin(): Promise<AdminPlatformFeedback[]> {
+  return adminProxyRequest<AdminPlatformFeedback[]>({ url: "/admin/feedback", method: "GET" });
+}
+
+export async function togglePlatformFeedback(id: string): Promise<void> {
+  await adminProxyRequest({ url: `/admin/feedback/${id}/toggle`, method: "POST" });
+}
+
 /** 100 derniers avis sur les etablissements. */
 export async function listVendorReviewsAdmin(): Promise<AdminVendorReview[]> {
   return adminProxyRequest<AdminVendorReview[]>({ url: "/seller/admin/reviews", method: "GET" });

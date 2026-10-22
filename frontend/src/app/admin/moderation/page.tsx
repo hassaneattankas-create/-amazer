@@ -6,7 +6,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   listConversationReports,
+  listPlatformFeedbackAdmin,
   listVendorReviewsAdmin,
+  togglePlatformFeedback,
   toggleVendorReview,
 } from "@/services/moderation-service";
 
@@ -85,15 +87,55 @@ function ReviewsSection() {
   );
 }
 
+/** Avis de la page publique « Avis » : masquer un avis insultant, faux ou publicitaire. */
+function PlatformFeedbackSection() {
+  const queryClient = useQueryClient();
+  const { data = [], isPending } = useQuery({ queryKey: ["admin-platform-feedback"], queryFn: listPlatformFeedbackAdmin });
+  const toggle = useMutation({
+    mutationFn: togglePlatformFeedback,
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-platform-feedback"] }),
+  });
+  return (
+    <section aria-labelledby="platform-feedback-title" className="space-y-3">
+      <h2 id="platform-feedback-title" className="text-lg font-semibold text-ink-900">
+        Avis sur AMAZER (page « Avis »)
+      </h2>
+      {isPending ? (
+        <div className="h-20 animate-pulse rounded-card bg-surface-3" aria-busy="true" />
+      ) : data.length ? (
+        <ul className="divide-y divide-border rounded-card border border-border bg-card">
+          {data.slice(0, 100).map((item) => (
+            <li key={item.id} className={`flex flex-wrap items-start justify-between gap-2 p-3 ${item.is_visible ? "" : "opacity-60"}`}>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-ink-900">
+                  {item.full_name} · {item.rating}/5{item.email ? ` · ${item.email}` : ""}
+                  {item.is_visible ? "" : " · masqué"}
+                </p>
+                <p className="text-sm text-ink-800">{item.message}</p>
+              </div>
+              <Button type="button" size="sm" variant="outline" disabled={toggle.isPending} onClick={() => toggle.mutate(item.id)}>
+                {item.is_visible ? "Masquer" : "Réafficher"}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-ink-600">Aucun avis pour le moment.</p>
+      )}
+    </section>
+  );
+}
+
 export default function AdminModerationPage() {
   return (
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold text-ink-900">Modération</h1>
-        <p className="mt-1 text-sm text-ink-600">Signalements des utilisateurs et avis sur les établissements.</p>
+        <p className="mt-1 text-sm text-ink-600">Signalements des utilisateurs, avis sur les établissements et avis sur AMAZER.</p>
       </header>
       <ReportsSection />
       <ReviewsSection />
+      <PlatformFeedbackSection />
     </div>
   );
 }

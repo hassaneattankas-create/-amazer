@@ -24,3 +24,4 @@ class FeedbackResponse(BaseModel):
     message: str
     rating: int
     created_at: datetime
+    is_visible: bool = True

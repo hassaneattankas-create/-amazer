@@ -138,7 +138,7 @@ export function SingleMediaField({
       ) : previewUrl && imgError ? (
         <div className="flex h-36 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-100 text-xs text-slate-400">
           <ImageOff className="h-5 w-5" />
-          Image non disponible — reuploader depuis la galerie
+          Image indisponible : ajoutez-la à nouveau depuis la galerie
         </div>
       ) : (
         <p className="text-xs text-slate-500">{emptyMessage}</p>
@@ -238,7 +238,7 @@ export function GalleryMediaField({
           })}
         </div>
       ) : (
-        <p className="text-xs text-slate-500">Ajoute les photos depuis la galerie du téléphone.</p>
+        <p className="text-xs text-slate-500">Ajoutez les photos depuis la galerie du téléphone.</p>
       )}
       <UploadTrigger
         label={label}

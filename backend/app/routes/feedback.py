@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.core.csrf import enforce_csrf
 from app.core.deps import get_admin_user, get_current_user_optional
+from app.core.exceptions import NotFoundError
+from app.core.rate_limit import enforce_rate_limit
 from app.database import get_db
 from app.models.customer_feedback import CustomerFeedback
 from app.models.user import User
@@ -18,15 +20,17 @@ router = APIRouter(prefix="/feedback", tags=["feedback"])
 admin_router = APIRouter(prefix="/admin/feedback", tags=["admin-feedback"])
 
 
-def _to_response(item: CustomerFeedback) -> FeedbackResponse:
+def _to_response(item: CustomerFeedback, *, public: bool = False) -> FeedbackResponse:
+    # Liste publique : jamais l'e-mail ni l'identifiant du compte (visibles seulement par l'admin).
     return FeedbackResponse(
         id=item.id,
-        user_id=item.user_id,
+        user_id=None if public else item.user_id,
         full_name=item.full_name,
-        email=item.email,
+        email=None if public else item.email,
         message=item.message,
         rating=item.rating,
         created_at=item.created_at,
+        is_visible=bool(getattr(item, "is_visible", True)),
     )
 
 
@@ -41,7 +45,7 @@ def list_feedback(
         .order_by(desc(CustomerFeedback.created_at))
         .limit(limit)
     ).all()
-    return [_to_response(row) for row in rows]
+    return [_to_response(row, public=True) for row in rows]
 
 
 @router.post("", response_model=FeedbackResponse, status_code=status.HTTP_201_CREATED)
@@ -52,6 +56,8 @@ def create_feedback(
     current_user: Annotated[User | None, Depends(get_current_user_optional)],
 ) -> FeedbackResponse:
     enforce_csrf(request)
+    # Avis publie sans compte : limite anti-spam par appareil.
+    enforce_rate_limit(request, key="feedback-create", limit=5, window_seconds=600)
     row = CustomerFeedback(
         user_id=current_user.id if current_user else None,
         full_name=payload.full_name,
@@ -62,7 +68,7 @@ def create_feedback(
     db.add(row)
     db.commit()
     db.refresh(row)
-    return _to_response(row)
+    return _to_response(row, public=True)
 
 
 @admin_router.get("", response_model=list[FeedbackResponse])
@@ -73,6 +79,34 @@ def list_feedback_admin(
 ) -> list[FeedbackResponse]:
     rows = db.scalars(select(CustomerFeedback).order_by(desc(CustomerFeedback.created_at)).limit(limit)).all()
     return [_to_response(row) for row in rows]
+
+
+@admin_router.post("/{feedback_id}/toggle", response_model=FeedbackResponse)
+def toggle_feedback_admin(
+    feedback_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> FeedbackResponse:
+    """Masquer ou reafficher un avis de la page « Avis »."""
+    enforce_csrf(request)
+    row = db.get(CustomerFeedback, feedback_id)
+    if row is None:
+        raise NotFoundError("Avis introuvable")
+    row.is_visible = not bool(row.is_visible)
+    append_audit_log(
+        db,
+        event_type="admin_feedback_hidden" if not row.is_visible else "admin_feedback_restored",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="customer_feedback",
+        entity_id=row.id,
+        details={},
+    )
+    db.commit()
+    db.refresh(row)
+    return _to_response(row)
 
 
 @admin_router.delete("/{feedback_id}", status_code=status.HTTP_200_OK)

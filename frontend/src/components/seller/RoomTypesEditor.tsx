@@ -93,7 +93,7 @@ export function RoomTypesEditor({
           </div>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             <label className="text-xs text-slate-600 sm:col-span-2">
-              {isTransport ? "Nom du trajet (ex: Niamey - Maradi)" : "Nom de la chambre"}
+              {isTransport ? "Nom du trajet (ex. Niamey - Maradi)" : "Nom de la chambre"}
               <Input
                 value={row.name}
                 onChange={(event) => update(index, { name: event.target.value })}
@@ -110,7 +110,7 @@ export function RoomTypesEditor({
               />
             </label>
             <label className="text-xs text-slate-600">
-              {isTransport ? "Nombre de places" : "Capacite"}
+              {isTransport ? "Nombre de places" : "Capacité (personnes)"}
               <Input
                 type="number"
                 min={1}
@@ -144,7 +144,7 @@ export function RoomTypesEditor({
               <Input
                 value={row.amenities}
                 onChange={(event) => update(index, { amenities: event.target.value })}
-                placeholder={isTransport ? "Climatise, WiFi, Bagages" : "Climatise, TV, Petit-dejeuner"}
+                placeholder={isTransport ? "Climatisé, Wi-Fi, bagages" : "Climatisée, TV, petit-déjeuner"}
               />
             </label>
           </div>
@@ -246,7 +246,8 @@ export function roomRowsToPayload(rows: RoomRow[]) {
   return rows
     .filter((row) => row.name.trim() && Number(row.night_price || 0) > 0)
     .map((row, index) => ({
-      id: row.id || `room-${index + 1}`,
+      // Identifiant unique pour une nouvelle ligne : jamais celui d'une chambre existante (réservations liées).
+      id: row.id || `room-${Date.now().toString(36)}-${index}-${Math.random().toString(36).slice(2, 6)}`,
       name: row.name.trim(),
       description: row.description.trim() || null,
       night_price: Number(row.night_price || 0),

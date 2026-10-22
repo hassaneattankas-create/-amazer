@@ -93,7 +93,7 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
               {status.on_duty_now ? status.duty_label ?? "Vous êtes de garde" : "Vous n'êtes pas de garde"}
             </p>
             <p className="mt-1 text-sm text-ink-600">
-              {status.on_duty_now ? "Vous apparaissez en tête de « Pharmacies de garde »." : "Activez la garde pour apparaître en tête de « Pharmacies de garde »."}
+              {status.on_duty_now ? "Vous apparaissez en tête de la page « Pharmacies »." : "Activez la garde pour apparaître en tête de la page « Pharmacies »."}
             </p>
             {/* Garde programmee en cours : rien a activer ; elle s'arrete seule (ou via « Supprimer »). */}
             {status.on_duty_now && !status.on_duty ? null : (
