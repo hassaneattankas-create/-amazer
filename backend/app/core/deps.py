@@ -92,7 +92,21 @@ def get_seller_user(
             vendor.is_active = False
             db.commit()
         raise ForbiddenError(
-            "Abonnement vendeur requis ou expire: activez un essai depuis votre profil vendeur "
-            "ou reglez votre cotisation pour continuer a publier."
+            "Abonnement vendeur requis ou expiré : renouvelez-le depuis « Profil et abonnement » "
+            "pour continuer à publier."
         )
     return current_user
+
+def get_seller_user_any(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> User:
+    """Vendeur, meme abonnement expire : pour voir et traiter les commandes et reservations DEJA recues.
+
+    Un client qui a paye ne doit pas rester bloque parce que l'abonnement du vendeur a expire entre-temps.
+    Publier ou modifier le catalogue reste reserve aux abonnes (get_seller_user).
+    """
+    try:
+        return get_seller_user(current_user, db)
+    except ForbiddenError:
+        return current_user

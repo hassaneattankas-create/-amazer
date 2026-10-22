@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session, object_session, selectinload
 
 from app.config import get_settings
 from app.core.cache import build_cache_key, cache_delete_prefixes, cache_get_json, cache_set_json
-from app.core.deps import get_admin_user, get_current_user, get_current_user_optional, get_seller_user
+from app.core.deps import get_seller_user_any, get_admin_user, get_current_user, get_current_user_optional, get_seller_user
 from app.core.crypto import decrypt_phone_value, encrypt_phone_value
 from app.core.csrf import enforce_csrf
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationDomainError
@@ -1121,7 +1121,7 @@ def list_inventory(
 @router.get("/orders", response_model=list[SellerShopOrderResponse])
 def list_seller_orders(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user)],
+    current_user: Annotated[User, Depends(get_seller_user_any)],
 ) -> list[SellerShopOrderResponse]:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -1149,7 +1149,7 @@ def list_seller_orders(
 @router.get("/orders/export")
 def export_seller_orders(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user)],
+    current_user: Annotated[User, Depends(get_seller_user_any)],
 ) -> StreamingResponse:
     """Export des ventes du vendeur en fichier texte (Premium Entreprise uniquement)."""
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
@@ -1211,7 +1211,7 @@ def update_seller_order_status(
     payload: SellerShopOrderStatusUpdateRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user)],
+    current_user: Annotated[User, Depends(get_seller_user_any)],
 ) -> SellerShopOrderResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
@@ -1470,7 +1470,7 @@ def create_restaurant_reservation(
 @router.get("/restaurant-reservations", response_model=list[RestaurantReservationResponse])
 def list_seller_restaurant_reservations(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user)],
+    current_user: Annotated[User, Depends(get_seller_user_any)],
 ) -> list[RestaurantReservationResponse]:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -1493,7 +1493,7 @@ def update_restaurant_reservation_status(
     payload: RestaurantReservationStatusUpdateRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user)],
+    current_user: Annotated[User, Depends(get_seller_user_any)],
 ) -> RestaurantReservationResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
@@ -1924,7 +1924,7 @@ def _notify_booking(db: Session, user_id: str | None, title: str, body: str, tag
 @router.get("/hotel-bookings", response_model=list[HotelBookingResponse])
 def list_seller_hotel_bookings(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user)],
+    current_user: Annotated[User, Depends(get_seller_user_any)],
 ) -> list[HotelBookingResponse]:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
     if profile is None:
@@ -1944,7 +1944,7 @@ def update_hotel_booking_status(
     payload: HotelBookingStatusUpdateRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user)],
+    current_user: Annotated[User, Depends(get_seller_user_any)],
 ) -> HotelBookingResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))

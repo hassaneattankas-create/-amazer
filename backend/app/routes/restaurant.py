@@ -11,7 +11,7 @@ from app.core.cache import cache_delete_prefixes
 from app.core.checkout_fees import platform_commission_and_service_fee
 from app.core.crypto import decrypt_payment_code, decrypt_phone_value, encrypt_payment_code, payment_code_hash
 from app.core.csrf import enforce_csrf
-from app.core.deps import get_current_user, get_current_user_optional, get_seller_user
+from app.core.deps import get_seller_user_any, get_current_user, get_current_user_optional, get_seller_user
 from app.core.exceptions import NotFoundError, UnauthorizedError, ValidationDomainError
 from app.core.rate_limit import enforce_rate_limit
 from app.core.receipt_security import create_receipt_access_token, decode_receipt_access_token, receipt_integrity_hash
@@ -776,7 +776,7 @@ def create_restaurant_order(
 @router.get("/seller/orders", response_model=list[RestaurantOrderResponse])
 def list_seller_restaurant_orders(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user)],
+    current_user: Annotated[User, Depends(get_seller_user_any)],
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> list[RestaurantOrderResponse]:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
@@ -804,7 +804,7 @@ def update_seller_restaurant_order_status(
     payload: RestaurantOrderStatusUpdateRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_seller_user)],
+    current_user: Annotated[User, Depends(get_seller_user_any)],
 ) -> RestaurantOrderResponse:
     enforce_csrf(request)
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))

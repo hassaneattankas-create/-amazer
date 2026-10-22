@@ -28,6 +28,16 @@ ALLOWED_CONTENT_TYPES = {
 }
 
 
+def _looks_like_image(data: bytes) -> bool:
+    """Signature reelle du fichier (le type annonce par le telephone ne suffit pas)."""
+    return (
+        data.startswith(bytes([0xFF, 0xD8, 0xFF]))
+        or data.startswith(bytes([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]))
+        or (data[:4] == b"RIFF" and data[8:12] == b"WEBP")
+        or data[:6] in (b"GIF87a", b"GIF89a")
+    )
+
+
 class MediaUploadResponse(BaseModel):
     filename: str
     url: str
@@ -52,6 +62,8 @@ async def upload_media(
         raise ValidationDomainError("La photo est vide. Choisissez une autre photo.")
     if len(raw) > MAX_RAW_BYTES:
         raise ValidationDomainError("Photo trop lourde (20 Mo maximum). Choisissez une autre photo.")
+    if not _looks_like_image(raw):
+        raise ValidationDomainError("Ce fichier n'est pas une photo. Choisissez une photo JPG, PNG ou WebP.")
     # Photos de telephone (souvent 3 a 8 Mo) : on les reduit au lieu de les refuser.
     if content_type != "image/gif" and len(raw) > COMPRESS_ABOVE_BYTES:
         try:
