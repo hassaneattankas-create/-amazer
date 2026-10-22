@@ -4,6 +4,7 @@ import { AlertTriangle, BadgeCheck, Bike, CheckCircle2, Fuel, MapPin, Moon, Navi
 
 import { formatDistance, telHref, timeAgo, whatsappHref } from "@/lib/local-services";
 import { resolveImageUrl } from "@/lib/image";
+import { recordOutletEvent } from "@/services/local-services-service";
 import { FUEL_LABELS, type FuelKey, type LocalServiceItem, type ServiceKind } from "@/types/local-services";
 
 type Props = {
@@ -32,6 +33,10 @@ export function LocalServiceCard({ item, kind, distanceKm, freshHours, compact =
       ? `Bonjour AMAZER, je souhaite commander du gaz livré depuis ${from}. Taille de bouteille : `
       : `Bonjour AMAZER, je souhaite une livraison depuis ${from}.`;
   const logo = item.logo_url ? resolveImageUrl(item.logo_url) : null;
+  // Statistiques de la station (appels, itineraires, commandes de gaz), sans donnee personnelle.
+  const track = (event: "call" | "route" | "gas") => {
+    if (item.outlet_id) recordOutletEvent(item.outlet_id, event);
+  };
 
   return (
     <article className="flex flex-col rounded-card border border-border bg-card p-4 shadow-resting">
@@ -103,13 +108,14 @@ export function LocalServiceCard({ item, kind, distanceKm, freshHours, compact =
 
       <div className="mt-4 flex gap-2">
         {item.phone ? (
-          <a href={telHref(item.phone)} className={`${actionClass} border border-border bg-card text-ink-800 hover:bg-surface-1`}>
+          <a href={telHref(item.phone)} onClick={() => track("call")} className={`${actionClass} border border-border bg-card text-ink-800 hover:bg-surface-1`}>
             <Phone className="h-4 w-4" aria-hidden="true" />
             Appeler
           </a>
         ) : null}
         <a
           href={item.maps_url}
+          onClick={() => track("route")}
           target="_blank"
           rel="noopener noreferrer"
           className={`${actionClass} border border-border bg-card text-ink-800 hover:bg-surface-1`}
@@ -122,6 +128,7 @@ export function LocalServiceCard({ item, kind, distanceKm, freshHours, compact =
       {item.delivery_phone ? (
         <a
           href={whatsappHref(item.delivery_phone, deliveryMessage)}
+          onClick={() => track("gas")}
           target="_blank"
           rel="noopener noreferrer"
           className={`${actionClass} mt-2 bg-brand-600 text-white hover:bg-brand-700`}
@@ -138,7 +145,7 @@ export function LocalServiceCard({ item, kind, distanceKm, freshHours, compact =
       )}
       {compact || inShop ? null : (
         <Link href={`/shop/${item.vendor_id}`} className="mt-3 text-center text-sm font-medium text-brand-700 hover:underline">
-          Voir la vitrine
+          {(item.brand_outlets ?? 0) > 1 ? `Voir les ${item.brand_outlets} stations ${item.brand_name ?? ""}`.trim() : "Voir la vitrine"}
         </Link>
       )}
     </article>

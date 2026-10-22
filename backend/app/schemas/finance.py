@@ -28,6 +28,11 @@ class FinanceSettingsResponse(BaseModel):
     pharmacy_delivery_phone: str | None = None
     fuel_delivery_phone: str | None = None
     local_delivery_cities: str = "Niamey"
+    fuel_included_outlets: int = 3
+    fuel_tier1_price: float = 2000
+    fuel_tier2_price: float = 1500
+    fuel_tier3_price: float = 1000
+    fuel_network_flat: float = 50000
     seller_trial_days: int = 0
     seller_launch_discount_percent: float = 0
     reseller_subscription_fee: float = 500
@@ -74,6 +79,12 @@ class FinanceSettingsUpdateRequest(BaseModel):
     fuel_delivery_phone: str | None = Field(default=None, max_length=40, pattern=r"^[+0-9 ().-]*$")
     # Villes livrees depuis les pharmacies / stations (« Niamey, Maradi, Zinder »).
     local_delivery_cities: str = Field(default="Niamey", max_length=400)
+    # Reseau de stations (0 au forfait national = pas de plafond).
+    fuel_included_outlets: int = Field(default=3, ge=0, le=1000)
+    fuel_tier1_price: float = Field(default=2000, ge=0)
+    fuel_tier2_price: float = Field(default=1500, ge=0)
+    fuel_tier3_price: float = Field(default=1000, ge=0)
+    fuel_network_flat: float = Field(default=50000, ge=0)
     # Essai gratuit a l'inscription vendeur (0 = desactive) et reduction de lancement en %.
     seller_trial_days: int = Field(default=0, ge=0, le=365)
     seller_launch_discount_percent: float = Field(default=0, ge=0, le=100)

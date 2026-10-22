@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, LocateFixed, MapPin, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { AlertTriangle, BarChart3, CheckCircle2, LocateFixed, MapPin, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { NIGER_REGION_CITIES, timeAgo } from "@/lib/local-services";
-import { createOutlet, deleteOutlet, listMyOutlets, updateOutlet } from "@/services/local-services-service";
+import { formatXOF } from "@/lib/currency";
+import { bulkUpdateOutlets, createOutlet, deleteOutlet, getFuelNetwork, listMyOutlets, updateOutlet } from "@/services/local-services-service";
 import { toast } from "@/store/toast-store";
 import { FUEL_LABELS, type FuelKey, type FuelOutlet, type FuelOutletUpdate, type FuelState } from "@/types/local-services";
 
@@ -97,6 +98,14 @@ function OutletCard({ outlet, busy, onUpdate, onDelete }: { outlet: FuelOutlet; 
         </div>
       ) : null}
 
+      {outlet.is_active ? (
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-ink-700">
+          <BarChart3 className="h-3.5 w-3.5 shrink-0 text-brand-600" aria-hidden="true" />
+          30 derniers jours : {outlet.routes_30d ?? 0} itinéraire{(outlet.routes_30d ?? 0) > 1 ? "s" : ""} · {outlet.calls_30d ?? 0} appel
+          {(outlet.calls_30d ?? 0) > 1 ? "s" : ""} · {outlet.gas_orders_30d ?? 0} commande{(outlet.gas_orders_30d ?? 0) > 1 ? "s" : ""} de gaz
+        </p>
+      ) : null}
+
       <div className="mt-3 flex flex-wrap gap-2">
         {outlet.is_active && outlet.fuel_updated_at ? (
           <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => onUpdate({ fuel: outlet.fuel }, `${outlet.name} : disponibilités confirmées.`)}>
@@ -138,8 +147,13 @@ function OutletCard({ outlet, busy, onUpdate, onDelete }: { outlet: FuelOutlet; 
 export function FuelOutletsManager() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ name: "", city: "Niamey", address: "", phone: "" });
+  const [bulkCity, setBulkCity] = useState("");
   const { data: outlets = [], isPending } = useQuery({ queryKey: ["fuel-outlets"], queryFn: listMyOutlets });
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: ["fuel-outlets"] });
+  const { data: network } = useQuery({ queryKey: ["fuel-network"], queryFn: getFuelNetwork });
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["fuel-outlets"] });
+    void queryClient.invalidateQueries({ queryKey: ["fuel-network"] });
+  };
   const onError = (error: unknown) => toast.error(getApiErrorMessage(error, "Action impossible. Réessayez."));
 
   const create = useMutation({
@@ -167,7 +181,18 @@ export function FuelOutletsManager() {
     },
     onError,
   });
-  const busy = create.isPending || update.isPending || remove.isPending;
+  const bulk = useMutation({
+    mutationFn: (payload: { fuel?: { gaz?: "available" | "out" }; confirm?: boolean; done: string }) =>
+      bulkUpdateOutlets({ fuel: payload.fuel, confirm: payload.confirm, city: bulkCity || undefined }),
+    onSuccess: (_rows, vars) => {
+      toast.success(vars.done);
+      refresh();
+    },
+    onError,
+  });
+  const busy = create.isPending || update.isPending || remove.isPending || bulk.isPending;
+  const outletCities = [...new Set(outlets.filter((o) => o.is_active).map((o) => o.city))];
+  const where = bulkCity ? `à ${bulkCity}` : "partout";
 
   return (
     <section className="rounded-card border border-border bg-card p-4 shadow-resting sm:p-5" aria-labelledby="outlets-title">
@@ -177,6 +202,57 @@ export function FuelOutletsManager() {
       <p className="mt-1 text-sm text-ink-600">
         Plusieurs stations sous votre marque ? Ajoutez-les : chacune apparaît dans « Où trouver de l&apos;essence » avec ses propres disponibilités.
       </p>
+
+      {network ? (
+        <div className="mt-3 rounded-field bg-brand-50 p-3 text-sm text-ink-800">
+          <p className="font-semibold text-ink-900">
+            {network.stations} station{network.stations > 1 ? "s" : ""} active{network.stations > 1 ? "s" : ""} · {network.with_gas} avec du gaz ·{" "}
+            {network.to_confirm} à confirmer
+          </p>
+          {network.negotiated != null ? (
+            <p className="mt-1">Votre abonnement : prix négocié de {formatXOF(network.negotiated)} par mois, toutes stations comprises.</p>
+          ) : network.capped ? (
+            <p className="mt-1">Votre abonnement : forfait réseau national {formatXOF(network.total)} par mois — stations illimitées.</p>
+          ) : (
+            <p className="mt-1">
+              Votre abonnement : {formatXOF(network.total)} par mois ({network.included} stations incluses
+              {network.extra ? `, + ${formatXOF(network.extra)} pour les suivantes` : ""}).
+              {network.flat > 0 ? ` Plafonné à ${formatXOF(network.flat)} (forfait national, stations illimitées).` : ""}
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      {outlets.length > 1 ? (
+        <div className="mt-3 rounded-field border border-border p-3">
+          <p className="text-sm font-semibold text-ink-900">Mettre à jour plusieurs stations d&apos;un coup</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <select
+              aria-label="Stations concernées"
+              value={bulkCity}
+              onChange={(e) => setBulkCity(e.target.value)}
+              className="h-10 rounded-field border border-border bg-card px-2 text-sm"
+            >
+              <option value="">Toutes les villes</option>
+              {outletCities.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+            <Button type="button" size="sm" disabled={busy} onClick={() => bulk.mutate({ fuel: { gaz: "available" }, done: `Gaz disponible ${where}.` })}>
+              Gaz disponible {where}
+            </Button>
+            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => bulk.mutate({ fuel: { gaz: "out" }, done: `Gaz en rupture ${where}.` })}>
+              Gaz en rupture {where}
+            </Button>
+            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => bulk.mutate({ confirm: true, done: `Informations confirmées ${where}.` })}>
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              Rien n&apos;a changé {where}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {isPending ? <div className="mt-3 h-24 animate-pulse rounded-field bg-surface-1" aria-busy="true" /> : null}
       {outlets.length ? (
@@ -227,6 +303,13 @@ export function FuelOutletsManager() {
           Téléphone de la station (facultatif)
           <input className={fieldClass} value={form.phone} inputMode="tel" onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+227 …" />
         </label>
+        {network && network.negotiated == null ? (
+          <p className="text-xs text-ink-600 sm:col-span-2">
+            {network.next_station_price > 0
+              ? `Cette station ajoutera ${formatXOF(network.next_station_price)} par mois à votre abonnement.`
+              : "Cette station est comprise dans votre abonnement."}
+          </p>
+        ) : null}
         <Button type="submit" disabled={busy} className="sm:col-span-2">
           <Plus className="h-4 w-4" aria-hidden="true" />
           Ajouter la station

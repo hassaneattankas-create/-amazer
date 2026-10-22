@@ -18,6 +18,12 @@ export type FinanceSettings = {
   fuel_delivery_phone?: string | null;
   /** Villes livrées depuis les pharmacies / stations, séparées par des virgules. */
   local_delivery_cities?: string;
+  /** Réseau de stations : incluses, prix par station en plus (4–10, 11–30, 31+), forfait national. */
+  fuel_included_outlets?: number;
+  fuel_tier1_price?: number;
+  fuel_tier2_price?: number;
+  fuel_tier3_price?: number;
+  fuel_network_flat?: number;
   /** Essai gratuit a l'inscription vendeur, en jours (0 = desactive). */
   seller_trial_days?: number;
   /** Revente sans stock : abonnement mensuel du revendeur (XOF) et part AMAZER sur la marge (%). */

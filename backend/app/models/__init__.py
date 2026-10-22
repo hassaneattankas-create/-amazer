@@ -7,6 +7,7 @@ from app.models.reseller import ResellerAccount, ResellerListing, ResellerSubscr
 from app.models.refund import Refund
 from app.models.storefront_stat import StorefrontDailyStat
 from app.models.fuel_outlet import FuelOutlet
+from app.models.fuel_outlet_stat import FuelOutletDailyStat
 from app.models.vendor_review import VendorReview
 from app.models.affiliate import AffiliateAccount, AffiliateEarning, AffiliatePayout, AffiliateReferral
 from app.models.price_alert import PriceAlert
@@ -36,6 +37,7 @@ from app.models.vendor import Vendor
 
 __all__ = [
     "FuelOutlet",
+    "FuelOutletDailyStat",
     "User",
     "RefreshToken",
     "LoginVerificationCode",

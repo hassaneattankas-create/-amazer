@@ -17,15 +17,19 @@ from app.core.exceptions import ForbiddenError, NotFoundError, ValidationDomainE
 from app.core.rate_limit import enforce_rate_limit
 from app.database import get_db
 from app.models.fuel_outlet import FuelOutlet
+from app.models.fuel_outlet_stat import FuelOutletDailyStat
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.repositories.catalog_repository import active_subscription_clause
 from app.schemas.local_services import (
     CityCount,
+    FuelNetworkResponse,
     FuelOutletCreate,
     FuelOutletResponse,
+    FuelOutletsBulkUpdate,
     FuelOutletUpdate,
+    OutletEvent,
     FuelStatusSchema,
     LocalServiceItem,
     LocalServiceListResponse,
@@ -82,7 +86,7 @@ def build_item(profile: SellerProfile, settings: object, now: datetime) -> Local
     )
 
 
-def build_outlet_item(profile: SellerProfile, outlet: FuelOutlet, settings: object, now: datetime) -> LocalServiceItem:
+def build_outlet_item(profile: SellerProfile, outlet: FuelOutlet, settings: object, now: datetime, brand_outlets: int = 0) -> LocalServiceItem:
     """Une station d'une marque : ses propres ville, adresse, position et disponibilites."""
     vendor = profile.vendor
     updated = svc._aware(outlet.fuel_updated_at)
@@ -93,6 +97,7 @@ def build_outlet_item(profile: SellerProfile, outlet: FuelOutlet, settings: obje
         business_name=f"{profile.business_name} · {outlet.name}",
         outlet_id=outlet.id,
         brand_name=profile.business_name,
+        brand_outlets=brand_outlets,
         city=outlet.city,
         address=outlet.address,
         phone=outlet.phone or decrypt_phone_value(profile.phone),
@@ -132,7 +137,8 @@ def _list(db: Session, kind: str, city: str | None, keep, sort_key) -> LocalServ
     entries: list[tuple[str | None, LocalServiceItem]] = []
     for profile in profiles:
         if outlets.get(profile.vendor_id):
-            entries.extend((o.city, build_outlet_item(profile, o, settings, now)) for o in outlets[profile.vendor_id])
+            network = outlets[profile.vendor_id]
+            entries.extend((o.city, build_outlet_item(profile, o, settings, now, len(network))) for o in network)
         else:
             entries.append((profile.city, build_item(profile, settings, now)))
     counts: dict[str, list] = {}
@@ -312,7 +318,22 @@ def _station_profile(db: Session, user: User) -> SellerProfile:
     return profile
 
 
-def _outlet_response(outlet: FuelOutlet, settings: object, now: datetime) -> FuelOutletResponse:
+def _outlet_stats(db: Session, outlet_ids: list[str], now: datetime) -> dict[str, tuple[int, int, int]]:
+    if not outlet_ids:
+        return {}
+    since = svc.niamey_today(now) - timedelta(days=29)
+    totals: dict[str, list[int]] = {}
+    for row in db.scalars(
+        select(FuelOutletDailyStat).where(FuelOutletDailyStat.outlet_id.in_(outlet_ids), FuelOutletDailyStat.day >= since)
+    ).all():
+        entry = totals.setdefault(row.outlet_id, [0, 0, 0])
+        entry[0] += row.calls
+        entry[1] += row.routes
+        entry[2] += row.gas_orders
+    return {key: (v[0], v[1], v[2]) for key, v in totals.items()}
+
+
+def _outlet_response(outlet: FuelOutlet, settings: object, now: datetime, stats: tuple[int, int, int] = (0, 0, 0)) -> FuelOutletResponse:
     updated = svc._aware(outlet.fuel_updated_at)
     return FuelOutletResponse(
         id=outlet.id,
@@ -328,6 +349,9 @@ def _outlet_response(outlet: FuelOutlet, settings: object, now: datetime) -> Fue
         fuel=FuelStatusSchema(**svc.clean_fuel_status(outlet.fuel_status)),
         fuel_fresh=svc.fuel_is_fresh(outlet, now),
         fuel_updated_at=updated.isoformat() if updated else None,
+        calls_30d=stats[0],
+        routes_30d=stats[1],
+        gas_orders_30d=stats[2],
     )
 
 
@@ -348,7 +372,85 @@ def list_my_outlets(
     rows = db.scalars(
         select(FuelOutlet).where(FuelOutlet.vendor_id == profile.vendor_id).order_by(FuelOutlet.sort_order, FuelOutlet.created_at)
     ).all()
-    return [_outlet_response(o, settings, now) for o in rows]
+    stats = _outlet_stats(db, [o.id for o in rows], now)
+    return [_outlet_response(o, settings, now, stats.get(o.id, (0, 0, 0))) for o in rows]
+
+
+@router.get("/seller/fuel-network", response_model=FuelNetworkResponse)
+def my_fuel_network(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> FuelNetworkResponse:
+    """Resume du reseau : prix de l'abonnement (inclus, en plus, forfait, negocie) et etat des stations."""
+    from app.services.fuel_network_pricing import price_for
+    from app.services.seller_finance_service import _base_subscription_fee_for_profile
+
+    profile = _station_profile(db, current_user)
+    now, settings = datetime.now(UTC), get_or_create_global_settings(db)
+    active = db.scalars(select(FuelOutlet).where(FuelOutlet.vendor_id == profile.vendor_id, FuelOutlet.is_active.is_(True))).all()
+    saved_kind = profile.service_kind
+    try:
+        # Abonnement de base (sans les stations) pour detailler le calcul.
+        profile.service_kind = None
+        base = _base_subscription_fee_for_profile(settings, profile)
+    finally:
+        profile.service_kind = saved_kind
+    price = price_for(settings, base, len(active))
+    negotiated = profile.seller_subscription_fee_override
+    return FuelNetworkResponse(
+        **price.__dict__,
+        negotiated=float(negotiated) if negotiated is not None else None,
+        with_gas=sum(1 for o in active if svc.has_fuel(o, "gaz", now)),
+        to_confirm=sum(1 for o in active if not svc.fuel_is_fresh(o, now)),
+    )
+
+
+@router.put("/seller/fuel-outlets/bulk", response_model=list[FuelOutletResponse])
+def bulk_update_outlets(
+    payload: FuelOutletsBulkUpdate,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> list[FuelOutletResponse]:
+    """Toutes les stations (ou celles d'une ville) en un geste : meme disponibilite, ou « rien n'a change »."""
+    enforce_csrf(request)
+    profile = _station_profile(db, current_user)
+    if payload.fuel is None and not payload.confirm:
+        raise ValidationDomainError("Indiquez une disponibilité ou confirmez les informations.")
+    now = datetime.now(UTC)
+    stmt = select(FuelOutlet).where(FuelOutlet.vendor_id == profile.vendor_id, FuelOutlet.is_active.is_(True))
+    rows = [o for o in db.scalars(stmt).all() if not payload.city or svc.normalize_city(o.city) == svc.normalize_city(payload.city)]
+    changes = {k: v for k, v in payload.fuel.model_dump().items() if v is not None} if payload.fuel else {}
+    for outlet in rows:
+        merged = svc.clean_fuel_status(outlet.fuel_status)
+        merged.update(changes)
+        outlet.fuel_status = svc.clean_fuel_status(merged)
+        outlet.fuel_updated_at = now
+    db.commit()
+    invalidate_services_cache()
+    return list_my_outlets(db, current_user)
+
+
+@router.post("/services/outlets/{outlet_id}/event", status_code=204, response_model=None)
+def record_outlet_event(
+    outlet_id: str,
+    payload: OutletEvent,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+) -> None:
+    """Compte un appel, un itineraire ou une commande de gaz (statistiques de la station, sans donnee personnelle)."""
+    enforce_rate_limit(request, key="outlet-event", limit=60, window_seconds=600)
+    outlet = db.get(FuelOutlet, outlet_id)
+    if outlet is None or not outlet.is_active:
+        return
+    day = svc.niamey_today()
+    row = db.get(FuelOutletDailyStat, (outlet_id, day))
+    if row is None:
+        row = FuelOutletDailyStat(outlet_id=outlet_id, day=day, calls=0, routes=0, gas_orders=0)
+        db.add(row)
+    column = {"call": "calls", "route": "routes", "gas": "gas_orders"}[payload.kind]
+    setattr(row, column, (getattr(row, column) or 0) + 1)
+    db.commit()
 
 
 @router.post("/seller/fuel-outlets", response_model=FuelOutletResponse, status_code=201)

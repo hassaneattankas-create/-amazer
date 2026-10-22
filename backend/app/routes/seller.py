@@ -664,8 +664,9 @@ def _build_public_storefront(vendor_id: str, db: Session) -> SellerStorefrontRes
         ),
         local_outlets=(
             [
-                build_outlet_item(profile, outlet, get_or_create_global_settings(db), datetime.now(UTC))
-                for outlet in active_outlets(db, [profile.vendor_id]).get(profile.vendor_id, [])
+                build_outlet_item(profile, outlet, get_or_create_global_settings(db), datetime.now(UTC), len(network))
+                for network in [active_outlets(db, [profile.vendor_id]).get(profile.vendor_id, [])]
+                for outlet in network
             ]
             if getattr(profile, "service_kind", None) == "fuel_station"
             else []

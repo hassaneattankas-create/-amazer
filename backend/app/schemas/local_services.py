@@ -26,6 +26,8 @@ class LocalServiceItem(BaseModel):
     # Point de vente d'une marque (ex. « Oriba · Plateau ») : identifiant et nom de la marque.
     outlet_id: str | None = None
     brand_name: str | None = None
+    # Nombre de stations de la marque (lien « Voir les N stations »).
+    brand_outlets: int = 0
     city: str | None
     address: str | None
     phone: str | None
@@ -115,6 +117,43 @@ class FuelOutletResponse(BaseModel):
     fuel: FuelStatusSchema
     fuel_fresh: bool
     fuel_updated_at: str | None
+    # 30 derniers jours : ce que la station a rapporte en contacts.
+    calls_30d: int = 0
+    routes_30d: int = 0
+    gas_orders_30d: int = 0
+
+
+class FuelOutletsBulkUpdate(BaseModel):
+    """Mise a jour de toutes les stations d'un coup (ou d'une ville) : disponibilites ou simple confirmation."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    fuel: FuelStatusSchema | None = None
+    confirm: bool = False
+    city: str | None = Field(default=None, max_length=80)
+
+
+class FuelNetworkResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    stations: int
+    included: int
+    base: float
+    extra: float
+    total: float
+    flat: float
+    capped: bool
+    next_station_price: float
+    # Prix negocie par AMAZER : remplace le calcul (montant mensuel).
+    negotiated: float | None
+    with_gas: int
+    to_confirm: int
+
+
+class OutletEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["call", "route", "gas"]
 
 
 class ServiceStatusResponse(BaseModel):

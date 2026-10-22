@@ -201,6 +201,16 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
         pharmacy_delivery_phone=getattr(settings, "pharmacy_delivery_phone", None),
         fuel_delivery_phone=getattr(settings, "fuel_delivery_phone", None),
         local_delivery_cities=getattr(settings, "local_delivery_cities", None) or "Niamey",
+        **{
+            key: getattr(settings, key) if getattr(settings, key, None) is not None else default
+            for key, default in (
+                ("fuel_included_outlets", 3),
+                ("fuel_tier1_price", 2000),
+                ("fuel_tier2_price", 1500),
+                ("fuel_tier3_price", 1000),
+                ("fuel_network_flat", 50000),
+            )
+        },
         support_email=settings.support_email,
         support_phone=settings.support_phone,
         support_whatsapp=settings.support_whatsapp,
@@ -549,6 +559,8 @@ def update_finance_settings(
     settings_row.support_whatsapp = payload.support_whatsapp
     settings_row.pharmacy_delivery_phone = (payload.pharmacy_delivery_phone or "").strip() or None
     settings_row.fuel_delivery_phone = (payload.fuel_delivery_phone or "").strip() or None
+    for key in ("fuel_included_outlets", "fuel_tier1_price", "fuel_tier2_price", "fuel_tier3_price", "fuel_network_flat"):
+        setattr(settings_row, key, getattr(payload, key))
     settings_row.local_delivery_cities = ", ".join(parse_cities(payload.local_delivery_cities)) or "Niamey"
     cache_delete_prefixes("services:", "catalog:")
     append_audit_log(

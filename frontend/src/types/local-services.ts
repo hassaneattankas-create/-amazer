@@ -12,6 +12,8 @@ export type LocalServiceItem = {
   /** Point de vente d'une marque (ex. « Oriba · Plateau »). */
   outlet_id?: string | null;
   brand_name?: string | null;
+  /** Nombre de stations de la marque (lien « Voir les N stations »). */
+  brand_outlets?: number;
   city: string | null;
   address: string | null;
   phone: string | null;
@@ -80,6 +82,25 @@ export type FuelOutlet = {
   fuel: FuelStatus;
   fuel_fresh: boolean;
   fuel_updated_at: string | null;
+  /** 30 derniers jours. */
+  calls_30d?: number;
+  routes_30d?: number;
+  gas_orders_30d?: number;
+};
+
+/** Résumé du réseau d'une marque : prix de l'abonnement et état des stations. */
+export type FuelNetwork = {
+  stations: number;
+  included: number;
+  base: number;
+  extra: number;
+  total: number;
+  flat: number;
+  capped: boolean;
+  next_station_price: number;
+  negotiated: number | null;
+  with_gas: number;
+  to_confirm: number;
 };
 
 export type FuelOutletInput = { name: string; city: string; address?: string; phone?: string };

@@ -71,7 +71,13 @@ def _base_subscription_fee_for_profile(
         configured = getattr(settings, "seller_subscription_fee_restaurant", None)
     else:
         configured = getattr(settings, "seller_subscription_fee_shop", None)
-    return float(configured if configured is not None else legacy_default)
+    base = float(configured if configured is not None else legacy_default)
+    if getattr(profile, "service_kind", None) == "fuel_station":
+        # Marque de carburant : abonnement + stations supplementaires (degressif, plafonne au forfait national).
+        from app.services.fuel_network_pricing import active_outlet_count, price_for
+
+        return price_for(settings, base, active_outlet_count(profile)).total
+    return base
 
 
 def build_effective_seller_finance_settings(

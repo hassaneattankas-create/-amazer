@@ -51,6 +51,12 @@ class GlobalSettings(Base):
     # Numeros AMAZER a contacter pour se faire livrer depuis une pharmacie ou une station (Niamey pour l'instant).
     pharmacy_delivery_phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     fuel_delivery_phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # Reseau de stations : stations incluses, prix par station en plus (paliers 4-10, 11-30, 31+), forfait national.
+    fuel_included_outlets: Mapped[int] = mapped_column(Integer, nullable=False, default=3, server_default="3")
+    fuel_tier1_price: Mapped[float] = mapped_column(Float, nullable=False, default=2000, server_default="2000")
+    fuel_tier2_price: Mapped[float] = mapped_column(Float, nullable=False, default=1500, server_default="1500")
+    fuel_tier3_price: Mapped[float] = mapped_column(Float, nullable=False, default=1000, server_default="1000")
+    fuel_network_flat: Mapped[float] = mapped_column(Float, nullable=False, default=50000, server_default="50000")
     # Villes ou AMAZER livre depuis les pharmacies / stations, separees par des virgules.
     local_delivery_cities: Mapped[str] = mapped_column(String(400), nullable=False, default="Niamey", server_default="Niamey")
     affiliate_min_payout: Mapped[float] = mapped_column(Float, nullable=False, default=2000, server_default="2000")

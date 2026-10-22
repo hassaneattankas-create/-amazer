@@ -49,7 +49,12 @@ type AffiliateSecurityKey =
   | "ambassador_tier2_percent"
   | "ambassador_tier3_shops"
   | "ambassador_tier3_percent"
-  | "ambassador_monthly_top_bonus";
+  | "ambassador_monthly_top_bonus"
+  | "fuel_included_outlets"
+  | "fuel_tier1_price"
+  | "fuel_tier2_price"
+  | "fuel_tier3_price"
+  | "fuel_network_flat";
 
 /** Securite des gains d'affiliation et taux des ambassadeurs (tous reglables). */
 const AFFILIATE_SECURITY_FIELDS: Array<{
@@ -63,6 +68,11 @@ const AFFILIATE_SECURITY_FIELDS: Array<{
   integer?: boolean;
   helper: string;
 }> = [
+  { key: "fuel_included_outlets", label: "Stations : nombre inclus dans l'abonnement Premium", suffix: "stations", fallback: 3, min: 0, max: 1000, step: "1", integer: true, helper: "Une marque de carburant paie l'abonnement Premium et déclare ce nombre de stations sans supplément." },
+  { key: "fuel_tier1_price", label: "Stations : prix par station suivante (jusqu'à la 10e)", suffix: "XOF / mois", fallback: 2000, min: 0, max: 10_000_000, step: "500", helper: "Exemple avec 3 incluses : la 4e à la 10e station coûtent chacune ce montant." },
+  { key: "fuel_tier2_price", label: "Stations : prix par station de la 11e à la 30e", suffix: "XOF / mois", fallback: 1500, min: 0, max: 10_000_000, step: "500", helper: "Prix dégressif : plus la marque a de stations, moins chacune coûte." },
+  { key: "fuel_tier3_price", label: "Stations : prix par station à partir de la 31e", suffix: "XOF / mois", fallback: 1000, min: 0, max: 10_000_000, step: "500", helper: "Pour les grands réseaux nationaux." },
+  { key: "fuel_network_flat", label: "Stations : forfait national (plafond, stations illimitées)", suffix: "XOF / mois", fallback: 50000, min: 0, max: 100_000_000, step: "1000", helper: "Le total d'une marque ne dépasse jamais ce montant. 0 = pas de plafond. Un prix négocié par marque (fiche vendeur) remplace tout ce calcul." },
   { key: "affiliate_hold_days", label: "Affiliés : délai de sécurité avant paiement", suffix: "jours", fallback: 30, min: 0, max: 180, step: "1", integer: true, helper: "Temps pour repérer annulations et fraudes avant qu'un gain soit payable." },
   { key: "affiliate_min_payout", label: "Affiliés : minimum pour demander un paiement", suffix: "XOF", fallback: 2000, min: 0, max: 10_000_000, step: "500", helper: "En dessous, le solde reste et s'additionne au mois suivant." },
   { key: "affiliate_new_account_monthly_cap", label: "Affiliés : plafond mensuel des nouveaux comptes", suffix: "XOF", fallback: 25000, min: 0, max: 100_000_000, step: "1000", helper: "Pendant les 3 premiers mois : au-delà, les gains passent « à vérifier ». 0 = pas de plafond." },
@@ -901,7 +911,8 @@ export default function AdminTarifsPage() {
                     }))
                   }
                   className="h-10 rounded-md border border-slate-300 px-3 text-sm"
-                  placeholder="Abonnement override XOF"
+                  placeholder="Prix négocié par mois (XOF)"
+                  title="Remplace le tarif calculé (ex. stations : abonnement + stations). Vide = tarif normal."
                 />
               </div>
               <div className="mt-3 flex flex-wrap gap-2">

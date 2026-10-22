@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { FuelKey, FuelOutlet, FuelOutletInput, FuelOutletUpdate, LocalServiceList, ServiceStatus, ServiceStatusUpdate } from "@/types/local-services";
+import type { FuelKey, FuelNetwork, FuelOutlet, FuelStatus, FuelOutletInput, FuelOutletUpdate, LocalServiceList, ServiceStatus, ServiceStatusUpdate } from "@/types/local-services";
 
 export async function listPharmacies(params: { city?: string; onDuty?: boolean }): Promise<LocalServiceList> {
   const response = await api.get<LocalServiceList>("/api/v1/services/pharmacies", {
@@ -43,4 +43,17 @@ export async function updateOutlet(id: string, payload: FuelOutletUpdate): Promi
 
 export async function deleteOutlet(id: string): Promise<void> {
   await api.delete(`/api/v1/seller/fuel-outlets/${id}`);
+}
+
+export async function getFuelNetwork(): Promise<FuelNetwork> {
+  return (await api.get<FuelNetwork>("/api/v1/seller/fuel-network")).data;
+}
+
+export async function bulkUpdateOutlets(payload: { fuel?: FuelStatus; confirm?: boolean; city?: string }): Promise<FuelOutlet[]> {
+  return (await api.put<FuelOutlet[]>("/api/v1/seller/fuel-outlets/bulk", payload)).data;
+}
+
+/** Statistiques de la station (appel, itinéraire, commande de gaz). Ne bloque jamais l'action du client. */
+export function recordOutletEvent(outletId: string, kind: "call" | "route" | "gas"): void {
+  void api.post(`/api/v1/services/outlets/${outletId}/event`, { kind }).catch(() => undefined);
 }

@@ -12,12 +12,13 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import ForbiddenError, NotFoundError, ValidationDomainError
 from app.database import Base
 from app.models.fuel_outlet import FuelOutlet
+from app.models.fuel_outlet_stat import FuelOutletDailyStat
 from app.models.global_settings import GlobalSettings
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.routes import local_services as route
-from app.schemas.local_services import FuelOutletCreate, FuelOutletUpdate, FuelStatusSchema, ServiceStatusUpdate
+from app.schemas.local_services import FuelOutletCreate, FuelOutletsBulkUpdate, FuelOutletUpdate, FuelStatusSchema, OutletEvent, ServiceStatusUpdate
 from app.services import local_services as svc
 
 
@@ -90,7 +91,7 @@ def test_position_must_be_in_niger() -> None:
 @pytest.fixture
 def db(monkeypatch):
     engine = create_engine("sqlite://")
-    Base.metadata.create_all(engine, tables=[t.__table__ for t in (User, Vendor, SellerProfile, GlobalSettings, FuelOutlet)])
+    Base.metadata.create_all(engine, tables=[t.__table__ for t in (User, Vendor, SellerProfile, GlobalSettings, FuelOutlet, FuelOutletDailyStat)])
     monkeypatch.setattr(route, "cache_get_json", lambda _key: None)
     monkeypatch.setattr(route, "cache_set_json", lambda *_a, **_k: None)
     monkeypatch.setattr(route, "invalidate_services_cache", lambda: None)
@@ -226,3 +227,54 @@ def test_only_the_brand_manages_its_outlets(db: Session) -> None:
         route.update_outlet(outlet.id, FuelOutletUpdate(latitude=48.8, longitude=2.3), None, db, owner)
     route.delete_outlet(outlet.id, None, db, owner)
     assert route.list_my_outlets(db, owner) == []
+
+
+# ---------------------------------------------------------------- prix du reseau
+
+def test_network_price_includes_three_stations_then_degressive_and_capped_by_the_national_flat() -> None:
+    from app.services.fuel_network_pricing import price_for
+
+    settings = SimpleNamespace(fuel_included_outlets=3, fuel_tier1_price=2000, fuel_tier2_price=1500, fuel_tier3_price=1000, fuel_network_flat=50000)
+    assert price_for(settings, 15000, 3).total == 15000  # 3 stations incluses
+    p5 = price_for(settings, 15000, 5)
+    assert (p5.extra, p5.total, p5.next_station_price) == (4000, 19000, 2000)
+    p12 = price_for(settings, 15000, 12)  # 7 x 2000 + 2 x 1500
+    assert p12.total == 15000 + 14000 + 3000
+    big = price_for(settings, 15000, 60)
+    assert big.capped and big.total == 50000 and big.next_station_price == 0  # forfait national : stations illimitees
+    no_cap = price_for(SimpleNamespace(**{**settings.__dict__, "fuel_network_flat": 0}), 15000, 40)
+    assert not no_cap.capped and no_cap.total == 15000 + 7 * 2000 + 20 * 1500 + 10 * 1000
+
+
+def test_brand_subscription_follows_its_stations_unless_a_price_was_negotiated(db: Session) -> None:
+    from app.services.seller_finance_service import build_effective_seller_finance_settings
+
+    user, profile = shop(db, "oriba", "fuel_station")
+    settings = db.query(GlobalSettings).first()
+    settings.seller_subscription_fee_premium = 15000
+    db.commit()
+    for name in ("A", "B", "C", "D", "E"):
+        route.create_outlet(FuelOutletCreate(name=f"Station {name}", city="Niamey"), None, db, user)
+    assert build_effective_seller_finance_settings(settings, profile).seller_subscription_fee == 19000
+    network = route.my_fuel_network(db, user)
+    assert (network.stations, network.total, network.next_station_price, network.negotiated) == (5, 19000, 2000, None)
+    profile.seller_subscription_fee_override = 12000  # prix negocie
+    db.commit()
+    assert build_effective_seller_finance_settings(settings, profile).seller_subscription_fee == 12000
+    assert route.my_fuel_network(db, user).negotiated == 12000
+
+
+def test_bulk_update_by_city_and_station_stats(db: Session) -> None:
+    user, _ = shop(db, "oriba", "fuel_station")
+    a = route.create_outlet(FuelOutletCreate(name="Plateau", city="Niamey"), None, db, user)
+    b = route.create_outlet(FuelOutletCreate(name="Centre", city="Maradi"), None, db, user)
+    rows = route.bulk_update_outlets(FuelOutletsBulkUpdate(fuel=FuelStatusSchema(gaz="available"), city="niamey"), None, db, user)
+    by_id = {r.id: r for r in rows}
+    assert by_id[a.id].fuel.gaz == "available" and by_id[b.id].fuel.gaz is None
+    with pytest.raises(ValidationDomainError):
+        route.bulk_update_outlets(FuelOutletsBulkUpdate(), None, db, user)
+    for kind in ("call", "route", "route", "gas"):
+        route.record_outlet_event(a.id, OutletEvent(kind=kind), None, db)
+    stats = {r.id: (r.calls_30d, r.routes_30d, r.gas_orders_30d) for r in route.list_my_outlets(db, user)}
+    assert stats[a.id] == (1, 2, 1) and stats[b.id] == (0, 0, 0)
+    assert route.my_fuel_network(db, user).with_gas == 1
