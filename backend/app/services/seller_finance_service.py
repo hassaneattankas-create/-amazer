@@ -74,9 +74,9 @@ def _base_subscription_fee_for_profile(
     base = float(configured if configured is not None else legacy_default)
     if getattr(profile, "service_kind", None) == "fuel_station":
         # Marque de carburant : abonnement + stations supplementaires (degressif, plafonne au forfait national).
-        from app.services.fuel_network_pricing import active_outlet_count, price_for
+        from app.services.fuel_network_pricing import active_outlet_count, fuel_base_fee, price_for
 
-        return price_for(settings, base, active_outlet_count(profile)).total
+        return price_for(settings, fuel_base_fee(settings, base), active_outlet_count(profile)).total
     return base
 
 

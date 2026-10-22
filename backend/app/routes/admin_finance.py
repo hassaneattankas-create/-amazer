@@ -211,6 +211,9 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
                 ("fuel_tier2_price", 1500),
                 ("fuel_tier3_price", 1000),
                 ("fuel_network_flat", 50000),
+                ("fuel_base_subscription", 0),
+                ("fuel_tier1_until", 10),
+                ("fuel_tier2_until", 30),
             )
         },
         support_email=settings.support_email,
@@ -561,8 +564,19 @@ def update_finance_settings(
     settings_row.support_whatsapp = payload.support_whatsapp
     settings_row.pharmacy_delivery_phone = (payload.pharmacy_delivery_phone or "").strip() or None
     settings_row.fuel_delivery_phone = (payload.fuel_delivery_phone or "").strip() or None
-    for key in ("fuel_included_outlets", "fuel_tier1_price", "fuel_tier2_price", "fuel_tier3_price", "fuel_network_flat"):
+    for key in (
+        "fuel_included_outlets",
+        "fuel_tier1_price",
+        "fuel_tier2_price",
+        "fuel_tier3_price",
+        "fuel_network_flat",
+        "fuel_base_subscription",
+    ):
         setattr(settings_row, key, getattr(payload, key))
+    # Paliers toujours dans l'ordre : inclus <= fin du palier 1 < fin du palier 2.
+    tier1_until = max(int(payload.fuel_tier1_until), int(payload.fuel_included_outlets))
+    settings_row.fuel_tier1_until = tier1_until
+    settings_row.fuel_tier2_until = max(int(payload.fuel_tier2_until), tier1_until + 1)
     settings_row.local_delivery_cities = ", ".join(parse_cities(payload.local_delivery_cities)) or "Niamey"
     cache_delete_prefixes("services:", "catalog:")
     append_audit_log(

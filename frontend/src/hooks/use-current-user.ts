@@ -50,5 +50,6 @@ export function useCurrentUser() {
   });
   // isLoading reste vrai tant que la session n'a pas été cherchée : une page protégée ne redirige
   // jamais vers la connexion un utilisateur en réalité connecté.
-  return { ...query, isLoading: !checked || query.isLoading };
+  // Session trouvée mais utilisateur pas encore reçu (requête pas encore partie) : toujours « en chargement ».
+  return { ...query, isLoading: !checked || (enabled && query.isPending) };
 }

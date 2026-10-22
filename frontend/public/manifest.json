@@ -1,7 +1,7 @@
 {
   "name": "AMAZER",
   "short_name": "AMAZER",
-  "description": "AMAZER Luxe & Energie - Commerce, Restaurant et Livraison intelligente au Niger.",
+  "description": "AMAZER : boutiques, restaurants, pharmacies, stations et services au Niger, avec paiement contrôlé et livraison.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -37,19 +37,25 @@
   ],
   "shortcuts": [
     {
-      "name": "Commander",
+      "name": "Panier",
       "short_name": "Panier",
       "url": "/cart"
     },
     {
-      "name": "Restaurant",
-      "short_name": "Resto",
-      "url": "/restaurant"
+      "name": "Essence",
+      "short_name": "Essence",
+      "url": "/stations"
     },
     {
-      "name": "Espace vendeur",
-      "short_name": "Vendeur",
-      "url": "/seller"
+      "name": "Pharmacies",
+      "short_name": "Pharmacies",
+      "url": "/pharmacies"
+    },
+    {
+      "name": "Mes commandes",
+      "short_name": "Commandes",
+      "url": "/dashboard"
     }
-  ]
+  ],
+  "id": "/"
 }

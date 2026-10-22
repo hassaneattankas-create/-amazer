@@ -23,6 +23,9 @@ export type FinanceSettings = {
   fuel_tier1_price?: number;
   fuel_tier2_price?: number;
   fuel_tier3_price?: number;
+  fuel_base_subscription?: number;
+  fuel_tier1_until?: number;
+  fuel_tier2_until?: number;
   fuel_network_flat?: number;
   /** Essai gratuit a l'inscription vendeur, en jours (0 = desactive). */
   seller_trial_days?: number;

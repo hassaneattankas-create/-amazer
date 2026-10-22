@@ -55,7 +55,7 @@ const PLANS: Plan[] = [
       "Hôtel : réservation des chambres en ligne",
       "Transport : billets et places avec QR code",
       "Pharmacie : vos gardes visibles par tout le Niger",
-      `Stations-essence : ${p.fuel_included_outlets ?? 3} stations incluses, puis ${formatXOF(p.fuel_tier1_price ?? 2000)} par station (prix dégressif)`,
+      `Stations-essence : ${(p.fuel_base_subscription ?? 0) > 0 ? `abonnement ${formatXOF(p.fuel_base_subscription ?? 0)} / mois, ` : ""}${p.fuel_included_outlets ?? 3} stations incluses, puis dès ${formatXOF(p.fuel_tier1_price ?? 2000)} par station (prix dégressif)`,
       "Stations : disponibilités, statistiques et commandes de gaz livrées",
       "Itinéraire Google Maps et livraison AMAZER à Niamey",
       "Site vitrine complet et badge vérifié",

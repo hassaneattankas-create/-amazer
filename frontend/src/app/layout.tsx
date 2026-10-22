@@ -4,6 +4,7 @@ import { AppFooter } from "@/components/layout/AppFooter";
 import { ChatWidget } from "@/components/ChatWidget";
 import { AndroidBackButtonHandler } from "@/components/providers/AndroidBackButtonHandler";
 import { FaviconBadge } from "@/components/FaviconBadge";
+import { InstallAppBanner } from "@/components/InstallAppBanner";
 import { FloatingNavbar } from "@/components/layout/FloatingNavbar";
 import { AuthPreferenceBootstrap } from "@/components/providers/AuthPreferenceBootstrap";
 import { AffiliateTracker } from "@/components/providers/AffiliateTracker";
@@ -89,6 +90,7 @@ export default function RootLayout({
           <AuthPreferenceBootstrap />
           <AffiliateTracker />
           <FloatingNavbar />
+          <InstallAppBanner />
           <main className="min-h-screen">{children}</main>
           <AppFooter />
           <ChatWidget />

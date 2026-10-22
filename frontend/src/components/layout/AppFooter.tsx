@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
+import { OPEN_INSTALL_EVENT } from "@/components/InstallAppBanner";
 import { ADMIN_EMAIL } from "@/lib/admin";
 import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 import { useT } from "@/lib/i18n";
@@ -67,6 +68,13 @@ export function AppFooter() {
             message="Bonjour AMAZER, j'ai une question."
             className="mt-4"
           />
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event(OPEN_INSTALL_EVENT))}
+            className="mt-3 block min-h-9 text-sm font-semibold text-brand-700 hover:underline"
+          >
+            {t("Installer l'application")}
+          </button>
           <p className="mt-3 text-sm text-ink-700">
             {t("Support :")}{" "}
             <a href={`mailto:${supportEmail}`} className="font-medium text-brand-700 hover:underline">

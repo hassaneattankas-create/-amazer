@@ -382,7 +382,7 @@ def my_fuel_network(
     current_user: Annotated[User, Depends(get_seller_user)],
 ) -> FuelNetworkResponse:
     """Resume du reseau : prix de l'abonnement (inclus, en plus, forfait, negocie) et etat des stations."""
-    from app.services.fuel_network_pricing import price_for
+    from app.services.fuel_network_pricing import fuel_base_fee, price_for
     from app.services.seller_finance_service import _base_subscription_fee_for_profile
 
     profile = _station_profile(db, current_user)
@@ -395,7 +395,7 @@ def my_fuel_network(
         base = _base_subscription_fee_for_profile(settings, profile)
     finally:
         profile.service_kind = saved_kind
-    price = price_for(settings, base, len(active))
+    price = price_for(settings, fuel_base_fee(settings, base), len(active))
     negotiated = profile.seller_subscription_fee_override
     return FuelNetworkResponse(
         **price.__dict__,

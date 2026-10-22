@@ -2,24 +2,19 @@
 
 import { useEffect } from "react";
 
+import { isMobileAppBuild } from "@/lib/mobile-app";
+
+/**
+ * Service worker minimal (public/sw.js) : rend le site installable sur Android et ordinateur.
+ * Il ne garde rien en mémoire (pas de vieille version) et nettoie les anciens caches.
+ * Pas dans l'application Android (Capacitor), qui est déjà installée.
+ */
 export function PwaRegistrar() {
   useEffect(() => {
-    if (!("serviceWorker" in navigator)) {
+    if (isMobileAppBuild() || !("serviceWorker" in navigator)) {
       return;
     }
-
-    // Temporary safety mode: aggressively unregister old service workers so
-    // production phones stop serving stale cached assets and outdated image logic.
-    navigator.serviceWorker
-      .getRegistrations()
-      .then((registrations) =>
-        Promise.all(
-          registrations.map((registration) =>
-            registration.unregister().catch(() => false)
-          )
-        )
-      )
-      .catch(() => undefined);
+    navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch(() => undefined);
   }, []);
 
   return null;

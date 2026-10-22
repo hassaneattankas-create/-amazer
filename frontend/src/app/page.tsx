@@ -214,6 +214,23 @@ export default function HomePage() {
               {t("Tout")}
             </button>
           </li>
+          {/* Essence et pharmacies en premier : les services les plus cherchés au quotidien. */}
+          <li className="shrink-0">
+            <Link href="/stations" className={tileClass(false)}>
+              <span className={tileIconClass(false)}>
+                <Fuel className="h-6 w-6" aria-hidden="true" />
+              </span>
+              {t("Essence")}
+            </Link>
+          </li>
+          <li className="shrink-0">
+            <Link href="/pharmacies" className={tileClass(false)}>
+              <span className={tileIconClass(false)}>
+                <Pill className="h-6 w-6" aria-hidden="true" />
+              </span>
+              {t("Pharmacies")}
+            </Link>
+          </li>
           {categories.map((item) => {
             const Icon = CATEGORY_ICONS[item.slug] ?? LayoutGrid;
             const active = category === item.slug;
@@ -247,22 +264,6 @@ export default function HomePage() {
                 <Crown className="h-6 w-6" aria-hidden="true" />
               </span>
               {t("Premium")}
-            </Link>
-          </li>
-          <li className="shrink-0">
-            <Link href="/pharmacies" className={tileClass(false)}>
-              <span className={tileIconClass(false)}>
-                <Pill className="h-6 w-6" aria-hidden="true" />
-              </span>
-              {t("Pharmacies")}
-            </Link>
-          </li>
-          <li className="shrink-0">
-            <Link href="/stations" className={tileClass(false)}>
-              <span className={tileIconClass(false)}>
-                <Fuel className="h-6 w-6" aria-hidden="true" />
-              </span>
-              {t("Stations")}
             </Link>
           </li>
         </ul>

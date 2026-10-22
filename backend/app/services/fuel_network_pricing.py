@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-# Paliers de stations supplementaires (au-dela des stations incluses).
+# Paliers par defaut (reglables dans Admin > Tarifs : fuel_tier1_until, fuel_tier2_until).
 TIER1_UNTIL = 10  # de la (inclus + 1)e a la 10e station
 TIER2_UNTIL = 30  # de la 11e a la 30e ; au-dela : palier 3
 
@@ -32,19 +32,34 @@ def _num(settings: object, name: str, default: float) -> float:
     return max(0.0, float(default if value is None else value))
 
 
+def fuel_base_fee(settings: object, premium_fee: float) -> float:
+    """Abonnement de base d'une marque : le prix « stations » s'il est regle, sinon le prix Premium."""
+    configured = _num(settings, "fuel_base_subscription", 0)
+    return configured if configured > 0 else float(premium_fee)
+
+
+def tier_limits(settings: object) -> tuple[int, int]:
+    """Fin des paliers 1 et 2, toujours dans l'ordre (inclus <= palier 1 < palier 2)."""
+    included = int(_num(settings, "fuel_included_outlets", 3))
+    tier1 = max(int(_num(settings, "fuel_tier1_until", TIER1_UNTIL)), included)
+    tier2 = max(int(_num(settings, "fuel_tier2_until", TIER2_UNTIL)), tier1 + 1)
+    return tier1, tier2
+
+
 def price_for(settings: object, base: float, stations: int) -> FuelNetworkPrice:
     """Prix mensuel d'une marque pour `stations` points de vente actifs."""
     included = int(_num(settings, "fuel_included_outlets", 3))
     tiers = (_num(settings, "fuel_tier1_price", 2000), _num(settings, "fuel_tier2_price", 1500), _num(settings, "fuel_tier3_price", 1000))
     flat = _num(settings, "fuel_network_flat", 50000)
+    tier1_until, tier2_until = tier_limits(settings)
 
     def station_price(rank: int) -> float:
         """Prix de la station numero `rank` (1 = premiere)."""
         if rank <= included:
             return 0.0
-        if rank <= TIER1_UNTIL:
+        if rank <= tier1_until:
             return tiers[0]
-        if rank <= TIER2_UNTIL:
+        if rank <= tier2_until:
             return tiers[1]
         return tiers[2]
 

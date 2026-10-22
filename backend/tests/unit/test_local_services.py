@@ -278,3 +278,23 @@ def test_bulk_update_by_city_and_station_stats(db: Session) -> None:
     stats = {r.id: (r.calls_30d, r.routes_30d, r.gas_orders_30d) for r in route.list_my_outlets(db, user)}
     assert stats[a.id] == (1, 2, 1) and stats[b.id] == (0, 0, 0)
     assert route.my_fuel_network(db, user).with_gas == 1
+
+
+def test_station_pricing_follows_admin_settings() -> None:
+    """Abonnement des stations et paliers reglables par l'admin."""
+    from app.services.fuel_network_pricing import fuel_base_fee, price_for
+
+    settings = SimpleNamespace(
+        fuel_included_outlets=2, fuel_tier1_price=1000, fuel_tier2_price=500, fuel_tier3_price=100,
+        fuel_network_flat=0, fuel_base_subscription=8000, fuel_tier1_until=4, fuel_tier2_until=6,
+    )
+    base = fuel_base_fee(settings, 15000)
+    assert base == 8000  # prix « stations » regle, pas le Premium
+    # 8 stations : 2 incluses, 3e-4e a 1000, 5e-6e a 500, 7e-8e a 100.
+    assert price_for(settings, base, 8).total == 8000 + 2 * 1000 + 2 * 500 + 2 * 100
+    settings.fuel_base_subscription = 0
+    assert fuel_base_fee(settings, 15000) == 15000  # 0 = meme prix que Premium
+    # Paliers incoherents : remis dans l'ordre (palier 1 jamais avant les stations incluses).
+    settings.fuel_tier1_until, settings.fuel_tier2_until = 1, 1
+    # inclus = 2 -> palier 1 = 2 (vide), palier 2 = 3e station, palier 3 au-dela.
+    assert price_for(settings, 0, 4).extra == 500 + 100
