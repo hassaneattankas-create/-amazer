@@ -46,8 +46,10 @@ def test_customer_pays_shop_price_plus_margin_shop_keeps_its_price() -> None:
 def test_earnings_split_delivered_and_pending() -> None:
     db = Mock()
     db.execute.return_value.all.return_value = [("o-1", "recu", 3000.0), ("o-2", "preparation", 1500.0), ("o-3", "CLAIMED", 500.0)]
+    db.scalar.return_value = 1000.0  # deja verse
     result = route.compute_earnings(db, "r-1")
     assert (result.earned, result.pending, result.orders_delivered, result.orders_pending) == (3500.0, 1500.0, 2, 1)
+    assert (result.paid, result.to_pay) == (1000.0, 2500.0)
 
 
 def test_public_shop_never_exposes_shop_price_or_margin() -> None:
