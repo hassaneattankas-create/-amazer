@@ -41,7 +41,7 @@ export function ManualPaymentCard({
     <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="text-2xl font-semibold text-ink-900">Finaliser le paiement</h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className={`mt-2 text-sm text-slate-600 ${data ? "" : "hidden"}`}>
           {data?.payment_mode === "amana"
             ? "Lancez le paiement, puis validez-le dans votre application AmanaTa."
             : "Envoyez le montant par Nita, puis indiquez la référence de votre transaction."}

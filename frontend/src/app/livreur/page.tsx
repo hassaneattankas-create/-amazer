@@ -149,7 +149,7 @@ export default function CourierPage() {
           </Link>
           <Link href="/pharmacies" className={quickLink}>
             <Pill className="h-4 w-4 text-brand-600" aria-hidden="true" />
-            Pharmacies de garde
+            Pharmacies
           </Link>
           <WhatsAppButton variant="outline" label="Contacter AMAZER" message="Bonjour AMAZER, je suis livreur et j'ai besoin d'aide." />
         </div>

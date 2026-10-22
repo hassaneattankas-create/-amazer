@@ -24,9 +24,14 @@ function hasSessionToken(): boolean {
 
 export function useCurrentUser() {
   const [enabled, setEnabled] = useState(false);
+  // Vrai une fois la session cherchée sur l'appareil : avant, on ne sait pas encore si l'utilisateur est connecté.
+  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    const syncTokenState = () => setEnabled(hasSessionToken());
+    const syncTokenState = () => {
+      setEnabled(hasSessionToken());
+      setChecked(true);
+    };
     syncTokenState();
     window.addEventListener("storage", syncTokenState);
     window.addEventListener(AUTH_CHANGE_EVENT, syncTokenState);
@@ -36,11 +41,14 @@ export function useCurrentUser() {
     };
   }, []);
 
-  return useQuery<UserResponse>({
+  const query = useQuery<UserResponse>({
     queryKey: ["auth-current-user"],
     queryFn: getCurrentUser,
     retry: false,
     staleTime: 30_000,
     enabled,
   });
+  // isLoading reste vrai tant que la session n'a pas été cherchée : une page protégée ne redirige
+  // jamais vers la connexion un utilisateur en réalité connecté.
+  return { ...query, isLoading: !checked || query.isLoading };
 }
