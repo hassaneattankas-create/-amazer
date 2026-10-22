@@ -112,7 +112,7 @@ def test_client_confirm_without_reference_stays_pending(module, confirm) -> None
 def test_checkout_with_arbitrary_transaction_code_stays_pending(monkeypatch) -> None:
     monkeypatch.setattr(orders_route, "_resolve_checkout_delivery_fee", lambda *_args: 0.0)
     monkeypatch.setattr(orders_route, "get_or_create_global_settings", lambda _db: SimpleNamespace())
-    monkeypatch.setattr(orders_route, "platform_commission_and_service_fee", lambda *args: (0.0, 0.0))
+    monkeypatch.setattr(orders_route, "marketplace_fees", lambda *args: (0.0, 0.0))
     monkeypatch.setattr(orders_route, "customer_bonus_for_order", lambda *a: (None, 0.0))
     monkeypatch.setattr(orders_route, "_notify_new_order", lambda *args, **kwargs: None)
     monkeypatch.setattr(orders_route, "_to_order_response", lambda order: order)

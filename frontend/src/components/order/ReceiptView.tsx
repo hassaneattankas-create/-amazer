@@ -6,6 +6,7 @@ import { QRCodeSVG } from "qrcode.react";
 
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
+import { publicSiteOrigin } from "@/lib/backend-origin";
 import { formatXOF } from "@/lib/currency";
 import type { Receipt } from "@/types/order";
 
@@ -16,14 +17,13 @@ type ReceiptViewProps = {
   backHref?: string;
 };
 
-const FALLBACK_PAYMENT_PHONE = "+227 96953163";
-
 // Le QR pointe vers la page de verification : le livreur, le vendeur ou l'admin le scanne a la remise.
+// Adresse publique (amazer.store) : depuis l'application, l'adresse interne ne s'ouvrirait pas chez le livreur.
 function receiptScanUrl(verifyUrl: string): string | null {
   try {
     const token = new URL(verifyUrl).searchParams.get("token");
     if (!token || typeof window === "undefined") return null;
-    return `${window.location.origin}/seller/delivery-scan?token=${encodeURIComponent(token)}`;
+    return `${publicSiteOrigin()}/seller/delivery-scan?token=${encodeURIComponent(token)}`;
   } catch {
     return null;
   }
@@ -100,9 +100,9 @@ export function ReceiptView({
     if (!receipt) return;
     try {
       downloadBlob(await buildPdfBlob(), `recu-amazer-${receipt.order_id}.pdf`);
-      setStatus("PDF telecharge.");
+      setStatus("PDF téléchargé.");
     } catch {
-      setStatus("Erreur lors du telechargement PDF.");
+      setStatus("Le PDF n'a pas pu être téléchargé.");
     }
   }
 
@@ -114,18 +114,18 @@ export function ReceiptView({
 
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
-          title: `Recu AMAZER ${receipt.order_id}`,
-          text: `Recu AMAZER pour la commande ${receipt.order_id}`,
+          title: `Reçu AMAZER ${receipt.order_id}`,
+          text: `Reçu AMAZER pour la commande ${receipt.order_id}`,
           files: [file],
         });
-        setStatus("PDF partage.");
+        setStatus("PDF partagé.");
         return;
       }
 
       downloadBlob(blob, file.name);
-      setStatus("Partage direct non disponible. Le PDF a été telecharge.");
+      setStatus("Partage direct indisponible : le PDF a été téléchargé.");
     } catch {
-      setStatus("Erreur lors du partage PDF.");
+      setStatus("Le PDF n'a pas pu être partagé.");
     }
   }
 
@@ -137,7 +137,7 @@ export function ReceiptView({
 
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
-          title: `Recu AMAZER ${receipt.order_id}`,
+          title: `Reçu AMAZER ${receipt.order_id}`,
           text: "Enregistrer le reçu comme image.",
           files: [file],
         });
@@ -146,9 +146,9 @@ export function ReceiptView({
       }
 
       downloadBlob(blob, file.name);
-      setStatus("Image telechargee.");
+      setStatus("Image téléchargée.");
     } catch {
-      setStatus("Erreur lors de l'enregistrement de l'image.");
+      setStatus("L'image n'a pas pu être enregistrée.");
     }
   }
 
@@ -165,9 +165,9 @@ export function ReceiptView({
     return (
       <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
         <article className="premium-card border border-rose-200 bg-rose-50 p-6">
-          <h1 className="text-xl font-semibold text-rose-700">Acces refusé ou recu invalide</h1>
+          <h1 className="text-xl font-semibold text-rose-700">Reçu inaccessible</h1>
           <p className="mt-2 text-sm text-rose-700">
-            Le lien est peut-etre expire, modifie ou non autorise.
+            Le lien a peut-être expiré ou a été modifié. Ouvrez le reçu depuis « Mes commandes ».
           </p>
           <Button asChild className="mt-4 border border-slate-200 bg-white text-slate-800 hover:bg-slate-50">
             <Link href={backHref}>Retour</Link>
@@ -177,7 +177,9 @@ export function ReceiptView({
     );
   }
 
-  const paymentPhone = receipt.platform_wallet_phone || FALLBACK_PAYMENT_PHONE;
+  // Jamais de numéro par défaut : un numéro périmé ferait perdre l'argent du client.
+  const paymentPhone = receipt.platform_wallet_phone || null;
+  const paid = receipt.payment_status === "paid";
   const scanUrl = receipt.payment_status === "paid" ? receiptScanUrl(receipt.verify_url) : null;
 
   return (
@@ -202,35 +204,35 @@ export function ReceiptView({
                   : "border border-amber-300 bg-amber-50 text-amber-700"
               }`}
             >
-              {receipt.payment_status === "paid" ? "Paiement confirme" : "Paiement en attente"}
+              {paid ? "Paiement confirmé" : "Paiement en attente"}
             </p>
           </div>
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-2 rounded-2xl border border-orange-100 bg-white/80 p-3 text-sm text-slate-700 sm:grid-cols-2">
           <p>
-            <span className="font-semibold text-slate-900">Client:</span> {receipt.customer_name}
+            <span className="font-semibold text-slate-900">Client :</span> {receipt.customer_name}
           </p>
           <p>
-            <span className="font-semibold text-slate-900">Paiement:</span> {receipt.payment_mode.toUpperCase()}
+            <span className="font-semibold text-slate-900">Paiement :</span> {receipt.payment_mode.toUpperCase()}
           </p>
           <p>
-            <span className="font-semibold text-slate-900">Date:</span>{" "}
+            <span className="font-semibold text-slate-900">Date :</span>{" "}
             {new Date(receipt.created_at).toLocaleDateString("fr-FR")}
           </p>
           <p>
-            <span className="font-semibold text-slate-900">Heure:</span>{" "}
+            <span className="font-semibold text-slate-900">Heure :</span>{" "}
             {new Date(receipt.created_at).toLocaleTimeString("fr-FR", { hour12: false })}
           </p>
           <p>
-            <span className="font-semibold text-slate-900">Référence:</span> {receipt.payment_reference ?? "-"}
+            <span className="font-semibold text-slate-900">Référence :</span> {receipt.payment_reference ?? "-"}
           </p>
           <p>
-            <span className="font-semibold text-slate-900">Code transaction:</span>{" "}
+            <span className="font-semibold text-slate-900">Code transaction :</span>{" "}
             {receipt.transaction_code_masked ?? "-"}
           </p>
           <p>
-            <span className="font-semibold text-slate-900">Integrite:</span> {receipt.integrity_hash.slice(0, 16)}...
+            <span className="font-semibold text-slate-900">Contrôle :</span> {receipt.integrity_hash.slice(0, 16)}…
           </p>
         </div>
 
@@ -239,7 +241,7 @@ export function ReceiptView({
             <thead className="text-xs uppercase tracking-[0.12em] text-slate-500">
               <tr>
                 <th className="pb-2">Article</th>
-                <th className="pb-2">Qt</th>
+                <th className="pb-2">Qté</th>
                 <th className="pb-2">Prix</th>
                 <th className="pb-2">Sous-total</th>
               </tr>
@@ -288,31 +290,40 @@ export function ReceiptView({
           </div>
         ) : null}
 
+        {!paid ? (
         <div className="mt-5 space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
           <p className="text-sm font-semibold text-slate-900">Paiement mobile ({receipt.payment_mode.toUpperCase()})</p>
-          <p className="text-xs text-slate-600">
-            Faites le versement au numéro AMAZER ci-dessous, puis revenez confirmer que le paiement est bien
-            effectue.
+          {paymentPhone ? (
+            <>
+              <p className="text-xs text-slate-600">
+                Envoyez le montant au numéro AMAZER ci-dessous, puis revenez confirmer le paiement.
+              </p>
+              <p className="text-sm text-slate-800">
+                <span className="font-semibold">Numéro AMAZER :</span> {paymentPhone}
+              </p>
+            </>
+          ) : (
+            <p className="text-xs text-slate-600">
+              Le numéro de paiement AMAZER n&apos;est pas encore affiché : contactez le support avant de payer.
+            </p>
+          )}
+          <p className="text-sm text-slate-800">
+            <span className="font-semibold">Montant à verser :</span> {formatXOF(receipt.total_amount)}
           </p>
           <p className="text-sm text-slate-800">
-            <span className="font-semibold">Numéro AMAZER:</span> {paymentPhone}
-          </p>
-          <p className="text-sm text-slate-800">
-            <span className="font-semibold">Montant a verser:</span> {formatXOF(receipt.total_amount)}
-          </p>
-          <p className="text-sm text-slate-800">
-            <span className="font-semibold">Référence a garder:</span> {receipt.payment_reference ?? "-"}
+            <span className="font-semibold">Référence à garder :</span> {receipt.payment_reference ?? "-"}
           </p>
         </div>
+        ) : null}
       </article>
 
       <article className="premium-card border border-emerald-200 bg-emerald-50 p-5">
-        <h2 className="text-base font-semibold text-emerald-800">Conseils de Sécurité AMAZER</h2>
+        <h2 className="text-base font-semibold text-emerald-800">Conseils de sécurité AMAZER</h2>
         <ul className="mt-3 space-y-2 text-sm text-emerald-900">
-          <li>Ne communique jamais ton code secret Nita ou Amana par message ou appel.</li>
-          <li>Vérifie que le montant, les frais et la référence correspondent avant de valider.</li>
-          <li>Conserve ce recu comme preuve; le vendeur peut vérifier la commande dans son espace.</li>
-          <li>AMAZER ne te demandera jamais ton code secret par SMS ou appel.</li>
+          <li>Ne communiquez jamais votre code secret Nita ou Amana, ni par message ni par appel.</li>
+          <li>Vérifiez que le montant, les frais et la référence correspondent avant de valider.</li>
+          <li>Conservez ce reçu comme preuve : le vendeur peut vérifier la commande dans son espace.</li>
+          <li>AMAZER ne vous demandera jamais votre code secret, ni par SMS ni par appel.</li>
         </ul>
       </article>
 
@@ -330,7 +341,11 @@ export function ReceiptView({
       <p className="text-xs text-slate-500">
         Sur mobile, l&apos;option image permet de sauvegarder le reçu comme photo ou de l&apos;envoyer vers la galerie.
       </p>
-      {status ? <p className="text-sm text-slate-700">{status}</p> : null}
+      {status ? (
+        <p className="text-sm text-slate-700" role="status">
+          {status}
+        </p>
+      ) : null}
     </section>
   );
 }

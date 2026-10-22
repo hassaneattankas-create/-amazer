@@ -13,9 +13,9 @@ type OrderStepperProps = {
 
 const STEP_LABELS: Record<string, string> = {
   commande: "Commande",
-  preparation: "Preparation",
+  preparation: "Préparation",
   livraison: "En livraison",
-  recu: "Recu",
+  recu: "Reçue",
 };
 
 export function OrderStepper({ order }: OrderStepperProps) {
@@ -50,7 +50,7 @@ export function OrderStepper({ order }: OrderStepperProps) {
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-xs text-slate-500">Commande #{order.id.slice(0, 8)}</p>
+          <p className="text-xs text-slate-500">Commande #{order.tracking_code ?? order.id.slice(0, 8).toUpperCase()}</p>
           {order.status === "payment_pending" ? (
             <p className="mt-1 text-xs text-amber-700">Paiement en attente de confirmation.</p>
           ) : null}
@@ -82,8 +82,13 @@ export function OrderStepper({ order }: OrderStepperProps) {
             disabled={confirmMutation.isPending}
             onClick={() => confirmMutation.mutate()}
           >
-            {confirmMutation.isPending ? "..." : "J ai recu ma commande"}
+            {confirmMutation.isPending ? "…" : "J'ai reçu ma commande"}
           </Button>
+        ) : null}
+        {confirmMutation.isError ? (
+          <p className="text-xs text-danger" role="alert">
+            Confirmation impossible pour le moment. Réessayez.
+          </p>
         ) : null}
       </div>
 
@@ -120,7 +125,7 @@ export function OrderStepper({ order }: OrderStepperProps) {
 
       <p className="mt-3 inline-flex items-center gap-1 text-xs text-slate-500">
         <Truck className="h-3.5 w-3.5 text-brand-600" />
-        Suivi: {order.tracking_code || "en cours"}
+        Suivi : {order.tracking_code || "en cours"}
       </p>
     </div>
   );

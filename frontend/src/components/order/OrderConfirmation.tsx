@@ -6,6 +6,7 @@ import { CheckCircle2, Clock, Mail, Package, Truck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { formatXOF } from "@/lib/currency";
+import { getOrderReceiptRoute } from "@/lib/mobile-routes";
 import { getReceiptLink, listMyOrders } from "@/services/order-service";
 
 /**
@@ -58,29 +59,37 @@ export function OrderConfirmation({ orderId }: { orderId: string }) {
   }
 
   const paid = order.payment_status === "paid";
+  const delivered = order.status === "recu" || order.status === "CLAIMED";
+  const cancelled = order.status === "annulee";
   const steps = [
     { icon: CheckCircle2, label: "Commande reçue", done: true },
     { icon: Clock, label: "Paiement vérifié par AMAZER", done: paid },
-    { icon: Package, label: "Préparation par la boutique", done: ["preparation", "livraison", "recu"].includes(order.status) },
-    { icon: Truck, label: "Livraison", done: order.status === "recu" },
+    { icon: Package, label: "Préparation par la boutique", done: delivered || ["preparation", "livraison"].includes(order.status) },
+    { icon: Truck, label: "Livraison", done: delivered },
   ];
 
   return (
     <section className="mx-auto w-full max-w-2xl space-y-4 px-gutter py-6">
       <div className="rounded-card border border-border bg-card p-6">
-        <CheckCircle2 className="h-10 w-10 text-success" aria-hidden="true" />
-        <h1 className="mt-2 text-2xl font-semibold text-ink-900">Merci, votre commande est enregistrée</h1>
+        <CheckCircle2 className={`h-10 w-10 ${cancelled ? "text-ink-400" : "text-success"}`} aria-hidden="true" />
+        <h1 className="mt-2 text-2xl font-semibold text-ink-900">
+          {cancelled ? "Cette commande a été annulée" : "Merci, votre commande est enregistrée"}
+        </h1>
         <p className="mt-1 text-sm text-ink-700">
           Commande <span className="font-semibold">#{order.tracking_code ?? order.id.slice(0, 8).toUpperCase()}</span> ·{" "}
           {formatXOF(order.total_amount)}
         </p>
         <p className={`mt-3 rounded-field px-3 py-2 text-sm ${paid ? "bg-surface-1 text-success" : "bg-surface-1 text-ink-800"}`}>
-          {paid
+          {cancelled
+            ? "Si vous aviez payé, AMAZER vous contacte pour le remboursement."
+            : delivered
+              ? "Commande livrée. Merci pour votre confiance !"
+              : paid
             ? "Paiement confirmé. La boutique prépare votre commande."
             : "Paiement en cours de vérification par AMAZER. La préparation commence dès la confirmation."}
         </p>
 
-        <ol className="mt-5 space-y-3">
+        <ol className={`mt-5 space-y-3 ${cancelled ? "hidden" : ""}`}>
           {steps.map((step) => {
             const Icon = step.icon;
             return (
@@ -105,9 +114,9 @@ export function OrderConfirmation({ orderId }: { orderId: string }) {
         </p>
 
         <div className="mt-5 grid gap-2 sm:grid-cols-3">
-          {receipt?.receipt_url ? (
+          {receipt ? (
             <Button asChild>
-              <Link href={receipt.receipt_url}>Mon reçu</Link>
+              <Link href={getOrderReceiptRoute(receipt.order_id, receipt.token)}>Mon reçu</Link>
             </Button>
           ) : null}
           <Button asChild variant="outline">

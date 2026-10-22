@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, ShoppingCart, Store, Zap } from "lucide-react";
+import { ShoppingCart, Store, Zap } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -11,12 +11,14 @@ import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getActiveAffiliateCode } from "@/lib/affiliate";
+import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
 import { getOrderPayRoute, getOrderReceiptRoute, getOrderSuccessRoute } from "@/lib/mobile-routes";
 import { DEFAULT_SHIPPING_COST, optimizeCart } from "@/lib/optimize-cart";
 import { getPublicDistrictFees, getPublicFinanceSettings } from "@/services/finance-service";
 import { notifyLocalOrderEvent } from "@/services/notification-service";
-import { checkout, getReceiptLink } from "@/services/order-service";
+import { checkout, getReceiptLink, quoteCheckout } from "@/services/order-service";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useCartStore } from "@/store/cartStore";
 import { OptimizeCartResult } from "@/types/cart";
 
@@ -31,7 +33,6 @@ export default function CartPage() {
   const [shareMessage, setShareMessage] = useState("");
   const [paymentMode, setPaymentMode] = useState<"nita" | "amana">("nita");
   const [deliveryType, setDeliveryType] = useState<"standard" | "express_niamey">("standard");
-  const [transactionCode, setTransactionCode] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryPhone, setDeliveryPhone] = useState("");
   // Sans adresse ni telephone, le livreur ne peut pas livrer : on les exige avant la commande.
@@ -75,28 +76,33 @@ export default function CartPage() {
     [items, financeSettings?.commission_rate, financeSettings?.service_fee, selectedShippingFee]
   );
 
-  const downloadReceipt = () => {
-    if (!result) {
-      return;
-    }
-
-    const content = [
-      "AMAZER - Recu de paiement",
-      `Date: ${new Date().toLocaleString("fr-NE")}`,
-      `Mode: ${paymentMode.toUpperCase()}`,
-      `Transaction: ${transactionCode || "N/A"}`,
-      `Livraison: ${deliveryType === "express_niamey" ? "Express Niamey" : "Standard"}`,
-      `Total estime: ${formatXOF(result.splitTotal)}`,
-    ].join("\n");
-
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `amazer-recu-${Date.now()}.txt`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
+  // Montant exact du serveur (commission propre a chaque boutique, frais du quartier) : c'est ce qui sera paye.
+  const quoteInput = useDebouncedValue(
+    JSON.stringify({
+      items: (result?.optimizedPlan ?? []).map((entry) => ({
+        product_id: entry.productId,
+        vendor_id: entry.vendorId,
+        quantity: entry.quantity,
+        unit_price: entry.unitPrice,
+        reseller_listing_id: entry.resellerListingId,
+      })),
+      delivery_type: deliveryType,
+      district: deliveryType === "standard" && district ? district : undefined,
+    }),
+    300
+  );
+  const { data: quote } = useQuery({
+    queryKey: ["checkout-quote", quoteInput],
+    queryFn: () => quoteCheckout(JSON.parse(quoteInput)),
+    enabled: Boolean(result?.optimizedPlan.length) && result?.status !== "unavailable_item",
+    staleTime: 30_000,
+    retry: false,
+  });
+  const shown = quote
+    ? { subtotal: quote.items_subtotal, shipping: quote.delivery_fee, commission: quote.platform_commission, service: quote.platform_service_fee, total: quote.total }
+    : result
+      ? { subtotal: result.subtotal, shipping: result.shippingFee, commission: result.commissionFee, service: result.serviceFee, total: result.splitTotal }
+      : null;
 
   const placeOrder = async () => {
     if (!result || isSubmittingOrder) {
@@ -115,7 +121,6 @@ export default function CartPage() {
         })),
         payment_mode: paymentMode,
         delivery_type: deliveryType,
-        transaction_code: transactionCode || undefined,
         currency: "XOF",
         district: deliveryType === "standard" && district ? district : undefined,
         delivery_address: deliveryAddress.trim() || undefined,
@@ -130,8 +135,8 @@ export default function CartPage() {
         // Fallback: on conserve le flux de paiement/succes si le lien recu n est pas encore pret.
       }
       notifyLocalOrderEvent({
-        title: "Commande envoyee",
-        body: `Ta commande ${order.tracking_code ?? order.id.slice(0, 8)} est en statut ${order.status}.`,
+        title: "Commande enregistrée",
+        body: `Votre commande ${order.tracking_code ?? order.id.slice(0, 8)} est enregistrée. Il reste à la payer.`,
         tag: `customer-order-${order.id}`,
         href: receiptHref ?? getOrderSuccessRoute(order.id),
       });
@@ -141,11 +146,15 @@ export default function CartPage() {
         router.push(getOrderPayRoute(order.id));
       }
       return;
-    } catch {
-      setShareMessage("Échec création commande. Vérifie ta connexion.");
+    } catch (error) {
+      // Pas connecte : on garde le panier et on revient ici apres la connexion.
+      if (getHttpResponseStatus(error) === 401) {
+        window.location.assign(`/login?next=${encodeURIComponent("/cart")}`);
+        return;
+      }
+      setShareMessage(getApiErrorMessage(error, "La commande n'a pas pu être créée. Vérifiez votre connexion, puis réessayez."));
     } finally {
       setIsSubmittingOrder(false);
-      window.setTimeout(() => setShareMessage(""), 2400);
     }
   };
 
@@ -164,7 +173,7 @@ export default function CartPage() {
         <div className="rounded-card border border-border bg-card p-10 text-center">
           <ShoppingCart className="mx-auto h-12 w-12 text-ink-400" aria-hidden="true" />
           <h1 className="mt-4 text-xl font-semibold text-ink-900">Votre panier est vide</h1>
-          <p className="mt-1 text-sm text-ink-600">Parcourez les boutiques de Niamey et ajoutez vos premiers articles.</p>
+          <p className="mt-1 text-sm text-ink-600">Parcourez les boutiques et ajoutez vos premiers articles.</p>
           <Button asChild className="mt-6">
             <Link href="/">Découvrir les produits</Link>
           </Button>
@@ -329,18 +338,9 @@ export default function CartPage() {
                 <p className="text-xs text-ink-600">Validation dans l&apos;application AmanaTa</p>
               </button>
             </div>
-            <div className="mt-4 max-w-md">
-              <label htmlFor="transaction-code" className="text-sm font-medium text-ink-800">
-                Référence de transaction <span className="font-normal text-ink-600">(si vous avez déjà payé)</span>
-              </label>
-              <Input
-                id="transaction-code"
-                value={transactionCode}
-                onChange={(event) => setTransactionCode(event.target.value)}
-                placeholder="Facultatif"
-                className="mt-1 h-11"
-              />
-            </div>
+            <p className="mt-3 text-xs text-ink-600">
+              Après « Commander », vous voyez le numéro AMAZER et le montant exact à envoyer.
+            </p>
           </article>
         </div>
 
@@ -368,37 +368,39 @@ export default function CartPage() {
                     </li>
                   ))}
                 </ul>
+                {shown ? (
                 <dl className="mt-4 space-y-1 border-t border-border pt-3 text-sm">
                   <div className="flex justify-between text-ink-700">
                     <dt>Sous-total</dt>
-                    <dd>{formatXOF(result.subtotal)}</dd>
+                    <dd>{formatXOF(shown.subtotal)}</dd>
                   </div>
                   <div className="flex justify-between text-ink-700">
                     <dt>Livraison</dt>
-                    <dd>{formatXOF(result.shippingFee)}</dd>
+                    <dd>{formatXOF(shown.shipping)}</dd>
                   </div>
-                  {result.commissionFee > 0 ? (
+                  {shown.commission > 0 ? (
                     <div className="flex justify-between text-ink-700">
                       <dt>Commission AMAZER</dt>
-                      <dd>{formatXOF(result.commissionFee)}</dd>
+                      <dd>{formatXOF(shown.commission)}</dd>
                     </div>
                   ) : null}
-                  {result.serviceFee > 0 ? (
+                  {shown.service > 0 ? (
                     <div className="flex justify-between text-ink-700">
                       <dt>Frais de service</dt>
-                      <dd>{formatXOF(result.serviceFee)}</dd>
+                      <dd>{formatXOF(shown.service)}</dd>
                     </div>
                   ) : null}
                   <div className="flex justify-between border-t border-border pt-2 text-base font-bold text-ink-900">
                     <dt>Total</dt>
                     <dd>
-                      <AnimatedPrice value={result.splitTotal} />
+                      <AnimatedPrice value={shown.total} />
                     </dd>
                   </div>
                   <div className="text-right">
-                    <ConvertedPrice amount={result.splitTotal} />
+                    <ConvertedPrice amount={shown.total} />
                   </div>
                 </dl>
+                ) : null}
                 <Button
                   type="button"
                   size="lg"
@@ -411,16 +413,10 @@ export default function CartPage() {
                 {!deliveryReady ? (
                   <p className="mt-2 text-center text-xs text-ink-600">Indiquez l&apos;adresse et le téléphone de livraison.</p>
                 ) : null}
-                <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
-                  <button type="button" onClick={downloadReceipt} className="inline-flex min-h-10 items-center gap-1 text-ink-600 hover:text-ink-900 hover:underline">
-                    <Download className="h-4 w-4" aria-hidden="true" />
-                    Reçu provisoire
-                  </button>
-                </div>
               </>
             )}
             {shareMessage ? (
-              <p className="mt-2 text-xs text-ink-600" role="status">
+              <p className="mt-2 text-sm text-danger" role="alert">
                 {shareMessage}
               </p>
             ) : null}

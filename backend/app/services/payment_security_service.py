@@ -12,8 +12,8 @@ from app.models.order import Order
 from app.models.restaurant import RestaurantOrder
 
 MANUAL_PAYMENT_PENDING_MESSAGE = (
-    "Paiement en attente de verification par AMAZER. "
-    "Votre commande sera confirmee des que la transaction aura ete controlee."
+    "Paiement en attente de vérification par AMAZER. "
+    "Votre commande sera confirmée dès que la transaction aura été contrôlée."
 )
 
 

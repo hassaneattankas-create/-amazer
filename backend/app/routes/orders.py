@@ -16,7 +16,7 @@ from app.core.receipt_security import (
     decode_receipt_access_token,
     receipt_integrity_hash,
 )
-from app.core.checkout_fees import platform_commission_and_service_fee
+from app.core.checkout_fees import marketplace_fees
 from app.core.rate_limit import enforce_rate_limit
 from app.core.exceptions import UnauthorizedError, ValidationDomainError
 from app.database import get_db
@@ -32,6 +32,8 @@ from app.services.affiliate_service import customer_bonus_for_order, request_fin
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.schemas.order import (
+    CheckoutQuoteRequest,
+    CheckoutQuoteResponse,
     CheckoutRequest,
     OrderFulfillmentResponse,
     OrderItemResponse,
@@ -444,6 +446,75 @@ def list_my_orders(
     return [_to_order_response(order) for order in orders]
 
 
+class _PricedCart:
+    """Articles verifies et montants d'un panier (meme calcul pour le devis et la commande)."""
+
+    def __init__(self) -> None:
+        self.validated_items: list[tuple[Price, int, ResellerListing | None]] = []
+        self.total = 0.0
+        self.currency: str | None = None
+        self.vendor_ids: set[str] = set()
+        self.shipped_vendor_ids: set[str] = set()
+        self.vendor_subtotals: dict[str, float] = {}
+
+
+def _price_cart(db: Session, items: list, *, lock: bool) -> _PricedCart:
+    cart = _PricedCart()
+    for item in items:
+        stmt = select(Price).where(
+            Price.product_id == item.product_id,
+            Price.vendor_id == item.vendor_id,
+            Price.is_active.is_(True),
+        )
+        if lock:
+            stmt = stmt.with_for_update()
+        price = db.scalar(stmt.options(selectinload(Price.product), selectinload(Price.vendor)))
+        if price is None or price.product is None or price.vendor is None:
+            raise ValidationDomainError("Article indisponible")
+        if not price.vendor.is_active:
+            raise ValidationDomainError("Vendeur inactif")
+        if price.stock_quantity < item.quantity:
+            raise ValidationDomainError("Stock insuffisant pour cet article")
+        if cart.currency is None:
+            cart.currency = price.currency
+        elif cart.currency != price.currency:
+            raise ValidationDomainError("Les devises multiples ne sont pas supportees")
+        listing = _resolve_reseller_listing(db, item.reseller_listing_id, price)
+        unit_amount = max(float(listing.resale_amount), float(price.amount)) if listing else float(price.amount)
+        line_total = unit_amount * item.quantity
+        cart.total += line_total
+        cart.vendor_subtotals[price.vendor_id] = cart.vendor_subtotals.get(price.vendor_id, 0.0) + line_total
+        cart.validated_items.append((price, item.quantity, listing))
+        cart.vendor_ids.add(price.vendor_id)
+        # Produit numerique : pas de livraison. Un vendeur n'est facture que s'il a un article physique.
+        if not (getattr(price.product, "specs", None) or {}).get("is_digital"):
+            cart.shipped_vendor_ids.add(price.vendor_id)
+    return cart
+
+
+def _cart_fees(db: Session, cart: _PricedCart, delivery_type: str, district: str | None) -> dict[str, float]:
+    delivery_total = _resolve_checkout_delivery_fee(db, delivery_type, district) * len(cart.shipped_vendor_ids)
+    commission_fee, service_fee = marketplace_fees(db, get_or_create_global_settings(db), cart.vendor_subtotals)
+    return {
+        "items_subtotal": round(cart.total, 2),
+        "delivery_fee": round(delivery_total, 2),
+        "platform_commission": round(commission_fee, 2),
+        "platform_service_fee": round(service_fee, 2),
+        "total": round(cart.total + delivery_total + commission_fee + service_fee, 2),
+    }
+
+
+@router.post("/quote", response_model=CheckoutQuoteResponse)
+def quote_checkout(
+    payload: CheckoutQuoteRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+) -> CheckoutQuoteResponse:
+    """Montant exact avant commande (meme calcul que /checkout) : le panier affiche ce qui sera paye."""
+    enforce_rate_limit(request, key="checkout_quote", limit=60, window_seconds=60)
+    return CheckoutQuoteResponse(**_cart_fees(db, _price_cart(db, payload.items, lock=False), payload.delivery_type, payload.district))
+
+
 @router.post("/checkout", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 def checkout(
     payload: CheckoutRequest,
@@ -454,41 +525,10 @@ def checkout(
     enforce_csrf(request)
     enforce_rate_limit(request, key="payment_checkout", limit=10, window_seconds=60)
     estimated_minutes = 45 if payload.delivery_type == "express_niamey" else 180
-    validated_items: list[tuple[Price, int, ResellerListing | None]] = []
-    total = 0.0
-    order_currency: str | None = None
-    vendor_ids: set[str] = set()
-    shipped_vendor_ids: set[str] = set()
-    for item in payload.items:
-        price = db.scalar(
-            select(Price)
-            .where(
-                Price.product_id == item.product_id,
-                Price.vendor_id == item.vendor_id,
-                Price.is_active.is_(True),
-            )
-            .with_for_update()
-            .options(selectinload(Price.product), selectinload(Price.vendor))
-        )
-        if price is None or price.product is None or price.vendor is None:
-            raise ValidationDomainError("Article indisponible")
-        if not price.vendor.is_active:
-            raise ValidationDomainError("Vendeur inactif")
-        if price.stock_quantity < item.quantity:
-            raise ValidationDomainError("Stock insuffisant pour cet article")
-        if order_currency is None:
-            order_currency = price.currency
-        elif order_currency != price.currency:
-            raise ValidationDomainError("Les devises multiples ne sont pas supportees")
-        listing = _resolve_reseller_listing(db, item.reseller_listing_id, price)
-        unit_amount = max(float(listing.resale_amount), float(price.amount)) if listing else float(price.amount)
-        line_total = unit_amount * item.quantity
-        total += line_total
-        validated_items.append((price, item.quantity, listing))
-        vendor_ids.add(price.vendor_id)
-        # Produit numerique : pas de livraison. Un vendeur n'est facture que s'il a un article physique.
-        if not (getattr(price.product, "specs", None) or {}).get("is_digital"):
-            shipped_vendor_ids.add(price.vendor_id)
+    cart = _price_cart(db, payload.items, lock=True)
+    validated_items = cart.validated_items
+    order_currency = cart.currency
+    vendor_ids = cart.vendor_ids
     encrypted_code: str | None = None
     code_hash: str | None = None
     payment_status = "pending"
@@ -504,23 +544,9 @@ def checkout(
     if order_currency and payload.currency.upper() != order_currency:
         raise ValidationDomainError("Devise invalide pour cette commande")
 
-    delivery_fee_per_vendor = _resolve_checkout_delivery_fee(db, payload.delivery_type, payload.district)
-    delivery_total = delivery_fee_per_vendor * len(shipped_vendor_ids)
-    items_subtotal = total
-    settings_row = get_or_create_global_settings(db)
-    commission_fee, service_fee = platform_commission_and_service_fee(
-        settings_row,
-        None,
-        items_subtotal,
-        bool(validated_items),
-    )
-    total = items_subtotal + delivery_total + commission_fee + service_fee
-    fee_breakdown = {
-        "items_subtotal": round(items_subtotal, 2),
-        "delivery_fee": round(delivery_total, 2),
-        "platform_commission": round(commission_fee, 2),
-        "platform_service_fee": round(service_fee, 2),
-    }
+    fees = _cart_fees(db, cart, payload.delivery_type, payload.district)
+    total = fees.pop("total")
+    fee_breakdown = fees
 
     # Affiliation : bonus fixe sur la premiere commande d'un nouveau client (jamais un % des ventes).
     affiliate_user_id, affiliate_amount = customer_bonus_for_order(
@@ -630,14 +656,14 @@ def start_order_payment(
         raise UnauthorizedError("Unauthorized order access")
     ensure_not_cancelled(order)
     if order.payment_status == "paid":
-        return PaymentStartResponse(order_id=order.id, payment_status="paid", message="Paiement deja confirme.")
+        return PaymentStartResponse(order_id=order.id, payment_status="paid", message="Paiement déjà confirmé.")
     if order.payment_mode != "amana":
         raise ValidationDomainError("Ce mode de paiement ne requiert pas Amana")
     if order.gateway_payment_reference:
         return PaymentStartResponse(
             order_id=order.id,
             payment_status="pending",
-            message="Paiement Amana deja initialise. Validez-le dans AmanaTa puis verifiez son statut.",
+            message="Paiement Amana déjà lancé. Validez-le dans AmanaTa, puis vérifiez son statut.",
         )
     reference = order.payment_reference or _build_payment_reference(order.id)
     order.payment_reference = reference
@@ -658,7 +684,7 @@ def start_order_payment(
     return PaymentStartResponse(
         order_id=order.id,
         payment_status="pending",
-        message="Paiement Amana initialise. Validez-le dans AmanaTa puis verifiez son statut.",
+        message="Paiement Amana lancé. Validez-le dans AmanaTa, puis vérifiez son statut.",
     )
 
 
@@ -684,7 +710,7 @@ def confirm_order_payment(
             order_id=order.id,
             payment_status="paid",
             order_status=order.status,
-            message="Paiement deja confirme.",
+            message="Paiement déjà confirmé.",
         )
 
     if order.payment_mode == "amana":
@@ -747,7 +773,7 @@ def confirm_order_payment(
         order_id=order.id,
         payment_status=order.payment_status,
         order_status=order.status,
-        message="Paiement confirme avec succes.",
+        message="Paiement confirmé.",
     )
 
 

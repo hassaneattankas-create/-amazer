@@ -31,6 +31,22 @@ class CheckoutRequest(BaseModel):
     delivery_phone: str | None = Field(default=None, min_length=8, max_length=40)
 
 
+class CheckoutQuoteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    items: list[CheckoutItemRequest] = Field(min_length=1, max_length=100)
+    delivery_type: str = Field(default="standard", pattern="^(standard|express_niamey)$")
+    district: str | None = Field(default=None, max_length=120)
+
+
+class CheckoutQuoteResponse(BaseModel):
+    items_subtotal: float
+    delivery_fee: float
+    platform_commission: float
+    platform_service_fee: float
+    total: float
+
+
 class OrderItemResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

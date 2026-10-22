@@ -18,6 +18,24 @@ export async function listMyOrders(): Promise<Order[]> {
   return response.data;
 }
 
+export type CheckoutQuote = {
+  items_subtotal: number;
+  delivery_fee: number;
+  platform_commission: number;
+  platform_service_fee: number;
+  total: number;
+};
+
+/** Montant exact calculé par le serveur (même calcul que la commande). */
+export async function quoteCheckout(payload: {
+  items: CheckoutPayload["items"];
+  delivery_type: CheckoutPayload["delivery_type"];
+  district?: string;
+}): Promise<CheckoutQuote> {
+  const response = await api.post<CheckoutQuote>("/api/v1/orders/quote", payload);
+  return response.data;
+}
+
 export async function checkout(payload: CheckoutPayload): Promise<Order> {
   const response = await api.post<Order>("/api/v1/orders/checkout", payload);
   return response.data;
