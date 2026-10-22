@@ -76,15 +76,16 @@ export default function AdminFinancePage() {
   });
   const { data: adminOrders, error: ordersError } = useQuery({
     queryKey: ["admin-orders"],
-    queryFn: () => listAdminOrders(30),
+    // Même requête que le panneau des commandes (même clé de cache) : mêmes paramètres, sinon l'une écrase l'autre.
+    queryFn: () => listAdminOrders(80),
     enabled: pinVerified,
-    refetchInterval: 5000,
+    refetchInterval: 15000,
   });
   const { data: sellerPayments = [], error: sellerPaymentsError } = useQuery({
     queryKey: ["admin-seller-subscription-payments"],
     queryFn: () => listAdminSellerSubscriptionPayments("pending", 100),
     enabled: pinVerified,
-    refetchInterval: 8000,
+    refetchInterval: 30000,
   });
 
   const sellerPaymentDecisionMutation = useMutation({
@@ -130,9 +131,9 @@ export default function AdminFinancePage() {
   const secondaryErrors = useMemo(
     () =>
       [
-        historyError ? `Historique: ${getAdminFinanceDataError(historyError)}` : null,
-        ordersError ? `Commandes: ${getAdminFinanceDataError(ordersError)}` : null,
-        sellerPaymentsError ? `Paiements vendeurs: ${getAdminFinanceDataError(sellerPaymentsError)}` : null,
+        historyError ? `Historique : ${getAdminFinanceDataError(historyError)}` : null,
+        ordersError ? `Commandes : ${getAdminFinanceDataError(ordersError)}` : null,
+        sellerPaymentsError ? `Paiements vendeurs : ${getAdminFinanceDataError(sellerPaymentsError)}` : null,
       ].filter(Boolean) as string[],
     [historyError, ordersError, sellerPaymentsError]
   );
@@ -165,11 +166,11 @@ export default function AdminFinancePage() {
     const latest = newOrders[0];
     notifyLocalOrderEvent({
       title: "Nouvelle commande client",
-      body: `${latest.customer_name} a passe une commande de ${formatXOF(latest.total_amount)}.`,
+      body: `${latest.customer_name} a passé une commande de ${formatXOF(latest.total_amount)}.`,
       tag: `admin-order-${latest.id}`,
       href: "/admin/finance",
     });
-    setTransferStatus(`Nouvelle commande detectee: ${latest.customer_name} (${formatXOF(latest.total_amount)}).`);
+    setTransferStatus(`Nouvelle commande : ${latest.customer_name} (${formatXOF(latest.total_amount)}).`);
   }, [adminOrders, pinVerified]);
 
   useEffect(() => {
@@ -199,7 +200,7 @@ export default function AdminFinancePage() {
       href: "/admin/finance",
     });
     setTransferStatus(
-      `Validation requise: ${latest.business_name} (${formatXOF(latest.amount_claimed)}).`,
+      `Paiement d'abonnement à valider : ${latest.business_name} (${formatXOF(latest.amount_claimed)}).`,
     );
   }, [sellerPayments, pinVerified]);
 
@@ -268,7 +269,7 @@ export default function AdminFinancePage() {
           <p className="mt-2 text-3xl font-semibold text-brand-600">{formatXOF(wallet.total_amana)}</p>
         </article>
         <article className="premium-card border border-slate-200 bg-white p-5">
-          <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Flux Total Collecte</p>
+          <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Total encaissé</p>
           <p className="mt-2 text-3xl font-semibold text-brand-600">{formatXOF(wallet.total_all)}</p>
         </article>
       </div>
@@ -282,11 +283,11 @@ export default function AdminFinancePage() {
           </p>
         </article>
         <article className="premium-card border border-slate-200 bg-white p-5">
-          <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Frais de Service</p>
+          <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Frais de service</p>
           <p className="mt-2 text-3xl font-semibold text-brand-600">{formatXOF(wallet.service_fee_total)}</p>
         </article>
         <article className="premium-card border border-slate-200 bg-white p-5">
-          <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Disponible a Virer</p>
+          <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Part vendeurs et livraisons</p>
           <p className="mt-2 text-3xl font-semibold text-brand-600">{formatXOF(availableForTransfer)}</p>
         </article>
       </div>
@@ -302,7 +303,7 @@ export default function AdminFinancePage() {
           />
         </article>
         <article className="premium-card border border-slate-200 bg-white p-5">
-          <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Nombre de Vendeurs Actifs</p>
+          <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Vendeurs actifs</p>
           <p className="mt-2 text-3xl font-semibold text-brand-600">{summary?.active_sellers ?? 0}</p>
         </article>
       </div>
@@ -342,12 +343,12 @@ export default function AdminFinancePage() {
               <div key={row.id} className="rounded-xl border border-slate-200 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-medium text-slate-900">
-                    {row.business_name} ({row.seller_email || "email inconnu"})
+                    {row.business_name} ({row.seller_email || "e-mail inconnu"})
                   </p>
                   <p className="text-sm text-brand-600">{formatXOF(row.amount_claimed)}</p>
                 </div>
                 <p className="mt-1 text-xs text-slate-600">
-                  Ref: {row.transaction_reference} | {row.payment_mode.toUpperCase()} | {row.months} mois
+                  Réf. {row.transaction_reference} · {row.payment_mode.toUpperCase()} · {row.months} mois
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Button
@@ -390,14 +391,14 @@ export default function AdminFinancePage() {
       </article>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
-        <h2 className="luxury-title text-lg font-semibold">Revenus AMAZER - 30 derniers jours</h2>
+        <h2 className="luxury-title text-lg font-semibold">Revenus AMAZER, 30 derniers jours</h2>
         <div className="mt-5">
           <AdminRevenueChart data={chartData} />
         </div>
       </article>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
-        <h2 className="luxury-title text-lg font-semibold">Historique Sécurisé des Transactions</h2>
+        <h2 className="luxury-title text-lg font-semibold">Historique des transactions</h2>
         <p className="mt-2 text-sm text-slate-600">
           Les codes sont stockés chiffrés. Vue réservée à l&apos;admin.
         </p>

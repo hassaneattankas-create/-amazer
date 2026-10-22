@@ -35,7 +35,7 @@ export function AdminOrdersPanel() {
   const { data: orders = [], isPending, isError, error } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: () => listAdminOrders(80),
-    refetchInterval: 5000,
+    refetchInterval: 15000,
   });
 
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["admin-orders"] });

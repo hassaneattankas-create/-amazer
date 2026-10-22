@@ -45,7 +45,7 @@ export default function AdminAffiliatesPage() {
         <p className="mt-1 text-sm text-ink-600">
           Dû (disponible ou demandé) : <strong>{formatXOF(available)}</strong> · à vérifier : <strong>{formatXOF(toReview)}</strong>.
           Taux et règles de sécurité :{" "}
-          <Link href="/admin/tarifs" className="font-semibold text-brand-700 hover:underline">
+          <Link href="/admin/tarifs?vue=reglages" className="font-semibold text-brand-700 hover:underline">
             Tarifs
           </Link>
           .

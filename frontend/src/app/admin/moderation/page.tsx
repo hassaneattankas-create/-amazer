@@ -22,9 +22,9 @@ function ReportsSection() {
       </h2>
       <p className="mt-1 text-sm text-ink-600">
         Le contenu des conversations reste privé : vous voyez le motif, l&apos;auteur et la boutique concernée. Pour
-        sanctionner une boutique, utilisez{" "}
-        <Link href="/admin/tarifs" className="font-medium text-brand-600 hover:underline">
-          Vendeurs et tarifs
+        suspendre un compte (client ou boutique), utilisez « Retirer » dans{" "}
+        <Link href="/admin/users" className="font-medium text-brand-600 hover:underline">
+          Utilisateurs
         </Link>
         .
       </p>

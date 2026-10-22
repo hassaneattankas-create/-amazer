@@ -11,6 +11,7 @@ import {
   listAdminSellerSubscriptionPayments,
   listAffiliatePayouts,
   listRefunds,
+  listResellerEarnings,
   listResellerPayments,
 } from "@/services/finance-service";
 import { listConversationReports } from "@/services/moderation-service";
@@ -31,6 +32,7 @@ export default function AdminHomePage() {
   });
   const payouts = useQuery({ queryKey: ["admin-affiliate-payouts", "requested"], queryFn: () => listAffiliatePayouts("requested") });
   const resellers = useQuery({ queryKey: ["admin-reseller-payments"], queryFn: listResellerPayments });
+  const resellerGains = useQuery({ queryKey: ["admin-reseller-earnings"], queryFn: listResellerEarnings });
   const refunds = useQuery({ queryKey: ["admin-refunds", "to_refund"], queryFn: () => listRefunds("to_refund") });
   const reports = useQuery({ queryKey: ["admin-reports"], queryFn: listConversationReports });
 
@@ -60,6 +62,13 @@ export default function AdminHomePage() {
     { href: "/admin/finance", label: "Abonnements vendeurs à valider", hint: "Renouvellements et changements de formule.", icon: Store, count: count(sellerPays), urgent: true },
     { href: "/admin/affilies", label: "Retraits d'affiliés demandés", hint: "Payer puis saisir la référence.", icon: Share2, count: count(payouts) },
     { href: "/admin/revendeurs", label: "Abonnements revendeurs à valider", hint: "Vérifier le paiement.", icon: Wallet, count: count(resellers, (r) => r.status === "pending") },
+    {
+      href: "/admin/revendeurs",
+      label: "Gains de revendeurs à verser",
+      hint: "Verser la marge, puis « Enregistrer un versement ».",
+      icon: Wallet,
+      count: count(resellerGains, (r) => (r.to_pay ?? r.earned) > 0),
+    },
     { href: "/admin/remboursements", label: "Remboursements à faire", hint: "Commandes payées puis annulées.", icon: RotateCcw, count: count(refunds) },
     {
       href: "/admin/moderation",
