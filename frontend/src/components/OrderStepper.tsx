@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { CheckCircle2, Circle, Truck } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
+import { getOrderPayRoute } from "@/lib/mobile-routes";
 import { cancelOrder, confirmOrderReception } from "@/services/order-service";
 import { Order } from "@/types/order";
 
@@ -52,7 +54,13 @@ export function OrderStepper({ order }: OrderStepperProps) {
         <div>
           <p className="text-xs text-slate-500">Commande #{order.tracking_code ?? order.id.slice(0, 8).toUpperCase()}</p>
           {order.status === "payment_pending" ? (
-            <p className="mt-1 text-xs text-amber-700">Paiement en attente de confirmation.</p>
+            <p className="mt-1 text-xs text-amber-700">
+              Paiement en attente de confirmation.{" "}
+              {/* Le client peut revenir payer (ou envoyer sa référence) à tout moment. */}
+              <Link href={getOrderPayRoute(order.id)} className="font-semibold text-brand-700 underline">
+                Payer ou envoyer la référence
+              </Link>
+            </p>
           ) : null}
           {isCancelled ? <p className="mt-1 text-xs font-medium text-danger">Commande annulée.</p> : null}
           {canCancel ? (

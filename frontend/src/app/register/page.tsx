@@ -129,7 +129,9 @@ function RegisterPageContent() {
   } | null>(null);
   const [verifyCode, setVerifyCode] = useState("");
 
-  const next = searchParams.get("next") || "/";
+  // Retour apres inscription : seulement une page du site (jamais « //autre-site »).
+  const rawNext = searchParams.get("next") || "/";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
   const isSellerFlow = useMemo(
     () => searchParams.get("seller") === "1" || next.startsWith("/seller"),
     [next, searchParams]
@@ -188,8 +190,7 @@ function RegisterPageContent() {
         }
         throw loginError;
       }
-      const target = next.startsWith("/") ? next : "/";
-      window.location.assign(target);
+      window.location.assign(next);
     } catch (error) {
       setStatus(getApiErrorMessage(error, "Inscription impossible. Vérifiez les informations saisies."));
     } finally {
@@ -204,7 +205,7 @@ function RegisterPageContent() {
     try {
       await verifyAccount({ identifier: identifier.trim(), code: verifyCode });
       await login({ identifier: identifier.trim(), password });
-      window.location.assign(next.startsWith("/") ? next : "/");
+      window.location.assign(next);
     } catch (error) {
       setStatus(getApiErrorMessage(error, "Vérification impossible. Vérifiez le code."));
     } finally {
@@ -248,13 +249,13 @@ function RegisterPageContent() {
           </p>
           {pendingVerification.preview ? (
             <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              Code de developpement (non visible en production): {pendingVerification.preview}
+              Code de test (jamais affiché en production) : {pendingVerification.preview}
             </p>
           ) : null}
           <form onSubmit={onVerifySubmit} className="mt-6 space-y-4">
             <div>
               <label className="text-sm font-medium text-ink-800" htmlFor="verify-code">
-                Code a 6 chiffres
+                Code à 6 chiffres
               </label>
               <input
                 id="verify-code"
@@ -272,7 +273,7 @@ function RegisterPageContent() {
               disabled={isLoading || !canVerify}
               className="primary-glow-btn w-full text-white"
             >
-              {isLoading ? "Verification..." : "Activer mon compte"}
+              {isLoading ? "Vérification…" : "Activer mon compte"}
             </Button>
             <button
               type="button"
@@ -283,7 +284,7 @@ function RegisterPageContent() {
                 setStatus("");
               }}
             >
-              Retour a l inscription
+              Retour à l&apos;inscription
             </button>
           </form>
           {status ? <p className="mt-3 text-sm text-ink-700">{status}</p> : null}

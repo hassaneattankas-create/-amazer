@@ -80,7 +80,13 @@ function capital(text: string): string {
 }
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {
-  const maybe = error as ApiErrorShape & { code?: string; message?: string; request?: unknown; isAxiosError?: boolean };
+  const maybe = error as ApiErrorShape & {
+    code?: string;
+    message?: string;
+    request?: unknown;
+    isAxiosError?: boolean;
+    config?: { url?: string };
+  };
   // Erreur preparee par le site lui-meme (ex. photo illisible) : son message est deja en francais.
   if (error instanceof Error && !maybe.isAxiosError && !maybe.response && error.message) {
     return error.message;
@@ -90,8 +96,12 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   }
   const status = maybe?.response?.status;
   if (status === 413) return "Fichier trop lourd. Choisissez une photo plus légère.";
-  if (status === 401) return "Votre session a expiré. Reconnectez-vous puis réessayez.";
   const detail = maybe?.response?.data?.detail;
+  // Connexion, verification, mot de passe : le 401 dit ce qui ne va pas (ex. mot de passe incorrect).
+  const isAuthForm = /\/auth\/(login|verify|password\/)/.test(maybe?.config?.url ?? "");
+  if (status === 401 && !(isAuthForm && typeof detail === "string" && detail.trim())) {
+    return "Votre session a expiré. Reconnectez-vous puis réessayez.";
+  }
   if (typeof detail === "string" && detail.trim()) {
     return detail;
   }
@@ -103,10 +113,10 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   }
   const code = maybe?.response?.data?.code;
   const translatedByCode: Record<string, string> = {
-    unauthorized: "Acces non autorise.",
+    unauthorized: "Accès non autorisé.",
     forbidden: "Action interdite.",
-    conflict: "Cette information existe deja.",
-    validation_error: "Certaines donnees sont invalides.",
+    conflict: "Cette information existe déjà.",
+    validation_error: "Certaines données sont invalides.",
     too_many_requests: "Trop de tentatives. Patientez un instant.",
   };
   if (code && translatedByCode[code]) {

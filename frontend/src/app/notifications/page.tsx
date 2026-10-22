@@ -74,6 +74,7 @@ export default function NotificationsPage() {
   }
 
   async function handleClearAll() {
+    if (!window.confirm("Effacer toutes vos notifications ?")) return;
     setActionError("");
     clearAll();
     setHasMore(true);
@@ -122,7 +123,11 @@ export default function NotificationsPage() {
             Vider
           </Button>
         </div>
-        {actionError ? <p className="mt-3 text-sm text-rose-700">{actionError}</p> : null}
+        {actionError ? (
+          <p className="mt-3 text-sm text-rose-700" role="alert">
+            {actionError}
+          </p>
+        ) : null}
       </header>
 
       <article className="premium-card border border-slate-200 bg-white p-6">
@@ -143,7 +148,12 @@ export default function NotificationsPage() {
                   <button
                     type="button"
                     className="mt-3 text-xs font-medium text-brand-600 hover:underline"
-                    onClick={() => void handleMarkAsRead(item.id)}
+                    onClick={(event) => {
+                      // Dans une notification cliquable : marquer comme lu sans ouvrir la page.
+                      event.preventDefault();
+                      event.stopPropagation();
+                      void handleMarkAsRead(item.id);
+                    }}
                   >
                     Marquer comme lu
                   </button>

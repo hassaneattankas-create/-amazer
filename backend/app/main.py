@@ -15,6 +15,7 @@ from sqlalchemy import func, select, text
 
 from app import models as _models  # noqa: F401
 from app.config import get_settings
+from app.core.messages_fr import to_french
 from app.core.csrf import enforce_csrf
 from app.core.security import hash_password
 from app.core.exceptions import DomainError
@@ -488,7 +489,7 @@ def ping() -> dict[str, str]:
 def domain_error_handler(_: Request, exc: DomainError) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,
-        content={"detail": exc.message, "code": exc.code},
+        content={"detail": to_french(exc.message), "code": exc.code},
     )
 
 
@@ -601,7 +602,7 @@ async def security_access_logger(
             except DomainError as exc:
                 return JSONResponse(
                     status_code=exc.status_code,
-                    content={"detail": exc.message, "code": exc.code},
+                    content={"detail": to_french(exc.message), "code": exc.code},
                 )
     response = await call_next(request)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")

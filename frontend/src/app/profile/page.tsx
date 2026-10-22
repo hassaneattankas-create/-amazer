@@ -12,7 +12,7 @@ export default function ProfilePage() {
 
   return (
     <section className="mx-auto w-full max-w-3xl px-4 pb-14 pt-10 sm:px-6">
-      <p className="text-sm text-slate-500">Redirection vers le dashboard...</p>
+      <p className="text-sm text-slate-500">Redirection vers votre tableau de bord…</p>
     </section>
   );
 }

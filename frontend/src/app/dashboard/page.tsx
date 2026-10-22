@@ -14,6 +14,7 @@ import { OrderStepper } from "@/components/OrderStepper";
 import { PasswordInput } from "@/components/PasswordInput";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { getHttpResponseStatus } from "@/lib/api-error";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { CURRENCIES, LANGUAGES, countryName } from "@/lib/locale";
 import { deleteMyAccount } from "@/services/auth-service";
@@ -30,7 +31,8 @@ export default function DashboardPage() {
   const [deleteStatus, setDeleteStatus] = useState("");
   const [soundEnabled, setSoundEnabled] = useState(() => isNotificationSoundEnabled());
 
-  const { data: orders = [], isPending: ordersPending } = useQuery({
+  const [showAllOrders, setShowAllOrders] = useState(false);
+  const { data: orders = [], isPending: ordersPending, error: ordersError } = useQuery({
     queryKey: ["orders-me"],
     queryFn: listMyOrders,
     retry: false,
@@ -52,7 +54,23 @@ export default function DashboardPage() {
   function onDeleteAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setDeleteStatus("");
+    if (!window.confirm("Supprimer définitivement votre compte ? Cette action ne peut pas être annulée.")) return;
     deleteAccountMutation.mutate({ password: deletePassword });
+  }
+
+  // Pas connecté : on invite à se connecter au lieu d'afficher un tableau vide trompeur.
+  if (getHttpResponseStatus(ordersError) === 401) {
+    return (
+      <section className="mx-auto w-full max-w-xl px-gutter py-10">
+        <div className={`${cardClass} text-center`}>
+          <h1 className="text-xl font-semibold text-ink-900">Connectez-vous</h1>
+          <p className="mt-1 text-sm text-ink-600">Retrouvez vos commandes, réservations et préférences.</p>
+          <Button asChild className="mt-4">
+            <Link href={`/login?next=${encodeURIComponent("/dashboard")}`}>Se connecter</Link>
+          </Button>
+        </div>
+      </section>
+    );
   }
 
   const memberSince = user?.created_at
@@ -82,7 +100,16 @@ export default function DashboardPage() {
           {ordersPending ? (
             <div className="h-24 animate-pulse rounded-card bg-surface-3" aria-busy="true" />
           ) : orders.length ? (
-            orders.slice(0, 5).map((order) => <OrderStepper key={order.id} order={order} />)
+            <>
+              {(showAllOrders ? orders : orders.slice(0, 5)).map((order) => (
+                <OrderStepper key={order.id} order={order} />
+              ))}
+              {orders.length > 5 && !showAllOrders ? (
+                <Button type="button" variant="outline" onClick={() => setShowAllOrders(true)}>
+                  Voir les {orders.length} commandes
+                </Button>
+              ) : null}
+            </>
           ) : (
             <div className="text-sm text-ink-600">
               Aucune commande pour le moment.{" "}

@@ -62,7 +62,7 @@ export default function ForgotPasswordPage() {
         <h1 className="text-2xl font-semibold text-ink-900">Mot de passe oublié</h1>
         <p className="mt-2 text-sm text-ink-600">
           {step === "request"
-            ? "Indiquez l'e-mail ou le numéro WhatsApp de votre compte : nous vous envoyons un code a 6 chiffres."
+            ? "Indiquez l'e-mail ou le numéro WhatsApp de votre compte : nous vous envoyons un code à 6 chiffres."
             : "Saisissez le code reçu et choisissez un nouveau mot de passe."}
         </p>
 
@@ -84,7 +84,7 @@ export default function ForgotPasswordPage() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Envoi..." : "Recevoir un code"}
+              {isLoading ? "Envoi…" : "Recevoir un code"}
             </Button>
           </form>
         ) : (
@@ -120,10 +120,10 @@ export default function ForgotPasswordPage() {
               onChange={(event) => setNewPassword(event.target.value)}
             />
             <p className="text-xs text-ink-600">
-              8 caracteres minimum, avec une minuscule, une majuscule, un chiffre et un caractere special.
+              8 caractères minimum, avec une minuscule, une majuscule, un chiffre et un caractère spécial.
             </p>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Modification..." : "Changer mon mot de passe"}
+              {isLoading ? "Modification…" : "Changer mon mot de passe"}
             </Button>
             <button
               type="button"

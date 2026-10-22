@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ConversationList } from "@/components/messages/ConversationList";
 import { ConversationThread } from "@/components/messages/ConversationThread";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getApiErrorMessage, getHttpResponseStatus } from "@/lib/api-error";
 import {
   getConversation,
   listConversations,
@@ -88,6 +88,25 @@ function MessagesContent() {
 
   const showThread = Boolean(conversationId || (newVendorId && !existing));
   const thread = threadQuery.data;
+
+  // Pas connecté (ex. « Écrire à la boutique ») : connexion puis retour sur cette même conversation.
+  if (getHttpResponseStatus(listQuery.error) === 401) {
+    const back = typeof window === "undefined" ? "/messages" : `${window.location.pathname}${window.location.search}`;
+    return (
+      <section className="mx-auto max-w-xl px-gutter py-10">
+        <div className="rounded-card border border-border bg-card p-6 text-center">
+          <h1 className="text-xl font-semibold text-ink-900">Connectez-vous pour écrire</h1>
+          <p className="mt-1 text-sm text-ink-600">Vos messages avec les boutiques restent privés.</p>
+          <Link
+            href={`/login?next=${encodeURIComponent(back)}`}
+            className="mt-4 inline-flex min-h-11 items-center rounded-field bg-brand-600 px-5 text-sm font-semibold text-white hover:bg-brand-700"
+          >
+            Se connecter
+          </Link>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="mx-auto max-w-5xl px-gutter py-8">
