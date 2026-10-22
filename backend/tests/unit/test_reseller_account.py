@@ -66,3 +66,42 @@ def test_inactive_reseller_shop_shows_no_products(monkeypatch) -> None:
     db.get.return_value = SimpleNamespace(id="r-1", is_active=True, full_name="Awa Diallo")
     shop = route.reseller_shop("r-1", db)
     assert shop.active is False and shop.items == []
+
+
+def test_admin_reseller_subscription_state() -> None:
+    from app.routes import admin_finance
+    state = admin_finance._reseller_subscription_state
+    assert state(0, None, NOW) == "free"
+    assert state(500, None, NOW) == "none"
+    assert state(500, NOW + timedelta(days=2), NOW) == "active"
+    assert state(500, (NOW - timedelta(days=1)).replace(tzinfo=None), NOW) == "expired"
+
+
+def test_admin_sees_every_reseller_even_without_sales(monkeypatch) -> None:
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from app.database import Base
+    from app.models.reseller import ResellerAccount, ResellerListing, ResellerSubscriptionPayment
+    from app.models.user import User
+    from app.routes import admin_finance
+    from app.routes.resellers import EarningsResponse
+
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine, tables=[t.__table__ for t in (User, ResellerAccount, ResellerListing, ResellerSubscriptionPayment)])
+    monkeypatch.setattr(admin_finance, "_require_finance_pin", lambda *_a, **_k: None)
+    monkeypatch.setattr(admin_finance, "reseller_terms", lambda _db: (500.0, 10.0))
+    monkeypatch.setattr(admin_finance, "compute_reseller_earnings", lambda _db, _uid: EarningsResponse(earned=0, pending=0, orders_delivered=0, orders_pending=0))
+    with Session(engine) as db:
+        for uid in ("a", "b", "c"):
+            db.add(User(id=uid, email=f"{uid}@t.ne", full_name=f"Revendeur {uid}", hashed_password="x"))
+        db.add(ResellerAccount(user_id="a", paid_until=datetime.now(UTC) + timedelta(days=5)))
+        db.add_all([ResellerListing(reseller_user_id="a", price_id="p1", resale_amount=1000, is_active=True),
+                    ResellerListing(reseller_user_id="a", price_id="p2", resale_amount=1000, is_active=False),
+                    ResellerListing(reseller_user_id="b", price_id="p1", resale_amount=900, is_active=True)])
+        db.add(ResellerSubscriptionPayment(user_id="a", payment_mode="nita", transaction_reference="R1", status="approved"))
+        db.commit()
+        rows = {r.user_id: r for r in admin_finance.list_all_resellers(SimpleNamespace(), db, SimpleNamespace(id="admin"))}
+    assert set(rows) == {"a", "b"}  # c n'est pas revendeur
+    assert (rows["a"].listings_active, rows["a"].listings_total, rows["a"].subscription, rows["a"].has_paid) == (1, 2, "active", True)
+    assert (rows["b"].subscription, rows["b"].has_paid) == ("none", False)

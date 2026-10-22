@@ -73,7 +73,7 @@ from app.schemas.finance import (
 )
 from app.services import order_event_notifications as order_events
 from app.routes.resellers import compute_earnings as compute_reseller_earnings
-from app.models.reseller import ResellerSubscriptionPayment
+from app.models.reseller import ResellerAccount, ResellerListing, ResellerSubscriptionPayment
 from app.models.refund import Refund
 from app.models.affiliate import AffiliateAccount, AffiliateEarning, AffiliatePayout, AffiliateReferral
 from app.routes.affiliates import compute_affiliate_earnings
@@ -91,6 +91,7 @@ from app.services.affiliate_service import (
 )
 from app.services.reseller_account_service import ensure_account as ensure_reseller_account
 from app.services.reseller_account_service import extend_subscription as extend_reseller_subscription
+from app.services.reseller_account_service import reseller_terms
 from app.services.audit_log_service import append_audit_log
 from app.services.order_cancellation_service import cancel_order, ensure_not_cancelled, notify_order_cancelled
 from app.services.order_fulfillment_service import sync_fulfillments
@@ -2363,6 +2364,89 @@ def list_reseller_earnings(
             )
         )
     return sorted(rows, key=lambda row: row.earned, reverse=True)
+
+
+class AdminResellerRow(BaseModel):
+    user_id: str
+    full_name: str
+    contact: str
+    whatsapp_phone: str | None
+    joined_at: str | None
+    listings_active: int
+    listings_total: int
+    # free = abonnement gratuit (0 XOF) ; active = paye ou en essai ; expired = echu ; none = jamais active
+    subscription: Literal["free", "active", "expired", "none"]
+    paid_until: str | None
+    has_paid: bool
+    earned: float
+    pending: float
+    orders_delivered: int
+
+
+def _reseller_subscription_state(fee: float, paid_until: datetime | None, now: datetime) -> str:
+    if fee <= 0:
+        return "free"
+    if paid_until is None:
+        return "none"
+    aware = paid_until if paid_until.tzinfo else paid_until.replace(tzinfo=UTC)
+    return "active" if aware > now else "expired"
+
+
+@router.get("/resellers", response_model=list[AdminResellerRow])
+def list_all_resellers(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> list[AdminResellerRow]:
+    """Tous les revendeurs presents (compte revendeur ou au moins une annonce), meme sans vente."""
+    _require_finance_pin(request, admin_user)
+    fee, _percent = reseller_terms(db)
+    now = datetime.now(UTC)
+    counts: dict[str, list[int]] = {}
+    for user_id, is_active, total in db.execute(
+        select(ResellerListing.reseller_user_id, ResellerListing.is_active, func.count(ResellerListing.id)).group_by(
+            ResellerListing.reseller_user_id, ResellerListing.is_active
+        )
+    ).all():
+        entry = counts.setdefault(user_id, [0, 0])
+        entry[1] += int(total)
+        if is_active:
+            entry[0] += int(total)
+    accounts = {account.user_id: account for account in db.scalars(select(ResellerAccount)).all()}
+    paid_ids = set(
+        db.scalars(
+            select(ResellerSubscriptionPayment.user_id).where(ResellerSubscriptionPayment.status == "approved").distinct()
+        ).all()
+    )
+    ids = set(accounts) | set(counts)
+    users = {user.id: user for user in db.scalars(select(User).where(User.id.in_(ids))).all()} if ids else {}
+    rows: list[AdminResellerRow] = []
+    for user_id in ids:
+        user = users.get(user_id)
+        if user is None:
+            continue
+        account = accounts.get(user_id)
+        active, total = counts.get(user_id, [0, 0])
+        totals = compute_reseller_earnings(db, user_id)
+        joined = (account.created_at if account else None) or user.created_at
+        rows.append(
+            AdminResellerRow(
+                user_id=user.id,
+                full_name=user.full_name or "Revendeur",
+                contact=user.email,
+                whatsapp_phone=user.whatsapp_phone,
+                joined_at=joined.isoformat() if joined else None,
+                listings_active=active,
+                listings_total=total,
+                subscription=_reseller_subscription_state(fee, account.paid_until if account else None, now),
+                paid_until=account.paid_until.isoformat() if account and account.paid_until else None,
+                has_paid=user_id in paid_ids,
+                earned=totals.earned,
+                pending=totals.pending,
+                orders_delivered=totals.orders_delivered,
+            )
+        )
+    return sorted(rows, key=lambda row: (row.listings_active, row.joined_at or ""), reverse=True)
 
 
 class AdminResellerPayment(BaseModel):

@@ -362,6 +362,26 @@ export type AdminResellerPayment = {
   created_at: string;
 };
 
+export type AdminResellerRow = {
+  user_id: string;
+  full_name: string;
+  contact: string;
+  whatsapp_phone: string | null;
+  joined_at: string | null;
+  listings_active: number;
+  listings_total: number;
+  subscription: "free" | "active" | "expired" | "none";
+  paid_until: string | null;
+  has_paid: boolean;
+  earned: number;
+  pending: number;
+  orders_delivered: number;
+};
+
+export async function listAllResellers(): Promise<AdminResellerRow[]> {
+  return adminProxyRequest<AdminResellerRow[]>({ url: "/admin/finance/resellers", method: "GET" });
+}
+
 export async function listResellerPayments(): Promise<AdminResellerPayment[]> {
   return adminProxyRequest<AdminResellerPayment[]>({ url: "/admin/finance/reseller-payments", method: "GET" });
 }

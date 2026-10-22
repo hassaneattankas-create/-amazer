@@ -1,13 +1,107 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 import { getAdminFinanceDataError } from "@/lib/admin-finance-verification";
 import { formatXOF } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
-import { decideResellerPayment, listResellerEarnings, listResellerPayments } from "@/services/finance-service";
+import { decideResellerPayment, listAllResellers, listResellerEarnings, listResellerPayments, type AdminResellerRow } from "@/services/finance-service";
+
+const SUBSCRIPTION_LABELS: Record<AdminResellerRow["subscription"], { label: string; className: string }> = {
+  free: { label: "Gratuit", className: "bg-surface-2 text-ink-700" },
+  active: { label: "Actif", className: "bg-success/10 text-success" },
+  expired: { label: "Expiré", className: "bg-danger/10 text-danger" },
+  none: { label: "Jamais activé", className: "bg-warning/10 text-ink-800" },
+};
+
+function formatDate(value: string | null): string {
+  return value ? new Date(value).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "—";
+}
+
+/** Tous les revendeurs presents sur la plateforme, meme sans vente. */
+function AllResellers() {
+  const [search, setSearch] = useState("");
+  const { data = [], isPending, error } = useQuery({ queryKey: ["admin-resellers"], queryFn: listAllResellers, retry: false });
+  const needle = search.trim().toLowerCase();
+  const rows = needle
+    ? data.filter((row) => [row.full_name, row.contact, row.whatsapp_phone ?? ""].some((value) => value.toLowerCase().includes(needle)))
+    : data;
+  const active = data.filter((row) => row.subscription === "active" || row.subscription === "free").length;
+  const withListings = data.filter((row) => row.listings_active > 0).length;
+
+  return (
+    <section aria-label="Tous les revendeurs" className="space-y-2">
+      <h2 className="text-lg font-semibold text-ink-900">Tous les revendeurs ({data.length})</h2>
+      {data.length ? (
+        <p className="text-sm text-ink-600">
+          {active} abonnement{active > 1 ? "s" : ""} actif{active > 1 ? "s" : ""} · {withListings} avec des annonces en ligne
+        </p>
+      ) : null}
+      <label className="block">
+        <span className="sr-only">Rechercher un revendeur</span>
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Rechercher par nom, e-mail ou téléphone"
+          className="h-10 w-full rounded-field border border-border bg-card px-3 text-sm"
+        />
+      </label>
+      {isPending ? (
+        <div className="h-24 animate-pulse rounded-card bg-surface-3" aria-busy="true" />
+      ) : error ? (
+        <p className="text-sm text-danger" role="alert">
+          {getAdminFinanceDataError(error) || "Chargement impossible."}
+        </p>
+      ) : rows.length ? (
+        <ul className="divide-y divide-border rounded-card border border-border bg-card">
+          {rows.map((row) => {
+            const badge = SUBSCRIPTION_LABELS[row.subscription];
+            return (
+              <li key={row.user_id} className="flex flex-wrap items-start gap-3 p-3 text-sm">
+                <div className="min-w-0 flex-1 basis-60">
+                  <p className="flex flex-wrap items-center gap-2 font-semibold text-ink-900">
+                    {row.full_name}
+                    <span className={`rounded-pill px-2 py-0.5 text-xs font-medium ${badge.className}`}>{badge.label}</span>
+                    {row.has_paid ? <span className="rounded-pill bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">A déjà payé</span> : null}
+                  </p>
+                  <p className="text-xs text-ink-600">
+                    {row.contact}
+                    {row.whatsapp_phone ? ` · ${row.whatsapp_phone}` : ""}
+                  </p>
+                  <p className="mt-1 text-xs text-ink-700">
+                    Inscrit le {formatDate(row.joined_at)}
+                    {row.paid_until && row.subscription !== "free" ? ` · abonnement jusqu'au ${formatDate(row.paid_until)}` : ""}
+                  </p>
+                  <p className="mt-1 text-xs text-ink-700">
+                    {row.listings_active} annonce{row.listings_active > 1 ? "s" : ""} en ligne sur {row.listings_total} · {row.orders_delivered} vente
+                    {row.orders_delivered > 1 ? "s" : ""} livrée{row.orders_delivered > 1 ? "s" : ""} · gagné {formatXOF(row.earned)}
+                    {row.pending ? ` · en attente ${formatXOF(row.pending)}` : ""}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link href={`/revendeur/${row.user_id}`} className="text-sm font-medium text-brand-700 hover:underline">
+                    Voir sa boutique
+                  </Link>
+                  {row.whatsapp_phone ? (
+                    <WhatsAppButton phone={row.whatsapp_phone} variant="link" label="WhatsApp" message={`Bonjour ${row.full_name}, ici AMAZER.`} />
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="rounded-card border border-border bg-card p-4 text-sm text-ink-600">
+          {needle ? "Aucun revendeur ne correspond à cette recherche." : "Aucun revendeur pour le moment."}
+        </p>
+      )}
+    </section>
+  );
+}
 
 /** Gains des revendeurs (revente sans stock) : a verser par Nita / Amana apres livraison. */
 export default function AdminResellersPage() {
@@ -26,7 +120,7 @@ export default function AdminResellersPage() {
       <header>
         <h1 className="text-2xl font-semibold text-ink-900">Revendeurs</h1>
         <p className="mt-1 text-sm text-ink-600">
-          Abonnements à valider et gains nets (après commission AMAZER) des revendeurs. Total à verser : {formatXOF(totalDue)}.
+          Tous les revendeurs de la plateforme, abonnements à valider et gains nets (après commission AMAZER). Total à verser : {formatXOF(totalDue)}.
         </p>
       </header>
       {errorText ? (
@@ -70,6 +164,8 @@ export default function AdminResellersPage() {
           <p className="text-xs text-ink-600">Vérifiez la référence sur votre compte Nita / Amana avant de valider.</p>
         </section>
       ) : null}
+
+      <AllResellers />
 
       <h2 className="text-lg font-semibold text-ink-900">Gains à verser</h2>
       {isPending ? (
