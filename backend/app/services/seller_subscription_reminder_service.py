@@ -61,8 +61,8 @@ def maybe_send_seller_subscription_reminders(
         NotificationService(db).send_to_user(
             user_id=user_id,
             payload=NotificationPayload(
-                title="Abonnement vendeur expire",
-                body="Renouvelle dans l'espace vendeur pour reactiver ta boutique. Tes donnees sont conservees.",
+                title="Abonnement vendeur expiré",
+                body="Renouvelez-le dans « Profil et abonnement » pour remettre votre boutique en ligne. Vos données sont conservées.",
                 data={
                     "tag": tag,
                     "href": "/seller",
@@ -82,19 +82,19 @@ def maybe_send_seller_subscription_reminders(
         bucket = "1d"
         title = "Abonnement vendeur : dernier jour"
         body = (
-            f"Ton abonnement expire le {until.strftime('%d/%m/%Y')}. "
-            "Renouvelle dans l'espace vendeur pour eviter la coupure."
+            f"Votre abonnement expire le {until.strftime('%d/%m/%Y')}. "
+            "Renouvelez-le dans « Profil et abonnement » pour éviter la coupure."
         )
     elif 1 < days_left <= 3:
         bucket = "3d"
         title = "Abonnement vendeur : moins de 3 jours"
-        body = f"Ton abonnement se termine le {until.strftime('%d/%m/%Y')}. Pense au renouvellement."
+        body = f"Votre abonnement se termine le {until.strftime('%d/%m/%Y')}. Pensez à le renouveler."
     elif 3 < days_left <= 7:
         bucket = "7d"
         title = "Abonnement vendeur : moins d'une semaine"
         body = (
-            f"Ton abonnement se termine le {until.strftime('%d/%m/%Y')}. "
-            "Tu peux deja renouveler depuis l'espace vendeur."
+            f"Votre abonnement se termine le {until.strftime('%d/%m/%Y')}. "
+            "Vous pouvez déjà le renouveler dans « Profil et abonnement »."
         )
     else:
         return

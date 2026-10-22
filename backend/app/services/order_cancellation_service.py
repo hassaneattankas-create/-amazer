@@ -22,7 +22,7 @@ _CUSTOMER_CANCELLABLE = {"payment_pending", "commande"}
 
 def ensure_not_cancelled(order: Order) -> None:
     if order.status == CANCELLED_STATUS:
-        raise ConflictError("Cette commande a ete annulee.")
+        raise ConflictError("Cette commande a été annulée.")
 
 
 def _restore_stock(db: Session, order: Order) -> None:
@@ -40,12 +40,12 @@ def cancel_order(db: Session, order: Order, *, by_admin: bool) -> bool:
     """Annule la commande ; retourne True si du stock a ete remis en vente."""
     ensure_not_cancelled(order)
     if order.status in _DELIVERED:
-        raise ConflictError("Une commande deja livree ne peut pas etre annulee.")
+        raise ConflictError("Une commande déjà livrée ne peut pas être annulée.")
     if not by_admin:
         if order.payment_status == "paid":
-            raise ConflictError("Commande deja payee : contactez le support pour l'annuler.")
+            raise ConflictError("Commande déjà payée : contactez le support pour l'annuler.")
         if order.status not in _CUSTOMER_CANCELLABLE:
-            raise ConflictError("Cette commande est deja en cours de traitement.")
+            raise ConflictError("Cette commande est déjà en cours de traitement.")
 
     restocked = False
     if order.payment_status == "paid":
@@ -72,8 +72,8 @@ def notify_order_cancelled(db: Session, order: Order, *, by_admin: bool) -> None
             service.send_to_user(
                 user_id=profile.user_id,
                 payload=NotificationPayload(
-                    title="Commande annulee",
-                    body=f"La commande #{tracking} a ete annulee. Ne la preparez pas.",
+                    title="Commande annulée",
+                    body=f"La commande #{tracking} a été annulée. Ne la préparez pas.",
                     data={"tag": f"seller-order-cancel-{order.id}", "href": "/seller/dashboard", "kind": "order_cancelled"},
                 ),
             )
@@ -81,8 +81,8 @@ def notify_order_cancelled(db: Session, order: Order, *, by_admin: bool) -> None
             service.send_to_user(
                 user_id=order.user_id,
                 payload=NotificationPayload(
-                    title="Commande annulee",
-                    body=f"Votre commande #{tracking} a ete annulee par AMAZER. Contactez le support pour toute question.",
+                    title="Commande annulée",
+                    body=f"Votre commande #{tracking} a été annulée par AMAZER. Si vous aviez payé, vous serez remboursé.",
                     data={"tag": f"order-cancel-{order.id}", "href": "/dashboard", "kind": "order_cancelled"},
                 ),
             )

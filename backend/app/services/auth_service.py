@@ -128,7 +128,7 @@ class AuthService:
         if user is None:
             raise NotFoundError("Compte introuvable")
         if user.is_active:
-            return {"success": True, "message": "Compte deja verifie"}
+            return {"success": True, "message": "Compte déjà vérifié"}
 
         record = self.db.scalar(
             select(LoginVerificationCode)
@@ -141,15 +141,15 @@ class AuthService:
             .limit(1)
         )
         if record is None or record.expires_at <= datetime.now(UTC):
-            raise UnauthorizedError("Code de verification expire ou introuvable")
+            raise UnauthorizedError("Code de vérification expiré ou introuvable.")
         if record.attempt_count >= settings.verification_code_max_attempts:
-            raise ForbiddenError("Code de verification bloque. Reinscription requise")
+            raise ForbiddenError("Code de vérification bloqué : recommencez l'inscription ou contactez AMAZER.")
 
         expected_hash = self._hash_verification_code(user.id, code)
         if record.code_hash != expected_hash:
             record.attempt_count += 1
             self.db.commit()
-            raise UnauthorizedError("Code de verification invalide")
+            raise UnauthorizedError("Code de vérification invalide.")
 
         record.consumed_at = datetime.now(UTC)
         user.is_active = True
@@ -357,7 +357,7 @@ class AuthService:
         settings = get_settings()
         user = self._get_user_by_identifier(identifier)
         if user is None or not user.is_active:
-            raise UnauthorizedError("Code de reinitialisation invalide ou expire")
+            raise UnauthorizedError("Code de réinitialisation invalide ou expiré.")
         record = self.db.scalar(
             select(LoginVerificationCode)
             .where(
@@ -369,13 +369,13 @@ class AuthService:
             .limit(1)
         )
         if record is None or record.expires_at <= datetime.now(UTC):
-            raise UnauthorizedError("Code de reinitialisation invalide ou expire")
+            raise UnauthorizedError("Code de réinitialisation invalide ou expiré.")
         if record.attempt_count >= settings.verification_code_max_attempts:
             raise ForbiddenError("Trop de tentatives. Demandez un nouveau code.")
         if record.code_hash != self._hash_verification_code(user.id, code):
             record.attempt_count += 1
             self.db.commit()
-            raise UnauthorizedError("Code de reinitialisation invalide ou expire")
+            raise UnauthorizedError("Code de réinitialisation invalide ou expiré.")
 
         record.consumed_at = datetime.now(UTC)
         user.hashed_password = hash_password(new_password)

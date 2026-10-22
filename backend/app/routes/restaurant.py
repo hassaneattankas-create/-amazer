@@ -95,7 +95,7 @@ def _amana_phone(phone: str | None) -> str:
         return f"00{compact}"
     if len(compact) == 8:
         return f"00227{compact}"
-    raise ValidationDomainError("Un numero Niger valide est necessaire pour payer par Amana")
+    raise ValidationDomainError("Un numéro nigérien valide est nécessaire pour payer par Amana.")
 
 
 def _resolve_platform_wallet_phone(db: Session) -> str | None:
@@ -921,7 +921,7 @@ def start_restaurant_order_payment(
     if order.user_id != current_user.id and not _is_admin(current_user):
         raise UnauthorizedError("Unauthorized order access")
     if order.payment_status == "paid":
-        return PaymentStartResponse(order_id=order.id, payment_status="paid", message="Paiement deja confirme.")
+        return PaymentStartResponse(order_id=order.id, payment_status="paid", message="Paiement déjà confirmé.")
     if order.payment_mode != "amana":
         raise ValidationDomainError("Ce mode de paiement ne requiert pas Amana")
     if order.gateway_payment_reference:
@@ -943,7 +943,7 @@ def start_restaurant_order_payment(
             ),
         )
     except PaymentGatewayError as exc:
-        raise ValidationDomainError("Impossible de demarrer le paiement Amana. Reessayez.") from exc
+        raise ValidationDomainError("Impossible de démarrer le paiement Amana. Réessayez.") from exc
     order.gateway_payment_reference = provider_reference
     db.commit()
     return PaymentStartResponse(
@@ -974,7 +974,7 @@ def confirm_restaurant_order_payment(
             order_id=order.id,
             payment_status="paid",
             order_status=order.status,
-            message="Paiement deja confirme.",
+            message="Paiement déjà confirmé.",
         )
 
     if order.payment_mode == "amana":
@@ -983,7 +983,7 @@ def confirm_restaurant_order_payment(
         try:
             provider_status = get_amana_payment_status(_settings, order.gateway_payment_reference)
         except PaymentGatewayError as exc:
-            raise ValidationDomainError("Verification Amana indisponible. Reessayez.") from exc
+            raise ValidationDomainError("Vérification Amana indisponible. Réessayez.") from exc
         if provider_status != "SUCCESS":
             return PaymentConfirmResponse(
                 order_id=order.id,

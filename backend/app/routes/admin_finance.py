@@ -1280,7 +1280,7 @@ def permanently_delete_user(
     if target is None:
         raise ValidationDomainError("Utilisateur introuvable")
     if is_admin(target):
-        raise ValidationDomainError("Le compte administrateur ne peut pas etre supprime.")
+        raise ValidationDomainError("Le compte administrateur ne peut pas être supprimé.")
     profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == target.id))
     if profile is not None:
         vendor = db.get(Vendor, profile.vendor_id)
@@ -1367,7 +1367,7 @@ def update_user_role_admin(
     if target is None:
         raise ValidationDomainError("User not found")
     if is_principal_admin(target):
-        raise ValidationDomainError("Le role du compte administrateur principal ne peut pas etre modifie.")
+        raise ValidationDomainError("Le rôle du compte administrateur principal ne peut pas être modifié.")
     if target.id == admin_user.id:
         raise ValidationDomainError("Vous ne pouvez pas modifier votre propre role.")
     if not target.is_active:
@@ -1526,7 +1526,7 @@ def permanently_delete_seller(
         raise ValidationDomainError("Profil vendeur introuvable")
     user = db.get(User, profile.user_id)
     if user is not None and is_admin(user):
-        raise ValidationDomainError("Le compte administrateur ne peut pas etre supprime.")
+        raise ValidationDomainError("Le compte administrateur ne peut pas être supprimé.")
 
     vendor = db.get(Vendor, profile.vendor_id)
     if vendor is not None:
@@ -1966,9 +1966,9 @@ def decide_seller_subscription_payment(
     if row is None:
         raise ValidationDomainError("Demande de paiement introuvable")
     if row.status != "pending":
-        raise ValidationDomainError("Cette demande a deja ete traitee")
+        raise ValidationDomainError("Cette demande a déjà été traitée.")
     if payload.decision == "rejected" and not (payload.admin_note or "").strip():
-        raise ValidationDomainError("Motif obligatoire: ajoutez une note admin pour rejeter cette demande")
+        raise ValidationDomainError("Motif obligatoire : ajoutez une note pour refuser cette demande.")
     profile = db.get(SellerProfile, row.seller_profile_id)
     if profile is None:
         raise ValidationDomainError("Profil vendeur introuvable")
@@ -2014,18 +2014,18 @@ def decide_seller_subscription_payment(
         next_step = (
             "Votre boutique peut maintenant publier et recevoir des commandes."
             if payload.decision == "approved"
-            else "Verifiez le numero de versement, l'operateur choisi et votre reference avant un nouvel envoi."
+            else "Vérifiez le numéro de versement, l'opérateur choisi et votre référence avant un nouvel envoi."
         )
         body_suffix = (
-            f" Motif admin: {payload.admin_note.strip()}." if (payload.admin_note or "").strip() else ""
+            f" Motif : {payload.admin_note.strip()}." if (payload.admin_note or "").strip() else ""
         )
         NotificationService(db).send_to_user(
             user_id=seller_user.id,
             payload=NotificationPayload(
-                title="Paiement vendeur accepte" if payload.decision == "approved" else "Paiement vendeur refuse",
+                title="Paiement d'abonnement accepté" if payload.decision == "approved" else "Paiement d'abonnement refusé",
                 body=(
-                    f"Votre paiement {row.payment_mode.upper()} de {row.months} mois a ete {decision_label}."
-                    f" Reference: {row.transaction_reference}. {next_step}{body_suffix}"
+                    f"Votre paiement {row.payment_mode.upper()} de {row.months} mois a été {decision_label}."
+                    f" Référence : {row.transaction_reference}. {next_step}{body_suffix}"
                 ),
                 data={
                     "tag": f"seller-payment-decision-{row.id}",
@@ -2094,7 +2094,7 @@ def decide_seller_pre_registration(
     if reg is None:
         raise ValidationDomainError("Inscription introuvable")
     if reg.status != "pending":
-        raise ValidationDomainError("Cette inscription a deja ete traitee")
+        raise ValidationDomainError("Cette inscription a déjà été traitée.")
 
     now = datetime.now(UTC)
     reg.status = payload.decision
@@ -2305,7 +2305,7 @@ def send_admin_message(
     stmt = select(User).where(User.is_active.is_(True), User.email.notlike("%@users.deleted.amazer.ne"))
     if payload.audience == "user":
         if not payload.user_email:
-            raise ValidationDomainError("Indiquez l'e-mail ou le numero du destinataire.")
+            raise ValidationDomainError("Indiquez l'e-mail ou le numéro du destinataire.")
         needle = payload.user_email.strip().lower()
         stmt = stmt.where(or_(func.lower(User.email) == needle, User.whatsapp_phone == payload.user_email.strip()))
     elif payload.audience == "sellers":
@@ -2316,7 +2316,7 @@ def send_admin_message(
         stmt = stmt.where(User.id.not_in(select(SellerProfile.user_id)), User.role == "user")
     recipients = db.scalars(stmt).all()
     if payload.audience == "user" and not recipients:
-        raise ValidationDomainError("Aucun utilisateur actif avec cet e-mail ou ce numero.")
+        raise ValidationDomainError("Aucun utilisateur actif avec cet e-mail ou ce numéro.")
     tag = f"admin-message-{uuid.uuid4().hex[:12]}"
     service = NotificationService(db)
     for recipient in recipients:

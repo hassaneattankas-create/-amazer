@@ -180,7 +180,7 @@ def _amana_phone(phone: str | None) -> str:
         return f"00{compact}"
     if len(compact) == 8:
         return f"00227{compact}"
-    raise ValidationDomainError("Un numero Niger valide est necessaire pour payer par Amana")
+    raise ValidationDomainError("Un numéro nigérien valide est nécessaire pour payer par Amana.")
 
 
 def _marketplace_fee_snapshot(order: Order) -> dict[str, float]:
@@ -478,7 +478,7 @@ def _price_cart(db: Session, items: list, *, lock: bool) -> _PricedCart:
         if cart.currency is None:
             cart.currency = price.currency
         elif cart.currency != price.currency:
-            raise ValidationDomainError("Les devises multiples ne sont pas supportees")
+            raise ValidationDomainError("Une commande ne peut contenir qu'une seule devise.")
         listing = _resolve_reseller_listing(db, item.reseller_listing_id, price)
         unit_amount = max(float(listing.resale_amount), float(price.amount)) if listing else float(price.amount)
         line_total = unit_amount * item.quantity
@@ -678,7 +678,7 @@ def start_order_payment(
             ),
         )
     except PaymentGatewayError as exc:
-        raise ValidationDomainError("Impossible de demarrer le paiement Amana. Reessayez.") from exc
+        raise ValidationDomainError("Impossible de démarrer le paiement Amana. Réessayez.") from exc
     order.gateway_payment_reference = provider_reference
     db.commit()
     return PaymentStartResponse(
@@ -719,7 +719,7 @@ def confirm_order_payment(
         try:
             provider_status = get_amana_payment_status(settings, order.gateway_payment_reference)
         except PaymentGatewayError as exc:
-            raise ValidationDomainError("Verification Amana indisponible. Reessayez.") from exc
+            raise ValidationDomainError("Vérification Amana indisponible. Réessayez.") from exc
         if provider_status != "SUCCESS":
             return PaymentConfirmResponse(
                 order_id=order.id,
@@ -811,9 +811,9 @@ def client_confirm_reception(
     if order is None:
         raise ValidationDomainError("Commande introuvable")
     if order.user_id != current_user.id:
-        raise UnauthorizedError("Acces non autorise")
+        raise UnauthorizedError("Accès non autorisé.")
     if order.status not in {"livraison", "commande", "preparation"}:
-        raise ValidationDomainError("Cette commande ne peut pas etre confirmee dans son etat actuel")
+        raise ValidationDomainError("Cette commande ne peut pas encore être confirmée.")
     mark_order_delivered(db, order, source="customer")
     db.commit()
     db.refresh(order)

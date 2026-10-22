@@ -69,7 +69,7 @@ def _notify_admin_seller_registration(
         user_id=admin_user.id,
         payload=NotificationPayload(
             title="Nouveau compte vendeur",
-            body=f"{full_name} a cree un compte vendeur ({identifier.strip()}).",
+            body=f"{full_name} a créé un compte vendeur ({identifier.strip()}).",
             data={
                 "tag": f"seller-register-{user_id or identifier.strip().lower()}",
                 "href": "/admin/users",
@@ -175,7 +175,7 @@ def verify_account(
 ) -> dict[str, str | bool]:
     enforce_rate_limit(request, key="auth_verify_account", limit=8, window_seconds=300)
     result = auth_service.verify_account(identifier=payload.identifier, code=payload.code)
-    if result.get("success") and result.get("message") != "Compte deja verifie":
+    if result.get("success") and result.get("message") != "Compte déjà vérifié":
         log_security_event(
             auth_service.db,
             event_type="account_verified",
@@ -297,21 +297,21 @@ def update_contact(
     db = auth_service.db
     if payload.email:
         if not user.email.endswith(SHADOW_EMAIL_DOMAIN):
-            raise ConflictError("Votre compte a deja une adresse e-mail.")
+            raise ConflictError("Votre compte a déjà une adresse e-mail.")
         if auth_service.users.get_by_email(payload.email) is not None:
-            raise ConflictError("Cette adresse e-mail est deja utilisee.")
+            raise ConflictError("Cette adresse e-mail est déjà utilisée.")
         user.email = payload.email
     if payload.whatsapp_phone:
         if user.whatsapp_phone:
-            raise ConflictError("Votre compte a deja un numero WhatsApp.")
+            raise ConflictError("Votre compte a déjà un numéro WhatsApp.")
         if auth_service.users.get_by_whatsapp_phone(payload.whatsapp_phone) is not None:
-            raise ConflictError("Ce numero WhatsApp est deja utilise.")
+            raise ConflictError("Ce numéro WhatsApp est déjà utilisé.")
         user.whatsapp_phone = payload.whatsapp_phone
     try:
         db.commit()
     except IntegrityError as exc:
         db.rollback()
-        raise ConflictError("Ce contact est deja utilise.") from exc
+        raise ConflictError("Ce contact est déjà utilisé.") from exc
     db.refresh(user)
     return user
 
@@ -442,7 +442,7 @@ def pre_register_seller(
                 user_id=admin_user.id,
                 payload=NotificationPayload(
                     title="Nouvelle demande vendeur",
-                    body=f"{reg.full_name} ({reg.identifier}) a soumis une demande vendeur a valider.",
+                    body=f"{reg.full_name} ({reg.identifier}) a envoyé une demande vendeur à valider.",
                     data={
                         "tag": f"seller-prereg-{reg.id}",
                         "href": "/admin/tarifs",
@@ -457,7 +457,7 @@ def pre_register_seller(
     return SellerPreRegisterResponse(
         id=reg.id,
         status="pending",
-        message="Votre demande a ete envoyee. Votre compte et votre boutique seront crees apres verification de votre paiement.",
+        message="Votre demande a été envoyée. Votre compte et votre boutique seront créés après vérification de votre paiement.",
     )
 
 
@@ -480,7 +480,7 @@ def get_pre_register_seller_status(
             "et commencer a utiliser AMAZER."
         )
     elif reg.status == "rejected":
-        message = "Votre demande n'a pas ete validee. Contactez le support AMAZER."
+        message = "Votre demande n'a pas été validée. Contactez le support AMAZER."
     else:
         message = "Votre demande est en cours de verification."
     # Durcissement: ne pas exposer l'identifiant (tel/email) sur un endpoint public,

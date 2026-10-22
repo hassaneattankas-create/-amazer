@@ -513,7 +513,7 @@ def pay_seller_subscription(
         is not None
     )
     if pending_exists:
-        raise ConflictError("Une demande de paiement est deja en attente de validation admin.")
+        raise ConflictError("Une demande de paiement est déjà en attente de validation.")
     transaction_reference = (payload.transaction_reference or "").strip()
     if not transaction_reference:
         # Flux semi-auto: l'admin valide sur releve operateur meme sans reference saisie.
@@ -888,7 +888,7 @@ def import_products_csv(
     if profile is None:
         raise NotFoundError("Create a seller profile first")
     if not getattr(profile, "is_enterprise", False):
-        raise ForbiddenError("Import en masse reserve au Premium Entreprise.")
+        raise ForbiddenError("Import en masse réservé à la formule Premium.")
 
     raw = file.file.read()
     if len(raw) > 2_000_000:
@@ -1001,7 +1001,7 @@ async def import_product_photos(
             "L'envoi de plusieurs produits a la fois est reserve aux boutiques Premium."
         )
     if len(files) > 40:
-        raise ValidationDomainError("Maximum 40 photos par envoi. Reessayez par lots.")
+        raise ValidationDomainError("Maximum 40 photos par envoi. Réessayez par lots.")
     remaining = 10_000
 
     created = 0
@@ -1156,7 +1156,7 @@ def export_seller_orders(
     if profile is None:
         raise NotFoundError("Seller profile not found")
     if not getattr(profile, "is_enterprise", False):
-        raise ForbiddenError("Export reserve au Premium Entreprise.")
+        raise ForbiddenError("Export réservé à la formule Premium.")
 
     rows = db.scalars(
         select(Order)
