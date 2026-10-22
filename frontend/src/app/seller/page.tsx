@@ -134,7 +134,8 @@ function SellerPageContent() {
   const requestedSellerTypeParam = searchParams.get("type");
   const requestedSellerType = normalizeSellerActivityType(requestedSellerTypeParam);
   const hasRequestedSellerType = Boolean(requestedSellerTypeParam);
-  const { data: user, isPending: isAuthPending } = useCurrentUser();
+  // isLoading : un visiteur non connecté doit être redirigé vers la connexion (pas d'attente infinie).
+  const { data: user, isLoading: isAuthPending } = useCurrentUser();
   const queryClient = useQueryClient();
   const setAppMode = useAuthStore((state) => state.setAppMode);
   const [status, setStatus] = useState("");

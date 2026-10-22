@@ -50,7 +50,8 @@ const NAV_GROUPS: Array<{ title: string; items: NavItem[] }> = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: user, isPending, isError } = useCurrentUser();
+  // isLoading : sans connexion la requête est désactivée ; on redirige vers la connexion au lieu d'attendre.
+  const { data: user, isLoading: isPending, isError } = useCurrentUser();
   const { data: adminMe, isPending: isAdminPending, isError: isAdminError } = useAdminMe(Boolean(user?.id));
   const isAdmin = Boolean(adminMe?.is_admin) || isAdminEmail(user?.email);
   // PIN : une seule saisie pour tout l'espace admin ; revérifié chaque minute (expiration au bout de 30 min).

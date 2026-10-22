@@ -7,6 +7,7 @@ import { Fuel, Pill, Truck } from "lucide-react";
 
 import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 import { DeliveryCard } from "@/components/courier/DeliveryCard";
+import { useAdminMe } from "@/hooks/use-admin-me";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useNow } from "@/hooks/use-now";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -23,10 +24,12 @@ type Tab = "available" | "mine";
 
 export default function CourierPage() {
   const queryClient = useQueryClient();
-  const { data: user, isPending: userPending } = useCurrentUser();
+  // isLoading (et non isPending) : pour un visiteur non connecte la requete est desactivee, jamais « en cours ».
+  const { data: user, isLoading: userPending } = useCurrentUser();
+  const { data: adminMe } = useAdminMe(Boolean(user?.id));
   const [tab, setTab] = useState<Tab>("available");
   const [message, setMessage] = useState("");
-  const allowed = user?.role === "courier" || user?.role === "admin";
+  const allowed = user?.role === "courier" || user?.role === "admin" || Boolean(adminMe?.is_admin);
   const now = useNow();
 
   const available = useQuery({
@@ -90,6 +93,14 @@ export default function CourierPage() {
           <Truck className="mx-auto h-10 w-10 text-ink-400" aria-hidden="true" />
           <h1 className="mt-3 text-xl font-semibold text-ink-900">Espace livreurs</h1>
           <p className="mt-1 text-sm text-ink-600">Réservé aux livreurs AMAZER. Vous voulez livrer avec nous ?</p>
+          {!user ? (
+            <p className="mt-2 text-sm text-ink-600">
+              Déjà livreur ?{" "}
+              <Link href="/login?next=/livreur" className="font-semibold text-brand-700 hover:underline">
+                Se connecter
+              </Link>
+            </p>
+          ) : null}
           <div className="mt-5 flex justify-center">
             <WhatsAppButton label="Devenir livreur" message="Bonjour AMAZER, je souhaite devenir livreur." />
           </div>

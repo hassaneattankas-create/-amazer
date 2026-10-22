@@ -32,7 +32,8 @@ export function ResellerSubscriptionPanel({ account }: { account: ResellerAccoun
   });
 
   const until = account.paid_until ? new Date(account.paid_until).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : null;
-  const wallet = settings?.platform_wallet_phone || settings?.support_whatsapp || "le numéro AMAZER";
+  // Jamais de repli sur un autre numéro : l'argent doit arriver sur le compte de paiement AMAZER.
+  const wallet = settings?.platform_wallet_phone || "";
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,8 +65,14 @@ export function ResellerSubscriptionPanel({ account }: { account: ResellerAccoun
       ) : account.monthly_fee > 0 ? (
         <form onSubmit={onSubmit} className="mt-3 space-y-3 border-t border-border pt-3">
           <p className="text-sm text-ink-700">
-            Envoyez <span className="font-semibold">{formatXOF(account.monthly_fee * months)}</span> au{" "}
-            <span className="font-semibold">{wallet}</span> par Nita ou Amana, puis saisissez la référence du paiement.
+            {wallet ? (
+              <>
+                Envoyez <span className="font-semibold">{formatXOF(account.monthly_fee * months)}</span> au{" "}
+                <span className="font-semibold">{wallet}</span> par Nita ou Amana, puis saisissez la référence du paiement.
+              </>
+            ) : (
+              <>Le numéro de paiement AMAZER n&apos;est pas encore affiché : contactez le support avant de payer.</>
+            )}
             {account.active ? " Le nouveau mois s'ajoute à la fin de votre abonnement." : ""}
           </p>
           <div className="grid gap-3 sm:grid-cols-3">

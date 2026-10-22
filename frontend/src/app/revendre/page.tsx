@@ -149,8 +149,8 @@ export default function RevendrePage() {
             </div>
           </div>
           <p className="text-xs text-ink-600">
-            Montants nets, après la commission AMAZER. Vos gains vous sont versés (Nita ou Amana) après livraison ; pour un
-            versement, écrivez-nous sur WhatsApp.
+            Montants nets, après la commission AMAZER. AMAZER vous verse vos gains (Nita ou Amana) après livraison ; vous êtes
+            prévenu à chaque versement.
           </p>
           {account ? <ResellerSubscriptionPanel account={account} /> : null}
 
@@ -249,7 +249,9 @@ export default function RevendrePage() {
                     <button
                       type="button"
                       aria-label={`Retirer ${item.product_name}`}
-                      onClick={() => remove.mutate(item.id)}
+                      onClick={() => {
+                        if (window.confirm(`Retirer « ${item.product_name} » de votre boutique ?`)) remove.mutate(item.id);
+                      }}
                       className="inline-flex h-11 w-11 items-center justify-center rounded-field text-ink-600 hover:bg-surface-1 hover:text-danger"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden="true" />

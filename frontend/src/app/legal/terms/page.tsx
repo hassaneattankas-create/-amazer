@@ -38,10 +38,10 @@ const SECTIONS: Section[] = [
   },
   {
     id: "reservations",
-    title: "4. Réservations d'hôtels et de trajets",
+    title: "4. Réservations d'hôtels, de trajets et de tables",
     paragraphs: [
       "Une réservation d'hôtel ou de trajet est une demande envoyée à l'établissement. Elle n'est valable qu'après sa confirmation, que vous recevez par notification.",
-      "Pour les hôtels et les transporteurs, vous payez directement l'établissement (Nita ou Amana, sur le numéro indiqué). AMAZER n'encaisse pas ce paiement : les annulations, modifications et remboursements se règlent avec l'établissement, selon ses propres conditions. AMAZER peut vous aider à le joindre, mais n'est pas responsable du remboursement.",
+      "Pour les hôtels, les transporteurs et les acomptes de réservation de table au restaurant, vous payez directement l'établissement (Nita ou Amana, sur le numéro indiqué). AMAZER n'encaisse pas ce paiement : les annulations, modifications et remboursements se règlent avec l'établissement, selon ses propres conditions. AMAZER peut vous aider à le joindre, mais n'est pas responsable du remboursement.",
       "Un billet de trajet est personnel. Son QR code n'est valable qu'une seule fois, pour le départ indiqué, et seulement auprès de la compagnie concernée. Présentez-vous à l'avance : un voyageur absent au départ peut perdre sa place.",
       "Un hôtel peut indiquer que vous ne vous êtes pas présenté. La chambre est alors libérée.",
     ],
