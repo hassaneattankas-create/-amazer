@@ -38,7 +38,8 @@ export default function RestaurantPage() {
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Rechercher un restaurant..."
+          aria-label="Rechercher un restaurant"
+          placeholder="Rechercher un restaurant…"
           className="mt-5"
         />
       </header>

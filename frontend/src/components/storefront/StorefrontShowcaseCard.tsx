@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { BadgeCheck, BedDouble, ChevronRight, MapPin, Store, UtensilsCrossed } from "lucide-react";
+import { BadgeCheck, BedDouble, Bus, ChevronRight, Fuel, MapPin, Pill, Store, UtensilsCrossed } from "lucide-react";
 
 import { formatXOF } from "@/lib/currency";
 import { resolveImageUrl } from "@/lib/image";
@@ -15,7 +15,9 @@ const activityMeta = {
   restaurant: { label: "Restaurant", icon: UtensilsCrossed },
   hotel: { label: "Premium", icon: BedDouble },
   enterprise: { label: "Premium", icon: Store },
-  transport: { label: "Transport", icon: Store },
+  transport: { label: "Transport", icon: Bus },
+  pharmacy: { label: "Pharmacie", icon: Pill },
+  station: { label: "Station-essence", icon: Fuel },
 } as const;
 
 function getInitials(name: string): string {
@@ -32,7 +34,10 @@ function activitySummary(store: VendorStorefront): string {
   const parts: string[] = [];
   if (store.product_count) parts.push(`${store.product_count} produit${store.product_count > 1 ? "s" : ""}`);
   if (store.service_count) parts.push(`${store.service_count} service${store.service_count > 1 ? "s" : ""}`);
-  if (store.room_type_count) parts.push(`${store.room_type_count} chambre${store.room_type_count > 1 ? "s" : ""}`);
+  if (store.room_type_count) {
+    const unit = store.offers_transport ? "trajet" : "chambre";
+    parts.push(`${store.room_type_count} ${unit}${store.room_type_count > 1 ? "s" : ""}`);
+  }
   return parts.join(" · ");
 }
 
@@ -43,8 +48,14 @@ export function StorefrontShowcaseCard({
   store: VendorStorefront;
   ctaLabel?: string;
 }) {
-  const activityKey =
-    store.activity_type === "restaurant" ||
+  const activityKey: keyof typeof activityMeta =
+    store.service_kind === "pharmacy"
+      ? "pharmacy"
+      : store.service_kind === "fuel_station"
+        ? "station"
+        : store.offers_transport
+          ? "transport"
+          : store.activity_type === "restaurant" ||
     store.activity_type === "hotel" ||
     store.activity_type === "enterprise" ||
     store.activity_type === "transport"

@@ -855,6 +855,26 @@ def _resolve_restaurant_order_for_receipt(db: Session, order_id: str) -> Restaur
     )
 
 
+@router.get("/orders/me", response_model=list[RestaurantOrderResponse])
+def list_my_restaurant_orders(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> list[RestaurantOrderResponse]:
+    """Commandes restaurant du client : suivi, paiement a terminer, recu."""
+    orders = db.scalars(
+        select(RestaurantOrder)
+        .where(RestaurantOrder.user_id == current_user.id)
+        .order_by(RestaurantOrder.created_at.desc())
+        .limit(30)
+    ).all()
+    vendor_ids = {order.vendor_id for order in orders}
+    vendors = {vendor.id: vendor.name for vendor in db.scalars(select(Vendor).where(Vendor.id.in_(vendor_ids))).all()} if vendor_ids else {}
+    dish_ids = {item.menu_item_id for order in orders for item in order.items}
+    dishes = db.scalars(select(RestaurantMenuItem).where(RestaurantMenuItem.id.in_(dish_ids))).all() if dish_ids else []
+    dish_map = {dish.id: dish.name for dish in dishes}
+    return [_order_response(order, vendors.get(order.vendor_id, "Restaurant"), dish_map) for order in orders]
+
+
 @router.get("/orders/{order_id}/payment-intent", response_model=PaymentIntentResponse)
 def get_restaurant_payment_intent(
     order_id: str,

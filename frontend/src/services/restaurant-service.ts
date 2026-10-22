@@ -37,6 +37,12 @@ export async function createRestaurantOrder(payload: RestaurantOrderRequest): Pr
   return response.data;
 }
 
+/** Commandes restaurant du client connecté. */
+export async function listMyRestaurantOrders(): Promise<RestaurantOrder[]> {
+  const response = await api.get<RestaurantOrder[]>("/api/v1/restaurant/orders/me");
+  return response.data;
+}
+
 export async function getRestaurantPaymentIntent(orderId: string): Promise<PaymentIntent> {
   const response = await api.get<PaymentIntent>(`/api/v1/restaurant/orders/${orderId}/payment-intent`);
   return response.data;

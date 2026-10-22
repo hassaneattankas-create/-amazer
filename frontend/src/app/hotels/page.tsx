@@ -3,15 +3,38 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BadgeCheck, BedDouble, Building2, Bus, CalendarClock, LayoutGrid, Search, Store, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import {
+  BadgeCheck,
+  BedDouble,
+  Building2,
+  Bus,
+  CalendarClock,
+  Fuel,
+  LayoutGrid,
+  Pill,
+  Search,
+  Store,
+  UtensilsCrossed,
+  type LucideIcon,
+} from "lucide-react";
 
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { StorefrontShowcaseCard } from "@/components/storefront/StorefrontShowcaseCard";
 import { Button } from "@/components/ui/button";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { listStorefronts } from "@/services/catalog-service";
+import type { VendorStorefront } from "@/types/catalog";
 
-type PremiumFilter = "all" | "hotel" | "transport" | "restaurant" | "enterprise" | "shop";
+type PremiumFilter = "all" | "hotel" | "transport" | "restaurant" | "pharmacy" | "station" | "enterprise" | "shop";
+
+/** Métier réel d'un établissement : transport, pharmacie et station sont des entreprises Premium avec une option. */
+function premiumKind(store: VendorStorefront): PremiumFilter {
+  if (store.service_kind === "pharmacy") return "pharmacy";
+  if (store.service_kind === "fuel_station") return "station";
+  if (store.offers_transport || store.activity_type === "transport") return "transport";
+  const activity = store.activity_type ?? "shop";
+  return ["hotel", "restaurant", "enterprise", "shop"].includes(activity) ? (activity as PremiumFilter) : "enterprise";
+}
 
 // Comme Booking (hotels), Busbud (transport) ou les vitrines « Plus » : un filtre par metier.
 const FILTERS: { key: PremiumFilter; label: string; icon: LucideIcon }[] = [
@@ -19,6 +42,8 @@ const FILTERS: { key: PremiumFilter; label: string; icon: LucideIcon }[] = [
   { key: "hotel", label: "Hôtels", icon: BedDouble },
   { key: "transport", label: "Transport", icon: Bus },
   { key: "restaurant", label: "Restaurants", icon: UtensilsCrossed },
+  { key: "pharmacy", label: "Pharmacies", icon: Pill },
+  { key: "station", label: "Stations", icon: Fuel },
   { key: "enterprise", label: "Entreprises", icon: Building2 },
   { key: "shop", label: "Boutiques", icon: Store },
 ];
@@ -33,6 +58,8 @@ const CTA_LABEL: Record<string, string> = {
   hotel: "Réserver",
   transport: "Voir les trajets",
   restaurant: "Voir le menu",
+  pharmacy: "Voir la pharmacie",
+  station: "Voir les stations",
 };
 
 export default function PremiumPage() {
@@ -49,7 +76,7 @@ export default function PremiumPage() {
   const counts = useMemo(() => {
     const result: Record<string, number> = { all: stores.length };
     for (const store of stores) {
-      const key = store.activity_type ?? "shop";
+      const key = premiumKind(store);
       result[key] = (result[key] ?? 0) + 1;
     }
     return result;
@@ -58,7 +85,7 @@ export default function PremiumPage() {
   const visible = useMemo(
     () =>
       stores
-        .filter((store) => filter === "all" || (store.activity_type ?? "shop") === filter)
+        .filter((store) => filter === "all" || premiumKind(store) === filter)
         .sort((a, b) => Number(b.is_verified) - Number(a.is_verified) || b.product_count - a.product_count),
     [stores, filter]
   );
@@ -70,7 +97,7 @@ export default function PremiumPage() {
         <p className="mt-1 max-w-2xl text-sm text-white/80">
           Hôtels, transport, restaurants, pharmacies, stations-essence et entreprises de confiance.{" "}
           <Link href="/pharmacies" className="font-semibold text-brand-400 hover:underline">
-            Pharmacies de garde
+            Pharmacies
           </Link>{" "}
           ·{" "}
           <Link href="/stations" className="font-semibold text-brand-400 hover:underline">
@@ -151,7 +178,7 @@ export default function PremiumPage() {
               <StorefrontShowcaseCard
                 key={store.id}
                 store={store}
-                ctaLabel={CTA_LABEL[store.activity_type ?? ""] ?? "Voir le site"}
+                ctaLabel={CTA_LABEL[premiumKind(store)] ?? "Voir le site"}
               />
             ))}
           </div>
@@ -165,7 +192,7 @@ export default function PremiumPage() {
 
       <aside className="mt-10 flex flex-col items-start gap-3 rounded-card border border-border bg-card p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-semibold text-ink-900">Vous gérez un hôtel, une compagnie de transport ou une entreprise ?</p>
+          <p className="font-semibold text-ink-900">Hôtel, transport, pharmacie, station-essence ou entreprise ?</p>
           <p className="text-sm text-ink-600">Passez en Premium : site vitrine, réservations en ligne et badge vérifié.</p>
         </div>
         <Button asChild className="shrink-0">

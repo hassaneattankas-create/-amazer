@@ -107,6 +107,7 @@ class CatalogService:
                         getattr(getattr(vendor, "seller_profile", None), "storefront_tier", None)
                     ),
                     service_kind=getattr(getattr(vendor, "seller_profile", None), "service_kind", None),
+                    offers_transport=bool(getattr(getattr(vendor, "seller_profile", None), "offers_transport", False)),
                     city=getattr(getattr(vendor, "seller_profile", None), "city", None),
                     phone=decrypt_phone_value(getattr(getattr(vendor, "seller_profile", None), "phone", None)),
                     address=getattr(getattr(vendor, "seller_profile", None), "address", None),

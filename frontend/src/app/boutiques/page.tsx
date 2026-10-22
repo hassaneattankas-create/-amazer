@@ -28,6 +28,7 @@ export default function BoutiquesPage() {
       (store) =>
         !["restaurant", "hotel", "transport"].includes(store.activity_type ?? "") &&
         !store.service_kind &&
+        !store.offers_transport &&
         (!verifiedOnly || store.is_verified)
     );
     copy.sort((a, b) => {

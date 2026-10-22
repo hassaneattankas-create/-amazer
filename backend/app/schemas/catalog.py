@@ -30,6 +30,8 @@ class VendorStorefrontResponse(BaseModel):
     storefront_tier: str | None
     # Pharmacie / station : annuaire dedie, pas une boutique de produits.
     service_kind: str | None = None
+    # Compagnie de transport (entreprise Premium avec l'option transport).
+    offers_transport: bool = False
     city: str | None
     phone: str | None
     address: str | None

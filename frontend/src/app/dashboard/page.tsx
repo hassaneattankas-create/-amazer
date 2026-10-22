@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Package, Settings, UserRound } from "lucide-react";
 
 import { MyBookings } from "@/components/account/MyBookings";
+import { MyRestaurantOrders } from "@/components/account/MyRestaurantOrders";
 import { AffiliateShareCard } from "@/components/affiliate/AffiliateShareCard";
 import { NotificationSettings } from "@/components/account/NotificationSettings";
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
@@ -120,6 +121,8 @@ export default function DashboardPage() {
           )}
         </div>
       </article>
+
+      <MyRestaurantOrders />
 
       <MyBookings />
 
