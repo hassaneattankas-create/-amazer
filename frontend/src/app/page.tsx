@@ -25,7 +25,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { BarcodeScannerDrawer } from "@/components/BarcodeScannerDrawer";
-import { FeaturedShopsRail, PromotionsRail } from "@/components/home/HomeRails";
+import { AdminSectionsRails, FeaturedShopsRail, PromotionsRail } from "@/components/home/HomeRails";
 import { PRODUCT_GRID_CLASS, ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { SearchToolbar, type PriceFilter } from "@/components/search/SearchToolbar";
@@ -34,6 +34,7 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useProductSearch } from "@/hooks/use-product-search";
 import { useT } from "@/lib/i18n";
 import { listCatalogCategories, listPromotions, listStorefronts } from "@/services/catalog-service";
+import { getHomeContent } from "@/services/content-service";
 import type { SearchSort } from "@/types/product";
 
 const DEBOUNCE_MS = 250;
@@ -100,6 +101,13 @@ export default function HomePage() {
   const { data: shops = [] } = useQuery({
     queryKey: ["home-featured-shops"],
     queryFn: () => listStorefronts({ limit: 24 }),
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: homeContent } = useQuery({
+    queryKey: ["home-content"],
+    queryFn: getHomeContent,
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });
@@ -263,6 +271,7 @@ export default function HomePage() {
       {!hasAnyFilter ? (
         <>
           <PromotionsRail items={promotions} />
+          <AdminSectionsRails sections={homeContent?.sections ?? []} />
           <FeaturedShopsRail shops={shops} />
         </>
       ) : null}

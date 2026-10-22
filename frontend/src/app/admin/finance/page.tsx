@@ -101,7 +101,7 @@ export default function AdminFinancePage() {
       queryClient.invalidateQueries({ queryKey: ["admin-seller-subscription-payments"] });
       queryClient.invalidateQueries({ queryKey: ["admin-finance-summary"] });
       setPaymentDecisionNote("");
-      setTransferStatus("Decision paiement vendeur enregistree.");
+      setTransferStatus("Décision enregistrée.");
     },
     onError: (error) =>
       setTransferStatus(
@@ -116,7 +116,7 @@ export default function AdminFinancePage() {
       queryClient.invalidateQueries({ queryKey: ["admin-treasury-history"] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       queryClient.invalidateQueries({ queryKey: ["admin-ad-click-stats"] });
-      setResetStatus("Compteurs remis a zero. Les nouveaux calculs partent de maintenant.");
+      setResetStatus("Compteurs remis à zéro. Les nouveaux calculs partent de maintenant.");
     },
     onError: (error) => {
       setResetStatus(getApiErrorMessage(error, "Impossible de réinitialiser les compteurs."));
@@ -294,7 +294,7 @@ export default function AdminFinancePage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <article className="premium-card border border-slate-200 bg-white p-5">
           <p className="text-xs uppercase tracking-[0.15em] text-slate-500">
-            Total des Commissions Collectees
+            Total des commissions encaissées
           </p>
           <AnimatedPrice
             value={summary?.total_commissions_collected ?? 0}
@@ -310,15 +310,17 @@ export default function AdminFinancePage() {
       <details className="rounded-card border border-border bg-card p-4">
         <summary className="cursor-pointer text-sm font-semibold text-ink-800">Zone sensible : remise à zéro des compteurs</summary>
         <p className="mt-2 text-sm text-slate-600">
-          Remet a zero les compteurs finances et clics pub sans supprimer l&apos;historique des commandes.
+          Remet à zéro les compteurs financiers et les clics publicitaires, sans supprimer l&apos;historique des commandes.
         </p>
         <Button
           type="button"
           disabled={resetCountersMutation.isPending}
-          onClick={() => resetCountersMutation.mutate()}
+          onClick={() => {
+            if (window.confirm("Remettre tous les compteurs à zéro ? L'historique des commandes est conservé.")) resetCountersMutation.mutate();
+          }}
           className="mt-4 border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
         >
-          {resetCountersMutation.isPending ? "Reinitialisation..." : "Remettre les compteurs a zero"}
+          {resetCountersMutation.isPending ? "Réinitialisation…" : "Remettre les compteurs à zéro"}
         </Button>
         {resetStatus ? <p className="mt-3 text-sm text-slate-700">{resetStatus}</p> : null}
       </details>
@@ -326,12 +328,12 @@ export default function AdminFinancePage() {
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="luxury-title text-lg font-semibold">Validations paiements vendeurs</h2>
         <p className="mt-2 text-sm text-slate-600">
-          Les comptes vendeurs restent bloques tant que le paiement n&apos;est pas approuve.
+          Les boutiques restent hors ligne tant que le paiement n&apos;est pas approuvé.
         </p>
         <input
           value={paymentDecisionNote}
           onChange={(event) => setPaymentDecisionNote(event.target.value)}
-          placeholder="Note admin (optionnel)"
+          placeholder="Note admin (facultatif)"
           className="mt-3 h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
         />
         <div className="mt-4 space-y-3">
@@ -397,9 +399,9 @@ export default function AdminFinancePage() {
       <article className="premium-card border border-slate-200 bg-white p-6">
         <h2 className="luxury-title text-lg font-semibold">Historique Sécurisé des Transactions</h2>
         <p className="mt-2 text-sm text-slate-600">
-          Les codes sont stockes chiffres en base. Vue reservee a l admin.
+          Les codes sont stockés chiffrés. Vue réservée à l&apos;admin.
         </p>
-        {isHistoryPending ? <p className="mt-4 text-sm text-slate-500">Chargement de l&apos;historique...</p> : null}
+        {isHistoryPending ? <p className="mt-4 text-sm text-slate-500">Chargement de l&apos;historique…</p> : null}
         {!isHistoryPending && isHistoryError ? (
           <p className="mt-4 text-sm text-amber-700">{getAdminFinanceDataError(historyError)}</p>
         ) : null}

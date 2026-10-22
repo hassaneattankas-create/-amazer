@@ -736,8 +736,8 @@ export default function AdminTarifsPage() {
             <div>
               <p className="text-sm font-medium text-slate-800">Numéro wallet AMAZER (Nita / Amana)</p>
               <p className="text-xs text-slate-500">
-                Affiche sur les recus clients comme destination des versements plateforme (prioritaire sur le telephone
-                support si renseigne).
+                Seul numéro donné aux clients, vendeurs et revendeurs pour payer AMAZER. Sans lui, ils sont invités à
+                contacter le support (aucun autre numéro n&apos;est proposé).
               </p>
               <input
                 value={effective.platform_wallet_phone ?? ""}
@@ -848,7 +848,7 @@ export default function AdminTarifsPage() {
             Enregistrer quartiers
           </Button>
           <p className="text-xs text-slate-500">
-            {districtFees?.length ? `${districtFees.length} quartier(s) configures.` : "Aucun quartier configure."}
+            {districtFees?.length ? `${districtFees.length} quartier(s) configuré(s).` : "Aucun quartier configuré."}
           </p>
         </div>
       </article>

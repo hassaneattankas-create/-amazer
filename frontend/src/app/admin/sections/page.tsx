@@ -34,7 +34,7 @@ export default function AdminSectionsPage() {
       setTitle("");
       setSlug("");
     },
-    onError: () => setStatus("Erreur creation section."),
+    onError: () => setStatus("Création de la section impossible."),
   });
 
   const updateMutation = useMutation({
@@ -49,7 +49,7 @@ export default function AdminSectionsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-sections"] });
       setStatus("Section mise à jour.");
     },
-    onError: () => setStatus("Erreur mise à jour section."),
+    onError: () => setStatus("Mise à jour de la section impossible."),
   });
 
   const replaceItemsMutation = useMutation({
@@ -77,9 +77,9 @@ export default function AdminSectionsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-sections"] });
-      setStatus("Contenu de section mis a jour.");
+      setStatus("Contenu de la section mis à jour.");
     },
-    onError: () => setStatus("Erreur maj contenu section."),
+    onError: () => setStatus("Mise à jour du contenu impossible."),
   });
 
   const selectedSection = useMemo(
@@ -101,7 +101,7 @@ export default function AdminSectionsPage() {
       <header className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="luxury-title text-3xl font-semibold">Sections Dynamiques</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Creez des rubriques comme Meilleures Ventes, Nouveautes, Tendances.
+          Créez des rangées comme « Meilleures ventes » ou « Tendances » : elles s&apos;affichent sur l&apos;accueil, sous « Bonnes affaires ».
         </p>
       </header>
 
@@ -111,13 +111,13 @@ export default function AdminSectionsPage() {
           <input
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            placeholder="Titre (ex: Meilleures ventes)"
+            placeholder="Titre (ex. Meilleures ventes)"
             className="rounded-md border border-slate-300 px-3 py-2 text-sm"
           />
           <input
             value={slug}
             onChange={(event) => setSlug(event.target.value)}
-            placeholder="Slug (ex: meilleures-ventes)"
+            placeholder="Identifiant (ex. meilleures-ventes)"
             className="rounded-md border border-slate-300 px-3 py-2 text-sm"
           />
           <select
@@ -144,7 +144,7 @@ export default function AdminSectionsPage() {
           disabled={!title || !slug || createMutation.isPending}
           className="primary-glow-btn mt-4 bg-brand-600 text-white hover:bg-brand-700"
         >
-          Creer
+          Créer
         </Button>
       </article>
 
@@ -166,7 +166,7 @@ export default function AdminSectionsPage() {
                     onClick={() => setSelectedSectionId(section.id)}
                     className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                   >
-                    Editer contenu
+                    Modifier le contenu
                   </Button>
                   <Button
                     type="button"
@@ -200,7 +200,7 @@ export default function AdminSectionsPage() {
             onClick={() => replaceItemsMutation.mutate({ sectionId: selectedSection.id, raw: itemsText })}
             className="primary-glow-btn mt-3 bg-brand-600 text-white hover:bg-brand-700"
           >
-            Enregistrer les items
+            Enregistrer le contenu
           </Button>
         </article>
       ) : null}

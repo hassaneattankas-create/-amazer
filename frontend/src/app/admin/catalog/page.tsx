@@ -40,7 +40,7 @@ export default function AdminCatalogPage() {
       setStatus("Catégorie créée.");
       setForm({ name: "", slug: "", parent_id: "", is_active: true });
     },
-    onError: () => setStatus("Creation catégorie impossible."),
+    onError: () => setStatus("Création de la catégorie impossible."),
   });
 
   const updateMutation = useMutation({
@@ -76,7 +76,7 @@ export default function AdminCatalogPage() {
       <header className="premium-card border border-slate-200 bg-white p-6">
         <h1 className="luxury-title text-3xl font-semibold">Admin Rubriques & Catégories</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Creez vos categories ici, et gerez les rubriques dynamiques depuis les sections.
+          Créez vos catégories ici. Les rangées de l&apos;accueil se règlent dans « Sections de l&apos;accueil ».
         </p>
         <Button asChild variant="outline" className="mt-3">
           <Link href="/admin/sections">Ouvrir les Rubriques Dynamiques</Link>
@@ -131,7 +131,7 @@ export default function AdminCatalogPage() {
           }
           disabled={!form.name || !form.slug || createMutation.isPending}
         >
-          Creer
+          Créer
         </Button>
       </article>
 

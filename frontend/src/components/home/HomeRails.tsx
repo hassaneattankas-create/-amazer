@@ -10,7 +10,9 @@ import { useT } from "@/lib/i18n";
 import { getProductRoute, getShopRoute } from "@/lib/mobile-routes";
 import { resolveImageUrl } from "@/lib/image";
 import { resolveProductImageUrl } from "@/lib/product-image";
+import { trackAdClick } from "@/services/content-service";
 import type { PromotionItem, VendorStorefront } from "@/types/catalog";
+import type { HomeContentSection } from "@/types/content";
 
 function SectionHeader({ title, href, linkLabel }: { title: string; href: string; linkLabel: string }) {
   return (
@@ -120,5 +122,58 @@ export function FeaturedShopsRail({ shops }: { shops: VendorStorefront[] }) {
         })}
       </ul>
     </section>
+  );
+}
+
+/** Rangées choisies par l'admin (Admin › Sections de l'accueil) : produits et restaurants mis en avant. */
+export function AdminSectionsRails({ sections }: { sections: HomeContentSection[] }) {
+  const t = useT();
+  const visible = sections.filter((section) => section.products.length || section.restaurants.length);
+  if (!visible.length) return null;
+  return (
+    <>
+      {visible.map((section) => (
+        <section key={section.id} className="mt-6" aria-label={section.title}>
+          <h2 className="text-lg font-semibold text-ink-900">{t(section.title)}</h2>
+          <ul className={railClass}>
+            {section.products.slice(0, 12).map((product) => {
+              const image = resolveProductImageUrl({ raw: product.main_image_url });
+              return (
+                <li key={`p-${product.id}`} className="w-36 shrink-0 snap-start sm:w-44">
+                  <Link
+                    href={getProductRoute(product.id)}
+                    onClick={() => void trackAdClick(product.id, section.slug)}
+                    className="group block overflow-hidden rounded-card border border-border bg-card"
+                  >
+                    <div className="relative aspect-square bg-surface-1">
+                      {image ? (
+                        <Image src={image} alt={product.name} fill sizes="176px" unoptimized className="object-cover" />
+                      ) : (
+                        <Tag className="absolute inset-0 m-auto h-8 w-8 text-ink-400" aria-hidden="true" />
+                      )}
+                    </div>
+                    <div className="p-2">
+                      <p className="text-sm font-bold text-ink-900">{formatXOF(product.amount)}</p>
+                      <p className="line-clamp-2 text-xs text-ink-700 group-hover:text-brand-700">{product.name}</p>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+            {section.restaurants.slice(0, 12).map((restaurant) => (
+              <li key={`r-${restaurant.id}`} className="w-44 shrink-0 snap-start">
+                <Link
+                  href={getShopRoute(restaurant.id)}
+                  className="flex h-full items-center gap-2 rounded-card border border-border bg-card p-3 text-sm font-semibold text-ink-900 hover:border-ink-400"
+                >
+                  <Store className="h-5 w-5 shrink-0 text-ink-500" aria-hidden="true" />
+                  <span className="truncate">{restaurant.name}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </>
   );
 }
