@@ -140,7 +140,14 @@ export async function GET(request: NextRequest): Promise<Response> {
         .webp({ quality: 72 })
         .toBuffer();
       return new Response(new Uint8Array(small), {
-        headers: { "Cache-Control": LONG_CACHE, "Content-Length": String(small.byteLength), "Content-Type": "image/webp" },
+        headers: {
+          "Cache-Control": LONG_CACHE,
+          // Cache partagé de Vercel : la petite version n'est calculée qu'une fois pour tout le monde.
+          "Vercel-CDN-Cache-Control": "max-age=31536000",
+          "CDN-Cache-Control": "max-age=31536000",
+          "Content-Length": String(small.byteLength),
+          "Content-Type": "image/webp",
+        },
       });
     } catch {
       // Image illisible pour la réduction : on renvoie l'originale.
