@@ -7,6 +7,7 @@ import { BookOpen, Copy, MousePointerClick } from "lucide-react";
 
 import { AffiliateWallet } from "@/components/affiliate/AffiliateWallet";
 import { AmbassadorPanel } from "@/components/affiliate/AmbassadorPanel";
+import { SellerPitchKit } from "@/components/affiliate/SellerPitchKit";
 import { WhatsAppIcon } from "@/components/contact/WhatsAppButton";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -177,6 +178,8 @@ export default function AffiliationPage() {
               ) : null}
             </div>
 
+            <SellerPitchKit sellerLink={withAffiliateRef(`${siteOrigin()}/vendre`, me.code)} />
+
             <AmbassadorPanel me={me} />
 
             {message ? (
@@ -187,6 +190,8 @@ export default function AffiliationPage() {
           </>
         )
       ) : null}
+
+      {!loggedIn && !userLoading ? <SellerPitchKit sellerLink={null} /> : null}
 
       <div className="rounded-card border border-border bg-card p-4 text-sm text-ink-700">
         <p className="font-semibold text-ink-900">Règles simples</p>
