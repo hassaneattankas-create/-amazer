@@ -41,7 +41,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
 
   const fallbackImage = product.images?.length ? product.images[0].image_url : null;
   const resolvedImageUrl = useMemo(
-    () => resolveProductImageUrl({ raw: main_image_url ?? fallbackImage, categorySlug: product.category?.slug }),
+    () => resolveProductImageUrl({ raw: main_image_url ?? fallbackImage, categorySlug: product.category?.slug, width: 400 }),
     [fallbackImage, main_image_url, product.category?.slug]
   );
   const displayImageUrl = imageError ? productFallbackImage(product.category?.slug) : resolvedImageUrl;

@@ -155,7 +155,7 @@ export function HotelBookingFlow({
               <div className="aspect-[16/9] bg-surface-1">
                 {photo ? (
                   <Image
-                    src={resolveImageUrl(photo) ?? "/images/placeholders/default.svg"}
+                    src={resolveImageUrl(photo, 800) ?? "/images/placeholders/default.svg"}
                     alt={item.name}
                     width={640}
                     height={360}

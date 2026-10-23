@@ -38,7 +38,7 @@ export function PromotionsRail({ items }: { items: PromotionItem[] }) {
       <SectionHeader title={t("Bonnes affaires")} href="/promotions" linkLabel={t("Voir tout")} />
       <ul className={railClass}>
         {items.slice(0, 12).map((promo) => {
-          const image = resolveProductImageUrl({ raw: promo.main_image_url, categorySlug: promo.category_slug });
+          const image = resolveProductImageUrl({ raw: promo.main_image_url, categorySlug: promo.category_slug, width: 400 });
           const discount =
             promo.original_amount > promo.promo_amount
               ? Math.round(((promo.original_amount - promo.promo_amount) / promo.original_amount) * 100)
@@ -89,7 +89,7 @@ export function FeaturedShopsRail({ shops }: { shops: VendorStorefront[] }) {
       <SectionHeader title={t("Boutiques à la une")} href="/boutiques" linkLabel={t("Voir tout")} />
       <ul className={railClass}>
         {featured.map((shop) => {
-          const logo = resolveImageUrl(shop.logo_url);
+          const logo = resolveImageUrl(shop.logo_url, 200);
           return (
             <li key={shop.id} className="w-44 shrink-0 snap-start sm:w-52">
               <Link
@@ -137,7 +137,7 @@ export function AdminSectionsRails({ sections }: { sections: HomeContentSection[
           <h2 className="text-lg font-semibold text-ink-900">{t(section.title)}</h2>
           <ul className={railClass}>
             {section.products.slice(0, 12).map((product) => {
-              const image = resolveProductImageUrl({ raw: product.main_image_url });
+              const image = resolveProductImageUrl({ raw: product.main_image_url, width: 400 });
               return (
                 <li key={`p-${product.id}`} className="w-36 shrink-0 snap-start sm:w-44">
                   <Link

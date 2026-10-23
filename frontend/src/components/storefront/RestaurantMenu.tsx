@@ -130,7 +130,7 @@ export function RestaurantMenu({
                     <div className="h-24 w-24 overflow-hidden rounded-field bg-surface-1">
                       {dish.image_url ? (
                         <Image
-                          src={resolveImageUrl(dish.image_url) ?? "/images/placeholders/default.svg"}
+                          src={resolveImageUrl(dish.image_url, 200) ?? "/images/placeholders/default.svg"}
                           alt={dish.name}
                           width={192}
                           height={192}

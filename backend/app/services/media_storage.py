@@ -143,7 +143,11 @@ class S3MediaStorage(MediaStorage):
                 file.file,
                 self.bucket,
                 filename,
-                ExtraArgs={"ContentType": file.content_type or "application/octet-stream"},
+                # Nom de fichier unique, jamais remplace : le telephone peut garder la photo un an.
+                ExtraArgs={
+                    "ContentType": file.content_type or "application/octet-stream",
+                    "CacheControl": "public, max-age=31536000, immutable",
+                },
             )
         except (BotoCoreError, ClientError):
             raise ValidationDomainError("Envoi de la photo impossible. Réessayez dans un instant.") from None

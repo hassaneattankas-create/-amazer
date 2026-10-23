@@ -54,7 +54,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
     if (!data) return [] as string[];
     const raw = [data.product.main_image_url, ...(data.product.images ?? []).map((image) => image.image_url)];
     const resolved = raw
-      .map((url) => resolveProductImageUrl({ raw: url ?? null, categorySlug: data.product.category?.slug }))
+      .map((url) => resolveProductImageUrl({ raw: url ?? null, categorySlug: data.product.category?.slug, width: 800 }))
       .filter((url): url is string => Boolean(url));
     return Array.from(new Set(resolved));
   }, [data]);

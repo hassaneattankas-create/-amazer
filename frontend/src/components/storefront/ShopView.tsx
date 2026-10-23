@@ -618,7 +618,7 @@ export function ShopView({ vendorId }: { vendorId: string }) {
             {data.gallery_images.map((imageUrl, index) => (
               <div key={`gallery-${index}-${imageUrl}`} className="overflow-hidden rounded-2xl bg-slate-100">
                 <Image
-                  src={resolveImageUrl(imageUrl) ?? "/images/placeholders/default.svg"}
+                  src={resolveImageUrl(imageUrl, 400) ?? "/images/placeholders/default.svg"}
                   alt={data.business_name}
                   width={600}
                   height={600}
@@ -650,7 +650,7 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
       <div className="relative h-36 w-full bg-ink-900 sm:h-52">
         {data.cover_image_url ? (
           <Image
-            src={resolveImageUrl(data.cover_image_url) ?? "/images/placeholders/default.svg"}
+            src={resolveImageUrl(data.cover_image_url, 800) ?? "/images/placeholders/default.svg"}
             alt=""
             fill
             sizes="(max-width: 768px) 100vw, 1200px"
@@ -666,7 +666,7 @@ function StorefrontHero({ data }: { data: SellerStorefront }) {
           <div className="relative -mt-10 flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-card border-4 border-card bg-surface-1 shadow-resting sm:h-24 sm:w-24">
             {data.logo_url ? (
               <Image
-                src={resolveImageUrl(data.logo_url) ?? "/images/placeholders/default.svg"}
+                src={resolveImageUrl(data.logo_url, 200) ?? "/images/placeholders/default.svg"}
                 alt=""
                 width={96}
                 height={96}
@@ -809,7 +809,7 @@ function RetailShopContent({
               <div className="relative aspect-square w-full overflow-hidden bg-surface-1">
                 {item.main_image_url ? (
                   <Image
-                    src={resolveImageUrl(item.main_image_url) ?? "/images/placeholders/default.svg"}
+                    src={resolveImageUrl(item.main_image_url, 400) ?? "/images/placeholders/default.svg"}
                     alt={item.name}
                     fill
                     loading="lazy"

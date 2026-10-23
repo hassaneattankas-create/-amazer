@@ -103,7 +103,7 @@ export function ResellerShopView({ resellerId }: { resellerId: string }) {
               <article key={item.id} className="flex flex-col overflow-hidden rounded-card border border-border bg-card">
                 <div className="relative aspect-square bg-surface-1">
                   <Image
-                    src={resolveProductImageUrl({ raw: item.image_url })}
+                    src={resolveProductImageUrl({ raw: item.image_url, width: 400 })}
                     alt={item.product_name}
                     fill
                     sizes="(max-width: 640px) 50vw, 240px"

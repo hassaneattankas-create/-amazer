@@ -1,4 +1,4 @@
-import { resolveImageUrl } from "@/lib/image";
+import { resolveImageUrl, type ImageWidth } from "@/lib/image";
 
 const blockedHosts = new Set(["picsum.photos", "fastly.picsum.photos"]);
 
@@ -30,9 +30,11 @@ export function productFallbackImage(categorySlug?: string | null): string {
 export function resolveProductImageUrl(options: {
   raw: string | null | undefined;
   categorySlug?: string | null;
+  /** Petite version (200 / 400 / 800 px) : bien plus rapide à charger. */
+  width?: ImageWidth;
 }): string {
   const fallback = productFallbackImage(options.categorySlug);
-  const resolved = resolveImageUrl(options.raw);
+  const resolved = resolveImageUrl(options.raw, options.width);
   if (!resolved) {
     return fallback;
   }

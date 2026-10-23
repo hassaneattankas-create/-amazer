@@ -66,8 +66,8 @@ export function StorefrontShowcaseCard({
   const name = store.business_name || store.name;
   const [coverFailed, setCoverFailed] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
-  const coverUrl = coverFailed ? null : resolveImageUrl(store.cover_image_url);
-  const logoUrl = logoFailed ? null : resolveImageUrl(store.logo_url);
+  const coverUrl = coverFailed ? null : resolveImageUrl(store.cover_image_url, 800);
+  const logoUrl = logoFailed ? null : resolveImageUrl(store.logo_url, 200);
   const summary = activitySummary(store);
 
   return (

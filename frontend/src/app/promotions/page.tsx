@@ -104,7 +104,7 @@ export default function PromotionsPage() {
                   >
                     <div className="relative aspect-square bg-surface-1">
                       <Image
-                        src={resolveProductImageUrl({ raw: item.main_image_url, categorySlug: item.category_slug })}
+                        src={resolveProductImageUrl({ raw: item.main_image_url, categorySlug: item.category_slug, width: 400 })}
                         alt={item.product_name}
                         fill
                         sizes="(max-width: 640px) 50vw, 240px"

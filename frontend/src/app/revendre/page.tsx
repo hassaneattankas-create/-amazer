@@ -212,7 +212,7 @@ export default function RevendrePage() {
                 return (
                   <li key={item.id} className="flex min-w-0 flex-wrap items-center gap-3 p-3">
                     <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-field bg-surface-1">
-                      <Image src={resolveProductImageUrl({ raw: item.image_url })} alt="" fill sizes="56px" unoptimized className="object-cover" />
+                      <Image src={resolveProductImageUrl({ raw: item.image_url, width: 200 })} alt="" fill sizes="56px" unoptimized className="object-cover" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-ink-900">{item.product_name}</p>
@@ -303,7 +303,7 @@ export default function RevendrePage() {
               <li key={product.id} className="flex min-w-0 flex-wrap items-center gap-3 rounded-card border border-border bg-card p-3">
                 <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-field bg-surface-1">
                   <Image
-                    src={resolveProductImageUrl({ raw: product.main_image_url, categorySlug: product.category?.slug })}
+                    src={resolveProductImageUrl({ raw: product.main_image_url, categorySlug: product.category?.slug, width: 200 })}
                     alt=""
                     fill
                     sizes="56px"

@@ -1,8 +1,13 @@
 import { NextRequest } from "next/server";
+import sharp from "sharp";
 
 export const runtime = "nodejs";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+// Petites versions demandées par le site (vignettes, grandes photos) : rien d'autre, pour un cache efficace.
+const ALLOWED_WIDTHS = new Set([200, 400, 800]);
+// Les fichiers d'images AMAZER ne sont jamais remplacés (nom unique) : cache d'un an.
+const LONG_CACHE = "public, max-age=31536000, s-maxage=31536000, immutable";
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1"]);
 
 function isPrivateIpv4(hostname: string): boolean {
@@ -125,9 +130,26 @@ export async function GET(request: NextRequest): Promise<Response> {
     return jsonError("Image too large", 413);
   }
 
+  const width = Number(request.nextUrl.searchParams.get("w") || 0);
+  if (ALLOWED_WIDTHS.has(width) && !contentType.toLowerCase().includes("svg")) {
+    try {
+      // Version légère : redimensionnée, orientée correctement, en WebP (10 à 30 fois plus petite).
+      const small = await sharp(Buffer.from(body), { failOn: "none", animated: false })
+        .rotate()
+        .resize({ width, height: width, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 72 })
+        .toBuffer();
+      return new Response(new Uint8Array(small), {
+        headers: { "Cache-Control": LONG_CACHE, "Content-Length": String(small.byteLength), "Content-Type": "image/webp" },
+      });
+    } catch {
+      // Image illisible pour la réduction : on renvoie l'originale.
+    }
+  }
+
   return new Response(body, {
     headers: {
-      "Cache-Control": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=259200",
+      "Cache-Control": "public, max-age=604800, s-maxage=31536000, stale-while-revalidate=259200",
       "Content-Length": String(body.byteLength),
       "Content-Type": contentType,
     },

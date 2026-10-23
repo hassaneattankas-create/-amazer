@@ -104,7 +104,7 @@ export function RestaurantMenuManager({ startWithForm = false }: { startWithForm
                     <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-field bg-surface-1">
                       {dish.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={resolveImageUrl(dish.image_url) ?? ""} alt="" className="h-full w-full object-cover" />
+                        <img src={resolveImageUrl(dish.image_url, 200) ?? ""} alt="" className="h-full w-full object-cover" />
                       ) : (
                         <UtensilsCrossed className="h-5 w-5 text-ink-400" aria-hidden="true" />
                       )}

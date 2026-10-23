@@ -1,4 +1,4 @@
-import { getBackendOriginFromEnv } from "@/lib/backend-origin";
+import { getBackendOriginFromEnv, publicSiteOrigin } from "@/lib/backend-origin";
 import { isMobileAppBuild } from "@/lib/mobile-app";
 
 const IMAGE_PROXY_ROUTE = "/api/image-proxy";
@@ -75,7 +75,33 @@ function isLikelyRelativeMediaPath(value: string): boolean {
   return value.includes("/");
 }
 
-export function resolveImageUrl(raw: string | null | undefined): string | null {
+/** Largeurs des petites versions servies par /api/image-proxy (vignette, carte, grande photo). */
+export type ImageWidth = 200 | 400 | 800;
+
+/**
+ * Petite version d'une image (WebP redimensionné, mis en cache un an) : chargement quasi immédiat
+ * au lieu de la photo d'origine (souvent 300 Ko à 2 Mo). Dans l'application Android, l'adresse publique du site sert.
+ */
+export function sizedImageUrl(url: string | null, width?: ImageWidth): string | null {
+  if (!url || !width) return url;
+  if (url.startsWith(`${IMAGE_PROXY_ROUTE}?`)) {
+    return `${url}&w=${width}`;
+  }
+  if (!/^https?:\/\//i.test(url)) return url;
+  try {
+    if (LOCAL_HOSTS.has(new URL(url).hostname)) return url;
+  } catch {
+    return url;
+  }
+  const origin = isMobileAppBuild() ? publicSiteOrigin().replace(/\/$/, "") : "";
+  return `${origin}${IMAGE_PROXY_ROUTE}?url=${encodeURIComponent(url)}&w=${width}`;
+}
+
+export function resolveImageUrl(raw: string | null | undefined, width?: ImageWidth): string | null {
+  return sizedImageUrl(resolveFullImageUrl(raw), width);
+}
+
+function resolveFullImageUrl(raw: string | null | undefined): string | null {
   if (!raw) {
     return null;
   }

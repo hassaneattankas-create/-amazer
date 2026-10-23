@@ -33,7 +33,7 @@ export function LocalServiceCard({ item, kind, distanceKm, freshHours, compact =
     kind === "fuel_station"
       ? `Bonjour AMAZER, je souhaite commander du gaz livré depuis ${from}. Taille de bouteille : `
       : `Bonjour AMAZER, je souhaite une livraison depuis ${from}.`;
-  const logo = item.logo_url ? resolveImageUrl(item.logo_url) : null;
+  const logo = item.logo_url ? resolveImageUrl(item.logo_url, 200) : null;
   // Statistiques de la station (appels, itineraires, commandes de gaz), sans donnee personnelle.
   const track = (event: "call" | "route" | "gas") => {
     if (item.outlet_id) recordOutletEvent(item.outlet_id, event);
