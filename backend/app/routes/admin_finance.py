@@ -97,7 +97,7 @@ from app.services.audit_log_service import append_audit_log
 from app.services.order_cancellation_service import cancel_order, ensure_not_cancelled, notify_order_cancelled
 from app.services.order_fulfillment_service import sync_fulfillments
 from app.services.notification_service import NotificationPayload, NotificationService
-from app.services.local_services import parse_cities
+from app.services.local_services import parse_cities, strip_unrelated_options
 from app.services.seller_finance_service import (
     auto_receipt_hours,
     build_effective_seller_finance_settings,
@@ -1819,6 +1819,7 @@ def apply_seller_activity(profile: SellerProfile, activity: str) -> None:
         # Entreprise / transport : reservations (chambres, trajets, tables) debloquees.
         profile.accepts_hotel_bookings = True
         profile.accepts_table_reservations = profile.accepts_table_reservations or activity == "premium"
+    strip_unrelated_options(profile)
 
 
 @router.post("/sellers/{profile_id}/activity", response_model=AdminSellerResponse)
@@ -1875,6 +1876,7 @@ def set_seller_service_kind(
         profile.is_enterprise = True
         if profile.activity_type not in ("enterprise", "hotel"):
             profile.activity_type = "enterprise"
+        strip_unrelated_options(profile)
     append_audit_log(
         db,
         event_type="admin_seller_service_kind_set",

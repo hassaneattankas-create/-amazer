@@ -218,6 +218,9 @@ def apply_seller_profile_payload(profile: SellerProfile, payload: Mapping[str, A
         profile.offers_shop = bool(payload.get("offers_shop"))
     if payload.get("offers_restaurant") is not None:
         profile.offers_restaurant = bool(payload.get("offers_restaurant"))
+    from app.services.local_services import strip_unrelated_options
+
+    strip_unrelated_options(profile)
 
 
 def create_or_update_seller_profile(

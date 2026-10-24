@@ -320,6 +320,13 @@ def _bootstrap_database_if_needed() -> None:
             "seller_subscription_fee_restaurant = COALESCE(seller_subscription_fee_restaurant, seller_subscription_fee, 5000), "
             "seller_subscription_fee_premium = COALESCE(seller_subscription_fee_premium, seller_subscription_fee, 5000)"
         ),
+        # Pharmacies et stations : ni boutique, ni restaurant, ni reservations (options hors sujet retirees).
+        (
+            "UPDATE seller_profiles SET offers_shop = FALSE, offers_restaurant = FALSE, "
+            "accepts_hotel_bookings = FALSE, accepts_table_reservations = FALSE, deposit_amount = NULL "
+            "WHERE service_kind IN ('pharmacy', 'fuel_station') AND (offers_shop OR offers_restaurant "
+            "OR accepts_hotel_bookings OR accepts_table_reservations OR deposit_amount IS NOT NULL)"
+        ),
     ):
         _run_ddl_safely(statement)
 

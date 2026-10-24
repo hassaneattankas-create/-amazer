@@ -490,3 +490,12 @@ def test_region_manager_receives_reminders_for_stations_without_manager(db: Sess
     now = datetime.now(UTC)
     assert station_tasks.send_station_reminders(db, now) == 1
     assert sent[0][0] == "resp" and "/gerant-station" in sent[0][2]
+
+
+def test_pharmacy_and_station_never_keep_shop_restaurant_or_booking_options() -> None:
+    station = _p(service_kind="fuel_station", offers_shop=True, offers_restaurant=True, accepts_hotel_bookings=True, accepts_table_reservations=True, deposit_amount=5000)
+    svc.strip_unrelated_options(station)
+    assert (station.offers_shop, station.offers_restaurant, station.accepts_hotel_bookings, station.accepts_table_reservations, station.deposit_amount) == (False, False, False, False, None)
+    hotel = _p(service_kind=None, accepts_hotel_bookings=True)
+    svc.strip_unrelated_options(hotel)
+    assert hotel.accepts_hotel_bookings

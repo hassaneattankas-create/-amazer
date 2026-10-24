@@ -28,6 +28,17 @@ DEFAULT_FUEL_FRESH_HOURS = 4
 DEFAULT_DELIVERY_CITIES = "Niamey"
 
 
+def strip_unrelated_options(profile: SellerProfile) -> None:
+    """Pharmacie ou station : pas de boutique, de restaurant ni de reservations (hors sujet pour ces services)."""
+    if getattr(profile, "service_kind", None) not in SERVICE_KINDS:
+        return
+    profile.offers_shop = False
+    profile.offers_restaurant = False
+    profile.accepts_hotel_bookings = False
+    profile.accepts_table_reservations = False
+    profile.deposit_amount = None
+
+
 def _aware(value: datetime | None) -> datetime | None:
     if value is None:
         return None

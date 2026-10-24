@@ -111,12 +111,15 @@ export default function SellerDashboardPage() {
     profile?.activity_type === "hotel" || profile?.activity_type === "enterprise"
       ? "enterprise"
       : profile?.activity_type || "shop";
-  const showProductTools = sellerMode === "shop" || (sellerMode === "enterprise" && profile?.offers_shop !== false);
-  const showRestaurantTools = sellerMode === "restaurant" || (sellerMode === "enterprise" && Boolean(profile?.offers_restaurant));
+  // Pharmacie ou station : pas de produits, de menu ni de réservations, seulement leurs outils propres.
+  const isLocalService = profile?.service_kind === "pharmacy" || profile?.service_kind === "fuel_station";
+  const showProductTools = !isLocalService && (sellerMode === "shop" || (sellerMode === "enterprise" && profile?.offers_shop !== false));
+  const showRestaurantTools = !isLocalService && (sellerMode === "restaurant" || (sellerMode === "enterprise" && Boolean(profile?.offers_restaurant)));
   const showRestaurantReservationTools =
     showRestaurantTools && Boolean(profile?.accepts_table_reservations);
   const isTransport = Boolean(profile?.offers_transport) || profile?.activity_type === "transport";
   const showHotelBookingTools =
+    !isLocalService &&
     Boolean(profile) &&
     (profile?.activity_type === "hotel" || profile?.activity_type === "enterprise" || isTransport) &&
     Boolean(profile?.accepts_hotel_bookings);
@@ -406,7 +409,13 @@ export default function SellerDashboardPage() {
 
       <nav className="sticky top-14 z-sticky -mx-gutter border-b border-border bg-background/95 px-gutter backdrop-blur sm:top-16" aria-label="Sections vendeur">
         <div className="flex gap-1 overflow-x-auto" role="tablist">
-          {SELLER_TABS.filter((item) => item.key !== "commandes" || showProductTools || showRestaurantTools || showHotelBookingTools).map((item) => (
+          {SELLER_TABS.filter((item) =>
+            item.key === "commandes"
+              ? showProductTools || showRestaurantTools || showHotelBookingTools
+              : item.key === "produits" || item.key === "ajouter"
+                ? !isLocalService
+                : true
+          ).map((item) => (
             <button
               key={item.key}
               type="button"

@@ -330,7 +330,9 @@ function SellerPageContent() {
   const isRestaurant = profileForm.activity_type === "restaurant";
   const isTransport = Boolean(profile?.offers_transport);
   const isPremium = profileForm.activity_type === "hotel" || profileForm.activity_type === "enterprise";
-  const showRestaurantSection = isRestaurant || isPremium;
+  // Pharmacie ou station : ni boutique, ni restaurant, ni réservations (hors sujet pour ces services).
+  const isLocalService = profile?.service_kind === "pharmacy" || profile?.service_kind === "fuel_station";
+  const showRestaurantSection = (isRestaurant || isPremium) && !isLocalService;
   const showRoomTypes = isPremium || isTransport;
   const { data: publicFinance } = useQuery({
     queryKey: ["public-finance-settings"],
@@ -417,11 +419,11 @@ function SellerPageContent() {
       service_offerings: isPremium ? parseServices(profileForm.service_offerings_text) : [],
       room_types: showRoomTypes ? roomRowsToPayload(profileForm.room_types_list) : [],
       deposit_payment_method: showRoomTypes ? profileForm.deposit_payment_method : undefined,
-      deposit_amount: isPremium ? (profileForm.deposit_amount ? Number(profileForm.deposit_amount) : undefined) : undefined,
+      deposit_amount: isPremium && !isLocalService ? (profileForm.deposit_amount ? Number(profileForm.deposit_amount) : undefined) : undefined,
       accepts_table_reservations: showRestaurantSection ? profileForm.accepts_table_reservations : false,
-      accepts_hotel_bookings: isPremium ? profileForm.accepts_hotel_bookings : false,
-      offers_shop: isPremium ? profileForm.offers_shop : undefined,
-      offers_restaurant: isPremium ? profileForm.offers_restaurant : undefined,
+      accepts_hotel_bookings: isPremium && !isLocalService ? profileForm.accepts_hotel_bookings : false,
+      offers_shop: isLocalService ? false : isPremium ? profileForm.offers_shop : undefined,
+      offers_restaurant: isLocalService ? false : isPremium ? profileForm.offers_restaurant : undefined,
     });
 
   return (
@@ -660,8 +662,10 @@ function SellerPageContent() {
 
           {isPremium || isRestaurant ? (
             <div className="space-y-3 border-t border-border pt-4">
-              <h3 className="font-semibold text-ink-900">Options {isPremium ? "Premium" : "restaurant"}</h3>
-              {isPremium ? (
+              <h3 className="font-semibold text-ink-900">
+                {isLocalService ? "Votre vitrine" : `Options ${isPremium ? "Premium" : "restaurant"}`}
+              </h3>
+              {isPremium && !isLocalService ? (
                 <fieldset className="space-y-2">
                   <legend className="text-sm font-medium text-ink-800">Ce que propose votre mini-site</legend>
                   <label className="flex min-h-11 items-center gap-2 text-sm text-ink-800">
@@ -699,12 +703,14 @@ function SellerPageContent() {
                   Réservation de tables
                 </label>
               ) : null}
+              {isLocalService ? null : (
               <label className={labelClass}>
                 Numéro qui reçoit les paiements clients (Nita / Amana)
                 <input className={fieldClass} inputMode="tel" placeholder="Ex. 90 00 00 00" value={profileForm.payout_phone} onChange={(e) => setField("payout_phone")(e.target.value)} />
                 <span className="mt-1 block text-xs font-normal text-ink-600">Affiché au client pour les réservations et acomptes.</span>
               </label>
-              {isPremium ? (
+              )}
+              {isPremium && !isLocalService ? (
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className={labelClass}>
                     Acompte de réservation (XOF, facultatif)
@@ -728,7 +734,7 @@ function SellerPageContent() {
               ) : null}
               {isPremium ? (
                 <label className={labelClass}>
-                  Services (un par ligne : titre | description)
+                  {isLocalService ? "Services proposés (un par ligne : titre | description, ex. Lavage | Lavage auto complet)" : "Services (un par ligne : titre | description)"}
                   <textarea
                     className={`${fieldClass} h-auto min-h-24 py-2`}
                     value={profileForm.service_offerings_text}
@@ -736,7 +742,7 @@ function SellerPageContent() {
                   />
                 </label>
               ) : null}
-              {showRoomTypes ? (
+              {showRoomTypes && !isLocalService ? (
                 <div id="chambres" className="scroll-mt-24">
                   <p className="mb-2 text-sm font-medium text-ink-800">{isTransport ? "Vos trajets" : "Vos chambres"}</p>
                   <RoomTypesEditor
