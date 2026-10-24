@@ -62,6 +62,8 @@ class GlobalSettings(Base):
     # Fin des paliers (numero de la derniere station du palier 1, puis du palier 2).
     fuel_tier1_until: Mapped[int] = mapped_column(Integer, nullable=False, default=10, server_default="10")
     fuel_tier2_until: Mapped[int] = mapped_column(Integer, nullable=False, default=30, server_default="30")
+    # Delai (heures) apres lequel une disponibilite de carburant passe « non confirmee ».
+    fuel_fresh_hours: Mapped[int] = mapped_column(Integer, nullable=False, default=4, server_default="4")
     # Villes ou AMAZER livre depuis les pharmacies / stations, separees par des virgules.
     local_delivery_cities: Mapped[str] = mapped_column(String(400), nullable=False, default="Niamey", server_default="Niamey")
     affiliate_min_payout: Mapped[float] = mapped_column(Float, nullable=False, default=2000, server_default="2000")

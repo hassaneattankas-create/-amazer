@@ -6,7 +6,8 @@ import { formatDistance, telHref, timeAgo, whatsappHref } from "@/lib/local-serv
 import { resolveImageUrl } from "@/lib/image";
 import { getShopRoute } from "@/lib/mobile-routes";
 import { recordOutletEvent } from "@/services/local-services-service";
-import { FUEL_LABELS, type FuelKey, type LocalServiceItem, type ServiceKind } from "@/types/local-services";
+import { ReportStationButton } from "@/components/services/ReportStationButton";
+import { FUEL_LABELS, FUEL_STATE_LABELS, type FuelKey, type LocalServiceItem, type ServiceKind } from "@/types/local-services";
 
 type Props = {
   item: LocalServiceItem;
@@ -82,16 +83,29 @@ export function LocalServiceCard({ item, kind, distanceKm, freshHours, compact =
               const state = item.fuel[fuel];
               const known = item.fuel_fresh && state;
               const ok = known && state === "available";
+              const low = known && state === "low";
               return (
                 <li
                   key={fuel}
                   className={`inline-flex items-center gap-1.5 rounded-pill border px-3 py-1 text-sm font-semibold ${
-                    !known ? "border-border bg-surface-1 text-ink-500" : ok ? "border-success/30 bg-success/10 text-success" : "border-danger/30 bg-danger/10 text-danger"
+                    !known
+                      ? "border-border bg-surface-1 text-ink-600"
+                      : ok
+                        ? "border-success/30 bg-success/10 text-success"
+                        : low
+                          ? "border-warning/40 bg-warning/10 text-ink-900"
+                          : "border-danger/30 bg-danger/10 text-danger"
                   }`}
                 >
-                  {!known ? null : ok ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> : <XCircle className="h-4 w-4" aria-hidden="true" />}
+                  {!known ? null : ok ? (
+                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                  ) : low ? (
+                    <AlertTriangle className="h-4 w-4 text-warning" aria-hidden="true" />
+                  ) : (
+                    <XCircle className="h-4 w-4" aria-hidden="true" />
+                  )}
                   {FUEL_LABELS[fuel]}
-                  <span className="font-normal">{!known ? "· ?" : ok ? "· disponible" : "· rupture"}</span>
+                  <span className="font-normal">· {known && state ? FUEL_STATE_LABELS[state] : "non confirmé"}</span>
                 </li>
               );
             })}
@@ -149,6 +163,7 @@ export function LocalServiceCard({ item, kind, distanceKm, freshHours, compact =
           {(item.brand_outlets ?? 0) > 1 ? `Voir les ${item.brand_outlets} stations ${item.brand_name ?? ""}`.trim() : "Voir la vitrine"}
         </Link>
       )}
+      {kind === "fuel_station" ? <ReportStationButton vendorId={item.vendor_id} outletId={item.outlet_id} name={item.business_name} /> : null}
     </article>
   );
 }

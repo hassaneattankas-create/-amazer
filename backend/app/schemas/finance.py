@@ -36,6 +36,7 @@ class FinanceSettingsResponse(BaseModel):
     fuel_base_subscription: float = 0
     fuel_tier1_until: int = 10
     fuel_tier2_until: int = 30
+    fuel_fresh_hours: int = 4
     seller_trial_days: int = 0
     seller_launch_discount_percent: float = 0
     reseller_subscription_fee: float = 500
@@ -91,6 +92,7 @@ class FinanceSettingsUpdateRequest(BaseModel):
     fuel_base_subscription: float = Field(default=0, ge=0)
     fuel_tier1_until: int = Field(default=10, ge=1, le=10000)
     fuel_tier2_until: int = Field(default=30, ge=1, le=10000)
+    fuel_fresh_hours: int = Field(default=4, ge=1, le=48)
     # Essai gratuit a l'inscription vendeur (0 = desactive) et reduction de lancement en %.
     seller_trial_days: int = Field(default=0, ge=0, le=365)
     seller_launch_discount_percent: float = Field(default=0, ge=0, le=100)

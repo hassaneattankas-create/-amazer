@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ForbiddenError, NotFoundError, ValidationDomainError
 from app.database import Base
+from app.models.fuel_history import FuelStatusChange, StationReport
 from app.models.fuel_outlet import FuelOutlet
 from app.models.fuel_outlet_stat import FuelOutletDailyStat
 from app.models.global_settings import GlobalSettings
@@ -18,7 +19,7 @@ from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.routes import local_services as route
-from app.schemas.local_services import FuelOutletCreate, FuelOutletsBulkUpdate, FuelOutletUpdate, FuelStatusSchema, OutletEvent, ServiceStatusUpdate
+from app.schemas.local_services import StationReportCreate, FuelOutletCreate, FuelOutletsBulkUpdate, FuelOutletUpdate, FuelStatusSchema, OutletEvent, ServiceStatusUpdate
 from app.services import local_services as svc
 
 
@@ -51,12 +52,26 @@ def test_scheduled_period_uses_niamey_time_and_ends_by_itself() -> None:
     assert svc.duty_label(profile, datetime(2026, 10, 21, 12, 0, tzinfo=UTC)) == "De garde jusqu'au 27 oct."
 
 
-def test_fuel_information_older_than_six_hours_is_not_trusted() -> None:
+def test_fuel_information_older_than_the_freshness_delay_is_not_trusted() -> None:
     now = datetime(2026, 10, 21, 12, 0, tzinfo=UTC)
     fresh = _p(service_kind="fuel_station", fuel_status={"super": "available", "gaz": "out"}, fuel_updated_at=now - timedelta(hours=2))
-    stale = _p(service_kind="fuel_station", fuel_status={"super": "available"}, fuel_updated_at=now - timedelta(hours=7))
+    stale = _p(service_kind="fuel_station", fuel_status={"super": "available"}, fuel_updated_at=now - timedelta(hours=5))
     assert svc.has_fuel(fresh, "super", now) and not svc.has_fuel(fresh, "gaz", now)
     assert not svc.has_fuel(stale, None, now)
+    # Delai regle par l'admin (6 h) : la meme information reste valable.
+    assert svc.has_fuel(stale, None, now, svc.fresh_hours(SimpleNamespace(fuel_fresh_hours=6)))
+    assert svc.fresh_hours(None) == 4 and svc.fresh_hours(SimpleNamespace(fuel_fresh_hours=0)) == 4
+    # Stock faible : il en reste, la station est utile.
+    low = _p(service_kind="fuel_station", fuel_status={"gasoil": "low"}, fuel_updated_at=now)
+    assert svc.has_fuel(low, "gasoil", now)
+
+
+def test_history_keeps_only_real_changes() -> None:
+    assert svc.fuel_changes({"super": "available", "gaz": "out"}, {"super": "available", "gaz": "low", "gasoil": "out"}) == [
+        ("gasoil", None, "out"),
+        ("gaz", "out", "low"),
+    ]
+    assert svc.fuel_changes({"super": "out"}, {"super": "out"}) == []
     assert svc.clean_fuel_status({"super": "available", "kerosene": "available", "gaz": "peut-etre"}) == {"super": "available"}
 
 
@@ -91,7 +106,7 @@ def test_position_must_be_in_niger() -> None:
 @pytest.fixture
 def db(monkeypatch):
     engine = create_engine("sqlite://")
-    Base.metadata.create_all(engine, tables=[t.__table__ for t in (User, Vendor, SellerProfile, GlobalSettings, FuelOutlet, FuelOutletDailyStat)])
+    Base.metadata.create_all(engine, tables=[t.__table__ for t in (User, Vendor, SellerProfile, GlobalSettings, FuelOutlet, FuelOutletDailyStat, FuelStatusChange, StationReport)])
     monkeypatch.setattr(route, "cache_get_json", lambda _key: None)
     monkeypatch.setattr(route, "cache_set_json", lambda *_a, **_k: None)
     monkeypatch.setattr(route, "invalidate_services_cache", lambda: None)
@@ -298,3 +313,17 @@ def test_station_pricing_follows_admin_settings() -> None:
     settings.fuel_tier1_until, settings.fuel_tier2_until = 1, 1
     # inclus = 2 -> palier 1 = 2 (vide), palier 2 = 3e station, palier 3 au-dela.
     assert price_for(settings, 0, 4).extra == 500 + 100
+
+
+def test_history_records_changes_and_customers_can_report_a_station(db: Session) -> None:
+    user, profile = shop(db, "station-h", "fuel_station")
+    route.update_service_status(ServiceStatusUpdate(fuel=FuelStatusSchema(super="available")), None, db, user)
+    route.update_service_status(ServiceStatusUpdate(fuel=FuelStatusSchema(super="available")), None, db, user)  # confirmation seule
+    route.update_service_status(ServiceStatusUpdate(fuel=FuelStatusSchema(super="low")), None, db, user)
+    history = route.my_fuel_history(db, user)
+    assert [(h.fuel, h.old_state, h.new_state) for h in history] == [("super", "available", "low"), ("super", None, "available")]
+    route.report_station(StationReportCreate(vendor_id=profile.vendor_id, kind="wrong_status", comment="Plus de super"), None, db)
+    with pytest.raises(NotFoundError):
+        route.report_station(StationReportCreate(vendor_id="inconnu", kind="closed"), None, db)
+    reports = route.my_station_reports(db, user)
+    assert [(r.kind, r.comment) for r in reports] == [("wrong_status", "Plus de super")]

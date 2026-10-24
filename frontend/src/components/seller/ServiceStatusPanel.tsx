@@ -9,7 +9,8 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { timeAgo } from "@/lib/local-services";
 import { getServiceStatus, listMyOutlets, updateServiceStatus } from "@/services/local-services-service";
 import { toast } from "@/store/toast-store";
-import { FUEL_LABELS, type FuelKey, type FuelState, type ServiceKind, type ServiceStatusUpdate } from "@/types/local-services";
+import { StationActivityPanel } from "@/components/seller/StationActivityPanel";
+import { FUEL_LABELS, FUEL_STATE_LABELS, type FuelKey, type FuelState, type ServiceKind, type ServiceStatusUpdate } from "@/types/local-services";
 
 const FUELS: FuelKey[] = ["super", "gasoil", "gaz"];
 const fieldClass =
@@ -161,11 +162,11 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
           {FUELS.map((fuel) => {
             const current = status.fuel[fuel] ?? null;
             const choose = (state: FuelState) =>
-              mutation.mutate({ fuel: { [fuel]: state }, done: `${FUEL_LABELS[fuel]} : ${state === "available" ? "disponible" : "en rupture"}.` });
+              mutation.mutate({ fuel: { [fuel]: state }, done: `${FUEL_LABELS[fuel]} : ${FUEL_STATE_LABELS[state]}.` });
             return (
               <div key={fuel} className="flex items-center gap-2">
                 <span className="w-16 shrink-0 text-base font-semibold text-ink-900">{FUEL_LABELS[fuel]}</span>
-                <div className="grid flex-1 grid-cols-2 gap-2" role="group" aria-label={FUEL_LABELS[fuel]}>
+                <div className="grid flex-1 grid-cols-3 gap-2" role="group" aria-label={FUEL_LABELS[fuel]}>
                   <button
                     type="button"
                     disabled={busy}
@@ -176,6 +177,15 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
                     }`}
                   >
                     Disponible
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    aria-pressed={current === "low"}
+                    onClick={() => choose("low")}
+                    className={`min-h-12 rounded-field border text-sm font-semibold ${current === "low" ? "border-warning bg-warning text-ink-900" : "border-border bg-card text-ink-700 hover:border-warning"}`}
+                  >
+                    Stock faible
                   </button>
                   <button
                     type="button"
@@ -202,7 +212,7 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
               {status.fuel_updated_at
                 ? status.fuel_fresh
                   ? `Mis à jour ${timeAgo(status.fuel_updated_at)}.`
-                  : `Dernière mise à jour ${timeAgo(status.fuel_updated_at)} : les clients la voient « à confirmer ».`
+                  : `Dernière mise à jour ${timeAgo(status.fuel_updated_at)} : les clients la voient « non confirmée ».`
                 : "Indiquez vos disponibilités : les clients les voient tout de suite."}
             </p>
             {status.fuel_updated_at ? (
@@ -244,6 +254,7 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
               : "La livraison AMAZER n'est pas encore disponible dans votre ville."}
         </p>
       </div>
+      {kind === "fuel_station" ? <StationActivityPanel /> : null}
     </section>
   );
 }

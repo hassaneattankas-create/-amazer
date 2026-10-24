@@ -222,6 +222,7 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS fuel_base_subscription DOUBLE PRECISION NOT NULL DEFAULT 0",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS fuel_tier1_until INTEGER NOT NULL DEFAULT 10",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS fuel_tier2_until INTEGER NOT NULL DEFAULT 30",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS fuel_fresh_hours INTEGER NOT NULL DEFAULT 4",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS local_delivery_cities VARCHAR(400) NOT NULL DEFAULT 'Niamey'",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS service_kind VARCHAR(20)",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS on_duty BOOLEAN NOT NULL DEFAULT FALSE",

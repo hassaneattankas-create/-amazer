@@ -13,7 +13,8 @@ type StationKey =
   | "fuel_tier2_until"
   | "fuel_tier2_price"
   | "fuel_tier3_price"
-  | "fuel_network_flat";
+  | "fuel_network_flat"
+  | "fuel_fresh_hours";
 
 const DEFAULTS: Record<StationKey, number> = {
   fuel_base_subscription: 0,
@@ -24,7 +25,11 @@ const DEFAULTS: Record<StationKey, number> = {
   fuel_tier2_price: 1500,
   fuel_tier3_price: 1000,
   fuel_network_flat: 50000,
+  fuel_fresh_hours: 4,
 };
+
+/** Bornes acceptées par le serveur pour le délai de fraîcheur. */
+const clampValue = (key: StationKey, value: number) => (key === "fuel_fresh_hours" ? Math.min(48, Math.max(1, value || 1)) : Math.max(0, value || 0));
 
 const EXAMPLES = [3, 5, 12, 40];
 
@@ -70,10 +75,11 @@ export function StationPricingCard({
         <input
           type="number"
           inputMode="numeric"
-          min={0}
+          min={key === "fuel_fresh_hours" ? 1 : 0}
+          max={key === "fuel_fresh_hours" ? 48 : undefined}
           className={fieldClass}
           value={values[key]}
-          onChange={(event) => onChange({ [key]: Math.max(0, Number(event.target.value) || 0) })}
+          onChange={(event) => onChange({ [key]: clampValue(key, Number(event.target.value)) })}
         />
         <span className="shrink-0 text-xs text-ink-600">{suffix}</span>
       </span>
@@ -96,6 +102,12 @@ export function StationPricingCard({
           `0 = même prix que l'abonnement Premium (${formatXOF(premiumFee)}).`
         )}
         {field("fuel_included_outlets", "Stations comprises dans l'abonnement", "stations", "Aucun supplément jusqu'à ce nombre.")}
+        {field(
+          "fuel_fresh_hours",
+          "Délai avant « Non confirmé »",
+          "heures",
+          "Sans nouvelle déclaration après ce délai, la disponibilité n'est plus présentée comme sûre (4 h conseillé, de 1 à 48)."
+        )}
       </div>
 
       <div className="space-y-2">

@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-FuelState = Literal["available", "out"]
+FuelState = Literal["available", "low", "out"]
 
 
 class FuelStatusSchema(BaseModel):
@@ -172,3 +172,36 @@ class ServiceStatusResponse(BaseModel):
     longitude: float | None
     maps_url: str
     delivery_phone: str | None
+
+
+class FuelChangeItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    outlet_id: str | None
+    outlet_name: str | None
+    fuel: Literal["super", "gasoil", "gaz"]
+    old_state: FuelState | None
+    new_state: FuelState
+    created_at: str
+
+
+StationReportKind = Literal["wrong_status", "closed", "wrong_place", "other"]
+
+
+class StationReportCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    vendor_id: str = Field(min_length=1, max_length=36)
+    outlet_id: str | None = Field(default=None, max_length=36)
+    kind: StationReportKind
+    comment: str | None = Field(default=None, max_length=300)
+
+
+class StationReportItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    outlet_id: str | None
+    outlet_name: str | None
+    kind: StationReportKind
+    comment: str | None
+    created_at: str

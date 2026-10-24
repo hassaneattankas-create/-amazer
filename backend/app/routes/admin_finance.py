@@ -214,6 +214,7 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
                 ("fuel_base_subscription", 0),
                 ("fuel_tier1_until", 10),
                 ("fuel_tier2_until", 30),
+                ("fuel_fresh_hours", 4),
             )
         },
         support_email=settings.support_email,
@@ -571,6 +572,7 @@ def update_finance_settings(
         "fuel_tier3_price",
         "fuel_network_flat",
         "fuel_base_subscription",
+        "fuel_fresh_hours",
     ):
         setattr(settings_row, key, getattr(payload, key))
     # Paliers toujours dans l'ordre : inclus <= fin du palier 1 < fin du palier 2.

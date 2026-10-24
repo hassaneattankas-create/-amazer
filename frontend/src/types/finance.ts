@@ -26,6 +26,8 @@ export type FinanceSettings = {
   fuel_base_subscription?: number;
   fuel_tier1_until?: number;
   fuel_tier2_until?: number;
+  /** Heures après lesquelles une disponibilité de carburant passe « non confirmée » (4 par défaut). */
+  fuel_fresh_hours?: number;
   fuel_network_flat?: number;
   /** Essai gratuit a l'inscription vendeur, en jours (0 = desactive). */
   seller_trial_days?: number;

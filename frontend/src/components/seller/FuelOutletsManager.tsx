@@ -10,7 +10,7 @@ import { NIGER_REGION_CITIES, timeAgo } from "@/lib/local-services";
 import { formatXOF } from "@/lib/currency";
 import { bulkUpdateOutlets, createOutlet, deleteOutlet, getFuelNetwork, listMyOutlets, updateOutlet } from "@/services/local-services-service";
 import { toast } from "@/store/toast-store";
-import { FUEL_LABELS, type FuelKey, type FuelOutlet, type FuelOutletUpdate, type FuelState } from "@/types/local-services";
+import { FUEL_LABELS, FUEL_STATE_LABELS, type FuelKey, type FuelOutlet, type FuelOutletUpdate, type FuelState } from "@/types/local-services";
 
 const FUELS: FuelKey[] = ["super", "gasoil", "gaz"];
 const fieldClass =
@@ -56,11 +56,11 @@ function OutletCard({ outlet, busy, onUpdate, onDelete }: { outlet: FuelOutlet; 
           {FUELS.map((fuel) => {
             const current = outlet.fuel[fuel] ?? null;
             const choose = (state: FuelState) =>
-              onUpdate({ fuel: { [fuel]: state } }, `${outlet.name} — ${FUEL_LABELS[fuel]} : ${state === "available" ? "disponible" : "en rupture"}.`);
+              onUpdate({ fuel: { [fuel]: state } }, `${outlet.name} — ${FUEL_LABELS[fuel]} : ${FUEL_STATE_LABELS[state]}.`);
             return (
               <div key={fuel} className="flex items-center gap-2">
                 <span className="w-16 shrink-0 text-sm font-semibold text-ink-900">{FUEL_LABELS[fuel]}</span>
-                <div className="grid flex-1 grid-cols-2 gap-2" role="group" aria-label={`${FUEL_LABELS[fuel]} à ${outlet.name}`}>
+                <div className="grid flex-1 grid-cols-3 gap-2" role="group" aria-label={`${FUEL_LABELS[fuel]} à ${outlet.name}`}>
                   <button
                     type="button"
                     disabled={busy}
@@ -69,6 +69,15 @@ function OutletCard({ outlet, busy, onUpdate, onDelete }: { outlet: FuelOutlet; 
                     className={`min-h-11 rounded-field border text-sm font-semibold ${current === "available" ? "border-success bg-success text-white" : "border-border bg-card text-ink-700 hover:border-success"}`}
                   >
                     Disponible
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    aria-pressed={current === "low"}
+                    onClick={() => choose("low")}
+                    className={`min-h-11 rounded-field border text-sm font-semibold ${current === "low" ? "border-warning bg-warning text-ink-900" : "border-border bg-card text-ink-700 hover:border-warning"}`}
+                  >
+                    Stock faible
                   </button>
                   <button
                     type="button"

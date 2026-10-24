@@ -1,7 +1,7 @@
 /** Pharmacies de garde et stations-essence (vitrines Premium dont l'admin a choisi le type). */
 export type ServiceKind = "pharmacy" | "fuel_station";
 export type FuelKey = "super" | "gasoil" | "gaz";
-export type FuelState = "available" | "out";
+export type FuelState = "available" | "low" | "out";
 export type FuelStatus = Partial<Record<FuelKey, FuelState | null>>;
 
 export type LocalServiceItem = {
@@ -107,3 +107,16 @@ export type FuelOutletInput = { name: string; city: string; address?: string; ph
 export type FuelOutletUpdate = Partial<FuelOutletInput> & { is_active?: boolean; fuel?: FuelStatus; latitude?: number; longitude?: number };
 
 export const FUEL_LABELS: Record<FuelKey, string> = { super: "Super", gasoil: "Gasoil", gaz: "Gaz" };
+export const FUEL_STATE_LABELS: Record<FuelState, string> = { available: "disponible", low: "stock faible", out: "rupture" };
+
+export type FuelChange = {
+  outlet_id: string | null;
+  outlet_name: string | null;
+  fuel: FuelKey;
+  old_state: FuelState | null;
+  new_state: FuelState;
+  created_at: string;
+};
+
+export type StationReportKind = "wrong_status" | "closed" | "wrong_place" | "other";
+export type StationReport = { outlet_id: string | null; outlet_name: string | null; kind: StationReportKind; comment: string | null; created_at: string };

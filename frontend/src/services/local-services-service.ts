@@ -1,5 +1,18 @@
 import { api } from "@/lib/api";
-import type { FuelKey, FuelNetwork, FuelOutlet, FuelStatus, FuelOutletInput, FuelOutletUpdate, LocalServiceList, ServiceStatus, ServiceStatusUpdate } from "@/types/local-services";
+import type {
+  FuelChange,
+  FuelKey,
+  FuelNetwork,
+  FuelOutlet,
+  FuelStatus,
+  FuelOutletInput,
+  FuelOutletUpdate,
+  LocalServiceList,
+  ServiceStatus,
+  ServiceStatusUpdate,
+  StationReport,
+  StationReportKind,
+} from "@/types/local-services";
 
 export async function listPharmacies(params: { city?: string; onDuty?: boolean }): Promise<LocalServiceList> {
   const response = await api.get<LocalServiceList>("/api/v1/services/pharmacies", {
@@ -51,6 +64,18 @@ export async function getFuelNetwork(): Promise<FuelNetwork> {
 
 export async function bulkUpdateOutlets(payload: { fuel?: FuelStatus; confirm?: boolean; city?: string }): Promise<FuelOutlet[]> {
   return (await api.put<FuelOutlet[]>("/api/v1/seller/fuel-outlets/bulk", payload)).data;
+}
+
+export async function listMyFuelHistory(): Promise<FuelChange[]> {
+  return (await api.get<FuelChange[]>("/api/v1/seller/fuel-history")).data;
+}
+
+export async function listMyStationReports(): Promise<StationReport[]> {
+  return (await api.get<StationReport[]>("/api/v1/seller/station-reports")).data;
+}
+
+export async function reportStation(payload: { vendor_id: string; outlet_id: string | null; kind: StationReportKind; comment: string | null }): Promise<void> {
+  await api.post("/api/v1/services/report", payload);
 }
 
 /** Statistiques de la station (appel, itinéraire, commande de gaz). Ne bloque jamais l'action du client. */
