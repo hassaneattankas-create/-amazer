@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, BarChart3, CheckCircle2, LocateFixed, MapPin, Plus, RefreshCw, Trash2 } from "lucide-react";
 
+import { OutletManagersBlock } from "@/components/seller/OutletManagersBlock";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { NIGER_REGION_CITIES, timeAgo } from "@/lib/local-services";
@@ -66,7 +67,7 @@ function OutletCard({ outlet, busy, onUpdate, onDelete }: { outlet: FuelOutlet; 
                     disabled={busy}
                     aria-pressed={current === "available"}
                     onClick={() => choose("available")}
-                    className={`min-h-11 rounded-field border text-sm font-semibold ${current === "available" ? "border-success bg-success text-white" : "border-border bg-card text-ink-700 hover:border-success"}`}
+                    className={`min-h-11 rounded-field border px-1 text-xs font-semibold sm:text-sm ${current === "available" ? "border-success bg-success text-white" : "border-border bg-card text-ink-700 hover:border-success"}`}
                   >
                     Disponible
                   </button>
@@ -75,7 +76,7 @@ function OutletCard({ outlet, busy, onUpdate, onDelete }: { outlet: FuelOutlet; 
                     disabled={busy}
                     aria-pressed={current === "low"}
                     onClick={() => choose("low")}
-                    className={`min-h-11 rounded-field border text-sm font-semibold ${current === "low" ? "border-warning bg-warning text-ink-900" : "border-border bg-card text-ink-700 hover:border-warning"}`}
+                    className={`min-h-11 rounded-field border px-1 text-xs font-semibold sm:text-sm ${current === "low" ? "border-warning bg-warning text-ink-900" : "border-border bg-card text-ink-700 hover:border-warning"}`}
                   >
                     Stock faible
                   </button>
@@ -84,7 +85,7 @@ function OutletCard({ outlet, busy, onUpdate, onDelete }: { outlet: FuelOutlet; 
                     disabled={busy}
                     aria-pressed={current === "out"}
                     onClick={() => choose("out")}
-                    className={`min-h-11 rounded-field border text-sm font-semibold ${current === "out" ? "border-danger bg-danger text-white" : "border-border bg-card text-ink-700 hover:border-danger"}`}
+                    className={`min-h-11 rounded-field border px-1 text-xs font-semibold sm:text-sm ${current === "out" ? "border-danger bg-danger text-white" : "border-border bg-card text-ink-700 hover:border-danger"}`}
                   >
                     Rupture
                   </button>
@@ -101,7 +102,7 @@ function OutletCard({ outlet, busy, onUpdate, onDelete }: { outlet: FuelOutlet; 
             {outlet.fuel_updated_at
               ? outlet.fuel_fresh
                 ? `Mis à jour ${timeAgo(outlet.fuel_updated_at)}.`
-                : `Dernière mise à jour ${timeAgo(outlet.fuel_updated_at)} : affichée « à confirmer ».`
+                : `Dernière mise à jour ${timeAgo(outlet.fuel_updated_at)} : affichée « non confirmée ».`
               : "Pas encore d'information pour cette station."}
           </p>
         </div>
@@ -114,6 +115,8 @@ function OutletCard({ outlet, busy, onUpdate, onDelete }: { outlet: FuelOutlet; 
           {(outlet.calls_30d ?? 0) > 1 ? "s" : ""} · {outlet.gas_orders_30d ?? 0} commande{(outlet.gas_orders_30d ?? 0) > 1 ? "s" : ""} de gaz
         </p>
       ) : null}
+
+      {outlet.is_active ? <OutletManagersBlock outletId={outlet.id} outletName={outlet.name} /> : null}
 
       <div className="mt-3 flex flex-wrap gap-2">
         {outlet.is_active && outlet.fuel_updated_at ? (

@@ -172,7 +172,7 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
                     disabled={busy}
                     aria-pressed={current === "available"}
                     onClick={() => choose("available")}
-                    className={`min-h-12 rounded-field border text-sm font-semibold transition-colors duration-fast ${
+                    className={`min-h-12 rounded-field border px-1 text-xs font-semibold sm:text-sm transition-colors duration-fast ${
                       current === "available" ? "border-success bg-success text-white" : "border-border bg-card text-ink-700 hover:border-success"
                     }`}
                   >
@@ -183,7 +183,7 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
                     disabled={busy}
                     aria-pressed={current === "low"}
                     onClick={() => choose("low")}
-                    className={`min-h-12 rounded-field border text-sm font-semibold ${current === "low" ? "border-warning bg-warning text-ink-900" : "border-border bg-card text-ink-700 hover:border-warning"}`}
+                    className={`min-h-12 rounded-field border px-1 text-xs font-semibold sm:text-sm ${current === "low" ? "border-warning bg-warning text-ink-900" : "border-border bg-card text-ink-700 hover:border-warning"}`}
                   >
                     Stock faible
                   </button>
@@ -192,7 +192,7 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
                     disabled={busy}
                     aria-pressed={current === "out"}
                     onClick={() => choose("out")}
-                    className={`min-h-12 rounded-field border text-sm font-semibold transition-colors duration-fast ${
+                    className={`min-h-12 rounded-field border px-1 text-xs font-semibold sm:text-sm transition-colors duration-fast ${
                       current === "out" ? "border-danger bg-danger text-white" : "border-border bg-card text-ink-700 hover:border-danger"
                     }`}
                   >

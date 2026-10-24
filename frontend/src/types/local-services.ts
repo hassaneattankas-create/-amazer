@@ -118,5 +118,19 @@ export type FuelChange = {
   created_at: string;
 };
 
+export type FuelManager = { id: string; outlet_id: string; outlet_name: string; email: string; full_name: string };
+
+export type ManagedOutlet = {
+  id: string;
+  name: string;
+  brand_name: string;
+  city: string;
+  fuel: FuelStatus;
+  fuel_fresh: boolean;
+  fuel_updated_at: string | null;
+  can_update: boolean;
+  fresh_hours: number;
+};
+
 export type StationReportKind = "wrong_status" | "closed" | "wrong_place" | "other";
 export type StationReport = { outlet_id: string | null; outlet_name: string | null; kind: StationReportKind; comment: string | null; created_at: string };

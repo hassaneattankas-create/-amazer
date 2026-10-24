@@ -4,7 +4,7 @@ from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Session
@@ -12,15 +12,16 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import ForbiddenError, NotFoundError, ValidationDomainError
 from app.database import Base
 from app.models.fuel_history import FuelStatusChange, StationReport
-from app.models.fuel_outlet import FuelOutlet
+from app.models.fuel_outlet import FuelOutlet, FuelOutletManager
 from app.models.fuel_outlet_stat import FuelOutletDailyStat
 from app.models.global_settings import GlobalSettings
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.routes import local_services as route
-from app.schemas.local_services import StationReportCreate, FuelOutletCreate, FuelOutletsBulkUpdate, FuelOutletUpdate, FuelStatusSchema, OutletEvent, ServiceStatusUpdate
+from app.schemas.local_services import FuelManagerCreate, ManagedFuelUpdate, StationReportCreate, FuelOutletCreate, FuelOutletsBulkUpdate, FuelOutletUpdate, FuelStatusSchema, OutletEvent, ServiceStatusUpdate
 from app.services import local_services as svc
+from app.services import station_tasks
 
 
 @compiles(JSONB, "sqlite")
@@ -106,7 +107,7 @@ def test_position_must_be_in_niger() -> None:
 @pytest.fixture
 def db(monkeypatch):
     engine = create_engine("sqlite://")
-    Base.metadata.create_all(engine, tables=[t.__table__ for t in (User, Vendor, SellerProfile, GlobalSettings, FuelOutlet, FuelOutletDailyStat, FuelStatusChange, StationReport)])
+    Base.metadata.create_all(engine, tables=[t.__table__ for t in (User, Vendor, SellerProfile, GlobalSettings, FuelOutlet, FuelOutletDailyStat, FuelStatusChange, StationReport, FuelOutletManager)])
     monkeypatch.setattr(route, "cache_get_json", lambda _key: None)
     monkeypatch.setattr(route, "cache_set_json", lambda *_a, **_k: None)
     monkeypatch.setattr(route, "invalidate_services_cache", lambda: None)
@@ -327,3 +328,93 @@ def test_history_records_changes_and_customers_can_report_a_station(db: Session)
         route.report_station(StationReportCreate(vendor_id="inconnu", kind="closed"), None, db)
     reports = route.my_station_reports(db, user)
     assert [(r.kind, r.comment) for r in reports] == [("wrong_status", "Plus de super")]
+
+
+@pytest.fixture
+def sent(monkeypatch):
+    calls: list[tuple[str, str, str]] = []
+    monkeypatch.setattr(station_tasks, "_notify", lambda _db, user_id, title, body, _tag, href: calls.append((user_id, title, body + " " + href)))
+    return calls
+
+
+def _gerant(db: Session, uid: str) -> User:
+    user = User(id=uid, email=f"{uid}@test.ne", full_name=uid.title(), hashed_password="x", is_active=True)
+    db.add(user)
+    db.commit()
+    return user
+
+
+def test_owner_entrusts_a_station_and_the_manager_only_updates_it(db: Session, sent) -> None:
+    owner, profile = shop(db, "brand", "fuel_station")
+    plateau = route.create_outlet(FuelOutletCreate(name="Plateau", city="Niamey"), None, db, owner)
+    port = route.create_outlet(FuelOutletCreate(name="Port", city="Niamey"), None, db, owner)
+    gerant = _gerant(db, "ali")
+
+    with pytest.raises(ValidationDomainError):
+        route.add_fuel_manager(FuelManagerCreate(outlet_id=plateau.id, email="inconnu@test.ne"), None, db, owner)
+    with pytest.raises(ValidationDomainError):
+        route.add_fuel_manager(FuelManagerCreate(outlet_id=plateau.id, email="brand@test.ne"), None, db, owner)
+    managers = route.add_fuel_manager(FuelManagerCreate(outlet_id=plateau.id, email="ALI@test.ne"), None, db, owner)
+    assert [(m.outlet_name, m.email) for m in managers] == [("Plateau", "ali@test.ne")]
+    assert sent and sent[0][0] == "ali" and "/gerant-station" in sent[0][2]
+
+    mine = route.my_managed_outlets(db, gerant)
+    assert [(o.name, o.brand_name, o.can_update) for o in mine] == [("Plateau", "Commerce brand", True)]
+    updated = route.update_managed_outlet(plateau.id, ManagedFuelUpdate(fuel=FuelStatusSchema(super="low")), None, db, gerant)
+    assert updated.fuel.super == "low" and updated.fuel_fresh
+    assert db.scalars(select(FuelStatusChange.user_id)).all() == ["ali"]
+    # Une autre station de la meme marque : refusee.
+    with pytest.raises(NotFoundError):
+        route.update_managed_outlet(port.id, ManagedFuelUpdate(fuel=FuelStatusSchema(super="out")), None, db, gerant)
+    # Abonnement de la marque expire : mises a jour suspendues.
+    profile.subscription_paid_until = datetime.now(UTC) - timedelta(days=1)
+    db.commit()
+    with pytest.raises(ForbiddenError):
+        route.update_managed_outlet(plateau.id, ManagedFuelUpdate(confirm=True), None, db, gerant)
+    assert not route.my_managed_outlets(db, gerant)[0].can_update
+    # Retire : plus aucun acces.
+    route.remove_fuel_manager(managers[0].id, None, db, owner)
+    with pytest.raises(NotFoundError):
+        route.update_managed_outlet(plateau.id, ManagedFuelUpdate(confirm=True), None, db, gerant)
+
+
+def test_stale_stations_remind_their_manager_once_then_the_owner(db: Session, sent) -> None:
+    owner, _ = shop(db, "brand2", "fuel_station")
+    a = route.create_outlet(FuelOutletCreate(name="Liberté", city="Niamey"), None, db, owner)
+    b = route.create_outlet(FuelOutletCreate(name="Fleuve", city="Niamey"), None, db, owner)
+    _gerant(db, "awa")
+    route.add_fuel_manager(FuelManagerCreate(outlet_id=a.id, email="awa@test.ne"), None, db, owner)
+    sent.clear()
+    now = datetime.now(UTC)
+    for outlet in db.scalars(select(FuelOutlet)).all():
+        outlet.fuel_status, outlet.fuel_updated_at = {"super": "available"}, now - timedelta(hours=5)
+    db.commit()
+
+    assert station_tasks.send_station_reminders(db, now) == 2
+    targets = {user_id: body for user_id, _t, body in sent}
+    assert "Liberté" in targets["awa"] and "/gerant-station" in targets["awa"]
+    assert "Fleuve" in targets["brand2"] and "/seller/dashboard" in targets["brand2"]
+    sent.clear()
+    assert station_tasks.send_station_reminders(db, now + timedelta(hours=1)) == 0  # deja relancees
+    # Nouvelle declaration puis de nouveau perimee : nouvelle relance.
+    outlet = db.get(FuelOutlet, a.id)
+    outlet.fuel_updated_at = now + timedelta(hours=2)
+    db.commit()
+    assert station_tasks.send_station_reminders(db, now + timedelta(hours=7)) == 1
+
+
+def test_monthly_report_counts_last_month_once(db: Session, sent) -> None:
+    owner, _ = shop(db, "brand3", "fuel_station")
+    outlet = route.create_outlet(FuelOutletCreate(name="Koira", city="Niamey"), None, db, owner)
+    db.add_all([
+        FuelOutletDailyStat(outlet_id=outlet.id, day=date(2026, 10, 3), calls=4, routes=10, gas_orders=1),
+        FuelOutletDailyStat(outlet_id=outlet.id, day=date(2026, 10, 30), calls=1, routes=2, gas_orders=0),
+        FuelOutletDailyStat(outlet_id=outlet.id, day=date(2026, 11, 1), calls=9, routes=9, gas_orders=9),
+    ])
+    db.commit()
+    now = datetime(2026, 11, 2, 9, 0, tzinfo=UTC)
+    assert station_tasks.send_monthly_reports(db, now) == 1
+    _user, title, body = sent[0]
+    assert title == "Votre rapport de octobre 2026" and "12 itinéraire(s), 5 appel(s) et 1 commande(s)" in body and "Koira" in body
+    assert station_tasks.send_monthly_reports(db, now) == 0
+    assert station_tasks.send_monthly_reports(db, datetime(2026, 11, 10, 9, 0, tzinfo=UTC)) == 0

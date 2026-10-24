@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import type {
   FuelChange,
+  FuelManager,
   FuelKey,
   FuelNetwork,
   FuelOutlet,
@@ -8,6 +9,7 @@ import type {
   FuelOutletInput,
   FuelOutletUpdate,
   LocalServiceList,
+  ManagedOutlet,
   ServiceStatus,
   ServiceStatusUpdate,
   StationReport,
@@ -64,6 +66,27 @@ export async function getFuelNetwork(): Promise<FuelNetwork> {
 
 export async function bulkUpdateOutlets(payload: { fuel?: FuelStatus; confirm?: boolean; city?: string }): Promise<FuelOutlet[]> {
   return (await api.put<FuelOutlet[]>("/api/v1/seller/fuel-outlets/bulk", payload)).data;
+}
+
+export async function listFuelManagers(): Promise<FuelManager[]> {
+  return (await api.get<FuelManager[]>("/api/v1/seller/fuel-managers")).data;
+}
+
+export async function addFuelManager(payload: { outlet_id: string; email: string }): Promise<FuelManager[]> {
+  return (await api.post<FuelManager[]>("/api/v1/seller/fuel-managers", payload)).data;
+}
+
+export async function removeFuelManager(id: string): Promise<void> {
+  await api.delete(`/api/v1/seller/fuel-managers/${id}`);
+}
+
+/** Stations confiées au compte connecté (gérant). */
+export async function listManagedOutlets(): Promise<ManagedOutlet[]> {
+  return (await api.get<ManagedOutlet[]>("/api/v1/station-manager/outlets")).data;
+}
+
+export async function updateManagedOutlet(id: string, payload: { fuel?: FuelStatus; confirm?: boolean }): Promise<ManagedOutlet> {
+  return (await api.put<ManagedOutlet>(`/api/v1/station-manager/outlets/${id}`, payload)).data;
 }
 
 export async function listMyFuelHistory(): Promise<FuelChange[]> {

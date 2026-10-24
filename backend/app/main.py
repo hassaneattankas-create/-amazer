@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 import shutil
 
-from fastapi import FastAPI, Request
+from fastapi import BackgroundTasks, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -223,6 +223,10 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS fuel_tier1_until INTEGER NOT NULL DEFAULT 10",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS fuel_tier2_until INTEGER NOT NULL DEFAULT 30",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS fuel_fresh_hours INTEGER NOT NULL DEFAULT 4",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS station_tasks_ran_at TIMESTAMP WITH TIME ZONE",
+        "ALTER TABLE fuel_outlets ADD COLUMN IF NOT EXISTS reminded_at TIMESTAMP WITH TIME ZONE",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS fuel_reminded_at TIMESTAMP WITH TIME ZONE",
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS fuel_report_month VARCHAR(7)",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS local_delivery_cities VARCHAR(400) NOT NULL DEFAULT 'Niamey'",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS service_kind VARCHAR(20)",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS on_duty BOOLEAN NOT NULL DEFAULT FALSE",
@@ -447,9 +451,35 @@ def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def _station_tasks_once_per_hour() -> None:
+    """Relances et rapports des stations : un seul passage par heure, meme si /ping est appele souvent."""
+    from datetime import UTC, datetime, timedelta
+    from sqlalchemy import or_, update
+    from app.models.global_settings import GlobalSettings
+    from app.services.station_tasks import run_station_tasks
+
+    db = SessionLocal()
+    try:
+        now = datetime.now(UTC)
+        claimed = db.execute(
+            update(GlobalSettings)
+            .where(or_(GlobalSettings.station_tasks_ran_at.is_(None), GlobalSettings.station_tasks_ran_at < now - timedelta(minutes=55)))
+            .values(station_tasks_ran_at=now)
+        )
+        db.commit()
+        if claimed.rowcount:
+            run_station_tasks(db, now)
+    except Exception:  # noqa: BLE001 - une tache ratee ne doit jamais casser /ping
+        db.rollback()
+        logger.exception("Taches des stations impossibles.")
+    finally:
+        db.close()
+
+
 @app.get("/ping")
-def ping() -> dict[str, str]:
-    """Endpoint leger + desactivation lazy des abonnements vendeur expires."""
+def ping(background_tasks: BackgroundTasks) -> dict[str, str]:
+    """Endpoint leger + desactivation lazy des abonnements vendeur expires + taches des stations (en arriere-plan)."""
+    background_tasks.add_task(_station_tasks_once_per_hour)
     from datetime import UTC, datetime
     from sqlalchemy import update
     from app.models.seller_profile import SellerProfile

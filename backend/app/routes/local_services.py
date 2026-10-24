@@ -6,18 +6,18 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.cache import build_cache_key, cache_delete_prefixes, cache_get_json, cache_set_json
 from app.core.crypto import decrypt_phone_value
 from app.core.csrf import enforce_csrf
-from app.core.deps import get_seller_user
+from app.core.deps import get_current_user, get_seller_user
 from app.core.exceptions import ForbiddenError, NotFoundError, ValidationDomainError
 from app.core.rate_limit import enforce_rate_limit
 from app.database import get_db
 from app.models.fuel_history import FuelStatusChange, StationReport
-from app.models.fuel_outlet import FuelOutlet
+from app.models.fuel_outlet import FuelOutlet, FuelOutletManager
 from app.models.fuel_outlet_stat import FuelOutletDailyStat
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
@@ -26,6 +26,8 @@ from app.repositories.catalog_repository import active_subscription_clause
 from app.schemas.local_services import (
     CityCount,
     FuelChangeItem,
+    FuelManagerCreate,
+    FuelManagerItem,
     FuelNetworkResponse,
     FuelOutletCreate,
     FuelOutletResponse,
@@ -35,6 +37,8 @@ from app.schemas.local_services import (
     FuelStatusSchema,
     LocalServiceItem,
     LocalServiceListResponse,
+    ManagedFuelUpdate,
+    ManagedOutlet,
     ServiceStatusResponse,
     ServiceStatusUpdate,
     StationReportCreate,
@@ -628,3 +632,162 @@ def my_station_reports(
         )
         for r in rows
     ]
+
+
+# ---------------------------------------------------------------- gerants de station
+MAX_MANAGERS_PER_OUTLET = 5
+
+
+def _brand_can_publish(db: Session, vendor_id: str, now: datetime) -> bool:
+    """Abonnement de la marque en cours : sinon les mises a jour des gerants sont suspendues."""
+    vendor = db.get(Vendor, vendor_id)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == vendor_id))
+    paid_until = svc._aware(profile.subscription_paid_until) if profile is not None else None
+    return bool(vendor is not None and vendor.is_active and paid_until is not None and paid_until > now)
+
+
+def _manager_items(db: Session, vendor_id: str) -> list[FuelManagerItem]:
+    rows = db.execute(
+        select(FuelOutletManager, FuelOutlet.name, User.email, User.full_name)
+        .join(FuelOutlet, FuelOutlet.id == FuelOutletManager.outlet_id)
+        .join(User, User.id == FuelOutletManager.user_id)
+        .where(FuelOutletManager.vendor_id == vendor_id)
+        .order_by(FuelOutlet.sort_order, FuelOutletManager.created_at)
+    ).all()
+    return [FuelManagerItem(id=m.id, outlet_id=m.outlet_id, outlet_name=name, email=email, full_name=full_name) for m, name, email, full_name in rows]
+
+
+@router.get("/seller/fuel-managers", response_model=list[FuelManagerItem])
+def list_fuel_managers(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> list[FuelManagerItem]:
+    return _manager_items(db, _station_profile(db, current_user).vendor_id)
+
+
+@router.post("/seller/fuel-managers", response_model=list[FuelManagerItem], status_code=201)
+def add_fuel_manager(
+    payload: FuelManagerCreate,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> list[FuelManagerItem]:
+    """Confie une station a un compte AMAZER existant (le gerant cree d'abord son compte gratuit)."""
+    from app.services.station_tasks import _notify
+
+    enforce_csrf(request)
+    enforce_rate_limit(request, key=f"fuel-manager:{current_user.id}", limit=30, window_seconds=600)
+    profile = _station_profile(db, current_user)
+    outlet = _own_outlet(db, profile, payload.outlet_id)
+    user = db.scalar(select(User).where(func.lower(User.email) == payload.email.strip().lower()))
+    if user is None or not user.is_active:
+        raise ValidationDomainError(
+            "Aucun compte AMAZER avec cet e-mail. Demandez au gérant de créer un compte gratuit sur amazer.store, puis réessayez."
+        )
+    if user.id == current_user.id:
+        raise ValidationDomainError("Vous gérez déjà toutes vos stations depuis cet espace.")
+    existing = db.scalars(select(FuelOutletManager).where(FuelOutletManager.outlet_id == outlet.id)).all()
+    if any(m.user_id == user.id for m in existing):
+        raise ValidationDomainError("Cette personne gère déjà cette station.")
+    if len(existing) >= MAX_MANAGERS_PER_OUTLET:
+        raise ValidationDomainError(f"{MAX_MANAGERS_PER_OUTLET} gérants au maximum par station.")
+    db.add(FuelOutletManager(vendor_id=profile.vendor_id, outlet_id=outlet.id, user_id=user.id))
+    db.commit()
+    _notify(
+        db,
+        user.id,
+        "Une station vous est confiée",
+        f"{profile.business_name} vous confie la station « {outlet.name} ». Indiquez ses disponibilités depuis votre téléphone, en un geste.",
+        f"fuel-manager-{outlet.id}",
+        "/gerant-station",
+    )
+    db.commit()
+    return _manager_items(db, profile.vendor_id)
+
+
+@router.delete("/seller/fuel-managers/{manager_id}", status_code=204, response_model=None)
+def remove_fuel_manager(
+    manager_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> None:
+    enforce_csrf(request)
+    profile = _station_profile(db, current_user)
+    row = db.get(FuelOutletManager, manager_id)
+    if row is None or row.vendor_id != profile.vendor_id:
+        raise NotFoundError("Gérant introuvable.")
+    db.delete(row)
+    db.commit()
+
+
+def _managed_outlet(db: Session, user: User, outlet_id: str) -> FuelOutlet:
+    """Seules les stations confiees a ce compte : jamais celles d'une autre marque ou d'une autre station."""
+    row = db.scalar(select(FuelOutletManager).where(FuelOutletManager.outlet_id == outlet_id, FuelOutletManager.user_id == user.id))
+    outlet = db.get(FuelOutlet, outlet_id) if row is not None else None
+    if outlet is None:
+        raise NotFoundError("Station introuvable.")
+    return outlet
+
+
+def _managed_response(db: Session, outlet: FuelOutlet, settings: object, now: datetime) -> ManagedOutlet:
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == outlet.vendor_id))
+    updated = svc._aware(outlet.fuel_updated_at)
+    hours = svc.fresh_hours(settings)
+    return ManagedOutlet(
+        id=outlet.id,
+        name=outlet.name,
+        brand_name=profile.business_name if profile is not None else "",
+        city=outlet.city,
+        fuel=FuelStatusSchema(**svc.clean_fuel_status(outlet.fuel_status)),
+        fuel_fresh=svc.fuel_is_fresh(outlet, now, hours),
+        fuel_updated_at=updated.isoformat() if updated else None,
+        can_update=bool(outlet.is_active) and _brand_can_publish(db, outlet.vendor_id, now),
+        fresh_hours=hours,
+    )
+
+
+@router.get("/station-manager/outlets", response_model=list[ManagedOutlet])
+def my_managed_outlets(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> list[ManagedOutlet]:
+    now, settings = datetime.now(UTC), get_or_create_global_settings(db)
+    rows = db.scalars(
+        select(FuelOutlet)
+        .join(FuelOutletManager, FuelOutletManager.outlet_id == FuelOutlet.id)
+        .where(FuelOutletManager.user_id == current_user.id)
+        .order_by(FuelOutlet.name)
+    ).all()
+    return [_managed_response(db, o, settings, now) for o in rows]
+
+
+@router.put("/station-manager/outlets/{outlet_id}", response_model=ManagedOutlet)
+def update_managed_outlet(
+    outlet_id: str,
+    payload: ManagedFuelUpdate,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> ManagedOutlet:
+    """Le gerant change les disponibilites (ou confirme « rien n'a change ») de SA station, rien d'autre."""
+    enforce_csrf(request)
+    enforce_rate_limit(request, key=f"station-manager:{current_user.id}", limit=120, window_seconds=600)
+    outlet = _managed_outlet(db, current_user, outlet_id)
+    now = datetime.now(UTC)
+    if not outlet.is_active or not _brand_can_publish(db, outlet.vendor_id, now):
+        raise ForbiddenError("Mises à jour suspendues : la station est fermée ou l'abonnement de la marque a expiré.")
+    if payload.fuel is None and not payload.confirm:
+        raise ValidationDomainError("Indiquez une disponibilité ou confirmez les informations.")
+    if payload.fuel is not None:
+        before = svc.clean_fuel_status(outlet.fuel_status)
+        merged = dict(before)
+        merged.update({k: v for k, v in payload.fuel.model_dump().items() if v is not None})
+        outlet.fuel_status = svc.clean_fuel_status(merged)
+        _log_fuel_changes(db, outlet.vendor_id, outlet.id, before, outlet.fuel_status, current_user.id)
+    elif not outlet.fuel_status:
+        raise ValidationDomainError("Indiquez d'abord les disponibilités de la station.")
+    outlet.fuel_updated_at = now
+    db.commit()
+    invalidate_services_cache()
+    return _managed_response(db, outlet, get_or_create_global_settings(db), now)

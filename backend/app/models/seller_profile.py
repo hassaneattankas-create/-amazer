@@ -81,6 +81,9 @@ class SellerProfile(Base):
     # Station : {"super": "available" | "out", "gasoil": ..., "gaz": ...} et heure de mise a jour.
     fuel_status: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     fuel_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Stations : derniere relance « non confirmee » et dernier rapport mensuel envoye (AAAA-MM).
+    fuel_reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    fuel_report_month: Mapped[str | None] = mapped_column(String(7), nullable=True)
     # Position enregistree sur place par le gerant (itineraire Google Maps exact).
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)

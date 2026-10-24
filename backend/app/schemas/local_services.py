@@ -205,3 +205,44 @@ class StationReportItem(BaseModel):
     kind: StationReportKind
     comment: str | None
     created_at: str
+
+
+class FuelManagerCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    outlet_id: str = Field(min_length=1, max_length=36)
+    email: str = Field(min_length=3, max_length=320, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+class FuelManagerItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    outlet_id: str
+    outlet_name: str
+    email: str
+    full_name: str
+
+
+class ManagedOutlet(BaseModel):
+    """Station confiee a un gerant : il ne voit et ne change que ses disponibilites."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    brand_name: str
+    city: str
+    fuel: FuelStatusSchema
+    fuel_fresh: bool
+    fuel_updated_at: str | None
+    # False si l'abonnement de la marque a expire : les mises a jour sont suspendues.
+    can_update: bool
+    fresh_hours: int
+
+
+class ManagedFuelUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    fuel: FuelStatusSchema | None = None
+    confirm: bool = False
