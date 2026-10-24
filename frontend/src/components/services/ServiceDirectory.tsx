@@ -6,9 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Fuel, LocateFixed, Pill, Share2 } from "lucide-react";
 
 import { LocalServiceCard } from "@/components/services/LocalServiceCard";
+import { OfficialLists } from "@/components/services/OfficialLists";
 import { Button } from "@/components/ui/button";
 import { NIGER_REGION_CITIES, distanceKm, type GeoPoint } from "@/lib/local-services";
-import { listPharmacies, listStations } from "@/services/local-services-service";
+import { listOfficialLists, listPharmacies, listStations } from "@/services/local-services-service";
 import { toast } from "@/store/toast-store";
 import { FUEL_LABELS, type FuelKey, type ServiceKind } from "@/types/local-services";
 
@@ -81,6 +82,14 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
     return [...NIGER_REGION_CITIES, ...extra.sort((a, b) => a.localeCompare(b, "fr"))];
   }, [data, city]);
   const deliveryCities = data?.delivery_cities ?? [];
+  // Listes officielles en cours (même requête que le bloc officiel, mise en cache) : adoucit le « rien trouvé ».
+  const officialKind = kind === "pharmacy" ? "pharmacy_duty" : "fuel_supply";
+  const { data: official = [] } = useQuery({
+    queryKey: ["official-lists", officialKind, city],
+    queryFn: () => listOfficialLists(officialKind, city || undefined),
+    staleTime: 60_000,
+  });
+  const hasOfficial = official.length > 0;
 
   const locate = () => {
     if (!("geolocation" in navigator)) {
@@ -197,10 +206,16 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
       <p className="mt-3 text-xs text-ink-600">
         {kind === "pharmacy"
           ? "Appelez avant de vous déplacer. AMAZER ne vend pas de médicaments."
-          : `Informations données par les stations. Au-delà de ${data?.fresh_hours ?? 6} h, appelez pour confirmer.`}
+          : `Informations données par les stations. Au-delà de ${data?.fresh_hours ?? 4} h, appelez pour confirmer.`}
         {refreshedAt ? ` Actualisé à ${refreshedAt}.` : null}
         {deliveryCities.length ? ` Livraison AMAZER : ${deliveryCities.join(", ")}.` : null}
       </p>
+
+      <OfficialLists kind={kind} city={city} fuel={fuel} />
+
+      {hasOfficial ? (
+        <h2 className="mt-6 text-lg font-semibold text-ink-900">{kind === "pharmacy" ? "Pharmacies inscrites sur AMAZER" : "Stations inscrites sur AMAZER"}</h2>
+      ) : null}
 
       <div className="mt-4">
         {isPending ? (
@@ -222,6 +237,12 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
               <LocalServiceCard key={item.outlet_id ?? item.vendor_id} item={item} kind={kind} distanceKm={distance} freshHours={data?.fresh_hours ?? 6} />
             ))}
           </div>
+        ) : hasOfficial ? (
+          <p className="text-sm text-ink-600">
+            {kind === "pharmacy"
+              ? "Aucune pharmacie inscrite ici pour le moment : consultez la liste officielle ci-dessus."
+              : "Aucune station inscrite n'a signalé de disponibilité ici : consultez la liste ci-dessus."}
+          </p>
         ) : (
           <div className="rounded-card border border-border bg-card p-6 text-center">
             <p className="font-semibold text-ink-900">{copy.empty}</p>

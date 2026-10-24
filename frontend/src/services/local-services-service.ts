@@ -12,6 +12,7 @@ import type {
   FuelOutletUpdate,
   LocalServiceList,
   ManagedOutlet,
+  OfficialList,
   RegionManager,
   ServiceStatus,
   ServiceStatusUpdate,
@@ -90,6 +91,11 @@ export async function listManagedOutlets(): Promise<ManagedOutlet[]> {
 
 export async function updateManagedOutlet(id: string, payload: { fuel?: FuelStatus; confirm?: boolean }): Promise<ManagedOutlet> {
   return (await api.put<ManagedOutlet>(`/api/v1/station-manager/outlets/${id}`, payload)).data;
+}
+
+/** Listes officielles en cours (gardes, approvisionnements). */
+export async function listOfficialLists(kind: OfficialList["kind"], city?: string): Promise<OfficialList[]> {
+  return (await api.get<OfficialList[]>("/api/v1/services/official-lists", { params: { kind, ...(city ? { city } : {}) } })).data;
 }
 
 export async function getFuelPlan(): Promise<FuelPlan> {

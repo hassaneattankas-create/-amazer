@@ -157,5 +157,23 @@ export type FuelDashboard = {
 
 export type RegionManager = { id: string; city: string; email: string; full_name: string };
 
+export type OfficialEntry = { name: string; district: string | null; location: string | null; phone: string | null; group_label: string | null };
+
+/** Liste officielle datée (pharmacies de garde, stations approvisionnées), publiée par AMAZER avec sa source. */
+export type OfficialList = {
+  id: string;
+  kind: "pharmacy_duty" | "fuel_supply";
+  city: string;
+  title: string;
+  source: string;
+  brand: string | null;
+  fuel: FuelKey | null;
+  contact_phone: string | null;
+  contact_address: string | null;
+  starts_at: string;
+  ends_at: string;
+  entries: OfficialEntry[];
+};
+
 export type StationReportKind = "wrong_status" | "closed" | "wrong_place" | "other";
 export type StationReport = { outlet_id: string | null; outlet_name: string | null; kind: StationReportKind; comment: string | null; created_at: string };

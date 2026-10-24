@@ -49,6 +49,7 @@ from app.routes.courier import router as courier_router
 from app.routes.assistant import router as assistant_router
 from app.routes.maintenance import router as maintenance_router
 from app.routes.local_services import router as local_services_router
+from app.routes.official_lists import router as official_lists_router
 from app.services.security_log_service import log_security_event
 
 settings = get_settings()
@@ -428,6 +429,20 @@ def _backfill_affiliate_ledger() -> None:
         db.close()
 
 
+def _seed_official_lists() -> None:
+    """Listes officielles recues (gardes, approvisionnements) : inserees une seule fois."""
+    from app.routes.official_lists import seed_official_lists
+
+    db = SessionLocal()
+    try:
+        seed_official_lists(db)
+    except Exception:  # noqa: BLE001 - ne bloque jamais le demarrage
+        db.rollback()
+        logger.exception("Insertion des listes officielles impossible.")
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     if settings.bootstrap_on_startup:
@@ -435,6 +450,7 @@ def on_startup() -> None:
     _ensure_admin_account()
     _assign_missing_categories()
     _backfill_affiliate_ledger()
+    _seed_official_lists()
     if settings.app_env.lower() not in ("test", "testing"):
         from app.services.promo_service import start_promo_expiry_worker
 
@@ -618,6 +634,7 @@ app.include_router(affiliates_router, prefix=settings.api_prefix)
 app.include_router(assistant_router, prefix=settings.api_prefix)
 app.include_router(maintenance_router, prefix=settings.api_prefix)
 app.include_router(local_services_router, prefix=settings.api_prefix)
+app.include_router(official_lists_router, prefix=settings.api_prefix)
 
 
 @app.middleware("http")
