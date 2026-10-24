@@ -16,13 +16,14 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.fuel_history import FuelStatusChange
-from app.models.fuel_outlet import FuelOutlet, FuelOutletManager
+from app.models.fuel_outlet import FuelOutlet, FuelOutletManager, FuelRegionManager
 from app.models.fuel_outlet_stat import FuelOutletDailyStat
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.repositories.catalog_repository import active_subscription_clause
 from app.services import local_services as svc
+from app.services.fuel_plan import fuel_plan
 from app.services.email_delivery_service import email_delivery_configured, send_email
 from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.seller_finance_service import get_or_create_global_settings
@@ -65,7 +66,8 @@ def _notify(db: Session, user_id: str, title: str, body: str, tag: str, href: st
 
 
 def send_station_reminders(db: Session, now: datetime) -> int:
-    hours = svc.fresh_hours(get_or_create_global_settings(db))
+    settings = get_or_create_global_settings(db)
+    hours = svc.fresh_hours(settings)
     todo: dict[str, list[str]] = {}
     managed_users: set[str] = set()
     for profile in _station_profiles(db):
@@ -74,13 +76,18 @@ def send_station_reminders(db: Session, now: datetime) -> int:
             managers: dict[str, list[str]] = {}
             for row in db.scalars(select(FuelOutletManager).where(FuelOutletManager.vendor_id == profile.vendor_id)).all():
                 managers.setdefault(row.outlet_id, []).append(row.user_id)
+            regions: dict[str, list[str]] = {}
+            if fuel_plan(db, profile, settings).network_tools:
+                for row in db.scalars(select(FuelRegionManager).where(FuelRegionManager.vendor_id == profile.vendor_id)).all():
+                    regions.setdefault(svc.normalize_city(row.city), []).append(row.user_id)
             for outlet in outlets:
                 if svc.fuel_is_fresh(outlet, now, hours) or not reminder_due(outlet.reminded_at, outlet.fuel_updated_at, now):
                     continue
-                recipients = managers.get(outlet.id) or [profile.user_id]
+                helpers = managers.get(outlet.id) or regions.get(svc.normalize_city(outlet.city), [])
+                recipients = helpers or [profile.user_id]
                 for user_id in recipients:
                     todo.setdefault(user_id, []).append(f"{profile.business_name} · {outlet.name}")
-                managed_users.update(managers.get(outlet.id, []))
+                managed_users.update(helpers)
                 outlet.reminded_at = now
         elif not svc.fuel_is_fresh(profile, now, hours) and reminder_due(profile.fuel_reminded_at, profile.fuel_updated_at, now):
             todo.setdefault(profile.user_id, []).append(profile.business_name)

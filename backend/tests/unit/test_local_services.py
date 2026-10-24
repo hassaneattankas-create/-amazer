@@ -12,14 +12,14 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import ForbiddenError, NotFoundError, ValidationDomainError
 from app.database import Base
 from app.models.fuel_history import FuelStatusChange, StationReport
-from app.models.fuel_outlet import FuelOutlet, FuelOutletManager
+from app.models.fuel_outlet import FuelOutlet, FuelOutletManager, FuelRegionManager
 from app.models.fuel_outlet_stat import FuelOutletDailyStat
 from app.models.global_settings import GlobalSettings
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.routes import local_services as route
-from app.schemas.local_services import FuelManagerCreate, ManagedFuelUpdate, StationReportCreate, FuelOutletCreate, FuelOutletsBulkUpdate, FuelOutletUpdate, FuelStatusSchema, OutletEvent, ServiceStatusUpdate
+from app.schemas.local_services import RegionManagerCreate, FuelManagerCreate, ManagedFuelUpdate, StationReportCreate, FuelOutletCreate, FuelOutletsBulkUpdate, FuelOutletUpdate, FuelStatusSchema, OutletEvent, ServiceStatusUpdate
 from app.services import local_services as svc
 from app.services import station_tasks
 
@@ -107,7 +107,7 @@ def test_position_must_be_in_niger() -> None:
 @pytest.fixture
 def db(monkeypatch):
     engine = create_engine("sqlite://")
-    Base.metadata.create_all(engine, tables=[t.__table__ for t in (User, Vendor, SellerProfile, GlobalSettings, FuelOutlet, FuelOutletDailyStat, FuelStatusChange, StationReport, FuelOutletManager)])
+    Base.metadata.create_all(engine, tables=[t.__table__ for t in (User, Vendor, SellerProfile, GlobalSettings, FuelOutlet, FuelOutletDailyStat, FuelStatusChange, StationReport, FuelOutletManager, FuelRegionManager)])
     monkeypatch.setattr(route, "cache_get_json", lambda _key: None)
     monkeypatch.setattr(route, "cache_set_json", lambda *_a, **_k: None)
     monkeypatch.setattr(route, "invalidate_services_cache", lambda: None)
@@ -418,3 +418,75 @@ def test_monthly_report_counts_last_month_once(db: Session, sent) -> None:
     assert title == "Votre rapport de octobre 2026" and "12 itinéraire(s), 5 appel(s) et 1 commande(s)" in body and "Koira" in body
     assert station_tasks.send_monthly_reports(db, now) == 0
     assert station_tasks.send_monthly_reports(db, datetime(2026, 11, 10, 9, 0, tzinfo=UTC)) == 0
+
+
+def _small_tiers(db: Session) -> None:
+    """Paliers miniatures : 1 station = Essentiel, 2 = Reseau, 3 et plus = Entreprise."""
+    settings = db.scalars(select(GlobalSettings)).first()
+    settings.fuel_included_outlets, settings.fuel_tier1_until, settings.fuel_tier2_until = 1, 1, 2
+    db.commit()
+
+
+def test_plan_unlocks_network_tools_then_export(db: Session, sent) -> None:
+    _small_tiers(db)
+    owner, _ = shop(db, "net", "fuel_station")
+    a = route.create_outlet(FuelOutletCreate(name="Plateau", city="Niamey"), None, db, owner)
+    plan = route.my_fuel_plan(db, owner)
+    assert (plan.level, plan.name, plan.network_tools, plan.export, plan.network_from) == (1, "Essentiel", False, False, 2)
+    with pytest.raises(ForbiddenError):
+        route.my_fuel_dashboard(db, owner)
+    with pytest.raises(ForbiddenError):
+        route.add_region_manager(RegionManagerCreate(city="Niamey", email="x@test.ne"), None, db, owner)
+
+    b = route.create_outlet(FuelOutletCreate(name="Koira", city="Niamey"), None, db, owner)
+    route.create_outlet(FuelOutletCreate(name="Centre", city="Maradi"), None, db, owner)  # 3 stations : Entreprise
+    assert route.my_fuel_plan(db, owner).level == 3
+    now = datetime.now(UTC)
+    outlet_a, outlet_b = db.get(FuelOutlet, a.id), db.get(FuelOutlet, b.id)
+    outlet_a.fuel_status, outlet_a.fuel_updated_at = {"gasoil": "out"}, now
+    outlet_b.fuel_status, outlet_b.fuel_updated_at = {"super": "available"}, now - timedelta(hours=9)
+    db.add(FuelStatusChange(vendor_id=outlet_a.vendor_id, outlet_id=a.id, fuel="gasoil", old_state="available", new_state="out", user_id="net", created_at=now - timedelta(hours=30)))
+    db.commit()
+    board = route.my_fuel_dashboard(db, owner)
+    assert (board.stations, board.fresh, board.to_confirm, board.without_manager) == (3, 1, 2, 3)
+    assert [(o.name, o.fuel) for o in board.long_outages] == [("Plateau", "gasoil")]
+    assert {(c.city, c.stations, c.out) for c in board.cities} == {("Niamey", 2, 1), ("Maradi", 1, 0)}
+
+    # Responsable de Niamey : voit et met a jour les 2 stations de Niamey, pas celle de Maradi.
+    chef = _gerant(db, "chef")
+    with pytest.raises(ValidationDomainError):
+        route.add_region_manager(RegionManagerCreate(city="Zinder", email="chef@test.ne"), None, db, owner)
+    route.add_region_manager(RegionManagerCreate(city="niamey", email="chef@test.ne"), None, db, owner)
+    mine = route.my_managed_outlets(db, chef)
+    assert sorted((o.name, o.via_region) for o in mine) == [("Koira", "Niamey"), ("Plateau", "Niamey")]
+    route.update_managed_outlet(b.id, ManagedFuelUpdate(confirm=True), None, db, chef)
+    maradi = db.scalars(select(FuelOutlet).where(FuelOutlet.city == "Maradi")).one()
+    with pytest.raises(NotFoundError):
+        route.update_managed_outlet(maradi.id, ManagedFuelUpdate(fuel=FuelStatusSchema(super="out")), None, db, chef)
+
+    # Export Excel (Entreprise) : separateur « ; » et accents corrects.
+    export = route.export_fuel_data(db, owner, kind="history")
+    text = export.body.decode("utf-8")
+    assert text.startswith("\ufeffDate;Heure (Niamey);Station") and "Plateau;Niamey;Gasoil;Disponible;Rupture" in text
+    assert "attachment" in export.headers["content-disposition"]
+
+    # Retour a 1 station : outils reseau coupes, le responsable perd l'acces.
+    for outlet in db.scalars(select(FuelOutlet).where(FuelOutlet.id != a.id)).all():
+        outlet.is_active = False
+    db.commit()
+    assert route.my_managed_outlets(db, chef) == []
+    with pytest.raises(ForbiddenError):
+        route.export_fuel_data(db, owner, kind="stats")
+
+
+def test_region_manager_receives_reminders_for_stations_without_manager(db: Session, sent) -> None:
+    _small_tiers(db)
+    owner, _ = shop(db, "net2", "fuel_station")
+    for name in ("Alpha", "Beta"):
+        route.create_outlet(FuelOutletCreate(name=name, city="Niamey"), None, db, owner)
+    _gerant(db, "resp")
+    route.add_region_manager(RegionManagerCreate(city="Niamey", email="resp@test.ne"), None, db, owner)
+    sent.clear()
+    now = datetime.now(UTC)
+    assert station_tasks.send_station_reminders(db, now) == 1
+    assert sent[0][0] == "resp" and "/gerant-station" in sent[0][2]

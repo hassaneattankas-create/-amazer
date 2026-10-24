@@ -239,6 +239,8 @@ class ManagedOutlet(BaseModel):
     # False si l'abonnement de la marque a expire : les mises a jour sont suspendues.
     can_update: bool
     fresh_hours: int
+    # Confiee via une region (responsable regional) plutot que directement.
+    via_region: str | None = None
 
 
 class ManagedFuelUpdate(BaseModel):
@@ -246,3 +248,72 @@ class ManagedFuelUpdate(BaseModel):
 
     fuel: FuelStatusSchema | None = None
     confirm: bool = False
+
+
+class FuelPlanResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    level: int
+    name: str
+    stations: int
+    network_from: int
+    enterprise_from: int
+    network_tools: bool
+    export: bool
+
+
+class DashboardStation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    city: str
+    fuel_updated_at: str | None
+
+
+class DashboardOutage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    city: str
+    fuel: Literal["super", "gasoil", "gaz"]
+    since: str
+
+
+class DashboardCity(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    city: str
+    stations: int
+    to_confirm: int
+    out: int
+
+
+class FuelDashboardResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    stations: int
+    fresh: int
+    to_confirm: int
+    without_manager: int
+    reports_30d: int
+    stale: list[DashboardStation]
+    long_outages: list[DashboardOutage]
+    cities: list[DashboardCity]
+
+
+class RegionManagerCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    city: str = Field(min_length=2, max_length=80)
+    email: str = Field(min_length=3, max_length=320, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+class RegionManagerItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    city: str
+    email: str
+    full_name: str

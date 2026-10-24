@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -17,7 +19,7 @@ from app.core.exceptions import ForbiddenError, NotFoundError, ValidationDomainE
 from app.core.rate_limit import enforce_rate_limit
 from app.database import get_db
 from app.models.fuel_history import FuelStatusChange, StationReport
-from app.models.fuel_outlet import FuelOutlet, FuelOutletManager
+from app.models.fuel_outlet import FuelOutlet, FuelOutletManager, FuelRegionManager
 from app.models.fuel_outlet_stat import FuelOutletDailyStat
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
@@ -25,6 +27,11 @@ from app.models.vendor import Vendor
 from app.repositories.catalog_repository import active_subscription_clause
 from app.schemas.local_services import (
     CityCount,
+    DashboardCity,
+    DashboardOutage,
+    DashboardStation,
+    FuelDashboardResponse,
+    FuelPlanResponse,
     FuelChangeItem,
     FuelManagerCreate,
     FuelManagerItem,
@@ -39,12 +46,15 @@ from app.schemas.local_services import (
     LocalServiceListResponse,
     ManagedFuelUpdate,
     ManagedOutlet,
+    RegionManagerCreate,
+    RegionManagerItem,
     ServiceStatusResponse,
     ServiceStatusUpdate,
     StationReportCreate,
     StationReportItem,
 )
 from app.services import local_services as svc
+from app.services.fuel_plan import PLAN_NAMES, FuelPlan, fuel_plan
 from app.services.seller_finance_service import get_or_create_global_settings
 
 router = APIRouter(tags=["services"])
@@ -721,16 +731,32 @@ def remove_fuel_manager(
     db.commit()
 
 
+def _region_access(db: Session, user: User) -> dict[str, set[str]]:
+    """Villes confiees a ce compte, par marque, seulement si la marque est au palier Reseau ou plus."""
+    access: dict[str, set[str]] = {}
+    rows = db.scalars(select(FuelRegionManager).where(FuelRegionManager.user_id == user.id)).all()
+    if not rows:
+        return access
+    settings = get_or_create_global_settings(db)
+    for row in rows:
+        profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == row.vendor_id))
+        if profile is not None and fuel_plan(db, profile, settings).network_tools:
+            access.setdefault(row.vendor_id, set()).add(svc.normalize_city(row.city))
+    return access
+
+
 def _managed_outlet(db: Session, user: User, outlet_id: str) -> FuelOutlet:
-    """Seules les stations confiees a ce compte : jamais celles d'une autre marque ou d'une autre station."""
-    row = db.scalar(select(FuelOutletManager).where(FuelOutletManager.outlet_id == outlet_id, FuelOutletManager.user_id == user.id))
-    outlet = db.get(FuelOutlet, outlet_id) if row is not None else None
+    """Seules les stations confiees a ce compte (directement ou par sa ville) : jamais celles d'une autre marque."""
+    outlet = db.get(FuelOutlet, outlet_id)
     if outlet is None:
+        raise NotFoundError("Station introuvable.")
+    direct = db.scalar(select(FuelOutletManager).where(FuelOutletManager.outlet_id == outlet_id, FuelOutletManager.user_id == user.id))
+    if direct is None and svc.normalize_city(outlet.city) not in _region_access(db, user).get(outlet.vendor_id, set()):
         raise NotFoundError("Station introuvable.")
     return outlet
 
 
-def _managed_response(db: Session, outlet: FuelOutlet, settings: object, now: datetime) -> ManagedOutlet:
+def _managed_response(db: Session, outlet: FuelOutlet, settings: object, now: datetime, via_region: str | None = None) -> ManagedOutlet:
     profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == outlet.vendor_id))
     updated = svc._aware(outlet.fuel_updated_at)
     hours = svc.fresh_hours(settings)
@@ -744,6 +770,7 @@ def _managed_response(db: Session, outlet: FuelOutlet, settings: object, now: da
         fuel_updated_at=updated.isoformat() if updated else None,
         can_update=bool(outlet.is_active) and _brand_can_publish(db, outlet.vendor_id, now),
         fresh_hours=hours,
+        via_region=via_region,
     )
 
 
@@ -759,7 +786,14 @@ def my_managed_outlets(
         .where(FuelOutletManager.user_id == current_user.id)
         .order_by(FuelOutlet.name)
     ).all()
-    return [_managed_response(db, o, settings, now) for o in rows]
+    items = [_managed_response(db, o, settings, now) for o in rows]
+    seen = {o.id for o in rows}
+    for vendor_id, cities in _region_access(db, current_user).items():
+        for outlet in db.scalars(select(FuelOutlet).where(FuelOutlet.vendor_id == vendor_id).order_by(FuelOutlet.name)).all():
+            if outlet.id not in seen and svc.normalize_city(outlet.city) in cities:
+                seen.add(outlet.id)
+                items.append(_managed_response(db, outlet, settings, now, via_region=outlet.city))
+    return items
 
 
 @router.put("/station-manager/outlets/{outlet_id}", response_model=ManagedOutlet)
@@ -791,3 +825,226 @@ def update_managed_outlet(
     db.commit()
     invalidate_services_cache()
     return _managed_response(db, outlet, get_or_create_global_settings(db), now)
+
+
+# ---------------------------------------------------------------- paliers : tableau de bord, regions, export
+LONG_OUTAGE_HOURS = 24
+
+
+def _plan_or_forbid(db: Session, profile: SellerProfile, settings: object, need: int) -> FuelPlan:
+    plan = fuel_plan(db, profile, settings)
+    if plan.level < need:
+        threshold = plan.network_from if need == 2 else plan.enterprise_from
+        raise ForbiddenError(f"Réservé au palier {PLAN_NAMES[need]} (à partir de {threshold} stations).")
+    return plan
+
+
+@router.get("/seller/fuel-plan", response_model=FuelPlanResponse)
+def my_fuel_plan(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> FuelPlanResponse:
+    profile = _station_profile(db, current_user)
+    plan = fuel_plan(db, profile, get_or_create_global_settings(db))
+    return FuelPlanResponse(
+        level=plan.level,
+        name=plan.name,
+        stations=plan.stations,
+        network_from=plan.network_from,
+        enterprise_from=plan.enterprise_from,
+        network_tools=plan.network_tools,
+        export=plan.export,
+    )
+
+
+@router.get("/seller/fuel-dashboard", response_model=FuelDashboardResponse)
+def my_fuel_dashboard(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> FuelDashboardResponse:
+    """Vue reseau (palier Reseau et plus) : stations a relancer, ruptures longues, villes, signalements."""
+    profile = _station_profile(db, current_user)
+    settings = get_or_create_global_settings(db)
+    _plan_or_forbid(db, profile, settings, 2)
+    now, hours = datetime.now(UTC), svc.fresh_hours(settings)
+    outlets = db.scalars(
+        select(FuelOutlet).where(FuelOutlet.vendor_id == profile.vendor_id, FuelOutlet.is_active.is_(True)).order_by(FuelOutlet.name)
+    ).all()
+    managed = set(db.scalars(select(FuelOutletManager.outlet_id).where(FuelOutletManager.vendor_id == profile.vendor_id)).all())
+    regions = {svc.normalize_city(c) for c in db.scalars(select(FuelRegionManager.city).where(FuelRegionManager.vendor_id == profile.vendor_id)).all()}
+    # Date du dernier passage en rupture, par station et carburant.
+    last_out: dict[tuple[str, str], datetime] = {}
+    for outlet_id, fuel, when in db.execute(
+        select(FuelStatusChange.outlet_id, FuelStatusChange.fuel, func.max(FuelStatusChange.created_at))
+        .where(FuelStatusChange.vendor_id == profile.vendor_id, FuelStatusChange.new_state == "out", FuelStatusChange.outlet_id.is_not(None))
+        .group_by(FuelStatusChange.outlet_id, FuelStatusChange.fuel)
+    ).all():
+        last_out[(outlet_id, fuel)] = svc._aware(when)
+
+    stale: list[DashboardStation] = []
+    outages: list[DashboardOutage] = []
+    cities: dict[str, list] = {}
+    for outlet in outlets:
+        fresh = svc.fuel_is_fresh(outlet, now, hours)
+        status = svc.clean_fuel_status(outlet.fuel_status)
+        entry = cities.setdefault(svc.normalize_city(outlet.city), [outlet.city, 0, 0, 0])
+        entry[1] += 1
+        if not fresh:
+            entry[2] += 1
+            updated = svc._aware(outlet.fuel_updated_at)
+            stale.append(DashboardStation(id=outlet.id, name=outlet.name, city=outlet.city, fuel_updated_at=updated.isoformat() if updated else None))
+        for fuel, state in status.items():
+            since = last_out.get((outlet.id, fuel))
+            if fresh and state == "out":
+                entry[3] += 1
+                if since is not None and now - since >= timedelta(hours=LONG_OUTAGE_HOURS):
+                    outages.append(DashboardOutage(id=outlet.id, name=outlet.name, city=outlet.city, fuel=fuel, since=since.isoformat()))
+    since_30 = now - timedelta(days=HISTORY_DAYS)
+    reports = int(
+        db.scalar(select(func.count()).select_from(StationReport).where(StationReport.vendor_id == profile.vendor_id, StationReport.created_at >= since_30))
+        or 0
+    )
+    outages.sort(key=lambda o: o.since)
+    return FuelDashboardResponse(
+        stations=len(outlets),
+        fresh=len(outlets) - len(stale),
+        to_confirm=len(stale),
+        without_manager=sum(1 for o in outlets if o.id not in managed and svc.normalize_city(o.city) not in regions),
+        reports_30d=reports,
+        stale=stale[:50],
+        long_outages=outages[:50],
+        cities=[DashboardCity(city=c, stations=n, to_confirm=s, out=o) for c, n, s, o in sorted(cities.values(), key=lambda e: (-e[1], e[0]))],
+    )
+
+
+def _region_items(db: Session, vendor_id: str) -> list[RegionManagerItem]:
+    rows = db.execute(
+        select(FuelRegionManager, User.email, User.full_name)
+        .join(User, User.id == FuelRegionManager.user_id)
+        .where(FuelRegionManager.vendor_id == vendor_id)
+        .order_by(FuelRegionManager.city, FuelRegionManager.created_at)
+    ).all()
+    return [RegionManagerItem(id=r.id, city=r.city, email=email, full_name=name) for r, email, name in rows]
+
+
+@router.get("/seller/fuel-region-managers", response_model=list[RegionManagerItem])
+def list_region_managers(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> list[RegionManagerItem]:
+    return _region_items(db, _station_profile(db, current_user).vendor_id)
+
+
+@router.post("/seller/fuel-region-managers", response_model=list[RegionManagerItem], status_code=201)
+def add_region_manager(
+    payload: RegionManagerCreate,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> list[RegionManagerItem]:
+    """Responsable d'une ville : met a jour toutes les stations de la marque dans cette ville (palier Reseau)."""
+    from app.services.station_tasks import _notify
+
+    enforce_csrf(request)
+    enforce_rate_limit(request, key=f"fuel-region:{current_user.id}", limit=30, window_seconds=600)
+    profile = _station_profile(db, current_user)
+    _plan_or_forbid(db, profile, get_or_create_global_settings(db), 2)
+    wanted = svc.normalize_city(payload.city)
+    cities = {svc.normalize_city(c): c for c in db.scalars(select(FuelOutlet.city).where(FuelOutlet.vendor_id == profile.vendor_id)).all()}
+    if wanted not in cities:
+        raise ValidationDomainError("Aucune de vos stations n'est dans cette ville.")
+    user = db.scalar(select(User).where(func.lower(User.email) == payload.email.strip().lower()))
+    if user is None or not user.is_active:
+        raise ValidationDomainError(
+            "Aucun compte AMAZER avec cet e-mail. Demandez au responsable de créer un compte gratuit sur amazer.store, puis réessayez."
+        )
+    if user.id == current_user.id:
+        raise ValidationDomainError("Vous gérez déjà toutes vos stations depuis cet espace.")
+    existing = db.scalars(select(FuelRegionManager).where(FuelRegionManager.vendor_id == profile.vendor_id, FuelRegionManager.user_id == user.id)).all()
+    if any(svc.normalize_city(r.city) == wanted for r in existing):
+        raise ValidationDomainError("Cette personne est déjà responsable de cette ville.")
+    db.add(FuelRegionManager(vendor_id=profile.vendor_id, user_id=user.id, city=cities[wanted]))
+    db.commit()
+    _notify(
+        db,
+        user.id,
+        "Une région vous est confiée",
+        f"{profile.business_name} vous confie ses stations de {cities[wanted]}. Mettez à jour leurs disponibilités depuis votre téléphone.",
+        f"fuel-region-{profile.vendor_id}-{wanted}",
+        "/gerant-station",
+    )
+    db.commit()
+    return _region_items(db, profile.vendor_id)
+
+
+@router.delete("/seller/fuel-region-managers/{manager_id}", status_code=204, response_model=None)
+def remove_region_manager(
+    manager_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+) -> None:
+    enforce_csrf(request)
+    profile = _station_profile(db, current_user)
+    row = db.get(FuelRegionManager, manager_id)
+    if row is None or row.vendor_id != profile.vendor_id:
+        raise NotFoundError("Responsable introuvable.")
+    db.delete(row)
+    db.commit()
+
+
+EXPORT_DAYS = 365
+
+
+def _csv(rows: list[list[str]], filename: str) -> Response:
+    """CSV pour Excel en francais : separateur « ; » et BOM UTF-8 (accents corrects a l'ouverture)."""
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, delimiter=";", lineterminator="\r\n")
+    writer.writerows(rows)
+    return Response(
+        content="﻿" + buffer.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"},
+    )
+
+
+@router.get("/seller/fuel-export", response_class=Response)
+def export_fuel_data(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+    kind: Annotated[Literal["history", "stats"], Query()] = "history",
+) -> Response:
+    """Export Excel sur 12 mois (palier Entreprise) : historique des disponibilites ou statistiques par jour."""
+    profile = _station_profile(db, current_user)
+    _plan_or_forbid(db, profile, get_or_create_global_settings(db), 3)
+    outlets = {o.id: o for o in db.scalars(select(FuelOutlet).where(FuelOutlet.vendor_id == profile.vendor_id)).all()}
+    labels = {"available": "Disponible", "low": "Stock faible", "out": "Rupture"}
+    fuels = {"super": "Super", "gasoil": "Gasoil", "gaz": "Gaz"}
+    now = datetime.now(UTC)
+    if kind == "history":
+        rows = [["Date", "Heure (Niamey)", "Station", "Ville", "Carburant", "Avant", "Après"]]
+        for change in db.scalars(
+            select(FuelStatusChange)
+            .where(FuelStatusChange.vendor_id == profile.vendor_id, FuelStatusChange.created_at >= now - timedelta(days=EXPORT_DAYS))
+            .order_by(FuelStatusChange.created_at)
+        ).all():
+            local = svc._aware(change.created_at).astimezone(svc.NIAMEY_TZ)
+            outlet = outlets.get(change.outlet_id) if change.outlet_id else None
+            rows.append([
+                f"{local:%d/%m/%Y}",
+                f"{local:%H:%M}",
+                outlet.name if outlet else profile.business_name,
+                outlet.city if outlet else (profile.city or ""),
+                fuels.get(change.fuel, change.fuel),
+                labels.get(change.old_state or "", ""),
+                labels.get(change.new_state, change.new_state),
+            ])
+        return _csv(rows, "amazer-stations-historique.csv")
+    rows = [["Jour", "Station", "Ville", "Itinéraires", "Appels", "Commandes de gaz"]]
+    since = svc.niamey_today(now) - timedelta(days=EXPORT_DAYS)
+    for stat in db.scalars(
+        select(FuelOutletDailyStat).where(FuelOutletDailyStat.outlet_id.in_(list(outlets)), FuelOutletDailyStat.day >= since).order_by(FuelOutletDailyStat.day)
+    ).all():
+        outlet = outlets[stat.outlet_id]
+        rows.append([f"{stat.day:%d/%m/%Y}", outlet.name, outlet.city, str(stat.routes), str(stat.calls), str(stat.gas_orders)])
+    return _csv(rows, "amazer-stations-statistiques.csv")

@@ -6,7 +6,7 @@ from app.models.price_history import PriceHistory
 from app.models.reseller import ResellerAccount, ResellerListing, ResellerPayout, ResellerSubscriptionPayment
 from app.models.refund import Refund
 from app.models.storefront_stat import StorefrontDailyStat
-from app.models.fuel_outlet import FuelOutlet, FuelOutletManager
+from app.models.fuel_outlet import FuelOutlet, FuelOutletManager, FuelRegionManager
 from app.models.fuel_outlet_stat import FuelOutletDailyStat
 from app.models.fuel_history import FuelStatusChange, StationReport
 from app.models.vendor_review import VendorReview
@@ -39,6 +39,7 @@ from app.models.vendor import Vendor
 __all__ = [
     "FuelOutlet",
     "FuelOutletManager",
+    "FuelRegionManager",
     "FuelStatusChange",
     "StationReport",
     "FuelOutletDailyStat",

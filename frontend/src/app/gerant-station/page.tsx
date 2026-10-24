@@ -37,6 +37,7 @@ function OutletPanel({ outlet }: { outlet: ManagedOutlet }) {
       <h2 className="text-lg font-semibold text-ink-900">{outlet.name}</h2>
       <p className="text-sm text-ink-600">
         {outlet.brand_name} · {outlet.city}
+        {outlet.via_region ? ` · vous êtes responsable de ${outlet.via_region}` : ""}
       </p>
       {!outlet.can_update ? (
         <p className="mt-3 rounded-field bg-warning/10 p-3 text-sm text-ink-800">

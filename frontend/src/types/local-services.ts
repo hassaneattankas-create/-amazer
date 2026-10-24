@@ -130,7 +130,32 @@ export type ManagedOutlet = {
   fuel_updated_at: string | null;
   can_update: boolean;
   fresh_hours: number;
+  /** Station confiée via une ville (responsable régional). */
+  via_region?: string | null;
 };
+
+export type FuelPlan = {
+  level: 1 | 2 | 3;
+  name: string;
+  stations: number;
+  network_from: number;
+  enterprise_from: number;
+  network_tools: boolean;
+  export: boolean;
+};
+
+export type FuelDashboard = {
+  stations: number;
+  fresh: number;
+  to_confirm: number;
+  without_manager: number;
+  reports_30d: number;
+  stale: { id: string; name: string; city: string; fuel_updated_at: string | null }[];
+  long_outages: { id: string; name: string; city: string; fuel: FuelKey; since: string }[];
+  cities: { city: string; stations: number; to_confirm: number; out: number }[];
+};
+
+export type RegionManager = { id: string; city: string; email: string; full_name: string };
 
 export type StationReportKind = "wrong_status" | "closed" | "wrong_place" | "other";
 export type StationReport = { outlet_id: string | null; outlet_name: string | null; kind: StationReportKind; comment: string | null; created_at: string };

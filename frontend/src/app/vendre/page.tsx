@@ -49,13 +49,13 @@ const PLANS: Plan[] = [
     audience: "Hôtels, transport, pharmacies, stations-essence, entreprises",
     price: (p) => p.seller_subscription_fee_premium,
     highlighted: true,
-    features: (p) => [
+    features: () => [
       "Produits illimités et boutique en ligne",
       "Restaurant : menu et commandes en ligne",
       "Hôtel : réservation des chambres en ligne",
       "Transport : billets et places avec QR code",
       "Pharmacie : vos gardes visibles par tout le Niger",
-      `Stations-essence : ${(p.fuel_base_subscription ?? 0) > 0 ? `abonnement ${formatXOF(p.fuel_base_subscription ?? 0)} / mois, ` : ""}${p.fuel_included_outlets ?? 3} stations incluses, puis dès ${formatXOF(p.fuel_tier1_price ?? 2000)} par station (prix dégressif)`,
+      "Stations-essence : une station ou tout un réseau, avec des gérants par station",
       "Stations : disponibilités, statistiques et commandes de gaz livrées",
       "Itinéraire Google Maps et livraison AMAZER à Niamey",
       "Site vitrine complet et badge vérifié",

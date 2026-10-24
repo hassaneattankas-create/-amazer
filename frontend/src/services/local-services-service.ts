@@ -1,6 +1,8 @@
 import { api } from "@/lib/api";
 import type {
   FuelChange,
+  FuelDashboard,
+  FuelPlan,
   FuelManager,
   FuelKey,
   FuelNetwork,
@@ -10,6 +12,7 @@ import type {
   FuelOutletUpdate,
   LocalServiceList,
   ManagedOutlet,
+  RegionManager,
   ServiceStatus,
   ServiceStatusUpdate,
   StationReport,
@@ -87,6 +90,31 @@ export async function listManagedOutlets(): Promise<ManagedOutlet[]> {
 
 export async function updateManagedOutlet(id: string, payload: { fuel?: FuelStatus; confirm?: boolean }): Promise<ManagedOutlet> {
   return (await api.put<ManagedOutlet>(`/api/v1/station-manager/outlets/${id}`, payload)).data;
+}
+
+export async function getFuelPlan(): Promise<FuelPlan> {
+  return (await api.get<FuelPlan>("/api/v1/seller/fuel-plan")).data;
+}
+
+export async function getFuelDashboard(): Promise<FuelDashboard> {
+  return (await api.get<FuelDashboard>("/api/v1/seller/fuel-dashboard")).data;
+}
+
+export async function listRegionManagers(): Promise<RegionManager[]> {
+  return (await api.get<RegionManager[]>("/api/v1/seller/fuel-region-managers")).data;
+}
+
+export async function addRegionManager(payload: { city: string; email: string }): Promise<RegionManager[]> {
+  return (await api.post<RegionManager[]>("/api/v1/seller/fuel-region-managers", payload)).data;
+}
+
+export async function removeRegionManager(id: string): Promise<void> {
+  await api.delete(`/api/v1/seller/fuel-region-managers/${id}`);
+}
+
+/** Export Excel (CSV « ; ») : historique des disponibilités ou statistiques par jour, sur 12 mois. */
+export async function downloadFuelExport(kind: "history" | "stats"): Promise<Blob> {
+  return (await api.get<Blob>("/api/v1/seller/fuel-export", { params: { kind }, responseType: "blob" })).data;
 }
 
 export async function listMyFuelHistory(): Promise<FuelChange[]> {
