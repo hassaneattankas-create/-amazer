@@ -30,7 +30,15 @@ Gestionnaire de paquets : **npm** (ni pnpm, ni yarn, ni bun sur cette machine).
 | Code, architecture, API, données, sécurité AMAZER | `amazer-core` |
 | Interface, composant, style, responsive, accessibilité, animation web | `amazer-core` + `amazer-design-system` |
 | Vidéo, film, pub, explainer, storyboard, motion design | `amazer-motion-design` |
+| Timing, courbes, chorégraphie d'une animation (en complément) | `motion-design` |
+| Animation illustrée procédurale (papier découpé, croquis, isométrique…) | `animate` |
+| Code Remotion (`motion/remotion/` uniquement) | `remotion-best-practices` |
+| Plans cinématiques d'un film produit (recettes de plans, son) | `video-shotcraft` (lire d'abord `AMAZER.md`) |
 | Tests, QA, debugging, revue, non-régression | `amazer-qa` |
+| Audit qualité web mesuré (Lighthouse, Core Web Vitals, WCAG 2.2, SEO) | `web-quality-audit` (puis `web-performance`, `web-core-web-vitals`, `web-accessibility`, `web-seo`, `web-best-practices` au besoin) |
+
+Outils d'audit installés dans `tools/e2e` (hors site, rien n'est livré aux visiteurs) :
+`@axe-core/puppeteer` (accessibilité) et `lighthouse` (performance mobile).
 
 `amazer-core` est le socle : charge-le dès qu'il s'agit de toucher au code du produit.
 Les autres se chargent **par-dessus**, à la demande. Ne charge jamais les quatre

@@ -292,7 +292,7 @@ export default function HomePage() {
 
       <div className="mt-4">
         {showSkeletons ? (
-          <div className={PRODUCT_GRID_CLASS} aria-busy="true" aria-label={t("Chargement des produits")}>
+          <div className={PRODUCT_GRID_CLASS} role="status" aria-busy="true" aria-label={t("Chargement des produits")}>
             {Array.from({ length: 10 }).map((_, index) => (
               <ProductCardSkeleton key={`skeleton-${index}`} variant="tile" />
             ))}
