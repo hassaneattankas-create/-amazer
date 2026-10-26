@@ -31,14 +31,11 @@ export const metadata: Metadata = {
   title: "AMAZER",
   description: "AMAZER : boutiques, restaurants, pharmacies, stations et services premium au Niger, avec paiement contrôlé et livraison.",
   metadataBase: siteUrl,
-  alternates: {
-    canonical: "/",
-  },
+  // Pas d'adresse canonique commune : chaque page a la sienne (sinon Google prend tout pour l'accueil).
   manifest: "/manifest.json",
   openGraph: {
     title: "AMAZER",
     description: "AMAZER : boutiques, restaurants, pharmacies, stations et services premium au Niger, avec paiement contrôlé et livraison.",
-    url: siteUrl,
     siteName: "AMAZER",
     locale: "fr_NE",
     type: "website",

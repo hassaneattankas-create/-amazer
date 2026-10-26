@@ -15,7 +15,7 @@ const AXE_PATH = require.resolve("axe-core/axe.min.js");
 const SITE = (process.env.SITE_URL || "http://localhost:3100").replace(/\/$/, "");
 const PAGES = process.argv.slice(2).length
   ? process.argv.slice(2)
-  : ["/", "/stations", "/pharmacies", "/vendre", "/affiliation", "/login", "/register", "/promotions", "/shops", "/help"];
+  : ["/", "/stations", "/pharmacies", "/vendre", "/affiliation", "/login", "/register", "/promotions", "/boutiques", "/comment-ca-marche", "/hotels"];
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
 const browser = await puppeteer.launch({ headless: true });

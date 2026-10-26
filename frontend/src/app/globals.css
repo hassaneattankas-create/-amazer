@@ -18,7 +18,7 @@
     --muted-foreground: 215 16% 42%;
     --accent: 18 100% 50%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
+    --destructive: 0 74% 46%;
     --destructive-foreground: 0 0% 100%;
     --border: 214 30% 90%;
     --input: 214 30% 90%;
@@ -100,13 +100,13 @@
     --ink-900: 220 35% 16%;     /* identique a --foreground */
 
     /* --- Etats semantiques ------------------------------------------------- */
-    --success:    152 62% 36%;
+    --success:    152 62% 32%;   /* texte et fond : 4,7:1 sur blanc (WCAG AA) */
     --success-fg:   0  0% 100%;
     --warning:     38 92% 50%;
     --warning-fg: 220 35% 16%;
-    --danger:       0 84% 60%;  /* identique a --destructive */
+    --danger:       0 74% 46%;  /* identique a --destructive ; 5:1 sur blanc */
     --danger-fg:    0  0% 100%;
-    --info:       214 84% 56%;
+    --info:       214 84% 46%;
     --info-fg:      0  0% 100%;
 
     /* --- Surfaces (profondeur) --------------------------------------------- */
