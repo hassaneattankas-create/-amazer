@@ -92,13 +92,13 @@ export default function HomePage() {
     staleTime: 10 * 60_000,
     refetchOnWindowFocus: false,
   });
-  const { data: promotions = [] } = useQuery({
+  const { data: promotions = [], isPending: promotionsPending } = useQuery({
     queryKey: ["home-promotions"],
     queryFn: () => listPromotions(),
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });
-  const { data: shops = [] } = useQuery({
+  const { data: shops = [], isPending: shopsPending } = useQuery({
     queryKey: ["home-featured-shops"],
     queryFn: () => listStorefronts({ limit: 24 }),
     staleTime: 5 * 60_000,
@@ -271,9 +271,9 @@ export default function HomePage() {
 
       {!hasAnyFilter ? (
         <>
-          <PromotionsRail items={promotions} />
+          <PromotionsRail items={promotions} loading={promotionsPending} />
           <AdminSectionsRails sections={homeContent?.sections ?? []} />
-          <FeaturedShopsRail shops={shops} />
+          <FeaturedShopsRail shops={shops} loading={shopsPending} />
         </>
       ) : null}
 

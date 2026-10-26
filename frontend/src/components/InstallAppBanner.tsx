@@ -113,8 +113,11 @@ export function InstallAppBanner() {
   };
 
   return (
-    <aside aria-label="Installer l'application AMAZER" className="border-b border-border bg-brand-50">
-      <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-gutter py-2">
+    <aside
+      aria-label="Installer l'application AMAZER"
+      className="fixed inset-x-0 bottom-0 z-sticky border-t border-border bg-brand-50 pb-[env(safe-area-inset-bottom)] shadow-floating"
+    >
+      <div className="mx-auto flex w-full max-w-7xl items-center gap-3 py-2 pl-gutter pr-20 md:pr-24">
         <Image src="/logo-amazer-mark-128.png" alt="" width={36} height={36} className="h-9 w-9 shrink-0" />
         <div className="min-w-0 flex-1 text-sm">
           <p className="font-semibold text-ink-900">Installez l&apos;application AMAZER</p>

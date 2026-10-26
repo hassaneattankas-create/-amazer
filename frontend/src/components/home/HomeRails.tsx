@@ -28,16 +28,51 @@ function SectionHeader({ title, href, linkLabel }: { title: string; href: string
 
 const railClass = "-mx-gutter mt-2 flex snap-x gap-3 overflow-x-auto px-gutter pb-1";
 
+/** Place réservée pendant le chargement : mêmes dimensions que la rangée, rien ne saute à l'arrivée des données. */
+function RailSkeleton({ kind }: { kind: "products" | "shops" }) {
+  return (
+    <section className="mt-6" aria-busy="true" aria-hidden="true">
+      <div className="flex min-h-11 items-end">
+        <div className="h-6 w-40 animate-pulse rounded-field bg-surface-3" />
+      </div>
+      <ul className={railClass}>
+        {Array.from({ length: 4 }).map((_, index) =>
+          kind === "products" ? (
+            <li key={index} className="w-36 shrink-0 sm:w-44">
+              <div className="overflow-hidden rounded-card border border-border bg-card">
+                <div className="aspect-square animate-pulse bg-surface-3" />
+                <div className="space-y-1.5 p-2">
+                  <div className="h-4 w-16 rounded-field bg-surface-3" />
+                  <div className="h-3 w-full rounded-field bg-surface-3" />
+                  <div className="h-3 w-2/3 rounded-field bg-surface-3" />
+                </div>
+              </div>
+            </li>
+          ) : (
+            <li key={index} className="w-44 shrink-0 sm:w-52">
+              <div className="flex items-center gap-3 rounded-card border border-border bg-card p-3">
+                <span className="h-12 w-12 shrink-0 animate-pulse rounded-pill bg-surface-3" />
+                <span className="h-4 flex-1 rounded-field bg-surface-3" />
+              </div>
+            </li>
+          )
+        )}
+      </ul>
+    </section>
+  );
+}
+
 /** Rangee « Bonnes affaires » : produits en promotion, defilement horizontal. */
-export function PromotionsRail({ items }: { items: PromotionItem[] }) {
+export function PromotionsRail({ items, loading = false }: { items: PromotionItem[]; loading?: boolean }) {
   const t = useT();
   const convert = useConvertedPrice();
+  if (loading) return <RailSkeleton kind="products" />;
   if (!items.length) return null;
   return (
     <section className="mt-6" aria-label={t("Bonnes affaires")}>
       <SectionHeader title={t("Bonnes affaires")} href="/promotions" linkLabel={t("Voir tout")} />
       <ul className={railClass}>
-        {items.slice(0, 12).map((promo) => {
+        {items.slice(0, 12).map((promo, index) => {
           const image = resolveProductImageUrl({ raw: promo.main_image_url, categorySlug: promo.category_slug, width: 400 });
           const discount =
             promo.original_amount > promo.promo_amount
@@ -52,7 +87,7 @@ export function PromotionsRail({ items }: { items: PromotionItem[] }) {
               >
                 <div className="relative aspect-square bg-surface-1">
                   {image ? (
-                    <Image src={image} alt={promo.product_name} fill sizes="176px" unoptimized className="object-cover" />
+                    <Image src={image} alt={promo.product_name} fill sizes="176px" unoptimized priority={index < 2} className="object-cover" />
                   ) : (
                     <Tag className="absolute inset-0 m-auto h-8 w-8 text-ink-400" aria-hidden="true" />
                   )}
@@ -77,12 +112,13 @@ export function PromotionsRail({ items }: { items: PromotionItem[] }) {
 }
 
 /** Rangee « Boutiques a la une » : boutiques verifiees ou premium, les plus fournies d'abord. */
-export function FeaturedShopsRail({ shops }: { shops: VendorStorefront[] }) {
+export function FeaturedShopsRail({ shops, loading = false }: { shops: VendorStorefront[]; loading?: boolean }) {
   const t = useT();
   const featured = shops
     .filter((shop) => !shop.service_kind && (shop.is_verified || shop.storefront_tier === "premium"))
     .sort((a, b) => b.product_count - a.product_count)
     .slice(0, 12);
+  if (loading) return <RailSkeleton kind="shops" />;
   if (!featured.length) return null;
   return (
     <section className="mt-6" aria-label={t("Boutiques à la une")}>
