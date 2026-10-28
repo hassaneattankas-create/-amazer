@@ -36,16 +36,28 @@ async function allProducts(): Promise<string[]> {
   return ids;
 }
 
+// L'API plafonne les listes à 200 éléments : au-delà, elle répond 422 (liste vide ici).
+async function allShops(): Promise<VendorStorefront[]> {
+  const shops: VendorStorefront[] = [];
+  for (let offset = 0; offset < 2000; offset += 200) {
+    const page = await fetchPublicApi<{ items: VendorStorefront[] }>(`/api/v1/storefronts?limit=200&offset=${offset}`, 3600);
+    const items = page?.items ?? [];
+    shops.push(...items);
+    if (items.length < 200) break;
+  }
+  return shops;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const [shops, categories, products] = await Promise.all([
-    fetchPublicApi<{ items: VendorStorefront[] }>("/api/v1/storefronts?limit=500", 3600),
+    allShops(),
     fetchPublicApi<{ items: CatalogCategory[] }>("/api/v1/categories?limit=200", 3600),
     allProducts(),
   ]);
   return [
     ...STATIC_PAGES.map(([path, priority]) => ({ url: `${SITE_URL}${path}`, lastModified: now, priority })),
-    ...(shops?.items ?? []).filter((s) => s.is_active).map((s) => ({ url: `${SITE_URL}/shop/${encodeURIComponent(s.id)}`, lastModified: now, priority: 0.7 })),
+    ...shops.filter((s) => s.is_active).map((s) => ({ url: `${SITE_URL}/shop/${encodeURIComponent(s.id)}`, lastModified: now, priority: 0.7 })),
     ...(categories?.items ?? []).map((c) => ({ url: `${SITE_URL}/category/${encodeURIComponent(c.slug)}`, lastModified: now, priority: 0.6 })),
     ...products.map((id) => ({ url: `${SITE_URL}/product/${encodeURIComponent(id)}`, lastModified: now, priority: 0.5 })),
   ];
