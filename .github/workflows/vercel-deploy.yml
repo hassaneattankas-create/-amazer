@@ -27,7 +27,7 @@ jobs:
   deploy:
     name: Deploiement production
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     env:
       # Identifiants de projet, non secrets (visibles dans le dashboard Vercel).
       # amazerniger-hub-amazer = le SEUL projet qui sert amazer.store.
@@ -50,7 +50,7 @@ jobs:
           node-version: "24"
 
       - name: Installer Vercel CLI
-        run: npm install -g vercel@65.5.0
+        run: npm install -g vercel@latest
 
       - name: Deployer en production
         id: deploy
@@ -58,6 +58,9 @@ jobs:
           # Le `rootDirectory` (frontend) et la commande de build viennent des
           # reglages du projet Vercel : on deploie depuis la racine du depot,
           # .vercelignore ecarte l'outillage local et les artefacts video.
+          # Sans historique Git : Vercel (offre Hobby) bloque sinon le deploiement
+          # (« commit author doesn't have permission »). Le token reste celui du compte.
+          rm -rf .git
           url=$(vercel deploy --prod --yes --token="$VERCEL_TOKEN" 2>&1 | tee /dev/stderr | grep -oE 'https://[a-z0-9.-]+\.vercel\.app' | tail -1)
           if [ -z "$url" ]; then
             echo "::error::Aucune URL de deploiement renvoyee — voir le journal ci-dessus."
