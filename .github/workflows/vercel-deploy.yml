@@ -50,7 +50,7 @@ jobs:
           node-version: "24"
 
       - name: Installer Vercel CLI
-        run: npm install -g vercel@latest
+        run: npm install -g vercel@65.5.0
 
       - name: Deployer en production
         id: deploy
