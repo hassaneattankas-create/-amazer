@@ -29,6 +29,13 @@ jobs:
           echo "== 10 derniers deploiements =="
           api "/v6/deployments?projectId=$PROJECT&teamId=$TEAM&limit=10" > deps.json
           jq -r '.deployments[] | [.uid, .state, (.created/1000|todate), (.meta.githubCommitMessage // .name // "" | .[0:60])] | @tsv' deps.json
+          blocked=$(jq -r '[.deployments[] | select(.state=="BLOCKED")][0].uid // empty' deps.json)
+          if [ -n "$blocked" ]; then
+            echo "== Raison du blocage : $blocked =="
+            # Champs simples seulement (aucune variable d'environnement).
+            api "/v13/deployments/$blocked?teamId=$TEAM" | jq '(with_entries(select(.value | type != "object" and type != "array"))) + {checks: .checks, meta: (.meta // {} | with_entries(select(.key | test("github(CommitAuthor|Deployment|Org|Repo)"))))}'
+            api "/v3/deployments/$blocked/events?teamId=$TEAM&limit=40&direction=backward" | jq -r '.[]? | (.text // .payload.text // empty)' | tail -40
+          fi
           now=$(date +%s)
           for id in $(jq -r --argjson now "$now" '.deployments[] | select((.state=="BUILDING" or .state=="QUEUED" or .state=="INITIALIZING") and ($now - .created/1000) > 3000) | .uid' deps.json); do
             echo "== Bloque : $id =="
