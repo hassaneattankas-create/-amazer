@@ -1,0 +1,43 @@
+name: Diagnostic Vercel
+
+# Lancement manuel uniquement. Lit l'etat du compte et des derniers deploiements
+# Vercel avec le meme token que le deploiement (aucun secret affiche), et peut
+# annuler les deploiements restes bloques en « building » / « queued ».
+on:
+  workflow_dispatch:
+    inputs:
+      cancel_stuck:
+        description: "Annuler les deploiements bloques depuis plus de 50 min"
+        type: boolean
+        default: false
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TEAM: team_bL8FCYwfFX0DGa2Ppa1DYX7z
+      PROJECT: prj_QWZPAAiIg4fl8GbkxAFTpfYP6ZWP
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      CANCEL: ${{ inputs.cancel_stuck }}
+    steps:
+      - name: Etat du compte et des deploiements
+        run: |
+          api() { curl -sS -H "Authorization: Bearer $VERCEL_TOKEN" "https://api.vercel.com$1"; }
+          echo "== Equipe (blocage eventuel) =="
+          api "/v2/teams/$TEAM" | jq '{name, slug, softBlock, billing: (.billing | {plan, status} ), resourceConfig}'
+          echo "== 10 derniers deploiements =="
+          api "/v6/deployments?projectId=$PROJECT&teamId=$TEAM&limit=10" > deps.json
+          jq -r '.deployments[] | [.uid, .state, (.created/1000|todate), (.meta.githubCommitMessage // .name // "" | .[0:60])] | @tsv' deps.json
+          now=$(date +%s)
+          for id in $(jq -r --argjson now "$now" '.deployments[] | select((.state=="BUILDING" or .state=="QUEUED" or .state=="INITIALIZING") and ($now - .created/1000) > 3000) | .uid' deps.json); do
+            echo "== Bloque : $id =="
+            api "/v3/deployments/$id/events?teamId=$TEAM&limit=40&direction=backward" | jq -r '.[]? | (.text // .payload.text // empty)' | tail -40
+            if [ "$CANCEL" = "true" ]; then
+              echo "-- annulation de $id"
+              curl -sS -X PATCH -H "Authorization: Bearer $VERCEL_TOKEN" "https://api.vercel.com/v12/deployments/$id/cancel?teamId=$TEAM" | jq '{id: .id, state: (.readyState // .state), error}'
+            fi
+          done
+          echo "== Dernier deploiement termine en erreur (journal) =="
+          err=$(jq -r '[.deployments[] | select(.state=="ERROR")][0].uid // empty' deps.json)
+          [ -n "$err" ] && api "/v3/deployments/$err/events?teamId=$TEAM&limit=60&direction=backward" | jq -r '.[]? | (.text // .payload.text // empty)' | tail -60 || echo "aucun"
