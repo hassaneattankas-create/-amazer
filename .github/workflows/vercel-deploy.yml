@@ -27,7 +27,7 @@ jobs:
   deploy:
     name: Deploiement production
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       # Identifiants de projet, non secrets (visibles dans le dashboard Vercel).
       # amazerniger-hub-amazer = le SEUL projet qui sert amazer.store.
