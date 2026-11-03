@@ -18,8 +18,7 @@ import { RestaurantSettingsPanel } from "@/components/seller/restaurant/Restaura
 import { SellerStatsPanel } from "@/components/seller/SellerStatsPanel";
 import { SellerReviewsPanel } from "@/components/seller/SellerReviewsPanel";
 import { ServiceStatusPanel } from "@/components/seller/ServiceStatusPanel";
-import { FuelOutletsManager } from "@/components/seller/FuelOutletsManager";
-import { StationNetworkTools } from "@/components/seller/StationNetworkTools";
+import { OwnerStationSpace } from "@/components/stations/owner";
 import { AffiliateShareCard } from "@/components/affiliate/AffiliateShareCard";
 import { SellerKpis } from "@/components/seller/SellerKpis";
 import { SellerOrderList } from "@/components/seller/SellerOrderList";
@@ -385,6 +384,25 @@ export default function SellerDashboardPage() {
     setStatus(`Commande payée de ${latest.customer_name} : à préparer.`);
   }, [restaurantOrders]);
 
+  // Blocs communs à tous les vendeurs ; pour une marque de stations, ils sont rangés dans la dernière section repliée.
+  const sellerShowcase = (
+    <>
+      {profile?.vendor_id ? <AffiliateShareCard variant="seller" vendorId={profile.vendor_id} shopName={profile.business_name} /> : null}
+      <SellerStatsPanel />
+      <SellerReviewsPanel />
+      <p className="text-sm text-ink-600">
+        Besoin d&apos;aide ?{" "}
+        <Link href="/comment-ca-marche#vendre" className="font-medium text-brand-700 hover:underline">
+          Guide du vendeur
+        </Link>{" "}
+        ·{" "}
+        <Link href="/formations" className="font-medium text-brand-700 hover:underline">
+          Formations gratuites
+        </Link>
+      </p>
+    </>
+  );
+
   return (
     <section className="mx-auto w-full max-w-5xl space-y-4 px-gutter pb-14 pt-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -432,11 +450,10 @@ export default function SellerDashboardPage() {
         </div>
       </nav>
 
-      {tab === "accueil" ? (
+      {tab === "accueil" && profile?.service_kind === "fuel_station" ? <OwnerStationSpace vitrine={sellerShowcase} /> : null}
+      {tab === "accueil" && profile?.service_kind !== "fuel_station" ? (
         <>
           {profile?.service_kind ? <ServiceStatusPanel kind={profile.service_kind} /> : null}
-          {profile?.service_kind === "fuel_station" ? <StationNetworkTools /> : null}
-          {profile?.service_kind === "fuel_station" ? <FuelOutletsManager /> : null}
           {showProductTools ? <SellerKpis orders={shopOrders} inventory={inventory} /> : null}
           {showRestaurantTools ? <RestaurantKpis orders={restaurantOrders} menu={sellerMenu} /> : null}
           {showHotelBookingTools && !isTransport ? <HotelKpis bookings={hotelBookings} rooms={profile?.room_types ?? []} /> : null}
@@ -455,19 +472,7 @@ export default function SellerDashboardPage() {
             </Button>
           </div>
           ) : null}
-          {profile?.vendor_id ? <AffiliateShareCard variant="seller" vendorId={profile.vendor_id} shopName={profile.business_name} /> : null}
-          <SellerStatsPanel />
-          <SellerReviewsPanel />
-          <p className="text-sm text-ink-600">
-            Besoin d&apos;aide ?{" "}
-            <Link href="/comment-ca-marche#vendre" className="font-medium text-brand-700 hover:underline">
-              Guide du vendeur
-            </Link>{" "}
-            ·{" "}
-            <Link href="/formations" className="font-medium text-brand-700 hover:underline">
-              Formations gratuites
-            </Link>
-          </p>
+          {sellerShowcase}
         </>
       ) : null}
 

@@ -23,7 +23,6 @@ from app.models.user import User
 from app.models.vendor import Vendor
 from app.repositories.catalog_repository import active_subscription_clause
 from app.services import local_services as svc
-from app.services.fuel_plan import fuel_plan
 from app.services.email_delivery_service import email_delivery_configured, send_email
 from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.seller_finance_service import get_or_create_global_settings
@@ -77,9 +76,8 @@ def send_station_reminders(db: Session, now: datetime) -> int:
             for row in db.scalars(select(FuelOutletManager).where(FuelOutletManager.vendor_id == profile.vendor_id)).all():
                 managers.setdefault(row.outlet_id, []).append(row.user_id)
             regions: dict[str, list[str]] = {}
-            if fuel_plan(db, profile, settings).network_tools:
-                for row in db.scalars(select(FuelRegionManager).where(FuelRegionManager.vendor_id == profile.vendor_id)).all():
-                    regions.setdefault(svc.normalize_city(row.city), []).append(row.user_id)
+            for row in db.scalars(select(FuelRegionManager).where(FuelRegionManager.vendor_id == profile.vendor_id)).all():
+                regions.setdefault(svc.normalize_city(row.city), []).append(row.user_id)
             for outlet in outlets:
                 if svc.fuel_is_fresh(outlet, now, hours) or not reminder_due(outlet.reminded_at, outlet.fuel_updated_at, now):
                     continue

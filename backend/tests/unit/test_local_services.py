@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ForbiddenError, NotFoundError, ValidationDomainError
 from app.database import Base
+from app.models.fuel_activity import FuelActivity, FuelDelivery
 from app.models.fuel_history import FuelStatusChange, StationReport
 from app.models.fuel_outlet import FuelOutlet, FuelOutletManager, FuelRegionManager
 from app.models.fuel_outlet_stat import FuelOutletDailyStat
@@ -107,7 +108,7 @@ def test_position_must_be_in_niger() -> None:
 @pytest.fixture
 def db(monkeypatch):
     engine = create_engine("sqlite://")
-    Base.metadata.create_all(engine, tables=[t.__table__ for t in (User, Vendor, SellerProfile, GlobalSettings, FuelOutlet, FuelOutletDailyStat, FuelStatusChange, StationReport, FuelOutletManager, FuelRegionManager)])
+    Base.metadata.create_all(engine, tables=[t.__table__ for t in (User, Vendor, SellerProfile, GlobalSettings, FuelOutlet, FuelOutletDailyStat, FuelStatusChange, StationReport, FuelOutletManager, FuelRegionManager, FuelActivity, FuelDelivery)])
     monkeypatch.setattr(route, "cache_get_json", lambda _key: None)
     monkeypatch.setattr(route, "cache_set_json", lambda *_a, **_k: None)
     monkeypatch.setattr(route, "invalidate_services_cache", lambda: None)
@@ -427,16 +428,18 @@ def _small_tiers(db: Session) -> None:
     db.commit()
 
 
-def test_plan_unlocks_network_tools_then_export(db: Session, sent) -> None:
+def test_network_tools_at_every_tier_and_export_only_for_enterprise(db: Session, sent) -> None:
     _small_tiers(db)
     owner, _ = shop(db, "net", "fuel_station")
     a = route.create_outlet(FuelOutletCreate(name="Plateau", city="Niamey"), None, db, owner)
     plan = route.my_fuel_plan(db, owner)
-    assert (plan.level, plan.name, plan.network_tools, plan.export, plan.network_from) == (1, "Essentiel", False, False, 2)
-    with pytest.raises(ForbiddenError):
-        route.my_fuel_dashboard(db, owner)
-    with pytest.raises(ForbiddenError):
+    # Tableau de bord et responsables de ville ouverts des le palier Essentiel ; export reserve a Entreprise.
+    assert (plan.level, plan.name, plan.network_tools, plan.export, plan.network_from) == (1, "Essentiel", True, False, 2)
+    assert route.my_fuel_dashboard(db, owner).stations == 1
+    with pytest.raises(ValidationDomainError):  # compte inexistant (plus de refus lie au palier)
         route.add_region_manager(RegionManagerCreate(city="Niamey", email="x@test.ne"), None, db, owner)
+    with pytest.raises(ForbiddenError):
+        route.export_fuel_data(db, owner, kind="history")
 
     b = route.create_outlet(FuelOutletCreate(name="Koira", city="Niamey"), None, db, owner)
     route.create_outlet(FuelOutletCreate(name="Centre", city="Maradi"), None, db, owner)  # 3 stations : Entreprise
@@ -454,8 +457,9 @@ def test_plan_unlocks_network_tools_then_export(db: Session, sent) -> None:
 
     # Responsable de Niamey : voit et met a jour les 2 stations de Niamey, pas celle de Maradi.
     chef = _gerant(db, "chef")
-    with pytest.raises(ValidationDomainError):
-        route.add_region_manager(RegionManagerCreate(city="Zinder", email="chef@test.ne"), None, db, owner)
+    # Une ville sans station peut etre confiee (le responsable y creera les stations).
+    zinder = route.add_region_manager(RegionManagerCreate(city="zinder", email="chef@test.ne"), None, db, owner)
+    assert [(r.city, r.stations) for r in zinder] == [("Zinder", 0)]
     route.add_region_manager(RegionManagerCreate(city="niamey", email="chef@test.ne"), None, db, owner)
     mine = route.my_managed_outlets(db, chef)
     assert sorted((o.name, o.via_region) for o in mine) == [("Koira", "Niamey"), ("Plateau", "Niamey")]
@@ -470,11 +474,11 @@ def test_plan_unlocks_network_tools_then_export(db: Session, sent) -> None:
     assert text.startswith("\ufeffDate;Heure (Niamey);Station") and "Plateau;Niamey;Gasoil;Disponible;Rupture" in text
     assert "attachment" in export.headers["content-disposition"]
 
-    # Retour a 1 station : outils reseau coupes, le responsable perd l'acces.
+    # Retour a 1 station : export coupe, mais le responsable garde ses villes (plus de palier).
     for outlet in db.scalars(select(FuelOutlet).where(FuelOutlet.id != a.id)).all():
         outlet.is_active = False
     db.commit()
-    assert route.my_managed_outlets(db, chef) == []
+    assert sorted((o.name, o.can_update) for o in route.my_managed_outlets(db, chef)) == [("Koira", False), ("Plateau", True)]
     with pytest.raises(ForbiddenError):
         route.export_fuel_data(db, owner, kind="stats")
 

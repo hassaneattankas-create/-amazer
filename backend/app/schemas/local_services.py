@@ -3,9 +3,104 @@ from __future__ import annotations
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 FuelState = Literal["available", "low", "out"]
+FuelKind = Literal["super", "gasoil", "gaz"]
+StationRole = Literal["owner", "city", "manager"]
+# Services proposes par une station (codes stables ; libelles cote interface).
+STATION_SERVICES = ("lavage", "gonflage", "vidange", "boutique", "toilettes", "mobile_money", "carte", "atelier")
+StationServiceCode = Literal["lavage", "gonflage", "vidange", "boutique", "toilettes", "mobile_money", "carte", "atelier"]
+PHONE_PATTERN = r"^[+0-9 ().-]*$"
+
+
+def dedupe_services(value: list[str] | None) -> list[str] | None:
+    """Codes de services sans doublon, dans l'ordre choisi (8 au plus)."""
+    if value is None:
+        return None
+    seen: list[str] = []
+    for code in value:
+        if code not in seen:
+            seen.append(code)
+    return seen[: len(STATION_SERVICES)]
+
+
+class StationInfo(BaseModel):
+    """Fiche d'une station : adresse, telephone, horaires, services et position Google Maps."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    address: str | None
+    phone: str | None
+    opening_hours: str | None
+    services: list[str]
+    latitude: float | None
+    longitude: float | None
+    maps_url: str
+    info_updated_at: str | None
+
+
+class StationInfoUpdate(BaseModel):
+    """Champs absents = inchanges ; chaine vide = effacer (adresse, telephone, horaires).
+
+    Position : latitude + longitude (GPS sur place) ou maps_link (lien Google Maps ou « lat, lng »).
+    """
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    address: str | None = Field(default=None, max_length=220)
+    phone: str | None = Field(default=None, max_length=40, pattern=PHONE_PATTERN)
+    opening_hours: str | None = Field(default=None, max_length=120)
+    services: list[StationServiceCode] | None = Field(default=None, max_length=20)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+    maps_link: str | None = Field(default=None, max_length=500)
+
+    @field_validator("services")
+    @classmethod
+    def _unique_services(cls, value: list[str] | None) -> list[str] | None:
+        return dedupe_services(value)
+
+    @model_validator(mode="after")
+    def _both_or_none(self) -> StationInfoUpdate:
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("Indiquez la latitude et la longitude.")
+        return self
+
+
+class StationManagerRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    email: str
+    full_name: str | None
+
+
+class ActivityItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    created_at: str
+    role: StationRole
+    action: str
+    detail: str | None
+    actor_name: str | None
+    outlet_id: str | None
+    outlet_name: str | None
+    city: str | None
+
+
+class DeliveryItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    outlet_id: str
+    outlet_name: str
+    fuel: FuelKind
+    liters: int
+    reference: str | None
+    delivered_at: str
+    recorded_by: str | None
 
 
 class FuelStatusSchema(BaseModel):
@@ -45,6 +140,9 @@ class LocalServiceItem(BaseModel):
     fuel: FuelStatusSchema = Field(default_factory=FuelStatusSchema)
     fuel_fresh: bool = False
     fuel_updated_at: str | None = None
+    # Station : horaires et services (codes STATION_SERVICES).
+    opening_hours: str | None = None
+    services: list[str] = Field(default_factory=list)
 
 
 class CityCount(BaseModel):
@@ -99,6 +197,15 @@ class FuelOutletUpdate(BaseModel):
     fuel: FuelStatusSchema | None = None
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
+    # Fiche : horaires, services et position par lien Google Maps (meme analyse que l'espace station).
+    opening_hours: str | None = Field(default=None, max_length=120)
+    services: list[StationServiceCode] | None = Field(default=None, max_length=20)
+    maps_link: str | None = Field(default=None, max_length=500)
+
+    @field_validator("services")
+    @classmethod
+    def _unique_services(cls, value: list[str] | None) -> list[str] | None:
+        return dedupe_services(value)
 
 
 class FuelOutletResponse(BaseModel):
@@ -121,6 +228,9 @@ class FuelOutletResponse(BaseModel):
     calls_30d: int = 0
     routes_30d: int = 0
     gas_orders_30d: int = 0
+    info: StationInfo
+    managers: list[StationManagerRef] = Field(default_factory=list)
+    open_reports: int = 0
 
 
 class FuelOutletsBulkUpdate(BaseModel):
@@ -200,11 +310,24 @@ class StationReportCreate(BaseModel):
 class StationReportItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    id: str
     outlet_id: str | None
     outlet_name: str | None
     kind: StationReportKind
     comment: str | None
     created_at: str
+    resolved_at: str | None = None
+    resolution: str | None = None
+    resolved_by_name: str | None = None
+
+
+ReportItem = StationReportItem
+
+
+class ReportResolve(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    resolution: str | None = Field(default=None, max_length=300)
 
 
 class FuelManagerCreate(BaseModel):
@@ -241,6 +364,10 @@ class ManagedOutlet(BaseModel):
     fresh_hours: int
     # Confiee via une region (responsable regional) plutot que directement.
     via_region: str | None = None
+    info: StationInfo
+    open_reports: int = 0
+    # Role du compte sur cette station (« owner » seulement en reponse aux routes d'edition).
+    role: StationRole = "manager"
 
 
 class ManagedFuelUpdate(BaseModel):
@@ -288,6 +415,10 @@ class DashboardCity(BaseModel):
     stations: int
     to_confirm: int
     out: int
+    city_managers: list[str] = Field(default_factory=list)
+    calls_30d: int = 0
+    routes_30d: int = 0
+    without_manager: int = 0
 
 
 class FuelDashboardResponse(BaseModel):
@@ -301,6 +432,10 @@ class FuelDashboardResponse(BaseModel):
     stale: list[DashboardStation]
     long_outages: list[DashboardOutage]
     cities: list[DashboardCity]
+    calls_30d: int = 0
+    routes_30d: int = 0
+    gas_orders_30d: int = 0
+    deliveries_30d: int = 0
 
 
 class RegionManagerCreate(BaseModel):
@@ -317,3 +452,6 @@ class RegionManagerItem(BaseModel):
     city: str
     email: str
     full_name: str
+    # Stations de la marque dans cette ville et derniere action de ce responsable.
+    stations: int = 0
+    last_activity_at: str | None = None

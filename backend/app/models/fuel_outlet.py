@@ -33,6 +33,10 @@ class FuelOutlet(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     # Derniere relance envoyee aux gerants (information « non confirmee »).
     reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Fiche de la station (renseignee par le gerant, le responsable de ville ou le proprietaire).
+    opening_hours: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    services: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    info_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Les regles des stations (fraicheur, gaz livrable, itineraire) s'appliquent telles quelles.
     @property
@@ -45,7 +49,7 @@ class FuelOutlet(Base):
 
 
 class FuelOutletManager(Base):
-    """Gerant d'une station : un compte AMAZER qui ne peut que mettre a jour les disponibilites de cette station."""
+    """Gerant d'une station : un compte AMAZER qui gere cette station (disponibilites, fiche, livraisons, retours)."""
 
     __tablename__ = "fuel_outlet_managers"
     __table_args__ = (UniqueConstraint("outlet_id", "user_id", name="uq_fuel_outlet_manager"),)
@@ -54,11 +58,13 @@ class FuelOutletManager(Base):
     vendor_id: Mapped[str] = mapped_column(String(36), ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False, index=True)
     outlet_id: Mapped[str] = mapped_column(String(36), ForeignKey("fuel_outlets.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    # Compte qui a designe ce gerant (proprietaire ou responsable de ville).
+    assigned_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class FuelRegionManager(Base):
-    """Responsable regional (palier Reseau) : met a jour toutes les stations de la marque dans une ville."""
+    """Responsable de ville : cree les stations de la marque dans sa ville, y nomme les gerants et suit leur activite."""
 
     __tablename__ = "fuel_region_managers"
 

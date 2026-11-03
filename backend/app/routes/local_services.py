@@ -50,10 +50,12 @@ from app.schemas.local_services import (
     RegionManagerItem,
     ServiceStatusResponse,
     ServiceStatusUpdate,
+    StationManagerRef,
     StationReportCreate,
     StationReportItem,
 )
 from app.services import local_services as svc
+from app.services import station_access as sa
 from app.services.fuel_plan import PLAN_NAMES, FuelPlan, fuel_plan
 from app.services.seller_finance_service import get_or_create_global_settings
 
@@ -129,6 +131,8 @@ def build_outlet_item(profile: SellerProfile, outlet: FuelOutlet, settings: obje
         fuel=FuelStatusSchema(**svc.clean_fuel_status(outlet.fuel_status)),
         fuel_fresh=svc.fuel_is_fresh(outlet, now, svc.fresh_hours(settings)),
         fuel_updated_at=updated.isoformat() if updated else None,
+        opening_hours=outlet.opening_hours,
+        services=sa.clean_services(outlet.services),
     )
 
 
@@ -319,6 +323,7 @@ def update_service_status(
         merged.update({k: v for k, v in payload.fuel.model_dump().items() if v is not None})
         profile.fuel_status = svc.clean_fuel_status(merged)
         _log_fuel_changes(db, profile.vendor_id, None, before, profile.fuel_status, current_user.id)
+        sa.log_fuel_activity(db, vendor_id=profile.vendor_id, outlet=None, user=current_user, role="owner", before=before, after=profile.fuel_status, city=profile.city)
         # Meme sans changement, confirmer remet l'information « a jour ».
         profile.fuel_updated_at = now
 
@@ -326,6 +331,11 @@ def update_service_status(
         if not svc.valid_position(payload.latitude, payload.longitude):
             raise ValidationDomainError("Position introuvable au Niger. Activez la localisation et réessayez sur place.")
         profile.latitude, profile.longitude = payload.latitude, payload.longitude
+        if kind == "fuel_station":
+            sa.log_activity(
+                db, vendor_id=profile.vendor_id, outlet=None, user=current_user, role="owner", action="position",
+                detail=f"Position enregistrée : {payload.latitude:.5f}, {payload.longitude:.5f}", city=profile.city,
+            )
 
     db.commit()
     invalidate_services_cache()
@@ -359,7 +369,14 @@ def _outlet_stats(db: Session, outlet_ids: list[str], now: datetime) -> dict[str
     return {key: (v[0], v[1], v[2]) for key, v in totals.items()}
 
 
-def _outlet_response(outlet: FuelOutlet, settings: object, now: datetime, stats: tuple[int, int, int] = (0, 0, 0)) -> FuelOutletResponse:
+def _outlet_response(
+    outlet: FuelOutlet,
+    settings: object,
+    now: datetime,
+    stats: tuple[int, int, int] = (0, 0, 0),
+    managers: list[StationManagerRef] | None = None,
+    open_reports: int = 0,
+) -> FuelOutletResponse:
     updated = svc._aware(outlet.fuel_updated_at)
     return FuelOutletResponse(
         id=outlet.id,
@@ -378,7 +395,17 @@ def _outlet_response(outlet: FuelOutlet, settings: object, now: datetime, stats:
         calls_30d=stats[0],
         routes_30d=stats[1],
         gas_orders_30d=stats[2],
+        info=sa.station_info(outlet),
+        managers=managers or [],
+        open_reports=open_reports,
     )
+
+
+def _single_outlet_response(db: Session, outlet: FuelOutlet, now: datetime) -> FuelOutletResponse:
+    stats = _outlet_stats(db, [outlet.id], now).get(outlet.id, (0, 0, 0))
+    managers = sa.manager_refs(db, [outlet.id]).get(outlet.id, [])
+    reports = sa.open_report_counts(db, [outlet.id], now).get(outlet.id, 0)
+    return _outlet_response(outlet, get_or_create_global_settings(db), now, stats, managers, reports)
 
 
 def _own_outlet(db: Session, profile: SellerProfile, outlet_id: str) -> FuelOutlet:
@@ -398,8 +425,11 @@ def list_my_outlets(
     rows = db.scalars(
         select(FuelOutlet).where(FuelOutlet.vendor_id == profile.vendor_id).order_by(FuelOutlet.sort_order, FuelOutlet.created_at)
     ).all()
-    stats = _outlet_stats(db, [o.id for o in rows], now)
-    return [_outlet_response(o, settings, now, stats.get(o.id, (0, 0, 0))) for o in rows]
+    ids = [o.id for o in rows]
+    stats = _outlet_stats(db, ids, now)
+    managers = sa.manager_refs(db, ids)
+    reports = sa.open_report_counts(db, ids, now)
+    return [_outlet_response(o, settings, now, stats.get(o.id, (0, 0, 0)), managers.get(o.id, []), reports.get(o.id, 0)) for o in rows]
 
 
 @router.get("/seller/fuel-network", response_model=FuelNetworkResponse)
@@ -453,6 +483,8 @@ def bulk_update_outlets(
         merged.update(changes)
         outlet.fuel_status = svc.clean_fuel_status(merged)
         _log_fuel_changes(db, profile.vendor_id, outlet.id, before, outlet.fuel_status, current_user.id)
+        # Une ligne de journal par station : chaque niveau (ville, gerant) voit ce qui a change chez lui.
+        sa.log_fuel_activity(db, vendor_id=profile.vendor_id, outlet=outlet, user=current_user, role="owner", before=before, after=outlet.fuel_status)
         outlet.fuel_updated_at = now
     db.commit()
     invalidate_services_cache()
@@ -502,6 +534,8 @@ def create_outlet(
         sort_order=count,
     )
     db.add(outlet)
+    db.flush()
+    sa.log_activity(db, vendor_id=profile.vendor_id, outlet=outlet, user=current_user, role="owner", action="outlet_created", detail=f"Station ajoutée à {outlet.city}")
     db.commit()
     invalidate_services_cache()
     return _outlet_response(outlet, get_or_create_global_settings(db), datetime.now(UTC))
@@ -521,24 +555,32 @@ def update_outlet(
     profile = _station_profile(db, current_user)
     outlet = _own_outlet(db, profile, outlet_id)
     now = datetime.now(UTC)
-    for field in ("name", "city", "address", "phone", "is_active"):
-        value = getattr(payload, field)
-        if value is not None:
-            setattr(outlet, field, value or (None if field in ("address", "phone") else value))
+    # Fiche (adresse, telephone, horaires, services, position) : verifiee avant toute modification.
+    touched, changed, moved = sa.apply_info_update(outlet, payload, now)
+    renamed = []
+    if payload.name is not None and payload.name != outlet.name:
+        renamed.append(f"Nom : {payload.name}")
+        outlet.name = payload.name
+    if payload.city is not None and payload.city != outlet.city:
+        renamed.append(f"Ville : {payload.city}")
+        outlet.city = payload.city
+    if renamed:
+        sa.log_activity(db, vendor_id=profile.vendor_id, outlet=outlet, user=current_user, role="owner", action="info", detail=" · ".join(renamed))
+    sa.log_info_activity(db, outlet, current_user, "owner", touched, changed, moved)
+    if payload.is_active is not None and payload.is_active != bool(outlet.is_active):
+        outlet.is_active = payload.is_active
+        sa.log_activity(db, vendor_id=profile.vendor_id, outlet=outlet, user=current_user, role="owner", action="outlet_opened" if payload.is_active else "outlet_closed")
     if payload.fuel is not None:
         before = svc.clean_fuel_status(outlet.fuel_status)
         merged = dict(before)
         merged.update({k: v for k, v in payload.fuel.model_dump().items() if v is not None})
         outlet.fuel_status = svc.clean_fuel_status(merged)
         _log_fuel_changes(db, profile.vendor_id, outlet.id, before, outlet.fuel_status, current_user.id)
+        sa.log_fuel_activity(db, vendor_id=profile.vendor_id, outlet=outlet, user=current_user, role="owner", before=before, after=outlet.fuel_status)
         outlet.fuel_updated_at = now
-    if payload.latitude is not None or payload.longitude is not None:
-        if not svc.valid_position(payload.latitude, payload.longitude):
-            raise ValidationDomainError("Position introuvable au Niger. Activez la localisation et réessayez sur place.")
-        outlet.latitude, outlet.longitude = payload.latitude, payload.longitude
     db.commit()
     invalidate_services_cache()
-    return _outlet_response(outlet, get_or_create_global_settings(db), now)
+    return _single_outlet_response(db, outlet, now)
 
 
 @router.delete("/seller/fuel-outlets/{outlet_id}", status_code=204, response_model=None)
@@ -550,8 +592,8 @@ def delete_outlet(
 ) -> None:
     enforce_csrf(request)
     profile = _station_profile(db, current_user)
-    db.delete(_own_outlet(db, profile, outlet_id))
-    db.commit()
+    # Derniere station supprimee : la disponibilite de la marque repart de zero (aucune ancienne donnee ne revient).
+    sa.delete_outlet(db, _own_outlet(db, profile, outlet_id), current_user, "owner")
     invalidate_services_cache()
 
 
@@ -631,29 +673,16 @@ def my_station_reports(
         .order_by(StationReport.created_at.desc())
         .limit(100)
     ).all()
-    names = _outlet_names(db, {r.outlet_id for r in rows if r.outlet_id})
-    return [
-        StationReportItem(
-            outlet_id=r.outlet_id,
-            outlet_name=names.get(r.outlet_id) if r.outlet_id else None,
-            kind=r.kind,
-            comment=r.comment,
-            created_at=svc._aware(r.created_at).isoformat(),
-        )
-        for r in rows
-    ]
+    return sa.report_items(db, rows)
 
 
 # ---------------------------------------------------------------- gerants de station
-MAX_MANAGERS_PER_OUTLET = 5
+MAX_MANAGERS_PER_OUTLET = sa.MAX_MANAGERS_PER_OUTLET
 
 
 def _brand_can_publish(db: Session, vendor_id: str, now: datetime) -> bool:
     """Abonnement de la marque en cours : sinon les mises a jour des gerants sont suspendues."""
-    vendor = db.get(Vendor, vendor_id)
-    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == vendor_id))
-    paid_until = svc._aware(profile.subscription_paid_until) if profile is not None else None
-    return bool(vendor is not None and vendor.is_active and paid_until is not None and paid_until > now)
+    return sa.brand_can_publish(db, vendor_id, now)
 
 
 def _manager_items(db: Session, vendor_id: str) -> list[FuelManagerItem]:
@@ -683,35 +712,11 @@ def add_fuel_manager(
     current_user: Annotated[User, Depends(get_seller_user)],
 ) -> list[FuelManagerItem]:
     """Confie une station a un compte AMAZER existant (le gerant cree d'abord son compte gratuit)."""
-    from app.services.station_tasks import _notify
-
     enforce_csrf(request)
     enforce_rate_limit(request, key=f"fuel-manager:{current_user.id}", limit=30, window_seconds=600)
     profile = _station_profile(db, current_user)
     outlet = _own_outlet(db, profile, payload.outlet_id)
-    user = db.scalar(select(User).where(func.lower(User.email) == payload.email.strip().lower()))
-    if user is None or not user.is_active:
-        raise ValidationDomainError(
-            "Aucun compte AMAZER avec cet e-mail. Demandez au gérant de créer un compte gratuit sur amazer.store, puis réessayez."
-        )
-    if user.id == current_user.id:
-        raise ValidationDomainError("Vous gérez déjà toutes vos stations depuis cet espace.")
-    existing = db.scalars(select(FuelOutletManager).where(FuelOutletManager.outlet_id == outlet.id)).all()
-    if any(m.user_id == user.id for m in existing):
-        raise ValidationDomainError("Cette personne gère déjà cette station.")
-    if len(existing) >= MAX_MANAGERS_PER_OUTLET:
-        raise ValidationDomainError(f"{MAX_MANAGERS_PER_OUTLET} gérants au maximum par station.")
-    db.add(FuelOutletManager(vendor_id=profile.vendor_id, outlet_id=outlet.id, user_id=user.id))
-    db.commit()
-    _notify(
-        db,
-        user.id,
-        "Une station vous est confiée",
-        f"{profile.business_name} vous confie la station « {outlet.name} ». Indiquez ses disponibilités depuis votre téléphone, en un geste.",
-        f"fuel-manager-{outlet.id}",
-        "/gerant-station",
-    )
-    db.commit()
+    sa.assign_manager(db, outlet=outlet, email=payload.email, actor=current_user, role="owner", brand_name=profile.business_name)
     return _manager_items(db, profile.vendor_id)
 
 
@@ -727,50 +732,55 @@ def remove_fuel_manager(
     row = db.get(FuelOutletManager, manager_id)
     if row is None or row.vendor_id != profile.vendor_id:
         raise NotFoundError("Gérant introuvable.")
-    db.delete(row)
-    db.commit()
+    sa.remove_manager(db, row, current_user, "owner")
 
 
 def _region_access(db: Session, user: User) -> dict[str, set[str]]:
-    """Villes confiees a ce compte, par marque, seulement si la marque est au palier Reseau ou plus."""
-    access: dict[str, set[str]] = {}
-    rows = db.scalars(select(FuelRegionManager).where(FuelRegionManager.user_id == user.id)).all()
-    if not rows:
-        return access
-    settings = get_or_create_global_settings(db)
-    for row in rows:
-        profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == row.vendor_id))
-        if profile is not None and fuel_plan(db, profile, settings).network_tools:
-            access.setdefault(row.vendor_id, set()).add(svc.normalize_city(row.city))
-    return access
+    """Villes confiees a ce compte, par marque (a tous les paliers : le proprietaire delegue ses villes)."""
+    return {vendor_id: set(cities) for vendor_id, cities in sa.region_cities(db, user).items()}
 
 
-def _managed_outlet(db: Session, user: User, outlet_id: str) -> FuelOutlet:
-    """Seules les stations confiees a ce compte (directement ou par sa ville) : jamais celles d'une autre marque."""
-    outlet = db.get(FuelOutlet, outlet_id)
-    if outlet is None:
-        raise NotFoundError("Station introuvable.")
-    direct = db.scalar(select(FuelOutletManager).where(FuelOutletManager.outlet_id == outlet_id, FuelOutletManager.user_id == user.id))
-    if direct is None and svc.normalize_city(outlet.city) not in _region_access(db, user).get(outlet.vendor_id, set()):
-        raise NotFoundError("Station introuvable.")
-    return outlet
+def _managed_outlet(db: Session, user: User, outlet_id: str) -> tuple[FuelOutlet, sa.Role]:
+    """Station accessible a ce compte (proprietaire, ville ou gerant) : jamais celle d'une autre marque."""
+    return sa.require_station(db, user, outlet_id)
 
 
-def _managed_response(db: Session, outlet: FuelOutlet, settings: object, now: datetime, via_region: str | None = None) -> ManagedOutlet:
-    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == outlet.vendor_id))
+def _brand_state(db: Session, vendor_id: str, now: datetime) -> tuple[str, bool]:
+    """(nom de la marque, abonnement en cours) : une lecture par marque."""
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == vendor_id))
+    return (profile.business_name if profile is not None else "", _brand_can_publish(db, vendor_id, now))
+
+
+def _managed_response(
+    db: Session,
+    outlet: FuelOutlet,
+    settings: object,
+    now: datetime,
+    via_region: str | None = None,
+    role: sa.Role = "manager",
+    open_reports: int | None = None,
+    brand: tuple[str, bool] | None = None,
+) -> ManagedOutlet:
+    """brand = (nom de la marque, abonnement en cours) deja calcule pour une liste ; sinon lu ici."""
+    if brand is None:
+        brand = _brand_state(db, outlet.vendor_id, now)
+    brand_name, can_publish = brand
     updated = svc._aware(outlet.fuel_updated_at)
     hours = svc.fresh_hours(settings)
     return ManagedOutlet(
         id=outlet.id,
         name=outlet.name,
-        brand_name=profile.business_name if profile is not None else "",
+        brand_name=brand_name,
         city=outlet.city,
         fuel=FuelStatusSchema(**svc.clean_fuel_status(outlet.fuel_status)),
         fuel_fresh=svc.fuel_is_fresh(outlet, now, hours),
         fuel_updated_at=updated.isoformat() if updated else None,
-        can_update=bool(outlet.is_active) and _brand_can_publish(db, outlet.vendor_id, now),
+        can_update=bool(outlet.is_active) and can_publish,
         fresh_hours=hours,
         via_region=via_region,
+        info=sa.station_info(outlet),
+        open_reports=open_reports if open_reports is not None else sa.open_report_counts(db, [outlet.id], now).get(outlet.id, 0),
+        role=role,
     )
 
 
@@ -786,14 +796,27 @@ def my_managed_outlets(
         .where(FuelOutletManager.user_id == current_user.id)
         .order_by(FuelOutlet.name)
     ).all()
-    items = [_managed_response(db, o, settings, now) for o in rows]
+    regions = _region_access(db, current_user)
+
+    def role_of(outlet: FuelOutlet) -> sa.Role:
+        return "city" if svc.normalize_city(outlet.city) in regions.get(outlet.vendor_id, set()) else "manager"
+
+    listed: list[tuple[FuelOutlet, str | None]] = [(o, None) for o in rows]
     seen = {o.id for o in rows}
-    for vendor_id, cities in _region_access(db, current_user).items():
+    for vendor_id, cities in regions.items():
         for outlet in db.scalars(select(FuelOutlet).where(FuelOutlet.vendor_id == vendor_id).order_by(FuelOutlet.name)).all():
             if outlet.id not in seen and svc.normalize_city(outlet.city) in cities:
                 seen.add(outlet.id)
-                items.append(_managed_response(db, outlet, settings, now, via_region=outlet.city))
-    return items
+                listed.append((outlet, outlet.city))
+    reports = sa.open_report_counts(db, list(seen), now)
+    brands: dict[str, tuple[str, bool]] = {}
+    for o, _via in listed:
+        if o.vendor_id not in brands:
+            brands[o.vendor_id] = _brand_state(db, o.vendor_id, now)
+    return [
+        _managed_response(db, o, settings, now, via_region=via, role=role_of(o), open_reports=reports.get(o.id, 0), brand=brands[o.vendor_id])
+        for o, via in listed
+    ]
 
 
 @router.put("/station-manager/outlets/{outlet_id}", response_model=ManagedOutlet)
@@ -807,24 +830,25 @@ def update_managed_outlet(
     """Le gerant change les disponibilites (ou confirme « rien n'a change ») de SA station, rien d'autre."""
     enforce_csrf(request)
     enforce_rate_limit(request, key=f"station-manager:{current_user.id}", limit=120, window_seconds=600)
-    outlet = _managed_outlet(db, current_user, outlet_id)
+    outlet, role = _managed_outlet(db, current_user, outlet_id)
     now = datetime.now(UTC)
-    if not outlet.is_active or not _brand_can_publish(db, outlet.vendor_id, now):
+    if not _brand_can_publish(db, outlet.vendor_id, now) or (role != "owner" and not outlet.is_active):
         raise ForbiddenError("Mises à jour suspendues : la station est fermée ou l'abonnement de la marque a expiré.")
     if payload.fuel is None and not payload.confirm:
         raise ValidationDomainError("Indiquez une disponibilité ou confirmez les informations.")
+    before = svc.clean_fuel_status(outlet.fuel_status)
     if payload.fuel is not None:
-        before = svc.clean_fuel_status(outlet.fuel_status)
         merged = dict(before)
         merged.update({k: v for k, v in payload.fuel.model_dump().items() if v is not None})
         outlet.fuel_status = svc.clean_fuel_status(merged)
         _log_fuel_changes(db, outlet.vendor_id, outlet.id, before, outlet.fuel_status, current_user.id)
     elif not outlet.fuel_status:
         raise ValidationDomainError("Indiquez d'abord les disponibilités de la station.")
+    sa.log_fuel_activity(db, vendor_id=outlet.vendor_id, outlet=outlet, user=current_user, role=role, before=before, after=outlet.fuel_status)
     outlet.fuel_updated_at = now
     db.commit()
     invalidate_services_cache()
-    return _managed_response(db, outlet, get_or_create_global_settings(db), now)
+    return _managed_response(db, outlet, get_or_create_global_settings(db), now, via_region=outlet.city if role == "city" else None, role=role)
 
 
 # ---------------------------------------------------------------- paliers : tableau de bord, regions, export
@@ -862,16 +886,23 @@ def my_fuel_dashboard(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_seller_user)],
 ) -> FuelDashboardResponse:
-    """Vue reseau (palier Reseau et plus) : stations a relancer, ruptures longues, villes, signalements."""
+    """Vue reseau (tous paliers) : stations a relancer, ruptures longues, villes, trafic, signalements."""
     profile = _station_profile(db, current_user)
     settings = get_or_create_global_settings(db)
-    _plan_or_forbid(db, profile, settings, 2)
     now, hours = datetime.now(UTC), svc.fresh_hours(settings)
     outlets = db.scalars(
         select(FuelOutlet).where(FuelOutlet.vendor_id == profile.vendor_id, FuelOutlet.is_active.is_(True)).order_by(FuelOutlet.name)
     ).all()
     managed = set(db.scalars(select(FuelOutletManager.outlet_id).where(FuelOutletManager.vendor_id == profile.vendor_id)).all())
-    regions = {svc.normalize_city(c) for c in db.scalars(select(FuelRegionManager.city).where(FuelRegionManager.vendor_id == profile.vendor_id)).all()}
+    city_managers: dict[str, list[str]] = {}
+    for region, email, full_name in db.execute(
+        select(FuelRegionManager, User.email, User.full_name)
+        .join(User, User.id == FuelRegionManager.user_id)
+        .where(FuelRegionManager.vendor_id == profile.vendor_id)
+        .order_by(FuelRegionManager.created_at)
+    ).all():
+        city_managers.setdefault(svc.normalize_city(region.city), []).append((full_name or "").strip() or email)
+    stats = _outlet_stats(db, [o.id for o in outlets], now)
     # Date du dernier passage en rupture, par station et carburant.
     last_out: dict[tuple[str, str], datetime] = {}
     for outlet_id, fuel, when in db.execute(
@@ -883,12 +914,22 @@ def my_fuel_dashboard(
 
     stale: list[DashboardStation] = []
     outages: list[DashboardOutage] = []
+    # ville normalisee -> [nom, stations, a confirmer, en rupture, appels, itineraires, sans gerant]
     cities: dict[str, list] = {}
+    without_manager = 0
     for outlet in outlets:
         fresh = svc.fuel_is_fresh(outlet, now, hours)
         status = svc.clean_fuel_status(outlet.fuel_status)
-        entry = cities.setdefault(svc.normalize_city(outlet.city), [outlet.city, 0, 0, 0])
+        key = svc.normalize_city(outlet.city)
+        entry = cities.setdefault(key, [outlet.city, 0, 0, 0, 0, 0, 0])
         entry[1] += 1
+        calls, routes, _gas = stats.get(outlet.id, (0, 0, 0))
+        entry[4] += calls
+        entry[5] += routes
+        # Sans gerant = aucun gerant nomme (le responsable de ville nomme les gerants, il ne les remplace pas).
+        if outlet.id not in managed:
+            entry[6] += 1
+            without_manager += 1
         if not fresh:
             entry[2] += 1
             updated = svc._aware(outlet.fuel_updated_at)
@@ -909,11 +950,21 @@ def my_fuel_dashboard(
         stations=len(outlets),
         fresh=len(outlets) - len(stale),
         to_confirm=len(stale),
-        without_manager=sum(1 for o in outlets if o.id not in managed and svc.normalize_city(o.city) not in regions),
+        without_manager=without_manager,
         reports_30d=reports,
         stale=stale[:50],
         long_outages=outages[:50],
-        cities=[DashboardCity(city=c, stations=n, to_confirm=s, out=o) for c, n, s, o in sorted(cities.values(), key=lambda e: (-e[1], e[0]))],
+        cities=[
+            DashboardCity(
+                city=c, stations=n, to_confirm=s, out=o, city_managers=city_managers.get(svc.normalize_city(c), []),
+                calls_30d=calls, routes_30d=routes, without_manager=alone,
+            )
+            for c, n, s, o, calls, routes, alone in sorted(cities.values(), key=lambda e: (-e[1], e[0]))
+        ],
+        calls_30d=sum(v[0] for v in stats.values()),
+        routes_30d=sum(v[1] for v in stats.values()),
+        gas_orders_30d=sum(v[2] for v in stats.values()),
+        deliveries_30d=sa.deliveries_count(db, profile.vendor_id),
     )
 
 
@@ -924,7 +975,18 @@ def _region_items(db: Session, vendor_id: str) -> list[RegionManagerItem]:
         .where(FuelRegionManager.vendor_id == vendor_id)
         .order_by(FuelRegionManager.city, FuelRegionManager.created_at)
     ).all()
-    return [RegionManagerItem(id=r.id, city=r.city, email=email, full_name=name) for r, email, name in rows]
+    counts: dict[str, int] = {}
+    for city in db.scalars(select(FuelOutlet.city).where(FuelOutlet.vendor_id == vendor_id)).all():
+        counts[svc.normalize_city(city)] = counts.get(svc.normalize_city(city), 0) + 1
+    last = sa.last_activity_by_user(db, vendor_id)
+    return [
+        RegionManagerItem(
+            id=r.id, city=r.city, email=email, full_name=name,
+            stations=counts.get(svc.normalize_city(r.city), 0),
+            last_activity_at=last[r.user_id].isoformat() if r.user_id in last else None,
+        )
+        for r, email, name in rows
+    ]
 
 
 @router.get("/seller/fuel-region-managers", response_model=list[RegionManagerItem])
@@ -942,17 +1004,17 @@ def add_region_manager(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_seller_user)],
 ) -> list[RegionManagerItem]:
-    """Responsable d'une ville : met a jour toutes les stations de la marque dans cette ville (palier Reseau)."""
+    """Responsable d'une ville (tous paliers, meme avant la premiere station) : il y cree les stations et nomme les gerants."""
     from app.services.station_tasks import _notify
 
     enforce_csrf(request)
     enforce_rate_limit(request, key=f"fuel-region:{current_user.id}", limit=30, window_seconds=600)
     profile = _station_profile(db, current_user)
-    _plan_or_forbid(db, profile, get_or_create_global_settings(db), 2)
-    wanted = svc.normalize_city(payload.city)
-    cities = {svc.normalize_city(c): c for c in db.scalars(select(FuelOutlet.city).where(FuelOutlet.vendor_id == profile.vendor_id)).all()}
-    if wanted not in cities:
-        raise ValidationDomainError("Aucune de vos stations n'est dans cette ville.")
+    city = sa.canonical_city(db, profile.vendor_id, payload.city)
+    wanted = svc.normalize_city(city)
+    total = int(db.scalar(select(func.count()).select_from(FuelRegionManager).where(FuelRegionManager.vendor_id == profile.vendor_id)) or 0)
+    if total >= sa.MAX_CITY_MANAGERS:
+        raise ValidationDomainError(f"{sa.MAX_CITY_MANAGERS} responsables de ville au maximum.")
     user = db.scalar(select(User).where(func.lower(User.email) == payload.email.strip().lower()))
     if user is None or not user.is_active:
         raise ValidationDomainError(
@@ -963,13 +1025,17 @@ def add_region_manager(
     existing = db.scalars(select(FuelRegionManager).where(FuelRegionManager.vendor_id == profile.vendor_id, FuelRegionManager.user_id == user.id)).all()
     if any(svc.normalize_city(r.city) == wanted for r in existing):
         raise ValidationDomainError("Cette personne est déjà responsable de cette ville.")
-    db.add(FuelRegionManager(vendor_id=profile.vendor_id, user_id=user.id, city=cities[wanted]))
+    db.add(FuelRegionManager(vendor_id=profile.vendor_id, user_id=user.id, city=city))
+    sa.log_activity(
+        db, vendor_id=profile.vendor_id, outlet=None, user=current_user, role="owner", action="city_added",
+        detail=f"Responsable de ville : {user.email}", city=city,
+    )
     db.commit()
     _notify(
         db,
         user.id,
-        "Une région vous est confiée",
-        f"{profile.business_name} vous confie ses stations de {cities[wanted]}. Mettez à jour leurs disponibilités depuis votre téléphone.",
+        "Une ville vous est confiée",
+        f"{profile.business_name} vous confie ses stations de {city}. Ajoutez les stations, nommez leurs gérants et suivez leurs mises à jour.",
         f"fuel-region-{profile.vendor_id}-{wanted}",
         "/gerant-station",
     )
@@ -989,6 +1055,11 @@ def remove_region_manager(
     row = db.get(FuelRegionManager, manager_id)
     if row is None or row.vendor_id != profile.vendor_id:
         raise NotFoundError("Responsable introuvable.")
+    removed = db.get(User, row.user_id)
+    sa.log_activity(
+        db, vendor_id=profile.vendor_id, outlet=None, user=current_user, role="owner", action="city_removed",
+        detail=f"Responsable retiré : {removed.email}" if removed is not None else "Responsable retiré", city=row.city,
+    )
     db.delete(row)
     db.commit()
 

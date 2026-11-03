@@ -135,6 +135,22 @@ export function persistAuthTokens(tokens: TokenPair): void {
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
 
+/** Brouillons du profil vendeur (clé globale historique et clés par compte) : jamais repris par le compte suivant. */
+const SELLER_PROFILE_DRAFT_PREFIX = "amazer_seller_profile_draft";
+
+function removeSellerProfileDrafts(): void {
+  try {
+    for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+      const key = window.localStorage.key(index);
+      if (key?.startsWith(SELLER_PROFILE_DRAFT_PREFIX)) {
+        window.localStorage.removeItem(key);
+      }
+    }
+  } catch (error) {
+    console.warn("Brouillons vendeur non effacés", error);
+  }
+}
+
 export function clearAuthTokens(): void {
   if (typeof window === "undefined") {
     return;
@@ -145,6 +161,7 @@ export function clearAuthTokens(): void {
   void removeMobileToken(MOBILE_REFRESH_TOKEN_KEY);
   window.localStorage.removeItem(ADMIN_FINANCE_VERIFIED_KEY);
   window.sessionStorage.removeItem(ADMIN_FINANCE_VERIFIED_KEY);
+  removeSellerProfileDrafts();
   document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }

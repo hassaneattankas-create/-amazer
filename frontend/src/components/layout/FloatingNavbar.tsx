@@ -22,6 +22,7 @@ import {
   requestAndRegisterNotifications,
 } from "@/services/notification-service";
 import { getSellerProfile, getSellerSubscriptionStatus } from "@/services/seller-service";
+import { getStationSpaceMe, stationKeys } from "@/services/station-space-service";
 import { getPreRegisterSellerStatus } from "@/services/auth-service";
 import {
   clearPendingSellerPreReg,
@@ -113,6 +114,14 @@ export function FloatingNavbar() {
     enabled: Boolean(sellerProfile?.id),
     staleTime: 30_000,
   });
+  // Responsable de ville ou gérant de station : lien « Espace station ». Échec silencieux (le menu reste utilisable).
+  const { data: stationSpace } = useQuery({
+    queryKey: [...stationKeys.me, user?.id],
+    queryFn: getStationSpaceMe,
+    enabled: Boolean(user?.id),
+    staleTime: 10 * 60_000,
+    retry: false,
+  });
   const syncNotifications = useNotificationStore((state) => state.syncNotifications);
   const seenRemoteNotificationsRef = useRef<Set<string>>(new Set());
   const remoteNotificationsInitializedRef = useRef(false);
@@ -141,9 +150,11 @@ export function FloatingNavbar() {
     ? sellerNavItems
     : [{ href: "/seller", label: "Activer vendeur" }];
   const isAuthenticated = Boolean(user?.id);
+  const showStationLink = Boolean(stationSpace && !stationSpace.is_owner && stationSpace.cities + stationSpace.stations > 0);
   const accountNavItems = [
     ...(isAuthenticated ? [{ href: "/dashboard", label: "Tableau de bord" }, { href: "/messages", label: "Messages" }] : []),
     ...(showSellerLink ? sellerNavigationItems : []),
+    ...(showStationLink ? [{ href: "/gerant-station", label: "Espace station" }] : []),
     ...(user?.role === "courier" || showAdminLink ? [{ href: "/livreur", label: "Espace livreur" }] : []),
     ...(showAdminLink ? [{ href: "/admin", label: "Espace Admin" }] : []),
   ].filter((item, index, array) => !clientHrefs.has(item.href) && array.findIndex((entry) => entry.href === item.href) === index);

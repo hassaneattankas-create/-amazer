@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { AlertTriangle, BadgeCheck, Bike, CheckCircle2, Fuel, MapPin, Moon, Navigation, Phone, Pill, XCircle } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Bike, CheckCircle2, Clock, Fuel, MapPin, Moon, Navigation, Phone, Pill, XCircle } from "lucide-react";
 
 import { formatDistance, telHref, timeAgo, whatsappHref } from "@/lib/local-services";
 import { resolveImageUrl } from "@/lib/image";
@@ -8,6 +8,7 @@ import { getShopRoute } from "@/lib/mobile-routes";
 import { recordOutletEvent } from "@/services/local-services-service";
 import { ReportStationButton } from "@/components/services/ReportStationButton";
 import { FUEL_LABELS, FUEL_STATE_LABELS, type FuelKey, type LocalServiceItem, type ServiceKind } from "@/types/local-services";
+import { STATION_SERVICE_LABELS, isStationServiceCode } from "@/types/station-space";
 
 type Props = {
   item: LocalServiceItem;
@@ -35,6 +36,7 @@ export function LocalServiceCard({ item, kind, distanceKm, freshHours, compact =
       ? `Bonjour AMAZER, je souhaite commander du gaz livré depuis ${from}. Taille de bouteille : `
       : `Bonjour AMAZER, je souhaite une livraison depuis ${from}.`;
   const logo = item.logo_url ? resolveImageUrl(item.logo_url, 200) : null;
+  const services = (item.services ?? []).filter(isStationServiceCode);
   // Statistiques de la station (appels, itineraires, commandes de gaz), sans donnee personnelle.
   const track = (event: "call" | "route" | "gas") => {
     if (item.outlet_id) recordOutletEvent(item.outlet_id, event);
@@ -120,6 +122,26 @@ export function LocalServiceCard({ item, kind, distanceKm, freshHours, compact =
           )}
         </div>
       )}
+
+      {item.opening_hours || services.length ? (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-ink-700">
+          {item.opening_hours ? (
+            <span className="inline-flex items-center gap-1 font-medium text-ink-800">
+              <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              {item.opening_hours}
+            </span>
+          ) : null}
+          {services.length ? (
+            <ul className="contents" aria-label="Services">
+              {services.map((code) => (
+                <li key={code} className="rounded-pill bg-surface-2 px-2 py-0.5">
+                  {STATION_SERVICE_LABELS[code]}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mt-4 flex gap-2">
         {item.phone ? (

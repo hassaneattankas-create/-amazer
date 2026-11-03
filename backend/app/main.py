@@ -49,6 +49,7 @@ from app.routes.courier import router as courier_router
 from app.routes.assistant import router as assistant_router
 from app.routes.maintenance import router as maintenance_router
 from app.routes.local_services import router as local_services_router
+from app.routes.station_space import router as station_space_router
 from app.routes.official_lists import router as official_lists_router
 from app.services.security_log_service import log_security_event
 
@@ -226,6 +227,13 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS fuel_fresh_hours INTEGER NOT NULL DEFAULT 4",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS station_tasks_ran_at TIMESTAMP WITH TIME ZONE",
         "ALTER TABLE fuel_outlets ADD COLUMN IF NOT EXISTS reminded_at TIMESTAMP WITH TIME ZONE",
+        "ALTER TABLE fuel_outlets ADD COLUMN IF NOT EXISTS opening_hours VARCHAR(120)",
+        "ALTER TABLE fuel_outlets ADD COLUMN IF NOT EXISTS services JSONB",
+        "ALTER TABLE fuel_outlets ADD COLUMN IF NOT EXISTS info_updated_at TIMESTAMP WITH TIME ZONE",
+        "ALTER TABLE fuel_outlet_managers ADD COLUMN IF NOT EXISTS assigned_by VARCHAR(36)",
+        "ALTER TABLE station_reports ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP WITH TIME ZONE",
+        "ALTER TABLE station_reports ADD COLUMN IF NOT EXISTS resolved_by VARCHAR(36)",
+        "ALTER TABLE station_reports ADD COLUMN IF NOT EXISTS resolution VARCHAR(300)",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS fuel_reminded_at TIMESTAMP WITH TIME ZONE",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS fuel_report_month VARCHAR(7)",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS local_delivery_cities VARCHAR(400) NOT NULL DEFAULT 'Niamey'",
@@ -634,6 +642,7 @@ app.include_router(affiliates_router, prefix=settings.api_prefix)
 app.include_router(assistant_router, prefix=settings.api_prefix)
 app.include_router(maintenance_router, prefix=settings.api_prefix)
 app.include_router(local_services_router, prefix=settings.api_prefix)
+app.include_router(station_space_router, prefix=settings.api_prefix)
 app.include_router(official_lists_router, prefix=settings.api_prefix)
 
 

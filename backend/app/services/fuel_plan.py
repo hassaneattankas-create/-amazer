@@ -1,9 +1,12 @@
 """Palier d'une marque de stations et outils qu'il debloque.
 
 Le palier suit le nombre de stations actives (seuils reglables dans Admin > Tarifs) :
-- 1 « Essentiel » : jusqu'a la fin du palier 1 (10 par defaut) — gerants, relances, rapport mensuel, historique ;
-- 2 « Reseau » : jusqu'a la fin du palier 2 (30) — + tableau de bord reseau et responsables regionaux ;
+- 1 « Essentiel » : jusqu'a la fin du palier 1 (10 par defaut) ;
+- 2 « Reseau » : jusqu'a la fin du palier 2 (30) ;
 - 3 « Entreprise » : au-dela, ou tarif negocie — + export Excel (historique et statistiques sur 12 mois).
+
+A tous les paliers : gerants, responsables de ville, tableau de bord reseau, journal d'activite,
+livraisons, retours clients, relances et rapport mensuel. Seul l'export reste reserve a Entreprise.
 """
 
 from __future__ import annotations
@@ -30,7 +33,8 @@ class FuelPlan:
 
     @property
     def network_tools(self) -> bool:
-        return self.level >= 2
+        """Historique (compatibilite API) : les outils reseau sont ouverts a tous les paliers."""
+        return True
 
     @property
     def export(self) -> bool:

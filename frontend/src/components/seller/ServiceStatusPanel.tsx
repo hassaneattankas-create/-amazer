@@ -9,7 +9,6 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { timeAgo } from "@/lib/local-services";
 import { getServiceStatus, listMyOutlets, updateServiceStatus } from "@/services/local-services-service";
 import { toast } from "@/store/toast-store";
-import { StationActivityPanel } from "@/components/seller/StationActivityPanel";
 import { FUEL_LABELS, FUEL_STATE_LABELS, type FuelKey, type FuelState, type ServiceKind, type ServiceStatusUpdate } from "@/types/local-services";
 
 const FUELS: FuelKey[] = ["super", "gasoil", "gaz"];
@@ -254,7 +253,6 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
               : "La livraison AMAZER n'est pas encore disponible dans votre ville."}
         </p>
       </div>
-      {kind === "fuel_station" ? <StationActivityPanel /> : null}
     </section>
   );
 }

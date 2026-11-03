@@ -29,7 +29,13 @@ import {
 import { useAuthStore } from "@/store/auth-store";
 import type { SellerProfile, StorefrontTier } from "@/types/seller";
 
-const SELLER_PROFILE_DRAFT_KEY = "amazer_seller_profile_draft";
+/** Ancienne clé globale (partagée entre comptes) : ignorée et supprimée. */
+const LEGACY_SELLER_PROFILE_DRAFT_KEY = "amazer_seller_profile_draft";
+
+/** Brouillon du profil vendeur, propre à chaque compte (préfixe effacé par clearAuthTokens). */
+function sellerProfileDraftKey(userId: string): string {
+  return `${LEGACY_SELLER_PROFILE_DRAFT_KEY}:${userId}`;
+}
 
 function splitListInput(value: string): string[] {
   return value
@@ -76,6 +82,41 @@ function loadDraft<T>(key: string, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+function removeDraft(key: string): void {
+  try {
+    window.localStorage.removeItem(key);
+  } catch (error) {
+    console.warn("Brouillon vendeur non supprimé", error);
+  }
+}
+
+function defaultProfileForm(requestedSellerType: "shop" | "restaurant" | "enterprise") {
+  return {
+    business_name: "",
+    city: "Niamey",
+    phone: "",
+    payout_phone: "",
+    address: "",
+    activity_type: requestedSellerType as "shop" | "restaurant" | "hotel" | "enterprise",
+    storefront_tier: (requestedSellerType === "enterprise" ? "premium" : "basic") as "basic" | "premium",
+    description: "",
+    logo_url: "",
+    cover_image_url: "",
+    opening_hours: "",
+    whatsapp_contact: "",
+    contact_email: "",
+    gallery_images_text: "",
+    service_offerings_text: "",
+    room_types_list: [] as RoomRow[],
+    deposit_payment_method: "nita" as "nita" | "amana",
+    deposit_amount: "",
+    accepts_table_reservations: false,
+    accepts_hotel_bookings: false,
+    offers_shop: false,
+    offers_restaurant: false,
+  };
 }
 
 function normalizeSellerActivityType(
@@ -152,53 +193,14 @@ function SellerPageContent() {
     months: "1",
   });
 
-  const [profileForm, setProfileForm] = useState(() => {
-    const draft = loadDraft(SELLER_PROFILE_DRAFT_KEY, {
-      business_name: "",
-      city: "Niamey",
-      phone: "",
-      payout_phone: "",
-      address: "",
-      activity_type: requestedSellerType as "shop" | "restaurant" | "hotel" | "enterprise",
-      storefront_tier:
-        (requestedSellerType === "enterprise" ? "premium" : "basic") as "basic" | "premium",
-      description: "",
-      logo_url: "",
-      cover_image_url: "",
-      opening_hours: "",
-      whatsapp_contact: "",
-      contact_email: "",
-      gallery_images_text: "",
-      service_offerings_text: "",
-      room_types_list: [] as RoomRow[],
-      deposit_payment_method: "nita" as "nita" | "amana",
-      deposit_amount: "",
-      accepts_table_reservations: false,
-      accepts_hotel_bookings: false,
-      offers_shop: false,
-      offers_restaurant: false,
-    });
-    const normalizedDraftActivity =
-      (draft.activity_type as string) === "hotel" ? "enterprise" : draft.activity_type;
-    const normalizedActivity = hasRequestedSellerType ? requestedSellerType : normalizedDraftActivity;
-    return {
-      ...draft,
-      activity_type: normalizedActivity,
-      storefront_tier: normalizedActivity === "enterprise" ? "premium" : "basic",
-    };
-  });
+  // Brouillon : chargé seulement une fois le compte connu (clé par utilisateur), voir l'effet d'hydratation.
+  const [profileForm, setProfileForm] = useState(() => defaultProfileForm(requestedSellerType));
   useEffect(() => {
     setAppMode("seller");
     persistAppMode("seller");
   }, [setAppMode]);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(SELLER_PROFILE_DRAFT_KEY, JSON.stringify(profileForm));
-    }
-  }, [profileForm]);
-
-  const { data: profile, isPending } = useQuery({
+  const { data: profile, isPending, isSuccess: profileLoaded } = useQuery({
     queryKey: ["seller-profile"],
     queryFn: getSellerProfile,
     enabled: Boolean(user),
@@ -230,53 +232,74 @@ function SellerPageContent() {
     }
   }, [isAuthPending, pathname, router, user]);
 
+  const draftKey = user?.id ? sellerProfileDraftKey(user.id) : null;
+
+  // Le serveur l'emporte : le brouillon local ne sert que tant que la boutique n'existe pas encore.
   useEffect(() => {
-    if (!profile || profileHydratedFromServer) {
+    if (profileHydratedFromServer || !draftKey || !profileLoaded) {
       return;
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProfileForm((prev) => ({
-      ...prev,
-      business_name: prev.business_name || profile.business_name || "",
-      city: prev.city || profile.city || "Niamey",
-      phone: prev.phone || profile.phone || "",
-      payout_phone: prev.payout_phone || profile.payout_phone || "",
-      address: prev.address || profile.address || "",
-      activity_type: normalizeSellerActivityType(profile.activity_type),
-      storefront_tier:
-        profile.activity_type === "hotel" || profile.activity_type === "enterprise"
-          ? "premium"
-          : profile.storefront_tier || "basic",
-      description: prev.description || profile.description || "",
-      logo_url: prev.logo_url || profile.logo_url || "",
-      cover_image_url: prev.cover_image_url || profile.cover_image_url || "",
-      opening_hours: prev.opening_hours || profile.opening_hours || "",
-      whatsapp_contact: prev.whatsapp_contact || profile.whatsapp_contact || "",
-      contact_email: prev.contact_email || profile.contact_email || "",
-      gallery_images_text:
-        prev.gallery_images_text || (profile.gallery_images || []).join("\n") || "",
-      service_offerings_text:
-        prev.service_offerings_text ||
-        (profile.service_offerings || [])
+    removeDraft(LEGACY_SELLER_PROFILE_DRAFT_KEY);
+    if (profile) {
+      removeDraft(draftKey);
+      const defaults = defaultProfileForm(requestedSellerType);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setProfileForm({
+        ...defaults,
+        business_name: profile.business_name || "",
+        city: profile.city || "Niamey",
+        phone: profile.phone || "",
+        payout_phone: profile.payout_phone || "",
+        address: profile.address || "",
+        activity_type: normalizeSellerActivityType(profile.activity_type),
+        storefront_tier:
+          profile.activity_type === "hotel" || profile.activity_type === "enterprise"
+            ? "premium"
+            : profile.storefront_tier || "basic",
+        description: profile.description || "",
+        logo_url: profile.logo_url || "",
+        cover_image_url: profile.cover_image_url || "",
+        opening_hours: profile.opening_hours || "",
+        whatsapp_contact: profile.whatsapp_contact || "",
+        contact_email: profile.contact_email || "",
+        gallery_images_text: (profile.gallery_images || []).join("\n"),
+        service_offerings_text: (profile.service_offerings || [])
           .map((item) => [item.title, item.description || "", item.display_mode].join(" | "))
           .join("\n"),
-      room_types_list:
-        prev.room_types_list && prev.room_types_list.length
-          ? prev.room_types_list
-          : payloadToRoomRows(profile.room_types || []),
-      deposit_payment_method:
-        prev.deposit_payment_method || profile.deposit_payment_method || "nita",
-      deposit_amount:
-        prev.deposit_amount || (profile.deposit_amount ? String(profile.deposit_amount) : ""),
-      accepts_table_reservations:
-        prev.accepts_table_reservations || profile.accepts_table_reservations || false,
-      accepts_hotel_bookings:
-        prev.accepts_hotel_bookings || profile.accepts_hotel_bookings || false,
-      offers_shop: prev.offers_shop || profile.offers_shop || false,
-      offers_restaurant: prev.offers_restaurant || profile.offers_restaurant || false,
-    }));
+        room_types_list: payloadToRoomRows(profile.room_types || []),
+        deposit_payment_method: profile.deposit_payment_method || "nita",
+        deposit_amount: profile.deposit_amount ? String(profile.deposit_amount) : "",
+        accepts_table_reservations: profile.accepts_table_reservations || false,
+        accepts_hotel_bookings: profile.accepts_hotel_bookings || false,
+        offers_shop: profile.offers_shop || false,
+        offers_restaurant: profile.offers_restaurant || false,
+      });
+    } else {
+      const draft = loadDraft(draftKey, defaultProfileForm(requestedSellerType));
+      const normalizedDraftActivity =
+        (draft.activity_type as string) === "hotel" ? "enterprise" : draft.activity_type;
+      const normalizedActivity = hasRequestedSellerType ? requestedSellerType : normalizedDraftActivity;
+      setProfileForm({
+        ...draft,
+        activity_type: normalizedActivity,
+        storefront_tier: normalizedActivity === "enterprise" ? "premium" : "basic",
+      });
+    }
     setProfileHydratedFromServer(true);
-  }, [profile, profileHydratedFromServer]);
+  }, [draftKey, hasRequestedSellerType, profile, profileHydratedFromServer, profileLoaded, requestedSellerType]);
+
+  // Brouillon écrit seulement avant la création de la boutique, sous la clé du compte connecté.
+  useEffect(() => {
+    if (!draftKey || !profileHydratedFromServer || profile) {
+      return;
+    }
+    try {
+      window.localStorage.setItem(draftKey, JSON.stringify(profileForm));
+    } catch (error) {
+      // Stockage plein ou bloqué (navigation privée) : le formulaire reste utilisable sans brouillon.
+      console.warn("Brouillon vendeur non enregistré", error);
+    }
+  }, [draftKey, profile, profileForm, profileHydratedFromServer]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => setNowMs(Date.now()), 0);
@@ -308,6 +331,9 @@ function SellerPageContent() {
       // Met à jour la home + les listes de boutiques (elles sont basées sur /catalog/storefronts).
       queryClient.invalidateQueries({ queryKey: ["home-storefronts"] });
       queryClient.invalidateQueries({ queryKey: ["catalog-storefronts-boutiques"] });
+      if (draftKey) {
+        removeDraft(draftKey);
+      }
       setStatus("Profil vendeur enregistré.");
     },
     onError: (error) =>
