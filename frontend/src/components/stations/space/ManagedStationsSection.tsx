@@ -34,7 +34,7 @@ function ManagedStationPanel({ outlet }: { outlet: ManagedOutlet }) {
             freshHours={outlet.fresh_hours}
             busy={actions.busy}
             disabled={disabled}
-            onSetFuel={(fuel, state) => actions.setFuel.mutate({ fuel, state })}
+            onSetFuel={(fuel, state) => actions.setFuel.mutateAsync({ fuel, state })}
             onConfirm={() => actions.confirm.mutate()}
           />
         </AccordionItem>

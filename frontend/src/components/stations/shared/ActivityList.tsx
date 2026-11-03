@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import type { ActivityItem, StationRole } from "@/types/station-space";
 
 import { StationDataState } from "./StationDataState";
-import { ROLE_LABELS, activityActionLabel, formatDateTime } from "./station-ui";
+import { ROLE_LABELS, activityActionLabel, activityDetailText, formatDateTime } from "./station-ui";
 
 const ROLE_BADGE: Record<StationRole, string> = {
   owner: "bg-brand-50 text-brand-700",
@@ -147,7 +147,7 @@ export function ActivityList({
                   {showOutlet && (entry.outlet_name || (showCity && entry.city)) ? (
                     <p className="text-xs text-ink-700">{[entry.outlet_name, showCity ? entry.city : null].filter(Boolean).join(", ")}</p>
                   ) : null}
-                  {entry.detail ? <p className="mt-0.5 break-words text-ink-800">{entry.detail}</p> : null}
+                  {activityDetailText(entry.detail) ? <p className="mt-0.5 break-words text-ink-800">{activityDetailText(entry.detail)}</p> : null}
                   <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-600">
                     <span className="min-w-0 break-all">{entry.actor_name ?? "Compte supprimé"}</span>
                     <RoleBadge role={entry.role} />

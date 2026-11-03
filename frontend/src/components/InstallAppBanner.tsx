@@ -89,7 +89,7 @@ export function InstallAppBanner() {
   }, []);
 
   // Pas pendant un paiement ni dans l'espace admin.
-  if (mode === "hidden" || /^\/(admin|order|restaurant\/order)/.test(pathname ?? "")) return null;
+  if (mode === "hidden" || /^\/(admin|order|restaurant\/order|gerant-station|seller)/.test(pathname ?? "")) return null;
 
   const dismiss = () => {
     try {

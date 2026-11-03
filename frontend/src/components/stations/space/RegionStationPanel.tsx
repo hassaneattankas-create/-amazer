@@ -12,15 +12,17 @@ import {
 import { cn } from "@/lib/utils";
 import type { RegionCity, RegionStation } from "@/types/station-space";
 
+import { OutletDeliveries } from "./OutletFeeds";
 import { RegionStationManage } from "./RegionStationManage";
 import { useRegionActions } from "./use-region-actions";
 
-type Tab = "fuel" | "managers" | "info" | "manage";
+type Tab = "fuel" | "managers" | "info" | "deliveries" | "manage";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "fuel", label: "Disponibilités" },
   { id: "managers", label: "Gérants" },
   { id: "info", label: "Infos et position" },
+  { id: "deliveries", label: "Livraisons" },
   { id: "manage", label: "Gestion" },
 ];
 
@@ -43,7 +45,7 @@ export function RegionStationPanel({ station, city }: RegionStationPanelProps) {
         <p className="rounded-field bg-warning/10 p-3 text-sm text-ink-800">Station fermée : rouvrez-la dans « Gestion » pour la mettre à jour.</p>
       ) : null}
 
-      <div role="group" aria-label={`Sections de « ${station.name} »`} className="grid grid-cols-2 gap-1 rounded-field bg-surface-1 p-1 sm:grid-cols-4">
+      <div role="group" aria-label={`Sections de « ${station.name} »`} className="grid grid-cols-2 gap-1 rounded-field bg-surface-1 p-1 sm:grid-cols-5">
         {TABS.map((entry) => (
           <button
             key={entry.id}
@@ -52,7 +54,7 @@ export function RegionStationPanel({ station, city }: RegionStationPanelProps) {
             aria-controls={panelId}
             onClick={() => setTab(entry.id)}
             className={cn(
-              "min-h-11 rounded-field px-2 text-sm transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500",
+              "min-h-11 rounded-field px-2 text-sm transition-colors duration-fast last:col-span-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:last:col-span-1",
               tab === entry.id ? "bg-card font-semibold text-ink-900 shadow-hairline" : "text-ink-700 hover:bg-surface-2",
             )}
           >
@@ -71,7 +73,7 @@ export function RegionStationPanel({ station, city }: RegionStationPanelProps) {
             fuelUpdatedAt={station.fuel_updated_at}
             busy={actions.busy}
             disabled={!writable}
-            onSetFuel={(fuel, state) => actions.setFuel.mutate({ fuel, state })}
+            onSetFuel={(fuel, state) => actions.setFuel.mutateAsync({ fuel, state })}
             onConfirm={() => actions.confirm.mutate()}
           />
         ) : null}
@@ -104,6 +106,8 @@ export function RegionStationPanel({ station, city }: RegionStationPanelProps) {
             </div>
           </div>
         ) : null}
+
+        {tab === "deliveries" ? <OutletDeliveries outletId={station.id} actions={actions} disabled={!writable} /> : null}
 
         {tab === "manage" ? <RegionStationManage station={station} disabled={!city.can_update} /> : null}
       </div>

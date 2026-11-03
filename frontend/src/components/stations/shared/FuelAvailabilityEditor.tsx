@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { AlertTriangle, CheckCircle2, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -24,11 +25,12 @@ export type FuelAvailabilityEditorProps = {
   fuelUpdatedAt: string | null;
   /** Durée de validité affichée (« À refaire dans les N h »). */
   freshHours?: number;
-  /** Une mise à jour est en cours : boutons désactivés. */
+  /** Une mise à jour est en cours : boutons désactivés et « Enregistrement… » affiché. */
   busy?: boolean;
   /** Écritures impossibles (station fermée, abonnement expiré) ; disabledReason explique pourquoi. */
   disabled?: boolean;
   disabledReason?: string;
+  /** Passer `mutateAsync` : une promesse rejetée annule l'affichage immédiat du choix. */
   onSetFuel: (fuel: FuelKey, state: FuelState) => unknown;
   /** « Rien n'a changé » : reconfirme les disponibilités actuelles. */
   onConfirm: () => unknown;
@@ -54,12 +56,23 @@ export function FuelAvailabilityEditor({
   const now = useNow();
   const locked = busy || disabled;
   const ago = timeAgo(fuelUpdatedAt, now);
+  // Le choix s'affiche tout de suite ; il reste affiché jusqu'à ce que le serveur renvoie la nouvelle date, ou s'efface en cas d'échec.
+  const [picked, setPicked] = useState<Partial<Record<FuelKey, { state: FuelState; since: string | null }>>>({});
+  const pickedState = (key: FuelKey) => {
+    const entry = picked[key];
+    return entry && entry.since === fuelUpdatedAt ? entry.state : null;
+  };
+  const saving = busy || FUELS.some((key) => pickedState(key) !== null);
+  const choose = (key: FuelKey, state: FuelState) => {
+    setPicked((prev) => ({ ...prev, [key]: { state, since: fuelUpdatedAt } }));
+    Promise.resolve(onSetFuel(key, state)).catch(() => setPicked((prev) => ({ ...prev, [key]: undefined })));
+  };
 
   return (
     <div className="space-y-3">
       {disabled && disabledReason ? <p className="rounded-field bg-warning/10 p-3 text-sm text-ink-800">{disabledReason}</p> : null}
       {FUELS.map((key) => {
-        const current = fuel[key] ?? null;
+        const current = pickedState(key) ?? fuel[key] ?? null;
         return (
           <div key={key} className={stacked ? "space-y-1" : "flex items-center gap-2"}>
             <span className={cn("text-sm font-semibold text-ink-900", stacked ? "block" : "w-16 shrink-0")}>{FUEL_LABELS[key]}</span>
@@ -70,7 +83,7 @@ export function FuelAvailabilityEditor({
                   type="button"
                   disabled={locked}
                   aria-pressed={current === state.value}
-                  onClick={() => onSetFuel(key, state.value)}
+                  onClick={() => choose(key, state.value)}
                   className={cn(
                     "min-h-12 rounded-field border px-1 text-xs font-semibold transition-colors duration-fast disabled:opacity-60 sm:text-sm",
                     current === state.value ? state.on : cn("border-border bg-card text-ink-700", state.off),
@@ -89,13 +102,15 @@ export function FuelAvailabilityEditor({
           fuelFresh ? "bg-surface-1" : "bg-warning/10",
         )}
       >
-        <p className="flex items-start gap-2 text-sm text-ink-800">
+        <p className="flex items-start gap-2 text-sm text-ink-800" aria-live="polite">
           {fuelFresh ? (
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
           ) : (
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
           )}
-          {fuelUpdatedAt
+          {saving
+            ? "Enregistrement…"
+            : fuelUpdatedAt
             ? fuelFresh
               ? `Mis à jour ${ago}.${freshHours ? ` À refaire dans les ${freshHours} h.` : ""}`
               : `Dernière mise à jour ${ago} : les clients la voient « non confirmée ».`

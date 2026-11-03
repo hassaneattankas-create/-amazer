@@ -55,6 +55,14 @@ export type ActivityAction =
   | "city_added"
   | "city_removed";
 
+const ACTIVITY_REPEATED_START = /^(Retour traité|Livraison|Position enregistrée|Gérant ajouté|Gérant retiré|Station ajoutée à|Station supprimée|Responsable de ville|Responsable retiré)\s*:?\s*/;
+
+/** Détail d'une ligne du journal, sans répéter le titre déjà affiché (« Livraison Gasoil 12 000 L » → « Gasoil 12 000 L »). */
+export function activityDetailText(detail: string | null): string | null {
+  if (!detail) return null;
+  return detail.replace(ACTIVITY_REPEATED_START, "").trim() || null;
+}
+
 export const ACTIVITY_ACTION_LABELS: Record<ActivityAction, string> = {
   fuel: "Disponibilités",
   confirm: "Confirmation",

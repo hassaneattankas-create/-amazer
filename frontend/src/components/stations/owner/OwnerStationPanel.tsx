@@ -44,7 +44,7 @@ export function OwnerStationPanel({ outlet, cityChoices }: { outlet: FuelOutlet;
             disabled={closed}
             disabledReason={CLOSED_REASON}
             layout="stacked"
-            onSetFuel={(fuel, state) => station.setFuel.mutate({ fuel, state })}
+            onSetFuel={(fuel, state) => station.setFuel.mutateAsync({ fuel, state })}
             onConfirm={() => station.confirm.mutate()}
           />
         </AccordionItem>

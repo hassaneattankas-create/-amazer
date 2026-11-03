@@ -111,7 +111,7 @@ export function StationPositionEditor({ latitude, longitude, mapsUrl, busy = fal
           />
           <Button type="submit" variant="outline" className="min-h-11" disabled={locked}>
             <Link2 className="h-4 w-4" aria-hidden="true" />
-            Enregistrer
+            {busy ? "Enregistrement…" : "Enregistrer"}
           </Button>
         </div>
         <p id={`${uid}-howto`} className="text-xs text-ink-600">

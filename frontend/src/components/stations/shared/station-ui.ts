@@ -10,6 +10,7 @@ export {
   STATION_SERVICE_CODES,
   STATION_SERVICE_LABELS,
   activityActionLabel,
+  activityDetailText,
   isStationServiceCode,
 } from "@/types/station-space";
 export { FUEL_LABELS, FUEL_STATE_LABELS } from "@/types/local-services";
