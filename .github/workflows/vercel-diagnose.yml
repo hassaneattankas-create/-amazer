@@ -24,6 +24,9 @@ jobs:
       - name: Etat du compte et des deploiements
         run: |
           api() { curl -sS -H "Authorization: Bearer $VERCEL_TOKEN" "https://api.vercel.com$1"; }
+          echo "== Compte du token =="
+          api "/v2/user" | jq '{error, user: (.user | if . then {username, softBlock} else null end)}'
+          api "/v2/teams/$TEAM" | jq '{error}'
           echo "== Equipe (blocage eventuel) =="
           api "/v2/teams/$TEAM" | jq '{name, slug, softBlock, billing: (.billing | {plan, status} ), resourceConfig}'
           echo "== 10 derniers deploiements =="
