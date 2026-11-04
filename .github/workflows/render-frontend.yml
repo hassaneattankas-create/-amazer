@@ -1,0 +1,52 @@
+name: Site de secours sur Render
+
+# Lancement manuel. Cree (une seule fois) une copie du site sur Render, independante de Vercel,
+# puis la reconstruit. L'API et amazer.store ne sont pas touches. Aucun secret n'est affiche.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      API_SERVICE: srv-d6jcoqngi27c73d335i0
+      NAME: amazer-web
+    steps:
+      - name: Creer ou retrouver le service, puis deployer
+        run: |
+          api() { curl -sS -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" "$@"; }
+          base=https://api.render.com/v1
+          service=$(api "$base/services?name=$NAME&limit=1" | jq -r '.[0].service.id // empty')
+          if [ -z "$service" ]; then
+            api "$base/services/$API_SERVICE" > api.json
+            owner=$(jq -r '.ownerId' api.json)
+            repo=$(jq -r '.repo' api.json)
+            jq -n --arg owner "$owner" --arg repo "$repo" --arg name "$NAME" '{
+              type: "web_service", name: $name, ownerId: $owner, repo: $repo, branch: "main", rootDir: "frontend", autoDeploy: "yes",
+              serviceDetails: { runtime: "node", plan: "free", region: "frankfurt", healthCheckPath: "/",
+                envSpecificDetails: { buildCommand: "npm ci --include=dev && npm run build", startCommand: "npx next start -p $PORT" } },
+              envVars: [ { key: "NODE_VERSION", value: "24" }, { key: "NEXT_PUBLIC_API_URL", value: "/backend-api" },
+                         { key: "NEXT_PUBLIC_BACKEND_ORIGIN", value: "https://amazer-api.onrender.com" } ]
+            }' > body.json
+            api -X POST "$base/services" -d @body.json > created.json
+            jq '{id: .service.id, url: .service.serviceDetails.url, message}' created.json
+            service=$(jq -r '.service.id // empty' created.json)
+            [ -n "$service" ] || { echo "::error::Creation refusee"; exit 1; }
+          else
+            echo "Service existant : $service"
+            api -X POST "$base/services/$service/deploys" -d '{}' | jq '{id, status}'
+          fi
+          for i in $(seq 1 44); do
+            sleep 30
+            state=$(api "$base/services/$service/deploys?limit=1" | jq -r '.[0].deploy.status')
+            echo "$i : $state"
+            case "$state" in
+              live) break ;;
+              build_failed|update_failed|canceled|deactivated) echo "::error::Deploiement : $state"; exit 1 ;;
+            esac
+          done
+          url=$(api "$base/services/$service" | jq -r '.serviceDetails.url')
+          echo "Adresse : $url"
+          echo "### $url" >> "$GITHUB_STEP_SUMMARY"
