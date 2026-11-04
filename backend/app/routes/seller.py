@@ -23,6 +23,7 @@ from app.models.hospitality import HotelBooking, RestaurantReservation
 from app.models.order import Order, OrderItem
 from app.models.price_history import PriceHistory
 from app.models.product import Price, Product
+from app.services.payment_methods import require_active_method
 from app.services.image_service import compress_image_to_limit
 from app.services import (
     hotel_service,
@@ -522,6 +523,7 @@ def pay_seller_subscription(
         monthly_fee=float(finance.seller_subscription_fee),
         months=payload.months,
     )
+    require_active_method(db, payload.payment_mode)
     payment_request = SellerSubscriptionPayment(
         seller_profile_id=profile.id,
         seller_user_id=current_user.id,

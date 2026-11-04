@@ -17,6 +17,7 @@ from app.models.price_alert import PriceAlert
 from app.models.product import Price, Product, ProductImage
 from app.models.review import Review
 from app.models.conversation import Conversation, ConversationMessage
+from app.models.payment_method import PaymentMethod
 from app.models.order import Order, OrderFulfillment, OrderItem
 from app.models.restaurant import RestaurantMenuItem, RestaurantOrder, RestaurantOrderItem
 from app.models.seller_profile import SellerProfile
@@ -39,6 +40,7 @@ from app.models.global_settings import GlobalSettings
 from app.models.vendor import Vendor
 
 __all__ = [
+    "PaymentMethod",
     "OfficialList",
     "OfficialListEntry",
     "FuelOutlet",

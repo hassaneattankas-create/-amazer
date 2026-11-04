@@ -51,6 +51,7 @@ from app.routes.maintenance import router as maintenance_router
 from app.routes.local_services import router as local_services_router
 from app.routes.station_space import router as station_space_router
 from app.routes.official_lists import router as official_lists_router
+from app.routes.payment_methods import router as payment_methods_router
 from app.services.security_log_service import log_security_event
 
 settings = get_settings()
@@ -644,6 +645,7 @@ app.include_router(maintenance_router, prefix=settings.api_prefix)
 app.include_router(local_services_router, prefix=settings.api_prefix)
 app.include_router(station_space_router, prefix=settings.api_prefix)
 app.include_router(official_lists_router, prefix=settings.api_prefix)
+app.include_router(payment_methods_router, prefix=settings.api_prefix)
 
 
 @app.middleware("http")

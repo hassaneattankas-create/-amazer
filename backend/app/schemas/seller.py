@@ -192,7 +192,7 @@ class SellerShopOrderResponse(BaseModel):
     id: str
     customer_name: str
     status: Literal["payment_pending", "commande", "preparation", "livraison", "recu", "CLAIMED"]
-    payment_mode: Literal["nita", "amana"]
+    payment_mode: str
     payment_status: Literal["pending", "paid"]
     delivery_type: Literal["standard", "express_niamey"]
     tracking_code: str | None
@@ -226,7 +226,7 @@ class SellerSubscriptionStatusResponse(BaseModel):
 class SellerSubscriptionPayRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    payment_mode: Literal["nita", "amana"]
+    payment_mode: str = Field(pattern="^[a-z0-9-]{2,30}$")
     transaction_reference: str | None = Field(default=None, max_length=180)
     months: int = Field(default=1, ge=1, le=12)
 
@@ -237,7 +237,7 @@ class SellerSubscriptionPaymentRequestResponse(BaseModel):
     id: str
     seller_profile_id: str
     seller_user_id: str
-    payment_mode: Literal["nita", "amana"]
+    payment_mode: str
     transaction_reference: str
     months: int
     amount_claimed: float

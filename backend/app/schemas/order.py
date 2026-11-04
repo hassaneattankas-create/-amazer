@@ -18,7 +18,7 @@ class CheckoutRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     items: list[CheckoutItemRequest] = Field(min_length=1)
-    payment_mode: str = Field(default="nita", pattern="^(nita|amana)$")
+    payment_mode: str = Field(default="nita", pattern="^[a-z0-9-]{2,30}$")
     delivery_type: str = Field(default="standard", pattern="^(standard|express_niamey)$")
     transaction_code: str | None = Field(default=None, max_length=120)
     currency: str = Field(default="XOF", min_length=3, max_length=3)
@@ -158,8 +158,14 @@ class PaymentIntentResponse(BaseModel):
     payment_url: str
     qr_payload: str
     expires_in_seconds: int
-    # Numero AMAZER qui recoit les transferts Nita (parametres admin).
+    # Numero AMAZER general, conserve pour l'ancienne application.
     platform_wallet_phone: str | None = None
+    # Moyen choisi : ce que le client doit voir pour payer.
+    method_name: str | None = None
+    method_kind: str = "manual"
+    account_number: str | None = None
+    account_name: str | None = None
+    instructions: str | None = None
 
 
 class PaymentConfirmRequest(BaseModel):

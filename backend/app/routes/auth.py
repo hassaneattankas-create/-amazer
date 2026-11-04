@@ -37,6 +37,7 @@ from app.schemas.finance import (
 )
 from app.schemas.user import UserResponse
 from app.services import order_event_notifications as order_events
+from app.services.payment_methods import require_active_method
 from app.services.affiliate_service import record_referral, request_fingerprints
 from app.services.auth_service import SHADOW_EMAIL_DOMAIN, AuthService
 from app.models.seller_pending_registration import SellerPendingRegistration
@@ -424,7 +425,7 @@ def pre_register_seller(
         business_name=payload.business_name.strip() if payload.business_name else None,
         activity_type=payload.activity_type,
         storefront_tier=payload.storefront_tier,
-        payment_mode=payload.payment_mode,
+        payment_mode=require_active_method(db, payload.payment_mode).code,
         months=payload.months,
         transaction_reference=payload.transaction_reference.strip() if payload.transaction_reference else None,
         status="pending",

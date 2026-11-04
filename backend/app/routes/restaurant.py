@@ -46,6 +46,7 @@ from app.schemas.restaurant import (
 )
 from app.services import order_event_notifications as order_events
 from app.services import restaurant_service
+from app.services.payment_methods import intent_details, require_active_method
 from app.services.refund_service import record_refund
 from app.services.listing_limit_service import (
     count_vendor_menu_items,
@@ -708,6 +709,7 @@ def create_restaurant_order(
         encrypted_code = encrypt_payment_code(payload.transaction_code)
         code_hash = payment_code_hash(payload.transaction_code)
 
+    require_active_method(db, payload.payment_mode)
     order = RestaurantOrder(
         vendor_id=payload.vendor_id,
         user_id=current_user.id,
@@ -902,6 +904,7 @@ def get_restaurant_payment_intent(
         qr_payload=payment_url,
         expires_in_seconds=15 * 60,
         platform_wallet_phone=_resolve_platform_wallet_phone(db),
+        **intent_details(db, order.payment_mode),
     )
 
 

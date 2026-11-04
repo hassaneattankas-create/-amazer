@@ -736,6 +736,7 @@ def get_wallet_summary(
         total_nita=round(totals.get("nita", 0.0), 2),
         total_amana=round(totals.get("amana", 0.0), 2),
         total_cash_on_delivery=round(totals.get("cash_on_delivery", 0.0), 2),
+        total_other=round(sum(v for k, v in totals.items() if k not in ("nita", "amana", "cash_on_delivery")), 2),
         total_all=round(total_all, 2),
         amazer_commission_total=round(commission_total, 2),
         service_fee_total=round(service_fee_total, 2),

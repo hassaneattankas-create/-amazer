@@ -21,6 +21,7 @@ from app.database import get_db
 from app.models.order import Order, OrderItem
 from app.models.product import Price
 from app.models.reseller import ResellerListing, ResellerPayout, ResellerSubscriptionPayment
+from app.services.payment_methods import require_active_method
 from app.services.reseller_account_service import ensure_account, reseller_terms, subscription_active
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
@@ -91,7 +92,7 @@ class AccountResponse(BaseModel):
 class SubscriptionPaymentRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    payment_mode: str = Field(pattern="^(nita|amana)$")
+    payment_mode: str = Field(pattern="^[a-z0-9-]{2,30}$")
     transaction_reference: str = Field(min_length=4, max_length=180)
     months: int = Field(default=1, ge=1, le=12)
 
@@ -360,6 +361,7 @@ def submit_subscription_payment(
     )
     if reused is not None:
         raise ConflictError("Cette référence de paiement a déjà été utilisée.")
+    require_active_method(db, payload.payment_mode)
     fee, _percent = reseller_terms(db)
     db.add(
         ResellerSubscriptionPayment(

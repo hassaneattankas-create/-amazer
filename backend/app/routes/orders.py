@@ -26,6 +26,7 @@ from app.models.order import Order, OrderFulfillment, OrderItem
 from app.models.product import Price, Product
 from app.models.receipt_scan import ReceiptScan
 from app.models.reseller import ResellerListing
+from app.services.payment_methods import intent_details, require_active_method
 from app.services.order_delivery_service import mark_order_delivered
 from app.services.reseller_account_service import reseller_terms, split_margin, subscription_active
 from app.services.affiliate_service import customer_bonus_for_order, request_fingerprints
@@ -553,6 +554,7 @@ def checkout(
         db, current_user.id, payload.affiliate_code, request_fingerprints(request)[1]
     )
 
+    require_active_method(db, payload.payment_mode)
     order = Order(
         user_id=current_user.id,
         affiliate_user_id=affiliate_user_id if affiliate_amount > 0 else None,
@@ -636,6 +638,7 @@ def get_payment_intent(
         qr_payload=payment_url,
         expires_in_seconds=15 * 60,
         platform_wallet_phone=_resolve_platform_wallet_phone(db),
+        **intent_details(db, order.payment_mode),
     )
 
 

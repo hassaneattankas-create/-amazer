@@ -104,7 +104,7 @@ class RestaurantOrderCreateRequest(BaseModel):
     customer_name: str = Field(min_length=2, max_length=120)
     customer_phone: str = Field(min_length=6, max_length=40)
     delivery_address: str = Field(min_length=4, max_length=220)
-    payment_mode: str = Field(pattern="^(nita|amana)$")
+    payment_mode: str = Field(pattern="^[a-z0-9-]{2,30}$")
     transaction_code: str | None = Field(default=None, max_length=120)
     items: list[RestaurantOrderLineRequest] = Field(min_length=1, max_length=20)
 

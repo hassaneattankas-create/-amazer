@@ -153,6 +153,7 @@ class WalletSummaryResponse(BaseModel):
 
     total_nita: float
     total_amana: float
+    total_other: float = 0
     total_cash_on_delivery: float
     total_all: float
     amazer_commission_total: float
@@ -353,7 +354,7 @@ class SellerPreRegisterRequest(BaseModel):
     business_name: str | None = Field(default=None, max_length=255)
     activity_type: str = Field(default="shop", pattern=r"^(shop|restaurant|enterprise|transport)$")
     storefront_tier: str = Field(default="basic", pattern=r"^(basic|premium)$")
-    payment_mode: str = Field(default="nita", pattern=r"^(nita|amana)$")
+    payment_mode: str = Field(default="nita", pattern=r"^[a-z0-9-]{2,30}$")
     months: int = Field(default=1, ge=1, le=12)
     transaction_reference: str | None = Field(default=None, max_length=180)
 

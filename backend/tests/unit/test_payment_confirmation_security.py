@@ -14,6 +14,14 @@ from app.schemas.order import CheckoutItemRequest, CheckoutRequest, PaymentConfi
 from app.services.payment_gateway_service import PaymentGatewayError
 
 
+@pytest.fixture(autouse=True)
+def _payment_methods(monkeypatch) -> None:
+    """Ces tests utilisent une base simulee : le catalogue des moyens a ses propres tests."""
+    for module in (orders_route, restaurant_route):
+        monkeypatch.setattr(module, "require_active_method", lambda _db, code: SimpleNamespace(code=code))
+        monkeypatch.setattr(module, "intent_details", lambda _db, _code: {})
+
+
 def _request() -> SimpleNamespace:
     return SimpleNamespace(
         client=SimpleNamespace(host="127.0.0.1"),
