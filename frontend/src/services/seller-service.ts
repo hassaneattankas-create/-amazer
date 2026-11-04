@@ -191,7 +191,7 @@ export async function getSellerSubscriptionStatus(): Promise<SellerSubscriptionS
 }
 
 export async function paySellerSubscription(payload: {
-  payment_mode: "nita" | "amana";
+  payment_mode: string;
   transaction_reference?: string;
   months: number;
 }): Promise<SellerSubscriptionStatus> {

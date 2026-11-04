@@ -37,7 +37,7 @@ export type RestaurantOrderRequest = {
   customer_name: string;
   customer_phone: string;
   delivery_address: string;
-  payment_mode: "nita" | "amana";
+  payment_mode: string;
   items: Array<{
     menu_item_id: string;
     quantity: number;
@@ -56,7 +56,7 @@ export type RestaurantOrder = {
   distance_km: number;
   delivery_fee: number;
   delivery_minutes: number;
-  payment_mode: "nita" | "amana";
+  payment_mode: string;
   payment_reference: string | null;
   payment_status: "pending" | "paid";
   status: "payment_pending" | "commande" | "preparation" | "livraison" | "recu" | "annulee";

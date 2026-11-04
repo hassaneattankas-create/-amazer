@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
+import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
+import { CopyValue, PaymentRecipient } from "@/components/payment/PaymentRecipient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatXOF } from "@/lib/currency";
 import type { PaymentIntent } from "@/types/order";
-import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 
 type ManualPaymentCardProps = {
   orderId: string;
@@ -23,106 +24,102 @@ type ManualPaymentCardProps = {
   onConfirm: (providerReference: string) => void;
 };
 
-export function ManualPaymentCard({
-  orderId,
-  data,
-  isPending,
-  isError,
-  isConfirming,
-  isStarting,
-  status,
-  awaitingReview = false,
-  onStart,
-  onConfirm,
-}: ManualPaymentCardProps) {
+function Step({ rank, title, children }: { rank: number; title: string; children: ReactNode }) {
+  return (
+    <li className="flex gap-3">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-pill bg-ink-900 text-sm font-semibold text-white" aria-hidden="true">
+        {rank}
+      </span>
+      <div className="min-w-0 flex-1 space-y-2">
+        <p className="pt-0.5 font-semibold text-ink-900">{title}</p>
+        {children}
+      </div>
+    </li>
+  );
+}
+
+/** Paiement d'une commande en étapes numérotées, quel que soit le moyen choisi. */
+export function ManualPaymentCard({ orderId, data, isPending, isError, isConfirming, isStarting, status, awaitingReview = false, onStart, onConfirm }: ManualPaymentCardProps) {
   const [providerReference, setProviderReference] = useState("");
+  const isAmana = (data?.method_kind ?? data?.payment_mode) === "amana";
+  const methodName = data?.method_name ?? data?.payment_mode.toUpperCase() ?? "";
 
   return (
-    <section className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-14 sm:px-6">
-      <article className="premium-card border border-slate-200 bg-white p-6">
-        <h1 className="text-2xl font-semibold text-ink-900">Finaliser le paiement</h1>
-        <p className={`mt-2 text-sm text-slate-600 ${data ? "" : "hidden"}`}>
-          {data?.payment_mode === "amana"
-            ? "Lancez le paiement, puis validez-le dans votre application AmanaTa."
-            : "Envoyez le montant par Nita, puis indiquez la référence de votre transaction."}
-        </p>
+    <section className="mx-auto w-full max-w-xl space-y-4 px-gutter pb-14 pt-4">
+      <article className="space-y-5 rounded-card border border-border bg-card p-5 shadow-resting">
+        <header>
+          <h1 className="text-2xl font-semibold text-ink-900">Payer ma commande</h1>
+          {data ? (
+            <p className="mt-1 text-sm text-ink-600">
+              {formatXOF(data.amount)} par {methodName}
+            </p>
+          ) : null}
+        </header>
 
-        {isPending ? <p className="mt-3 text-sm text-slate-500">Préparation du paiement…</p> : null}
+        {isPending ? <div className="h-40 animate-pulse rounded-field bg-surface-2" aria-busy="true" aria-label="Préparation du paiement" /> : null}
         {isError ? (
-          <p className="mt-3 text-sm text-danger" role="alert">
+          <p className="text-sm text-danger" role="alert">
             Impossible de charger le paiement. Vérifiez votre connexion ou reconnectez-vous.
           </p>
         ) : null}
 
-        {data ? (
-          <div className="mt-5 space-y-4">
-            <div className="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-4">
-              <p className="text-xs text-slate-500">Référence paiement</p>
-              <p className="mt-1 text-2xl font-semibold tracking-wide text-brand-600">{data.payment_reference}</p>
-              <p className="mt-2 text-sm text-slate-700">Montant : {formatXOF(data.amount)}</p>
-            </div>
-
-            {data.payment_mode === "amana" ? (
-              <>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-semibold text-slate-900">Paiement Amana sécurisé</p>
-                  <p className="mt-2 text-sm text-slate-700">Validez exactement {formatXOF(data.amount)} dans AmanaTa.</p>
-                </div>
-                <Button onClick={onStart} className="w-full" disabled={isStarting || isConfirming}>
-                  {isStarting ? "Lancement…" : "Démarrer le paiement Amana"}
-                </Button>
-                <Button onClick={() => onConfirm("")} className="w-full border border-slate-200 bg-white text-slate-800 hover:bg-slate-50" disabled={isConfirming}>
-                  {isConfirming ? "Vérification…" : "Vérifier le paiement"}
-                </Button>
-              </>
-            ) : (
-              <>
-                <div className="rounded-field bg-surface-1 px-3 py-2 text-sm text-ink-700">
-                  {data.platform_wallet_phone ? (
-                    <p>
-                      Envoyez {formatXOF(data.amount)} par Nita au{" "}
-                      <span className="font-semibold text-ink-900">{data.platform_wallet_phone}</span>, en indiquant la
-                      référence {data.payment_reference}.
-                    </p>
-                  ) : (
-                    <p>Le numéro de paiement Nita n&apos;est pas encore disponible : contactez le support avant de payer.</p>
-                  )}
-                  <p className="mt-1">
-                    Saisissez ensuite la référence de votre transaction. La commande sera confirmée après vérification
-                    par AMAZER.
-                  </p>
-                </div>
-                <Input
-                  value={providerReference}
-                  onChange={(event) => setProviderReference(event.target.value)}
-                  aria-label="Référence de la transaction"
-                  placeholder="Référence de la transaction (facultatif)"
-                />
-                <Button onClick={() => onConfirm(providerReference)} className="w-full" disabled={isConfirming || awaitingReview}>
-                  {isConfirming ? "Envoi…" : "J'ai payé, envoyer la référence"}
-                </Button>
-              </>
-            )}
-          </div>
+        {data && isAmana ? (
+          <ol className="space-y-5">
+            <Step rank={1} title="Lancez le paiement">
+              <Button onClick={onStart} className="min-h-11 w-full" disabled={isStarting || isConfirming}>
+                {isStarting ? "Lancement…" : `Payer ${formatXOF(data.amount)}`}
+              </Button>
+            </Step>
+            <Step rank={2} title="Validez dans votre application AmanaTa">
+              <p className="text-sm text-ink-700">Le montant doit être exactement {formatXOF(data.amount)}.</p>
+              {data.instructions ? <p className="whitespace-pre-line text-sm text-ink-700">{data.instructions}</p> : null}
+            </Step>
+            <Step rank={3} title="Revenez ici">
+              <Button variant="outline" onClick={() => onConfirm("")} className="min-h-11 w-full" disabled={isConfirming}>
+                {isConfirming ? "Vérification…" : "Vérifier mon paiement"}
+              </Button>
+            </Step>
+          </ol>
         ) : null}
 
-        <p className="mt-4 text-xs text-slate-500">Commande : {orderId}</p>
-        <WhatsAppButton
-          variant="link"
-          label="Besoin d'aide pour payer ?"
-          message={`Bonjour AMAZER, j'ai besoin d'aide pour payer la commande ${orderId}.`}
-          className="mt-3"
-        />
+        {data && !isAmana ? (
+          <ol className="space-y-5">
+            <Step rank={1} title="Envoyez l'argent">
+              <PaymentRecipient
+                amount={data.amount}
+                methodName={methodName}
+                accountNumber={data.account_number ?? data.platform_wallet_phone ?? null}
+                accountName={data.account_name}
+                instructions={data.instructions}
+              />
+            </Step>
+            <Step rank={2} title="Indiquez ce motif">
+              <CopyValue label="Motif du paiement" value={data.payment_reference} />
+            </Step>
+            <Step rank={3} title="Confirmez ici">
+              <label className="block text-sm text-ink-700">
+                Référence reçue par SMS (facultatif)
+                <Input className="mt-1 h-11" value={providerReference} onChange={(event) => setProviderReference(event.target.value)} />
+              </label>
+              <Button onClick={() => onConfirm(providerReference)} className="min-h-11 w-full" disabled={isConfirming || awaitingReview}>
+                {isConfirming ? "Envoi…" : "J'ai payé"}
+              </Button>
+              <p className="text-xs text-ink-600">AMAZER vérifie le paiement, puis confirme votre commande.</p>
+            </Step>
+          </ol>
+        ) : null}
+
         {status ? (
-          <p className="mt-3 text-sm text-slate-700" role="status">
+          <p className="rounded-field bg-surface-1 p-3 text-sm text-ink-800" role="status">
             {status}
           </p>
         ) : null}
         {awaitingReview ? (
-          <Link href="/dashboard" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 hover:underline">
+          <Link href="/dashboard" className="inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 hover:underline">
             Suivre ma commande
           </Link>
         ) : null}
+        <WhatsAppButton variant="link" label="Besoin d'aide pour payer ?" message={`Bonjour AMAZER, j'ai besoin d'aide pour payer la commande ${orderId}.`} />
       </article>
     </section>
   );

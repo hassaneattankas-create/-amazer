@@ -87,7 +87,7 @@ export type SellerSubscriptionPaymentRequest = {
   id: string;
   seller_profile_id: string;
   seller_user_id: string;
-  payment_mode: "nita" | "amana";
+  payment_mode: string;
   transaction_reference: string;
   months: number;
   amount_claimed: number;
@@ -169,7 +169,7 @@ export type SellerShopOrder = {
   id: string;
   customer_name: string;
   status: "payment_pending" | "commande" | "preparation" | "livraison" | "recu" | "CLAIMED" | "annulee";
-  payment_mode: "nita" | "amana";
+  payment_mode: string;
   payment_status: "pending" | "paid";
   delivery_type: "standard" | "express_niamey";
   tracking_code: string | null;

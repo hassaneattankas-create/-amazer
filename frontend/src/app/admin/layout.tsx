@@ -39,6 +39,7 @@ const NAV_GROUPS: Array<{ title: string; items: NavItem[] }> = [
     title: "Gestion",
     items: [
       { href: "/admin/tarifs", label: "Vendeurs et tarifs", icon: SlidersHorizontal },
+      { href: "/admin/paiements", label: "Moyens de paiement", icon: CreditCard },
       { href: "/admin/users", label: "Utilisateurs", icon: Users },
       { href: "/admin/messages", label: "Messages", icon: Send },
       { href: "/admin/catalog", label: "Catégories", icon: FolderTree },

@@ -725,10 +725,9 @@ export default function AdminTarifsPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-1">
             <div>
-              <p className="text-sm font-medium text-slate-800">Numéro wallet AMAZER (Nita / Amana)</p>
+              <p className="text-sm font-medium text-slate-800">Numéro général AMAZER</p>
               <p className="text-xs text-slate-500">
-                Seul numéro donné aux clients, vendeurs et revendeurs pour payer AMAZER. Sans lui, ils sont invités à
-                contacter le support (aucun autre numéro n&apos;est proposé).
+                Utilisé pour tout moyen de paiement sans numéro propre. Les moyens se règlent dans « Moyens de paiement ».
               </p>
               <input
                 value={effective.platform_wallet_phone ?? ""}

@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { PaymentMethodPicker } from "@/components/payment/PaymentMethodPicker";
 import { ConvertedPrice } from "@/components/ConvertedPrice";
 import { AnimatedPrice } from "@/components/AnimatedPrice";
 import { Button } from "@/components/ui/button";
@@ -31,7 +32,7 @@ export default function CartPage() {
   const clearCart = useCartStore((state) => state.clearCart);
 
   const [shareMessage, setShareMessage] = useState("");
-  const [paymentMode, setPaymentMode] = useState<"nita" | "amana">("nita");
+  const [paymentMode, setPaymentMode] = useState("nita");
   const [deliveryType, setDeliveryType] = useState<"standard" | "express_niamey">("standard");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryPhone, setDeliveryPhone] = useState("");
@@ -328,18 +329,11 @@ export default function CartPage() {
 
           <article className="rounded-card border border-border bg-card p-5">
             <h2 className="text-lg font-semibold text-ink-900">Paiement</h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <button type="button" aria-pressed={paymentMode === "nita"} onClick={() => setPaymentMode("nita")} className={choiceClass(paymentMode === "nita")}>
-                <p className="font-semibold text-ink-900">Nita Transfert</p>
-                <p className="text-xs text-ink-600">Transfert au numéro AMAZER, vérifié par l&apos;équipe</p>
-              </button>
-              <button type="button" aria-pressed={paymentMode === "amana"} onClick={() => setPaymentMode("amana")} className={choiceClass(paymentMode === "amana")}>
-                <p className="font-semibold text-ink-900">Amana Transfert</p>
-                <p className="text-xs text-ink-600">Validation dans l&apos;application AmanaTa</p>
-              </button>
+            <div className="mt-3">
+              <PaymentMethodPicker value={paymentMode} onChange={setPaymentMode} />
             </div>
             <p className="mt-3 text-xs text-ink-600">
-              Après « Commander », vous voyez le numéro AMAZER et le montant exact à envoyer.
+              Après « Commander », vous voyez le montant exact et comment payer.
             </p>
           </article>
         </div>

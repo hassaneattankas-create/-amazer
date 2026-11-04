@@ -71,6 +71,6 @@ export async function getMyResellerAccount() {
   return (await api.get<ResellerAccount>("/api/v1/resellers/account/me")).data;
 }
 
-export async function submitResellerPayment(payload: { payment_mode: "nita" | "amana"; transaction_reference: string; months: number }) {
+export async function submitResellerPayment(payload: { payment_mode: string; transaction_reference: string; months: number }) {
   return (await api.post<ResellerAccount>("/api/v1/resellers/account/payments", payload)).data;
 }

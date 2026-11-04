@@ -156,14 +156,14 @@ export function AdminOrdersPanel() {
                     onSubmit={(event) => {
                       event.preventDefault();
                       if (!reference.trim()) {
-                        toast.error("Saisissez la référence Nita lue sur votre relevé.");
+                        toast.error("Saisissez la référence lue sur votre relevé.");
                         return;
                       }
                       confirm.mutate({ id: order.id, reference: reference.trim(), restaurant });
                     }}
                   >
                     <label className="min-w-0 flex-1 text-xs font-medium text-ink-700">
-                      Référence Nita (vérifiez-la sur votre relevé)
+                      Référence du paiement (vérifiez-la sur votre relevé)
                       <input
                         value={reference}
                         onChange={(event) => setRefs((prev) => ({ ...prev, [order.id]: event.target.value }))}

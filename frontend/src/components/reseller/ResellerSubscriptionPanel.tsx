@@ -4,6 +4,8 @@ import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BadgeCheck, Clock } from "lucide-react";
 
+import { PaymentMethodPicker, usePaymentMethods } from "@/components/payment/PaymentMethodPicker";
+import { PaymentRecipient } from "@/components/payment/PaymentRecipient";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
@@ -12,10 +14,12 @@ import { submitResellerPayment, type ResellerAccount } from "@/services/reseller
 
 const fieldClass = "mt-1 h-11 w-full rounded-field border border-border bg-card px-3 text-sm text-ink-900";
 
-/** Abonnement revendeur : etat, et paiement Nita / Amana valide par l'admin (meme principe que les vendeurs). */
+/** Abonnement revendeur : etat, et paiement valide par l'admin (meme principe que les vendeurs). */
 export function ResellerSubscriptionPanel({ account }: { account: ResellerAccount }) {
   const queryClient = useQueryClient();
-  const [mode, setMode] = useState<"nita" | "amana">("nita");
+  const [mode, setMode] = useState("nita");
+  const { data: methods } = usePaymentMethods();
+  const method = methods?.find((entry) => entry.code === mode);
   const [months, setMonths] = useState(1);
   const [reference, setReference] = useState("");
   const [error, setError] = useState("");
@@ -64,25 +68,16 @@ export function ResellerSubscriptionPanel({ account }: { account: ResellerAccoun
         </p>
       ) : account.monthly_fee > 0 ? (
         <form onSubmit={onSubmit} className="mt-3 space-y-3 border-t border-border pt-3">
-          <p className="text-sm text-ink-700">
-            {wallet ? (
-              <>
-                Envoyez <span className="font-semibold">{formatXOF(account.monthly_fee * months)}</span> au{" "}
-                <span className="font-semibold">{wallet}</span> par Nita ou Amana, puis saisissez la référence du paiement.
-              </>
-            ) : (
-              <>Le numéro de paiement AMAZER n&apos;est pas encore affiché : contactez le support avant de payer.</>
-            )}
-            {account.active ? " Le nouveau mois s'ajoute à la fin de votre abonnement." : ""}
-          </p>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <label className="block text-sm font-medium text-ink-800">
-              Moyen
-              <select className={fieldClass} value={mode} onChange={(event) => setMode(event.target.value as "nita" | "amana")}>
-                <option value="nita">Nita</option>
-                <option value="amana">Amana</option>
-              </select>
-            </label>
+          <PaymentMethodPicker value={mode} onChange={setMode} />
+          <PaymentRecipient
+            amount={account.monthly_fee * months}
+            methodName={method?.name ?? "transfert"}
+            accountNumber={method?.account_number || wallet || null}
+            accountName={method?.account_name}
+            instructions={method?.instructions}
+          />
+          {account.active ? <p className="text-sm text-ink-700">Le nouveau mois s&apos;ajoute à la fin de votre abonnement.</p> : null}
+          <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm font-medium text-ink-800">
               Durée
               <select className={fieldClass} value={months} onChange={(event) => setMonths(Number(event.target.value))}>

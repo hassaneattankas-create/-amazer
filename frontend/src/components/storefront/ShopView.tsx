@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Clock, Images, MapPin, Package, Phone, Search, ShieldCheck, Store } from "lucide-react";
 
+import { PaymentMethodPicker } from "@/components/payment/PaymentMethodPicker";
 import { PRODUCT_GRID_CLASS } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
@@ -95,7 +96,7 @@ export function ShopView({ vendorId }: { vendorId: string }) {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [paymentMode, setPaymentMode] = useState<"nita" | "amana">("nita");
+  const [paymentMode, setPaymentMode] = useState("nita");
   const [reservationForm, setReservationForm] = useState({
     customer_name: "",
     customer_phone: "",
@@ -861,13 +862,13 @@ type RestaurantOrderPanelProps = {
   customerName: string;
   customerPhone: string;
   deliveryAddress: string;
-  paymentMode: "nita" | "amana";
+  paymentMode: string;
   isSubmitting: boolean;
   statusMessage?: string;
   onCustomerNameChange: (value: string) => void;
   onCustomerPhoneChange: (value: string) => void;
   onDeliveryAddressChange: (value: string) => void;
-  onPaymentModeChange: (value: "nita" | "amana") => void;
+  onPaymentModeChange: (value: string) => void;
   onItemNoteChange: (menuItemId: string, note: string) => void;
   onQuantityChange: (menuItemId: string, delta: number) => void;
   onSubmit: () => void;
@@ -975,20 +976,8 @@ function RestaurantOrderPanel({
       </div>
       <fieldset className="min-w-0">
         <legend className="text-sm font-medium text-ink-800">Paiement</legend>
-        <div className="mt-1 flex gap-2">
-          {(["nita", "amana"] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              aria-pressed={paymentMode === mode}
-              onClick={() => onPaymentModeChange(mode)}
-              className={`min-h-11 flex-1 rounded-field border px-4 text-sm font-semibold ${
-                paymentMode === mode ? "border-ink-900 bg-ink-900 text-white" : "border-border bg-card text-ink-800"
-              }`}
-            >
-              {mode === "nita" ? "Nita" : "Amana"}
-            </button>
-          ))}
+        <div className="mt-1">
+          <PaymentMethodPicker value={paymentMode} onChange={onPaymentModeChange} />
         </div>
       </fieldset>
 

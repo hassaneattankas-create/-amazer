@@ -268,6 +268,12 @@ export default function AdminFinancePage() {
           <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Flux Amana</p>
           <p className="mt-2 text-3xl font-semibold text-brand-600">{formatXOF(wallet.total_amana)}</p>
         </article>
+        {(wallet.total_other ?? 0) > 0 ? (
+          <article className="premium-card border border-slate-200 bg-white p-5">
+            <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Autres moyens</p>
+            <p className="mt-2 text-3xl font-semibold text-brand-600">{formatXOF(wallet.total_other ?? 0)}</p>
+          </article>
+        ) : null}
         <article className="premium-card border border-slate-200 bg-white p-5">
           <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Total encaissé</p>
           <p className="mt-2 text-3xl font-semibold text-brand-600">{formatXOF(wallet.total_all)}</p>

@@ -16,7 +16,7 @@ export type OrderFulfillment = {
 export type Order = {
   id: string;
   status: "payment_pending" | "commande" | "preparation" | "livraison" | "recu" | "CLAIMED" | "annulee";
-  payment_mode: "nita" | "amana";
+  payment_mode: string;
   delivery_type: "standard" | "express_niamey";
   payment_reference: string | null;
   payment_status: "pending" | "paid";
@@ -40,7 +40,7 @@ export type CheckoutPayload = {
     unit_price: number;
     reseller_listing_id?: string;
   }>;
-  payment_mode: "nita" | "amana";
+  payment_mode: string;
   delivery_type: "standard" | "express_niamey";
   transaction_code?: string;
   currency?: string;
@@ -70,7 +70,7 @@ export type ReceiptItem = {
 export type Receipt = {
   order_id: string;
   customer_name: string;
-  payment_mode: "nita" | "amana";
+  payment_mode: string;
   payment_reference: string | null;
   payment_status: "pending" | "paid";
   currency: string;
@@ -104,14 +104,20 @@ export type ReceiptVerifyResult = {
 
 export type PaymentIntent = {
   order_id: string;
-  payment_mode: "nita" | "amana";
+  payment_mode: string;
   payment_reference: string;
   amount: number;
   currency: string;
   payment_url: string;
   qr_payload: string;
   expires_in_seconds: number;
-  /** Numero AMAZER qui recoit les transferts Nita, si configure par l'admin. */
+  /** Moyen choisi : ce que le client voit pour payer. */
+  method_name?: string | null;
+  method_kind?: string;
+  account_number?: string | null;
+  account_name?: string | null;
+  instructions?: string | null;
+  /** Numero AMAZER general. */
   platform_wallet_phone?: string | null;
 };
 

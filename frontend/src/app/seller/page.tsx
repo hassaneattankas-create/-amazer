@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useState } from "react";
+import { useCallback, Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PaymentMethodPicker, usePaymentMethods } from "@/components/payment/PaymentMethodPicker";
+import { PaymentRecipient } from "@/components/payment/PaymentRecipient";
 import { GalleryMediaField, SingleMediaField } from "@/components/seller/MediaFields";
 import {
   RoomTypesEditor,
@@ -184,7 +186,7 @@ function SellerPageContent() {
   const [showPayForm, setShowPayForm] = useState(false);
   const [nowMs, setNowMs] = useState<number | null>(null);
   const [subscriptionForm, setSubscriptionForm] = useState<{
-    payment_mode: "nita" | "amana";
+    payment_mode: string;
     transaction_reference: string;
     months: string;
   }>({
@@ -408,6 +410,9 @@ function SellerPageContent() {
       : "";
   const latestSubscriptionPayment = subscriptionPaymentRequests[0] ?? null;
   const paymentDestination = publicFinance?.platform_wallet_phone || "";
+  const { data: paymentMethods } = usePaymentMethods();
+  const subscriptionMethod = paymentMethods?.find((method) => method.code === subscriptionForm.payment_mode);
+  const chooseSubscriptionMethod = useCallback((code: string) => setSubscriptionForm((prev) => ({ ...prev, payment_mode: code })), []);
   const selectedSubscriptionMonths = Math.max(1, Math.min(12, Number(subscriptionForm.months || 1)));
   const selectedSubscriptionAmount = visibleMonthlyFee * selectedSubscriptionMonths;
 
@@ -529,33 +534,17 @@ function SellerPageContent() {
             </div>
             <div>
               <p className="text-sm font-medium text-ink-800">Moyen de paiement</p>
-              <div className="mt-1 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Moyen de paiement">
-                {(["nita", "amana"] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    role="radio"
-                    aria-checked={subscriptionForm.payment_mode === mode}
-                    onClick={() => setSubscriptionForm((prev) => ({ ...prev, payment_mode: mode }))}
-                    className={`min-h-11 rounded-field border text-sm font-semibold ${
-                      subscriptionForm.payment_mode === mode ? "border-ink-900 bg-ink-900 text-white" : "border-border bg-card text-ink-800"
-                    }`}
-                  >
-                    {mode === "nita" ? "Nita" : "Amana"}
-                  </button>
-                ))}
+              <div className="mt-1">
+                <PaymentMethodPicker value={subscriptionForm.payment_mode} onChange={chooseSubscriptionMethod} />
               </div>
             </div>
-            <div className="rounded-field bg-surface-1 p-3 text-sm text-ink-800">
-              {paymentDestination ? (
-                <>
-                  Envoyez <span className="text-lg font-bold text-ink-900">{formatXOF(selectedSubscriptionAmount)}</span> au{" "}
-                  <span className="text-lg font-bold text-ink-900">{paymentDestination}</span>
-                </>
-              ) : (
-                <>Le numéro de paiement AMAZER n&apos;est pas encore affiché : contactez le support avant de payer.</>
-              )}
-            </div>
+            <PaymentRecipient
+              amount={selectedSubscriptionAmount}
+              methodName={subscriptionMethod?.name ?? "transfert"}
+              accountNumber={subscriptionMethod?.account_number || paymentDestination || null}
+              accountName={subscriptionMethod?.account_name}
+              instructions={subscriptionMethod?.instructions}
+            />
             <label className={labelClass}>
               Référence du paiement (reçue par SMS)
               <input

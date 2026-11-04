@@ -74,6 +74,7 @@ export type FinanceSummary = {
 export type WalletSummary = {
   total_nita: number;
   total_amana: number;
+  total_other?: number;
   total_cash_on_delivery: number;
   total_all: number;
   amazer_commission_total: number;

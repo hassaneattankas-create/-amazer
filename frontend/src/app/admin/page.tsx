@@ -44,7 +44,7 @@ export default function AdminHomePage() {
     {
       href: "/admin/finance",
       label: "Paiements de commandes à valider",
-      hint: "Nita : comparez la référence du client avec votre relevé.",
+      hint: "Comparez la référence du client avec votre relevé.",
       icon: CreditCard,
       count: orders.isSuccess ? allOrders.filter((o) => (o.payment_status ?? "paid") !== "paid" && o.status !== "annulee").length : null,
       urgent: true,
