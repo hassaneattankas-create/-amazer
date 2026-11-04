@@ -30,7 +30,7 @@ export function AdminPinGate({ onVerified }: { onVerified: () => void }) {
         <ShieldCheck className="h-5 w-5 text-brand-600" aria-hidden="true" />
         Vérification admin
       </h1>
-      <p className="mt-1 text-sm text-ink-600">Une seule saisie ouvre tout l&apos;espace admin pendant 30 minutes.</p>
+      <p className="mt-1 text-sm text-ink-600">Une seule saisie suffit : l&apos;espace admin reste ouvert sur cet appareil.</p>
       <form
         className="mt-4 flex flex-col gap-3"
         onSubmit={(event) => {
