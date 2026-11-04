@@ -111,7 +111,7 @@ Connexion admin:
 
 Verification finance:
 
-- PIN: `9008`
+- PIN : celui réglé sur le serveur
 - date secondaire: `07/11/03`
 
 Etapes:

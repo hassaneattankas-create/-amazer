@@ -154,7 +154,7 @@ Pour les pages finance, tarifs et utilisateurs:
 Informations actuelles:
 
 - compte admin: `Amazer.niger@gmail.com`
-- PIN finance: `9008`
+- PIN finance : celui réglé sur le serveur
 - cle secondaire: `07/11/03`
 
 Si plusieurs essais echouent d'affilee, attendre quelques minutes avant de recommencer, car la verification est limitee pour la securite.

@@ -45,7 +45,7 @@ Variables minimales a garder:
 - `DATABASE_URL=...`
 - `JWT_SECRET_KEY=...`
 - `ADMIN_EMAIL=Amazer.niger@gmail.com`
-- `ADMIN_FINANCE_PIN=9008`
+- `ADMIN_FINANCE_PIN=<votre code>`
 - `ADMIN_BIRTH_DATE=07/11/03`
 - `PAYMENT_ENCRYPTION_KEY=...`
 - `CORS_ALLOWED_ORIGINS=https://amazerniger.vercel.app,https://amazerniger-hub-amazer.vercel.app,https://amazerapp.com,https://www.amazerapp.com,...`
@@ -85,7 +85,7 @@ Compte admin actuel:
 
 Verification finance:
 
-- PIN admin: `9008`
+- PIN admin : celui réglé sur le serveur
 - cle secondaire: `07/11/03`
 
 Parcours:
@@ -93,7 +93,7 @@ Parcours:
 1. se connecter
 2. ouvrir `/admin`
 3. ouvrir `Admin Finance`
-4. saisir `9008`
+4. saisir le code PIN
 5. saisir `07/11/03`
 
 Si tu inverses les deux champs, l'interface actuelle essaie maintenant de corriger automatiquement.
