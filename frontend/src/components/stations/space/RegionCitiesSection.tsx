@@ -23,7 +23,7 @@ function stationCount(city: RegionCity): string {
 
 function cityMeta(city: RegionCity): string {
   const parts = [city.brand_name, stationCount(city)];
-  if (city.totals.to_confirm > 0) parts.push(`${city.totals.to_confirm} à confirmer`);
+  if (city.totals.to_confirm > 0) parts.push(`${city.totals.to_confirm} à renseigner`);
   return parts.join(" · ");
 }
 

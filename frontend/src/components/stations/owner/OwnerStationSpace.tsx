@@ -58,7 +58,7 @@ export function OwnerStationSpace({ vitrine }: OwnerStationSpaceProps) {
           headingLevel={2}
           icon={<LayoutGrid className="h-5 w-5" />}
           title="Vue d'ensemble"
-          meta={toConfirm ? `${toConfirm} à confirmer` : undefined}
+          meta={toConfirm ? `${toConfirm} à renseigner` : undefined}
           tone="warning"
         >
           <OwnerOverview

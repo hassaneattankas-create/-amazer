@@ -67,7 +67,7 @@ export function RegionSummary({ city }: CityProps) {
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <Tile label="À jour" value={`${t.fresh}/${t.stations}`} />
-        <Tile label="À confirmer" value={String(t.to_confirm)} />
+        <Tile label="À renseigner" value={String(t.to_confirm)} />
         <Tile label="En rupture" value={String(t.out)} hint="au moins un carburant" />
         <Tile label="Sans gérant" value={String(t.without_manager)} />
         <Tile label="Retours ouverts" value={String(t.open_reports)} />

@@ -358,3 +358,26 @@ def test_expired_subscription_suspends_city_and_manager_writes(db: Session, chai
         space.region_add_manager(FuelManagerCreate(outlet_id=plateau.id, email="neo@test.ne"), None, db, chef)
     # Lecture toujours possible.
     assert space.station_deliveries(plateau.id, db, ali) == []
+
+
+def test_customer_report_notifies_the_manager_then_the_city_then_the_owner(db: Session, sent) -> None:
+    owner, profile = brand(db, "alerte")
+    plateau = route.create_outlet(FuelOutletCreate(name="Plateau", city="Niamey"), None, db, owner)
+    person(db, "ali")
+    route.add_fuel_manager(FuelManagerCreate(outlet_id=plateau.id, email="ali@test.ne"), None, db, owner)
+    sent.clear()
+    route.report_station(StationReportCreate(vendor_id=profile.vendor_id, outlet_id=plateau.id, kind="closed"), None, db)
+    assert [(user_id, title) for user_id, title, _body in sent] == [("ali", "Nouveau retour client")]
+
+    koira = route.create_outlet(FuelOutletCreate(name="Koira", city="Maradi"), None, db, owner)
+    sent.clear()
+    route.report_station(StationReportCreate(vendor_id=profile.vendor_id, outlet_id=koira.id, kind="other"), None, db)
+    assert [user_id for user_id, _t, body in sent] == ["alerte"] and "/seller/dashboard" in sent[0][2]
+
+
+def test_closed_station_refuses_writes_for_everyone_until_reopened(db: Session, sent) -> None:
+    owner, _profile = brand(db, "ferme")
+    plateau = route.create_outlet(FuelOutletCreate(name="Plateau", city="Niamey"), None, db, owner)
+    route.update_outlet(plateau.id, FuelOutletUpdate(is_active=False), None, db, owner)
+    with pytest.raises(ForbiddenError):
+        space.update_station_info(plateau.id, StationInfoUpdate(opening_hours="24 h/24"), None, db, owner)

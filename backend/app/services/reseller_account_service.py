@@ -23,7 +23,7 @@ def _aware(value: datetime | None) -> datetime | None:
 
 
 def subscription_active(db: Session, user_id: str | None, now: datetime | None = None) -> bool:
-    """Actif si l'abonnement est paye (ou en essai) jusqu'a une date future, ou si l'admin l'a rendu gratuit (0 XOF)."""
+    """Actif si l'abonnement est paye jusqu'a une date future, ou si l'admin l'a rendu gratuit (0 XOF)."""
     if not user_id:
         return False
     fee, _percent = reseller_terms(db)
@@ -35,16 +35,11 @@ def subscription_active(db: Session, user_id: str | None, now: datetime | None =
 
 
 def ensure_account(db: Session, user_id: str) -> ResellerAccount:
-    """Cree le compte revendeur au premier usage, avec l'essai gratuit vendeur s'il est active."""
+    """Cree le compte revendeur au premier usage, sans jour d'essai : il s'active au premier paiement."""
     account = db.get(ResellerAccount, user_id)
     if account is not None:
         return account
-    settings = get_or_create_global_settings(db)
-    trial_days = int(getattr(settings, "seller_trial_days", 0) or 0)
-    account = ResellerAccount(
-        user_id=user_id,
-        paid_until=datetime.now(UTC) + timedelta(days=trial_days) if trial_days > 0 else None,
-    )
+    account = ResellerAccount(user_id=user_id, paid_until=None)
     db.add(account)
     db.flush()
     return account

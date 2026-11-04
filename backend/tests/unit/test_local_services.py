@@ -54,14 +54,15 @@ def test_scheduled_period_uses_niamey_time_and_ends_by_itself() -> None:
     assert svc.duty_label(profile, datetime(2026, 10, 21, 12, 0, tzinfo=UTC)) == "De garde jusqu'au 27 oct."
 
 
-def test_fuel_information_older_than_the_freshness_delay_is_not_trusted() -> None:
+def test_fuel_information_stays_valid_until_the_station_changes_it() -> None:
     now = datetime(2026, 10, 21, 12, 0, tzinfo=UTC)
     fresh = _p(service_kind="fuel_station", fuel_status={"super": "available", "gaz": "out"}, fuel_updated_at=now - timedelta(hours=2))
-    stale = _p(service_kind="fuel_station", fuel_status={"super": "available"}, fuel_updated_at=now - timedelta(hours=5))
+    old = _p(service_kind="fuel_station", fuel_status={"super": "available"}, fuel_updated_at=now - timedelta(days=9))
+    never = _p(service_kind="fuel_station", fuel_status={"super": "available"}, fuel_updated_at=None)
     assert svc.has_fuel(fresh, "super", now) and not svc.has_fuel(fresh, "gaz", now)
-    assert not svc.has_fuel(stale, None, now)
-    # Delai regle par l'admin (6 h) : la meme information reste valable.
-    assert svc.has_fuel(stale, None, now, svc.fresh_hours(SimpleNamespace(fuel_fresh_hours=6)))
+    # Plus de delai d'expiration : seule une station jamais renseignee reste sans information.
+    assert svc.fuel_is_fresh(old, now) and svc.has_fuel(old, None, now)
+    assert not svc.fuel_is_fresh(never, now) and not svc.has_fuel(never, None, now)
     assert svc.fresh_hours(None) == 4 and svc.fresh_hours(SimpleNamespace(fuel_fresh_hours=0)) == 4
     # Stock faible : il en reste, la station est utile.
     low = _p(service_kind="fuel_station", fuel_status={"gasoil": "low"}, fuel_updated_at=now)
@@ -89,9 +90,10 @@ def test_delivery_number_only_in_served_cities_and_per_service() -> None:
     assert svc.delivery_phone(_p(city=" NIAMEY "), settings) == "+227 90 00 00 01"
     gas = _p(service_kind="fuel_station", fuel_status={"gaz": "available"}, fuel_updated_at=datetime.now(UTC))
     assert svc.delivery_phone(gas, settings) == "+227 90 00 00 02"
-    # Stations : seul le gaz se livre (pas de numero sans gaz disponible et recent).
+    # Stations : seul le gaz se livre (pas de numero sans gaz disponible).
     assert svc.delivery_phone(_p(service_kind="fuel_station", fuel_status={"gaz": "out", "super": "available"}, fuel_updated_at=datetime.now(UTC)), settings) is None
-    assert svc.delivery_phone(_p(service_kind="fuel_station", fuel_status={"gaz": "available"}, fuel_updated_at=datetime.now(UTC) - timedelta(hours=8)), settings) is None
+    assert svc.delivery_phone(_p(service_kind="fuel_station", fuel_status={"gaz": "available"}, fuel_updated_at=datetime.now(UTC) - timedelta(hours=8)), settings) == "+227 90 00 00 02"
+    assert svc.delivery_phone(_p(service_kind="fuel_station", fuel_status={"gaz": "available"}, fuel_updated_at=None), settings) is None
     assert svc.delivery_phone(_p(city="Maradi"), settings) is None
     assert svc.delivery_phone(_p(), SimpleNamespace(pharmacy_delivery_phone="  ", fuel_delivery_phone=None)) is None
 
@@ -163,10 +165,10 @@ def test_scheduled_duty_validation(db: Session) -> None:
     assert not cleared.on_duty_now and cleared.duty_end is None
 
 
-def test_station_updates_fuel_and_only_fresh_available_stations_are_listed(db: Session) -> None:
+def test_station_updates_fuel_and_available_stations_are_listed(db: Session) -> None:
     user, profile = shop(db, "station-a", "fuel_station")
     _, other = shop(db, "station-b", "fuel_station")
-    other.fuel_status, other.fuel_updated_at = {"super": "available"}, datetime.now(UTC) - timedelta(hours=8)
+    other.fuel_status, other.fuel_updated_at = {"super": "available"}, None
     db.commit()
 
     status = route.update_service_status(ServiceStatusUpdate(fuel=FuelStatusSchema(super="available", gaz="out")), None, db, user)
@@ -176,7 +178,7 @@ def test_station_updates_fuel_and_only_fresh_available_stations_are_listed(db: S
     assert (status.fuel.super, status.fuel.gasoil, status.fuel.gaz) == ("available", "available", "out")
 
     available = route.list_stations(db, city=None, fuel="super", available=True)
-    assert [i.business_name for i in available.items] == ["Commerce station-a"]  # station-b : information trop ancienne
+    assert [i.business_name for i in available.items] == ["Commerce station-a"]  # station-b : jamais renseignee
     assert route.list_stations(db, city=None, fuel="gaz", available=True).items == []
     everything = route.list_stations(db, city=None, fuel=None, available=False)
     assert [i.business_name for i in everything.items] == ["Commerce station-a", "Commerce station-b"]
@@ -248,7 +250,7 @@ def test_only_the_brand_manages_its_outlets(db: Session) -> None:
 
 # ---------------------------------------------------------------- prix du reseau
 
-def test_network_price_includes_three_stations_then_degressive_and_capped_by_the_national_flat() -> None:
+def test_network_price_includes_three_stations_then_degressive_without_any_cap() -> None:
     from app.services.fuel_network_pricing import price_for
 
     settings = SimpleNamespace(fuel_included_outlets=3, fuel_tier1_price=2000, fuel_tier2_price=1500, fuel_tier3_price=1000, fuel_network_flat=50000)
@@ -257,10 +259,9 @@ def test_network_price_includes_three_stations_then_degressive_and_capped_by_the
     assert (p5.extra, p5.total, p5.next_station_price) == (4000, 19000, 2000)
     p12 = price_for(settings, 15000, 12)  # 7 x 2000 + 2 x 1500
     assert p12.total == 15000 + 14000 + 3000
+    # Le reglage de l'ancien forfait national (50 000) n'a plus aucun effet.
     big = price_for(settings, 15000, 60)
-    assert big.capped and big.total == 50000 and big.next_station_price == 0  # forfait national : stations illimitees
-    no_cap = price_for(SimpleNamespace(**{**settings.__dict__, "fuel_network_flat": 0}), 15000, 40)
-    assert not no_cap.capped and no_cap.total == 15000 + 7 * 2000 + 20 * 1500 + 10 * 1000
+    assert not big.capped and big.total == 15000 + 7 * 2000 + 20 * 1500 + 30 * 1000 and big.next_station_price == 1000
 
 
 def test_brand_subscription_follows_its_stations_unless_a_price_was_negotiated(db: Session) -> None:
@@ -388,7 +389,7 @@ def test_stale_stations_remind_their_manager_once_then_the_owner(db: Session, se
     sent.clear()
     now = datetime.now(UTC)
     for outlet in db.scalars(select(FuelOutlet)).all():
-        outlet.fuel_status, outlet.fuel_updated_at = {"super": "available"}, now - timedelta(hours=5)
+        outlet.fuel_status, outlet.fuel_updated_at = None, None  # jamais renseignees
     db.commit()
 
     assert station_tasks.send_station_reminders(db, now) == 2
@@ -397,11 +398,11 @@ def test_stale_stations_remind_their_manager_once_then_the_owner(db: Session, se
     assert "Fleuve" in targets["brand2"] and "/seller/dashboard" in targets["brand2"]
     sent.clear()
     assert station_tasks.send_station_reminders(db, now + timedelta(hours=1)) == 0  # deja relancees
-    # Nouvelle declaration puis de nouveau perimee : nouvelle relance.
-    outlet = db.get(FuelOutlet, a.id)
-    outlet.fuel_updated_at = now + timedelta(hours=2)
+    # Une fois renseignee, une station n'est plus relancee, meme des jours plus tard.
+    for outlet in db.scalars(select(FuelOutlet)).all():
+        outlet.fuel_status, outlet.fuel_updated_at = {"super": "available"}, now
     db.commit()
-    assert station_tasks.send_station_reminders(db, now + timedelta(hours=7)) == 1
+    assert station_tasks.send_station_reminders(db, now + timedelta(days=5)) == 0
 
 
 def test_monthly_report_counts_last_month_once(db: Session, sent) -> None:
@@ -428,18 +429,17 @@ def _small_tiers(db: Session) -> None:
     db.commit()
 
 
-def test_network_tools_at_every_tier_and_export_only_for_enterprise(db: Session, sent) -> None:
+def test_all_tools_are_open_at_every_tier(db: Session, sent) -> None:
     _small_tiers(db)
     owner, _ = shop(db, "net", "fuel_station")
     a = route.create_outlet(FuelOutletCreate(name="Plateau", city="Niamey"), None, db, owner)
     plan = route.my_fuel_plan(db, owner)
-    # Tableau de bord et responsables de ville ouverts des le palier Essentiel ; export reserve a Entreprise.
-    assert (plan.level, plan.name, plan.network_tools, plan.export, plan.network_from) == (1, "Essentiel", True, False, 2)
+    # Tous les outils, export compris, sont ouverts des le palier Essentiel.
+    assert (plan.level, plan.name, plan.network_tools, plan.export, plan.network_from) == (1, "Essentiel", True, True, 2)
     assert route.my_fuel_dashboard(db, owner).stations == 1
     with pytest.raises(ValidationDomainError):  # compte inexistant (plus de refus lie au palier)
         route.add_region_manager(RegionManagerCreate(city="Niamey", email="x@test.ne"), None, db, owner)
-    with pytest.raises(ForbiddenError):
-        route.export_fuel_data(db, owner, kind="history")
+    assert "attachment" in route.export_fuel_data(db, owner, kind="history").headers["content-disposition"]
 
     b = route.create_outlet(FuelOutletCreate(name="Koira", city="Niamey"), None, db, owner)
     route.create_outlet(FuelOutletCreate(name="Centre", city="Maradi"), None, db, owner)  # 3 stations : Entreprise
@@ -447,7 +447,7 @@ def test_network_tools_at_every_tier_and_export_only_for_enterprise(db: Session,
     now = datetime.now(UTC)
     outlet_a, outlet_b = db.get(FuelOutlet, a.id), db.get(FuelOutlet, b.id)
     outlet_a.fuel_status, outlet_a.fuel_updated_at = {"gasoil": "out"}, now
-    outlet_b.fuel_status, outlet_b.fuel_updated_at = {"super": "available"}, now - timedelta(hours=9)
+    outlet_b.fuel_status, outlet_b.fuel_updated_at = {"super": "available"}, None
     db.add(FuelStatusChange(vendor_id=outlet_a.vendor_id, outlet_id=a.id, fuel="gasoil", old_state="available", new_state="out", user_id="net", created_at=now - timedelta(hours=30)))
     db.commit()
     board = route.my_fuel_dashboard(db, owner)
@@ -474,13 +474,12 @@ def test_network_tools_at_every_tier_and_export_only_for_enterprise(db: Session,
     assert text.startswith("\ufeffDate;Heure (Niamey);Station") and "Plateau;Niamey;Gasoil;Disponible;Rupture" in text
     assert "attachment" in export.headers["content-disposition"]
 
-    # Retour a 1 station : export coupe, mais le responsable garde ses villes (plus de palier).
+    # Retour a 1 station : le responsable garde ses villes et l'export reste ouvert.
     for outlet in db.scalars(select(FuelOutlet).where(FuelOutlet.id != a.id)).all():
         outlet.is_active = False
     db.commit()
-    assert sorted((o.name, o.can_update) for o in route.my_managed_outlets(db, chef)) == [("Koira", False), ("Plateau", True)]
-    with pytest.raises(ForbiddenError):
-        route.export_fuel_data(db, owner, kind="stats")
+    assert sorted((o.name, o.can_update, o.can_resolve) for o in route.my_managed_outlets(db, chef)) == [("Koira", False, True), ("Plateau", True, True)]
+    assert route.export_fuel_data(db, owner, kind="stats").body
 
 
 def test_region_manager_receives_reminders_for_stations_without_manager(db: Session, sent) -> None:

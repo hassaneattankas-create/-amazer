@@ -144,7 +144,7 @@ def _require_subscription(db: Session, user_id: str) -> None:
     ensure_account(db, user_id)
     if not subscription_active(db, user_id):
         fee, _percent = reseller_terms(db)
-        db.commit()  # garde le compte cree (et l'essai eventuel)
+        db.commit()  # garde le compte cree : il pourra payer quand il voudra
         raise ConflictError(
             f"Abonnement revendeur requis ({int(fee)} XOF par mois). Payez-le dans « Revendre » pour publier."
         )

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Lock } from "lucide-react";
+import Link from "next/link";
+import { Download } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -18,7 +19,6 @@ const EXPORTS = [
 
 function priceLine(network: FuelNetwork): string {
   if (network.negotiated != null) return `Prix négocié : ${formatXOF(network.negotiated)} par mois, toutes stations comprises.`;
-  if (network.capped) return `Forfait réseau national : ${formatXOF(network.total)} par mois, stations illimitées.`;
   // extra = montant total des stations au-delà des incluses (pas un prix unitaire).
   const included = `${network.included} station${network.included > 1 ? "s" : ""} incluse${network.included > 1 ? "s" : ""}`;
   const beyond = Math.max(0, network.stations - network.included);
@@ -56,7 +56,7 @@ function ExportButtons() {
   );
 }
 
-/** Palier, prix de l'abonnement et export Excel (offre Entreprise). */
+/** Palier, prix de l'abonnement et export pour Excel (ouvert à toutes les marques). */
 export function SubscriptionSection() {
   const plan = useQuery({ queryKey: ["fuel-plan"], queryFn: getFuelPlan });
   const network = useQuery({ queryKey: ["fuel-network"], queryFn: getFuelNetwork });
@@ -65,7 +65,10 @@ export function SubscriptionSection() {
   if (!plan.data || !network.data) {
     return (
       <div className="flex flex-wrap items-center gap-2 rounded-field bg-surface-1 p-3 text-sm">
-        <p className="text-ink-800">Abonnement indisponible pour le moment.</p>
+        <p className="text-ink-800">Abonnement expiré ou indisponible pour le moment.</p>
+        <Button asChild size="sm" className="min-h-11">
+          <Link href="/seller">Voir mon abonnement</Link>
+        </Button>
         <Button
           type="button"
           size="sm"
@@ -91,14 +94,7 @@ export function SubscriptionSection() {
         </p>
         <p className="mt-1 text-ink-800">{priceLine(network.data)}</p>
       </div>
-      {plan.data.export ? (
-        <ExportButtons />
-      ) : (
-        <p className="flex items-center gap-2 text-ink-700">
-          <Lock className="h-4 w-4 shrink-0 text-ink-500" aria-hidden="true" />
-          Export Excel sur 12 mois : à partir de {plan.data.enterprise_from} stations.
-        </p>
-      )}
+      <ExportButtons />
     </div>
   );
 }

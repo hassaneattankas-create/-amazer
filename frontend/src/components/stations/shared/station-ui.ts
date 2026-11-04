@@ -37,7 +37,7 @@ export function stationFreshness(
   if (station.is_active === false) return { label: "Fermée", tone: "default" };
   if (!station.fuel_updated_at) return { label: "Jamais renseignée", tone: "danger" };
   if (station.fuel_fresh) return { label: `À jour · ${timeAgo(station.fuel_updated_at, now) ?? ""}`.trim(), tone: "default" };
-  return { label: "À confirmer", tone: "warning" };
+  return { label: "À renseigner", tone: "warning" };
 }
 
 /** « 15 000 L ». */

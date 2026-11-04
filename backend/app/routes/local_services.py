@@ -657,6 +657,8 @@ def report_station(
         outlet_id = outlet.id
     db.add(StationReport(vendor_id=vendor.id, outlet_id=outlet_id, kind=payload.kind, comment=payload.comment or None))
     db.commit()
+    sa.notify_station_report(db, vendor.id, outlet_id)
+    db.commit()
 
 
 @router.get("/seller/station-reports", response_model=list[StationReportItem])
@@ -776,6 +778,7 @@ def _managed_response(
         fuel_fresh=svc.fuel_is_fresh(outlet, now, hours),
         fuel_updated_at=updated.isoformat() if updated else None,
         can_update=bool(outlet.is_active) and can_publish,
+        can_resolve=can_publish,
         fresh_hours=hours,
         via_region=via_region,
         info=sa.station_info(outlet),
@@ -1087,7 +1090,6 @@ def export_fuel_data(
 ) -> Response:
     """Export Excel sur 12 mois (palier Entreprise) : historique des disponibilites ou statistiques par jour."""
     profile = _station_profile(db, current_user)
-    _plan_or_forbid(db, profile, get_or_create_global_settings(db), 3)
     outlets = {o.id: o for o in db.scalars(select(FuelOutlet).where(FuelOutlet.vendor_id == profile.vendor_id)).all()}
     labels = {"available": "Disponible", "low": "Stock faible", "out": "Rupture"}
     fuels = {"super": "Super", "gasoil": "Gasoil", "gaz": "Gaz"}

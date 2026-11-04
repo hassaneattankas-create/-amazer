@@ -44,12 +44,12 @@ def test_payment_extends_from_current_end_date() -> None:
     assert expired.paid_until == NOW + timedelta(days=30)
 
 
-def test_new_account_gets_the_free_trial(monkeypatch) -> None:
+def test_new_reseller_has_no_free_trial_and_stays_inactive_until_paid(monkeypatch) -> None:
     monkeypatch.setattr(svc, "get_or_create_global_settings", lambda _db: _settings(trial=14))
     db = Mock()
     db.get.return_value = None
     account = svc.ensure_account(db, "u-1")
-    assert account.paid_until is not None and account.paid_until > datetime.now(UTC) + timedelta(days=13)
+    assert account.paid_until is None
 
 
 def test_publishing_requires_an_active_subscription(monkeypatch) -> None:

@@ -1,8 +1,8 @@
 """Prix de l'abonnement d'une marque de carburant selon son nombre de stations.
 
 Modele des grands acteurs (Yext, Shopify POS, logiciels de franchise) : l'abonnement de la marque
-inclut quelques stations, chaque station en plus coute un petit montant qui baisse avec le volume,
-et un forfait national plafonne le total. Un prix negocie (override admin) remplace tout le calcul.
+inclut quelques stations, chaque station en plus coute un petit montant qui baisse avec le volume.
+Il n'y a pas de plafond. Un prix negocie (override admin) remplace tout le calcul.
 Tous les montants se reglent dans Admin > Tarifs.
 """
 
@@ -50,7 +50,6 @@ def price_for(settings: object, base: float, stations: int) -> FuelNetworkPrice:
     """Prix mensuel d'une marque pour `stations` points de vente actifs."""
     included = int(_num(settings, "fuel_included_outlets", 3))
     tiers = (_num(settings, "fuel_tier1_price", 2000), _num(settings, "fuel_tier2_price", 1500), _num(settings, "fuel_tier3_price", 1000))
-    flat = _num(settings, "fuel_network_flat", 50000)
     tier1_until, tier2_until = tier_limits(settings)
 
     def station_price(rank: int) -> float:
@@ -64,22 +63,16 @@ def price_for(settings: object, base: float, stations: int) -> FuelNetworkPrice:
         return tiers[2]
 
     extra = sum(station_price(rank) for rank in range(1, max(0, stations) + 1))
-    raw = base + extra
-    # Le forfait national ne s'applique que s'il est plus avantageux (jamais en dessous de l'abonnement de base).
-    capped = flat > 0 and raw > max(flat, base)
-    total = max(flat, base) if capped else raw
-    next_price = 0.0 if capped else station_price(stations + 1)
-    if flat > 0 and not capped and raw + next_price > max(flat, base):
-        next_price = max(0.0, max(flat, base) - raw)
+    total = base + extra
     return FuelNetworkPrice(
         stations=max(0, stations),
         included=included,
         base=round(base, 2),
         extra=round(extra, 2),
         total=round(total, 2),
-        flat=flat,
-        capped=capped,
-        next_station_price=round(next_price, 2),
+        flat=0.0,
+        capped=False,
+        next_station_price=round(station_price(stations + 1), 2),
     )
 
 

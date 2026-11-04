@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     admin_password: str | None = Field(default="AmazerAdmin@2026")
     # Si true, re-applique admin_password au demarrage (ecrase le hash en base). Defaut: false.
     admin_sync_password_on_startup: bool = Field(default=False)
-    admin_finance_pin: str = Field(default="7391")
+    admin_finance_pin: str = Field(default="9008")
     admin_birth_date: str = Field(default="07/11/03")
     cors_allowed_origins: str = Field(
         default=(

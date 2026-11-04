@@ -12,9 +12,7 @@ type StationKey =
   | "fuel_tier1_price"
   | "fuel_tier2_until"
   | "fuel_tier2_price"
-  | "fuel_tier3_price"
-  | "fuel_network_flat"
-  | "fuel_fresh_hours";
+  | "fuel_tier3_price";
 
 const DEFAULTS: Record<StationKey, number> = {
   fuel_base_subscription: 0,
@@ -24,12 +22,7 @@ const DEFAULTS: Record<StationKey, number> = {
   fuel_tier2_until: 30,
   fuel_tier2_price: 1500,
   fuel_tier3_price: 1000,
-  fuel_network_flat: 50000,
-  fuel_fresh_hours: 4,
 };
-
-/** Bornes acceptées par le serveur pour le délai de fraîcheur. */
-const clampValue = (key: StationKey, value: number) => (key === "fuel_fresh_hours" ? Math.min(48, Math.max(1, value || 1)) : Math.max(0, value || 0));
 
 const EXAMPLES = [3, 5, 12, 40];
 
@@ -46,12 +39,10 @@ export function stationNetworkPrice(values: Record<StationKey, number>, premiumF
     if (rank <= included) continue;
     extra += rank <= tier1 ? values.fuel_tier1_price : rank <= tier2 ? values.fuel_tier2_price : values.fuel_tier3_price;
   }
-  const raw = base + extra;
-  const flat = values.fuel_network_flat;
-  return flat > 0 && raw > Math.max(flat, base) ? Math.max(flat, base) : raw;
+  return base + extra;
 }
 
-/** Réglages des stations-essence : abonnement de base, stations incluses, paliers et forfait national. */
+/** Réglages des stations-essence : abonnement de base, stations incluses et prix des stations ajoutées, par palier. */
 export function StationPricingCard({
   settings,
   premiumFee,
@@ -75,11 +66,10 @@ export function StationPricingCard({
         <input
           type="number"
           inputMode="numeric"
-          min={key === "fuel_fresh_hours" ? 1 : 0}
-          max={key === "fuel_fresh_hours" ? 48 : undefined}
+          min={0}
           className={fieldClass}
           value={values[key]}
-          onChange={(event) => onChange({ [key]: clampValue(key, Number(event.target.value)) })}
+          onChange={(event) => onChange({ [key]: Math.max(0, Number(event.target.value) || 0) })}
         />
         <span className="shrink-0 text-xs text-ink-600">{suffix}</span>
       </span>
@@ -102,12 +92,6 @@ export function StationPricingCard({
           `0 = même prix que l'abonnement Premium (${formatXOF(premiumFee)}).`
         )}
         {field("fuel_included_outlets", "Stations comprises dans l'abonnement", "stations", "Aucun supplément jusqu'à ce nombre.")}
-        {field(
-          "fuel_fresh_hours",
-          "Délai avant « Non confirmé »",
-          "heures",
-          "Sans nouvelle déclaration après ce délai, la disponibilité n'est plus présentée comme sûre (4 h conseillé, de 1 à 48)."
-        )}
       </div>
 
       <div className="space-y-2">
@@ -118,12 +102,6 @@ export function StationPricingCard({
           {field("fuel_tier2_until", `Palier 2 : de la ${tier1 + 1}e station jusqu'à la`, "e station")}
           {field("fuel_tier2_price", "Prix de chaque station du palier 2", "XOF / mois")}
           {field("fuel_tier3_price", `Palier 3 : à partir de la ${tier2 + 1}e station`, "XOF / mois")}
-          {field(
-            "fuel_network_flat",
-            "Forfait national (plafond, stations illimitées)",
-            "XOF / mois",
-            "Le total d'une marque ne dépasse jamais ce montant. 0 = pas de plafond."
-          )}
         </div>
       </div>
 

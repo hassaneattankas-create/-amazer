@@ -111,7 +111,7 @@ Connexion admin:
 
 Verification finance:
 
-- PIN: `7391`
+- PIN: `9008`
 - date secondaire: `07/11/03`
 
 Etapes:

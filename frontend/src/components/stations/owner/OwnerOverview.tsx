@@ -23,7 +23,7 @@ export type OwnerSummaryStripProps = {
 export function OwnerSummaryStrip({ dashboard, openReports, dashboardError, reportsError, onRetry }: OwnerSummaryStripProps) {
   const tiles = [
     { label: "Stations à jour", value: dashboard ? `${dashboard.fresh} / ${dashboard.stations}` : undefined, warn: false, failed: dashboardError },
-    { label: "À confirmer", value: dashboard?.to_confirm, warn: (dashboard?.to_confirm ?? 0) > 0, failed: dashboardError },
+    { label: "À renseigner", value: dashboard?.to_confirm, warn: (dashboard?.to_confirm ?? 0) > 0, failed: dashboardError },
     { label: "Sans gérant", value: dashboard?.without_manager, warn: (dashboard?.without_manager ?? 0) > 0, failed: dashboardError },
     { label: "Retours ouverts", value: openReports, warn: (openReports ?? 0) > 0, failed: reportsError },
   ];
@@ -135,7 +135,7 @@ export function OwnerOverview({ dashboard, isLoading, isError, onRetry }: OwnerO
         </dl>
       </div>
       <AlertList title="Ruptures depuis plus de 24 h" items={outages} />
-      <AlertList title="Stations à relancer" items={stale} />
+      <AlertList title="Stations à renseigner" items={stale} />
       {!outages.length && !stale.length ? <p className="text-sm text-ink-700">Aucune alerte : toutes les stations sont à jour.</p> : null}
     </div>
   );

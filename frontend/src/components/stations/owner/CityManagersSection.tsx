@@ -31,7 +31,7 @@ export function CityManagersSection({ cities }: { cities: string[] }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-ink-700">1. Désignez un responsable par ville · 2. Il nomme les gérants de ses stations.</p>
+      <p className="text-sm text-ink-700">1. Désignez un ou plusieurs responsables par ville · 2. Il nomme les gérants de ses stations.</p>
       <StationDataState
         items={query.data}
         isLoading={query.isPending}

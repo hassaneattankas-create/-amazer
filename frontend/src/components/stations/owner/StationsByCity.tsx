@@ -28,7 +28,7 @@ export function groupOutletsByCity(outlets: FuelOutlet[]): { city: string; outle
 function cityMeta(outlets: FuelOutlet[]): { text: string; warn: boolean } {
   const toConfirm = outlets.filter((o) => o.is_active && !o.fuel_fresh).length;
   const count = `${outlets.length} station${outlets.length > 1 ? "s" : ""}`;
-  return { text: toConfirm ? `${count} · ${toConfirm} à confirmer` : count, warn: toConfirm > 0 };
+  return { text: toConfirm ? `${count} · ${toConfirm} à renseigner` : count, warn: toConfirm > 0 };
 }
 
 export type StationsByCityProps = {

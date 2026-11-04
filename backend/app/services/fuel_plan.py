@@ -1,12 +1,11 @@
-"""Palier d'une marque de stations et outils qu'il debloque.
+"""Palier d'une marque de stations : il sert uniquement au prix de l'ajout de stations.
 
 Le palier suit le nombre de stations actives (seuils reglables dans Admin > Tarifs) :
 - 1 « Essentiel » : jusqu'a la fin du palier 1 (10 par defaut) ;
 - 2 « Reseau » : jusqu'a la fin du palier 2 (30) ;
-- 3 « Entreprise » : au-dela, ou tarif negocie — + export Excel (historique et statistiques sur 12 mois).
+- 3 « Entreprise » : au-dela, ou tarif negocie.
 
-A tous les paliers : gerants, responsables de ville, tableau de bord reseau, journal d'activite,
-livraisons, retours clients, relances et rapport mensuel. Seul l'export reste reserve a Entreprise.
+Tous les outils de gestion, export compris, sont ouverts a toutes les marques.
 """
 
 from __future__ import annotations
@@ -38,7 +37,8 @@ class FuelPlan:
 
     @property
     def export(self) -> bool:
-        return self.level >= 3
+        """Historique (compatibilite API) : l'export est ouvert a tous les paliers."""
+        return True
 
 
 def fuel_plan(db: Session, profile: SellerProfile, settings: object) -> FuelPlan:

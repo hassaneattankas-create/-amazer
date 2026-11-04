@@ -206,7 +206,7 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
       <p className="mt-3 text-xs text-ink-600">
         {kind === "pharmacy"
           ? "Appelez avant de vous déplacer. AMAZER ne vend pas de médicaments."
-          : `Informations données par les stations. Au-delà de ${data?.fresh_hours ?? 4} h, appelez pour confirmer.`}
+          : "Informations données par les stations, avec la date de leur dernière mise à jour."}
         {refreshedAt ? ` Actualisé à ${refreshedAt}.` : null}
         {deliveryCities.length ? ` Livraison AMAZER : ${deliveryCities.join(", ")}.` : null}
       </p>
@@ -234,7 +234,7 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
         ) : items.length ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map(({ item, distance }) => (
-              <LocalServiceCard key={item.outlet_id ?? item.vendor_id} item={item} kind={kind} distanceKm={distance} freshHours={data?.fresh_hours ?? 6} />
+              <LocalServiceCard key={item.outlet_id ?? item.vendor_id} item={item} kind={kind} distanceKm={distance} />
             ))}
           </div>
         ) : hasOfficial ? (

@@ -18,10 +18,11 @@ def test_signed_token_is_accepted_for_its_admin_only() -> None:
     assert not route.finance_pin_token_valid(token, "admin-2", now=1_000_000)
 
 
-def test_token_expires_after_thirty_minutes() -> None:
+def test_token_stays_valid_for_a_year() -> None:
     token = route.issue_finance_pin_token("admin-1", now=1_000_000)
-    assert route.finance_pin_token_valid(token, "admin-1", now=1_000_000 + 30 * 60)
-    assert not route.finance_pin_token_valid(token, "admin-1", now=1_000_000 + 30 * 60 + 1)
+    assert route.finance_pin_token_valid(token, "admin-1", now=1_000_000 + 30 * 24 * 60 * 60)
+    assert route.finance_pin_token_valid(token, "admin-1", now=1_000_000 + route.FINANCE_PIN_TTL_SECONDS)
+    assert not route.finance_pin_token_valid(token, "admin-1", now=1_000_000 + route.FINANCE_PIN_TTL_SECONDS + 1)
 
 
 @pytest.mark.parametrize("forged", ["1", "", "admin-1.9999999999.deadbeef", "admin-1.9999999999." + "0" * 48, "a.b.c"])

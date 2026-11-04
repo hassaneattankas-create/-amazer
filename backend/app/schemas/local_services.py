@@ -361,6 +361,8 @@ class ManagedOutlet(BaseModel):
     fuel_updated_at: str | None
     # False si l'abonnement de la marque a expire : les mises a jour sont suspendues.
     can_update: bool
+    # Traiter un retour reste possible sur une station fermee (rien n'est publie aux clients).
+    can_resolve: bool = False
     fresh_hours: int
     # Confiee via une region (responsable regional) plutot que directement.
     via_region: str | None = None

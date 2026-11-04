@@ -23,8 +23,6 @@ export type FuelAvailabilityEditorProps = {
   fuel: FuelStatus;
   fuelFresh: boolean;
   fuelUpdatedAt: string | null;
-  /** Durée de validité affichée (« À refaire dans les N h »). */
-  freshHours?: number;
   /** Une mise à jour est en cours : boutons désactivés et « Enregistrement… » affiché. */
   busy?: boolean;
   /** Écritures impossibles (station fermée, abonnement expiré) ; disabledReason explique pourquoi. */
@@ -44,7 +42,6 @@ export function FuelAvailabilityEditor({
   fuel,
   fuelFresh,
   fuelUpdatedAt,
-  freshHours,
   busy = false,
   disabled = false,
   disabledReason,
@@ -111,9 +108,7 @@ export function FuelAvailabilityEditor({
           {saving
             ? "Enregistrement…"
             : fuelUpdatedAt
-            ? fuelFresh
-              ? `Mis à jour ${ago}.${freshHours ? ` À refaire dans les ${freshHours} h.` : ""}`
-              : `Dernière mise à jour ${ago} : les clients la voient « non confirmée ».`
+            ? `Mis à jour ${ago}.`
             : "Indiquez les disponibilités : les clients les voient tout de suite."}
         </p>
         {fuelUpdatedAt ? (

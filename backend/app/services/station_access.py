@@ -108,11 +108,34 @@ def brand_can_publish(db: Session, vendor_id: str, now: datetime) -> bool:
 
 
 def ensure_writable(db: Session, outlet: FuelOutlet, role: str, now: datetime, *, allow_closed: bool = False) -> None:
-    """Ecritures suspendues si l'abonnement de la marque a expire, ou (sauf proprietaire) si la station est fermee."""
+    """Ecritures suspendues si l'abonnement de la marque a expire, ou si la station est fermee (a rouvrir d'abord)."""
     if not brand_can_publish(db, outlet.vendor_id, now):
         raise ForbiddenError(SUSPENDED_BRAND)
-    if role != "owner" and not allow_closed and not outlet.is_active:
+    if not allow_closed and not outlet.is_active:
         raise ForbiddenError(SUSPENDED_CLOSED)
+
+
+def notify_station_report(db: Session, vendor_id: str, outlet_id: str | None) -> None:
+    """Previent ceux qui traitent le retour : les gerants, sinon les responsables de la ville, sinon le proprietaire."""
+    from app.services.local_services import normalize_city
+    from app.services.station_tasks import _notify
+
+    outlet = db.get(FuelOutlet, outlet_id) if outlet_id else None
+    name = outlet.name if outlet is not None else None
+    title, body = "Nouveau retour client", f"Un client signale une erreur sur la station « {name} »." if name else "Un client signale une erreur sur votre station."
+    users: set[str] = set()
+    if outlet is not None:
+        users = set(db.scalars(select(FuelOutletManager.user_id).where(FuelOutletManager.outlet_id == outlet.id)).all())
+        if not users:
+            wanted = normalize_city(outlet.city)
+            users = {r.user_id for r in db.scalars(select(FuelRegionManager).where(FuelRegionManager.vendor_id == vendor_id)).all() if normalize_city(r.city) == wanted}
+    tag = f"station-report-{outlet_id or vendor_id}"
+    for user_id in users:
+        _notify(db, user_id, title, body, tag, "/gerant-station")
+    if not users:
+        owner_id = db.scalar(select(SellerProfile.user_id).where(SellerProfile.vendor_id == vendor_id))
+        if owner_id:
+            _notify(db, owner_id, title, body, tag, "/seller/dashboard")
 
 
 # ---------------------------------------------------------------- journal

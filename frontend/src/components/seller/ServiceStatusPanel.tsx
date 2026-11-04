@@ -209,9 +209,7 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
               )}
               {status.fuel_updated_at
-                ? status.fuel_fresh
-                  ? `Mis à jour ${timeAgo(status.fuel_updated_at)}.`
-                  : `Dernière mise à jour ${timeAgo(status.fuel_updated_at)} : les clients la voient « non confirmée ».`
+                ? `Mis à jour ${timeAgo(status.fuel_updated_at)}.`
                 : "Indiquez vos disponibilités : les clients les voient tout de suite."}
             </p>
             {status.fuel_updated_at ? (

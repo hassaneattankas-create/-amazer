@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 
 import { getBackendOriginFromEnv } from "@/lib/backend-origin";
 
+const PIN_TTL_SECONDS = 365 * 24 * 60 * 60;
+
 const BACKEND_ORIGIN = getBackendOriginFromEnv();
 
 export const runtime = "nodejs";
@@ -59,12 +61,12 @@ export async function POST(request: NextRequest): Promise<Response> {
     });
   }
 
-  // Jeton signe par le backend (lie a l'admin, expire en 30 min) : jamais un simple « 1 » falsifiable.
+  // Jeton signe par le backend (lie a l'admin, valable un an) : jamais un simple « 1 » falsifiable.
   const verified = (await upstream.json().catch(() => null)) as { token?: string; expires_in?: number } | null;
   if (!verified?.token) {
     return NextResponse.json({ detail: "Vérification du PIN impossible." }, { status: 502 });
   }
-  const response = NextResponse.json({ token: verified.token, expires_in: verified.expires_in ?? 1800 });
+  const response = NextResponse.json({ token: verified.token, expires_in: verified.expires_in ?? PIN_TTL_SECONDS });
   // En production, SameSite=None + Secure est requis pour que le cookie soit envoyé depuis l’APK
   // Capacitor (https://localhost) vers Vercel (cross-site). Avec Lax, les appels XHR ne portent pas le cookie.
   const isProd = process.env.NODE_ENV === "production";
@@ -74,7 +76,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? "none" : "lax",
-    maxAge: 30 * 60,
+    maxAge: verified.expires_in ?? PIN_TTL_SECONDS,
     path: "/",
   });
   return response;

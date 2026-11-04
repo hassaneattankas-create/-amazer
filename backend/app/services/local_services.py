@@ -92,14 +92,15 @@ def fresh_hours(settings: object | None) -> int:
 
 
 def fuel_is_fresh(profile: SellerProfile, now: datetime | None = None, hours: int | None = None) -> bool:
-    updated = _aware(getattr(profile, "fuel_updated_at", None))
-    if updated is None:
-        return False
-    return (now or datetime.now(UTC)) - updated <= timedelta(hours=hours or DEFAULT_FUEL_FRESH_HOURS)
+    """Vrai des que la station a renseigne ses disponibilites : plus de delai d'expiration.
+
+    Les clients voient la date de la derniere mise a jour. `now` et `hours` restent pour les appelants existants.
+    """
+    return _aware(getattr(profile, "fuel_updated_at", None)) is not None
 
 
 def has_fuel(profile: SellerProfile, fuel: str | None = None, now: datetime | None = None, hours: int | None = None) -> bool:
-    """Au moins un carburant (ou celui demande) disponible ou en stock faible, avec une information recente."""
+    """Au moins un carburant (ou celui demande) disponible ou en stock faible."""
     if getattr(profile, "service_kind", None) != "fuel_station" or not fuel_is_fresh(profile, now, hours):
         return False
     status = clean_fuel_status(getattr(profile, "fuel_status", None))

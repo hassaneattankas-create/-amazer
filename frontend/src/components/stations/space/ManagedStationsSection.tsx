@@ -31,7 +31,6 @@ function ManagedStationPanel({ outlet }: { outlet: ManagedOutlet }) {
             fuel={outlet.fuel}
             fuelFresh={outlet.fuel_fresh}
             fuelUpdatedAt={outlet.fuel_updated_at}
-            freshHours={outlet.fresh_hours}
             busy={actions.busy}
             disabled={disabled}
             onSetFuel={(fuel, state) => actions.setFuel.mutateAsync({ fuel, state })}
@@ -71,7 +70,7 @@ function ManagedStationPanel({ outlet }: { outlet: ManagedOutlet }) {
           meta={outlet.open_reports > 0 ? `${outlet.open_reports} ouvert${outlet.open_reports > 1 ? "s" : ""}` : undefined}
           tone="warning"
         >
-          <OutletReports outletId={outlet.id} actions={actions} disabled={disabled} />
+          <OutletReports outletId={outlet.id} actions={actions} disabled={!outlet.can_resolve} />
         </AccordionItem>
         <AccordionItem id="history" variant="row" headingLevel={4} title="Historique" icon={<Clock3 className={icon} />}>
           <OutletActivity outletId={outlet.id} />

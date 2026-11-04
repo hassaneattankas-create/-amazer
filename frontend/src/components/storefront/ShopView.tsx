@@ -397,12 +397,12 @@ export function ShopView({ vendorId }: { vendorId: string }) {
           </h2>
           <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {data.local_outlets.map((outlet) => (
-              <LocalServiceCard key={outlet.outlet_id ?? outlet.business_name} item={outlet} kind="fuel_station" freshHours={6} inShop />
+              <LocalServiceCard key={outlet.outlet_id ?? outlet.business_name} item={outlet} kind="fuel_station" inShop />
             ))}
           </div>
         </section>
       ) : data.local_service ? (
-        <LocalServiceCard item={data.local_service} kind={data.local_service.service_kind} freshHours={6} compact />
+        <LocalServiceCard item={data.local_service} kind={data.local_service.service_kind} compact />
       ) : null}
 
       {data.products.length || data.restaurant_menu.length || data.room_types.length ? (

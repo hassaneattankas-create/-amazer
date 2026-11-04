@@ -46,7 +46,7 @@ const PLANS: Plan[] = [
     key: "premium",
     name: "Premium",
     icon: Crown,
-    audience: "Hôtels, transport, pharmacies, stations-essence, entreprises",
+    audience: "Hôtels, transport, entreprises",
     price: (p) => p.seller_subscription_fee_premium,
     highlighted: true,
     features: () => [
@@ -54,9 +54,6 @@ const PLANS: Plan[] = [
       "Restaurant : menu et commandes en ligne",
       "Hôtel : réservation des chambres en ligne",
       "Transport : billets et places avec QR code",
-      "Pharmacie : vos gardes visibles par tout le Niger",
-      "Stations-essence : une station ou tout un réseau, avec des gérants par station",
-      "Stations : disponibilités, statistiques et commandes de gaz livrées",
       "Itinéraire Google Maps et livraison AMAZER à Niamey",
       "Site vitrine complet et badge vérifié",
       "Statistiques sur 30 jours et mise en avant Premium",

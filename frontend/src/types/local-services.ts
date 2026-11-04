@@ -31,7 +31,7 @@ export type LocalServiceItem = {
   on_duty: boolean;
   duty_label: string | null;
   fuel: FuelStatus;
-  /** Information carburant récente (moins de fresh_hours). */
+  /** Disponibilités déjà renseignées par la station. */
   fuel_fresh: boolean;
   fuel_updated_at: string | null;
   /** Stations : horaires en texte libre (ex. « 24 h/24 »). */
@@ -150,6 +150,8 @@ export type ManagedOutlet = {
   fuel_fresh: boolean;
   fuel_updated_at: string | null;
   can_update: boolean;
+  /** Traiter un retour reste possible sur une station fermée. */
+  can_resolve: boolean;
   fresh_hours: number;
   /** Station confiée via une ville (responsable régional). */
   via_region?: string | null;

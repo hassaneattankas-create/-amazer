@@ -223,7 +223,8 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
     )
 
 
-FINANCE_PIN_TTL_SECONDS = 30 * 60
+# Le proprietaire ne veut plus d'expiration de session admin : le PIN reste valable un an sur l'appareil.
+FINANCE_PIN_TTL_SECONDS = 365 * 24 * 60 * 60
 
 
 def _finance_pin_signature(user_id: str, expires_at: int) -> str:
@@ -232,7 +233,7 @@ def _finance_pin_signature(user_id: str, expires_at: int) -> str:
 
 
 def issue_finance_pin_token(user_id: str, now: int | None = None) -> str:
-    """Jeton signe « PIN finance verifie » : lie a l'admin, expire apres 30 minutes, infalsifiable sans le secret."""
+    """Jeton signe « PIN finance verifie » : lie a l'admin, valable un an, infalsifiable sans le secret."""
     expires_at = int(now if now is not None else time.time()) + FINANCE_PIN_TTL_SECONDS
     return f"{user_id}.{expires_at}.{_finance_pin_signature(user_id, expires_at)}"
 
@@ -488,7 +489,7 @@ def verify_admin_finance_pin(
         httponly=True,
         secure=settings.is_production(),
         samesite=same_site,
-        max_age=30 * 60,
+        max_age=FINANCE_PIN_TTL_SECONDS,
         path="/",
     )
     append_audit_log(
