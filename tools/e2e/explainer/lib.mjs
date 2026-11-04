@@ -35,11 +35,13 @@ const OVERLAY = () => {
     #xp-title b{font-size:34px;line-height:1.15;letter-spacing:-.01em}
     #xp-title span{font-size:18px;line-height:1.35;color:#FFB08A}
     #xp-title i{font-style:normal;font-weight:800;font-size:22px;letter-spacing:.08em;color:#FF4D00}
+    #xp-tick{position:absolute;left:0;top:0;width:1px;height:1px;background:rgba(255,255,255,.01);animation:xp-t .2s linear infinite alternate}
+    @keyframes xp-t{to{transform:translateX(1px)}}
     .xp-hide{display:none!important}`;
   document.head.append(style);
   const root = document.createElement("div");
   root.id = "xp-root";
-  root.innerHTML = `<div id="xp-ring"></div><div id="xp-caption"></div><div id="xp-title"></div>
+  root.innerHTML = `<div id="xp-tick"></div><div id="xp-ring"></div><div id="xp-caption"></div><div id="xp-title"></div>
     <svg id="xp-cursor" viewBox="0 0 24 24"><path d="M4 2l15 12-7 1 4 7-3 2-4-7-5 5z" fill="#fff" stroke="#0F172A" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
   document.body.append(root);
   // barre d'installation et bulle d'aide : hors sujet à l'image
@@ -51,13 +53,14 @@ const OVERLAY = () => {
 };
 
 export class Film {
-  constructor(name, { mocks, user } = {}) {
+  constructor(name, { mocks, user, onWrite } = {}) {
     this.name = name;
     this.dir = path.resolve("explainer/.work", name);
     fs.rmSync(this.dir, { recursive: true, force: true });
     fs.mkdirSync(this.dir, { recursive: true });
     this.mocks = mocks || [];
     this.user = user;
+    this.onWrite = onWrite;
     this.cues = [];
     this.pos = { x: 180, y: 300 };
   }

@@ -8,9 +8,20 @@ import { scenarios } from "./stations-data.mjs";
 const OUT = process.env.EXPLAINER_OUT || "C:/Users/User/Desktop/Videos AMAZER";
 const FORM = { selector: "button[type=submit]" };
 
+async function attempt(run) {
+  for (let i = 1; ; i += 1) {
+    try {
+      return await run();
+    } catch (err) {
+      if (i >= 3) throw err;
+      console.log(`  nouvel essai (${String(err.message).slice(0, 60)})`);
+    }
+  }
+}
+
 async function part(name, opts, scenes) {
   const out = path.resolve("explainer/.work", `${name}.mp4`);
-  await new Film(name, opts).make(scenes, out);
+  await attempt(() => new Film(name, opts).make(scenes, out));
   return out;
 }
 
@@ -46,20 +57,19 @@ async function stations() {
   const owner = { mocks: scenarios.owner.mocks, user: true };
   const city = { mocks: scenarios.city.mocks, user: true };
   const gerant = { ...gerantMocks(), user: true };
+  gerant.onWriteHandler = gerant.onWrite;
   const parts = [];
   parts.push(await part("st-intro", owner, [
     { say: "Cette vidéo vous montre comment gérer vos stations sur AMAZER. Il y a trois rôles : le propriétaire de la marque, le responsable de ville, et le gérant de station. Voyons ce que fait chacun.", caption: false, before: card("/seller/dashboard", "Gérer ses stations", "Propriétaire · Responsable de ville · Gérant") },
   ]));
-  const ownerPart = new Film("st-owner", owner);
-  ownerPart.onWrite = () => [];
-  await ownerPart.make([
+  await attempt(() => { const ownerPart = new Film("st-owner", owner); ownerPart.onWrite = () => []; return ownerPart.make([
     { say: "Le propriétaire se connecte à son compte. Il voit tout de suite l'état de ses stations.", before: (f) => f.goto("/seller/dashboard"), do: (f) => f.point("Stations à jour", { selector: "dt,p,span" }) },
     { say: "Son rôle est simple : nommer un responsable par ville. Il ouvre cette catégorie.", do: (f) => f.click("Responsables par ville") },
     { say: "Il écrit l'e-mail du responsable, puis il l'ajoute. Cette personne doit d'abord créer un compte AMAZER gratuit.", do: async (f) => { await f.type("responsable@exemple.com", "ibrahim@exemple.com"); await f.point("Ajouter un responsable", FORM); } },
     { say: "Ensuite, il suit tout. Dans Activité, il voit qui a fait quoi, et quand, dans toutes ses stations.", do: async (f) => { await f.click("Activité"); await f.scroll(160); } },
     { say: "Dans Stations par ville, il retrouve chaque station, ville par ville.", do: (f) => f.click("Stations par ville") },
     { say: "Et dans Abonnement, il voit son prix. Tous les outils sont compris : seul l'ajout de stations est facturé, selon les paliers.", do: (f) => f.click("Abonnement et export") },
-  ], path.resolve("explainer/.work/st-owner.mp4"));
+  ], path.resolve("explainer/.work/st-owner.mp4")); });
   parts.push(path.resolve("explainer/.work/st-owner.mp4"));
   parts.push(await part("st-city", city, [
     { say: "Voici maintenant le responsable de ville. Il se connecte avec son compte, et son Espace station s'ouvre directement.", before: (f) => f.goto("/gerant-station"), do: (f) => f.point("Mes villes", { selector: "h2" }) },
