@@ -169,6 +169,19 @@ export type StationManagerRef = { id: string; email: string; full_name: string |
 /** GET /station-space/me : décide si le menu affiche « Espace station ». */
 export type StationSpaceMe = { is_owner: boolean; owner_brand: string | null; cities: number; stations: number };
 
+/** Ce compte est responsable d'une ville ou gérant d'une station (propriétaire ou non). */
+export function hasStationSpace(me: StationSpaceMe | null | undefined): me is StationSpaceMe {
+  return Boolean(me && me.cities + me.stations > 0);
+}
+
+/** Résumé court pour le raccourci : « 2 villes · 1 station ». */
+export function stationSpaceSummary(me: StationSpaceMe): string {
+  const parts: string[] = [];
+  if (me.cities > 0) parts.push(`${me.cities} ${me.cities > 1 ? "villes" : "ville"}`);
+  if (me.stations > 0) parts.push(`${me.stations} ${me.stations > 1 ? "stations" : "station"}`);
+  return parts.join(" · ");
+}
+
 export type RegionTotals = {
   stations: number;
   fresh: number;

@@ -12,6 +12,7 @@ import { NotificationSettings } from "@/components/account/NotificationSettings"
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 import { MobileBuildStamp } from "@/components/MobileBuildStamp";
 import { OrderStepper } from "@/components/OrderStepper";
+import { StationSpaceShortcut } from "@/components/stations/StationSpaceShortcut";
 import { PasswordInput } from "@/components/PasswordInput";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -89,6 +90,7 @@ export default function DashboardPage() {
           {memberSince ? <p className="text-sm text-ink-600">Membre depuis le {memberSince}</p> : null}
         </div>
       </header>
+      <StationSpaceShortcut />
 
       {user?.id ? <AffiliateShareCard variant="client" /> : null}
 

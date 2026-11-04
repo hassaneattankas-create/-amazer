@@ -29,7 +29,18 @@ export function SpaceLoggedOut() {
   );
 }
 
-export function SpaceEmpty({ email }: { email?: string | null }) {
+export function SpaceEmpty({ email, isOwner = false }: { email?: string | null; isOwner?: boolean }) {
+  if (isOwner) {
+    return (
+      <div className="rounded-card border border-border bg-card p-5 text-center text-sm text-ink-700">
+        <p className="font-semibold text-ink-900">Vous êtes propriétaire de la marque.</p>
+        <p className="mt-1">Vos stations se gèrent depuis votre espace vendeur.</p>
+        <Button asChild className="mt-3 min-h-11">
+          <Link href="/seller/dashboard">Ouvrir mon espace</Link>
+        </Button>
+      </div>
+    );
+  }
   return (
     <div className="rounded-card border border-border bg-card p-5 text-sm text-ink-700">
       <p className="font-semibold text-ink-900">Aucune station ni ville ne vous est confiée pour l&apos;instant.</p>

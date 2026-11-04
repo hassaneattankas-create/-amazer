@@ -9,7 +9,7 @@ import { RegionCitiesSection } from "@/components/stations/space/RegionCitiesSec
 import { SpaceEmpty, SpaceLoadError, SpaceLoggedOut, SpaceSkeleton } from "@/components/stations/space/SpaceStates";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { listManagedOutlets } from "@/services/local-services-service";
-import { listRegionCities, stationKeys } from "@/services/station-space-service";
+import { getStationSpaceMe, listRegionCities, stationKeys } from "@/services/station-space-service";
 
 /**
  * Espace station (route gardée pour les notifications et liens existants) :
@@ -21,6 +21,13 @@ export default function StationSpacePage() {
   const userId = user?.id ?? "";
   const loggedIn = Boolean(userId);
   // Chargées en parallèle ; l'id du compte dans la clé évite d'afficher les stations d'un autre compte sur le même appareil.
+  const { data: stationSpace } = useQuery({
+    queryKey: [...stationKeys.me, user?.id],
+    queryFn: getStationSpaceMe,
+    enabled: Boolean(user?.id),
+    staleTime: 10 * 60_000,
+    retry: false,
+  });
   const cities = useQuery({
     queryKey: [...stationKeys.regionCities, userId],
     queryFn: listRegionCities,
@@ -64,7 +71,7 @@ export default function StationSpacePage() {
     );
   } else if (cityList.length === 0 && managed.length === 0) {
     // Une des deux listes a échoué : on ne conclut pas « rien de confié ».
-    body = citiesError ?? outletsError ?? <SpaceEmpty email={user?.email} />;
+    body = citiesError ?? outletsError ?? <SpaceEmpty email={user?.email} isOwner={Boolean(stationSpace?.is_owner)} />;
   } else {
     body = (
       <>

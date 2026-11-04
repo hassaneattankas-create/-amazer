@@ -16,6 +16,7 @@ import { RestaurantMenuManager, SELLER_MENU_KEY } from "@/components/seller/rest
 import { RestaurantReservations } from "@/components/seller/restaurant/RestaurantReservations";
 import { RestaurantSettingsPanel } from "@/components/seller/restaurant/RestaurantSettingsPanel";
 import { SellerStatsPanel } from "@/components/seller/SellerStatsPanel";
+import { StationSpaceShortcut } from "@/components/stations/StationSpaceShortcut";
 import { SellerReviewsPanel } from "@/components/seller/SellerReviewsPanel";
 import { ServiceStatusPanel } from "@/components/seller/ServiceStatusPanel";
 import { OwnerStationSpace } from "@/components/stations/owner";
@@ -450,6 +451,7 @@ export default function SellerDashboardPage() {
         </div>
       </nav>
 
+      {tab === "accueil" ? <StationSpaceShortcut /> : null}
       {tab === "accueil" && profile?.service_kind === "fuel_station" ? <OwnerStationSpace vitrine={sellerShowcase} /> : null}
       {tab === "accueil" && profile?.service_kind !== "fuel_station" ? (
         <>

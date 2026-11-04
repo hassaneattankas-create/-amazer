@@ -31,6 +31,7 @@ const COLUMNS = [
       { href: "/affiliation", label: "Affiliation" },
       { href: "/formations", label: "Formations gratuites" },
       { href: "/seller", label: "Espace vendeur" },
+      { href: "/gerant-station", label: "Espace station" },
       { href: "/comment-ca-marche#vendre", label: "Guide du vendeur" },
       { href: "/livreur", label: "Devenir livreur" },
     ],

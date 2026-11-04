@@ -23,6 +23,7 @@ import {
 } from "@/services/notification-service";
 import { getSellerProfile, getSellerSubscriptionStatus } from "@/services/seller-service";
 import { getStationSpaceMe, stationKeys } from "@/services/station-space-service";
+import { hasStationSpace } from "@/types/station-space";
 import { getPreRegisterSellerStatus } from "@/services/auth-service";
 import {
   clearPendingSellerPreReg,
@@ -150,7 +151,7 @@ export function FloatingNavbar() {
     ? sellerNavItems
     : [{ href: "/seller", label: "Activer vendeur" }];
   const isAuthenticated = Boolean(user?.id);
-  const showStationLink = Boolean(stationSpace && !stationSpace.is_owner && stationSpace.cities + stationSpace.stations > 0);
+  const showStationLink = hasStationSpace(stationSpace);
   const accountNavItems = [
     ...(isAuthenticated ? [{ href: "/dashboard", label: "Tableau de bord" }, { href: "/messages", label: "Messages" }] : []),
     ...(showSellerLink ? sellerNavigationItems : []),

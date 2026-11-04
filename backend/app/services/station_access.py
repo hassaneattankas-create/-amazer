@@ -395,7 +395,7 @@ def assign_manager(db: Session, *, outlet: FuelOutlet, email: str, actor: User, 
         db,
         user.id,
         "Une station vous est confiée",
-        f"{brand_name} vous confie la station « {outlet.name} ». Indiquez ses disponibilités depuis votre téléphone, en un geste.",
+        f"{brand_name} vous confie la station « {outlet.name} ». Pour y revenir, connectez-vous à AMAZER avec ce compte : « Espace station » se trouve dans le menu.",
         f"fuel-manager-{outlet.id}",
         "/gerant-station",
     )

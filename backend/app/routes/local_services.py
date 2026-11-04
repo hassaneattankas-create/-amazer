@@ -1035,7 +1035,7 @@ def add_region_manager(
         db,
         user.id,
         "Une ville vous est confiée",
-        f"{profile.business_name} vous confie ses stations de {city}. Ajoutez les stations, nommez leurs gérants et suivez leurs mises à jour.",
+        f"{profile.business_name} vous confie ses stations de {city}. Ajoutez les stations et nommez leurs gérants. Pour y revenir, connectez-vous à AMAZER avec ce compte : « Espace station » se trouve dans le menu.",
         f"fuel-region-{profile.vendor_id}-{wanted}",
         "/gerant-station",
     )

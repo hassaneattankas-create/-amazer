@@ -28,6 +28,7 @@ import { BarcodeScannerDrawer } from "@/components/BarcodeScannerDrawer";
 import { AdminSectionsRails, FeaturedShopsRail, PromotionsRail } from "@/components/home/HomeRails";
 import { PRODUCT_GRID_CLASS, ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
+import { StationSpaceShortcut } from "@/components/stations/StationSpaceShortcut";
 import { SearchToolbar, type PriceFilter } from "@/components/search/SearchToolbar";
 import { Button } from "@/components/ui/button";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -168,6 +169,7 @@ export default function HomePage() {
 
   return (
     <section className="mx-auto w-full max-w-7xl px-gutter pb-16 pt-4">
+      <StationSpaceShortcut className="mb-3" />
       <div className="rounded-card bg-ink-900 px-4 py-6 sm:px-8 sm:py-10">
         <h1 className="text-display-sm font-semibold tracking-display text-white">
           {t("Achetez et vendez en toute confiance")}

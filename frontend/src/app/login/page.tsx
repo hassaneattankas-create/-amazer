@@ -3,22 +3,26 @@
 import { FormEvent, useState } from "react";
 import { Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { isAdminEmail } from "@/lib/admin";
+import { isMobileAppBuild } from "@/lib/mobile-app";
 import { persistAppMode } from "@/lib/session-mode";
 import { getAdminMe } from "@/services/admin-service";
 import { getCurrentUser, login } from "@/services/auth-service";
 import { requestAndRegisterNotifications } from "@/services/notification-service";
 import { getSellerProfile } from "@/services/seller-service";
 import { useAuthStore } from "@/store/auth-store";
+import { getStationSpaceMe } from "@/services/station-space-service";
+import { hasStationSpace } from "@/types/station-space";
 
 function LoginPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState(() =>
@@ -63,7 +67,13 @@ function LoginPageContent() {
       }
       setAppMode("client");
       persistAppMode("client");
-      window.location.assign(next);
+      // Responsable de ville ou gérant : son espace, sans passer par le menu.
+      const stationSpace = hasExplicitNext ? null : await getStationSpaceMe().catch(() => null);
+      if (hasStationSpace(stationSpace) && isMobileAppBuild()) {
+        router.replace("/gerant-station");
+        return;
+      }
+      window.location.assign(hasStationSpace(stationSpace) ? "/gerant-station" : next);
     } catch (error) {
       setStatus(getApiErrorMessage(error, "Identifiant ou mot de passe incorrect."));
     } finally {
