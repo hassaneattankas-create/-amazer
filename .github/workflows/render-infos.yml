@@ -1,0 +1,20 @@
+name: Infos Render (lecture seule)
+
+# Lancement manuel. Liste les services Render (nom, type, formule, état) sans rien modifier ni afficher de secret.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  infos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+    steps:
+      - name: Lister les services
+        run: |
+          curl -sS -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services?limit=50" \
+            | jq -r '.[].service | "\(.name) | \(.type) | formule=\(.serviceDetails.plan // "-") | suspendu=\(.suspended) | \(.serviceDetails.url // "")"' \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+          curl -sS -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/owners?limit=5" \
+            | jq -r '.[].owner | "compte : \(.type) \(.name)"' | tee -a "$GITHUB_STEP_SUMMARY"
