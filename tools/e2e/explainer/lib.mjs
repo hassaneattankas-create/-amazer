@@ -48,6 +48,15 @@ const OVERLAY = () => {
   root.innerHTML = `<div id="xp-tick"></div><div id="xp-ring"></div><div id="xp-caption"></div><div id="xp-title"></div>
     <svg id="xp-cursor" viewBox="0 0 24 24"><path d="M4 2l15 12-7 1 4 7-3 2-4-7-5 5z" fill="#fff" stroke="#0F172A" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
   document.body.append(root);
+  // Le site est servi en local pour le tournage : à l'image, les liens gardent l'adresse publique.
+  const pub = (t) => t.replace(/http:\/\/localhost:3100/g, "https://amazer.store");
+  const fix = (root) => {
+    const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) if (n.nodeValue.includes("localhost:3100")) n.nodeValue = pub(n.nodeValue);
+    document.querySelectorAll("input,textarea").forEach((e) => { if (e.value.includes("localhost:3100")) e.value = pub(e.value); });
+  };
+  fix(document.body);
+  new MutationObserver(() => fix(document.body)).observe(document.body, { childList: true, subtree: true, characterData: true });
   // barre d'installation et bulle d'aide : hors sujet à l'image
   for (const e of document.querySelectorAll("body *")) {
     if (e.closest("#xp-root")) continue;
@@ -127,10 +136,16 @@ export class Film {
   }
 
   async goto(route) {
-    await this.page.goto(`${BASE}${route}`, { waitUntil: "domcontentloaded", timeout: 120000 }).catch(() => {});
+    const target = new URL(`${BASE}${route}`);
+    const here = new URL(this.page.url() === "about:blank" ? BASE : this.page.url());
+    const sameDoc = target.hash && here.pathname.replace(/\/$/, "") === target.pathname.replace(/\/$/, "") && here.search === target.search;
+    // Même page, autre onglet (#…) : pas de rechargement, sinon le navigateur attend une page qui ne vient jamais.
+    if (sameDoc) await this.page.evaluate((h) => { location.hash = h; }, target.hash);
+    else await this.page.goto(target.href, { waitUntil: "domcontentloaded", timeout: 120000 }).catch(() => {});
     // Le site interroge le serveur en continu : on attend un court calme réseau, pas un silence total.
-    await this.page.waitForNetworkIdle({ idleTime: 700, timeout: 20000, concurrency: 2 }).catch(() => {});
-    await wait(1800);
+    // Pendant le tournage, pas de longue attente à l'image : la page est prête en quelques secondes.
+    await this.page.waitForNetworkIdle({ idleTime: 600, timeout: this.start ? 4500 : 20000, concurrency: 2 }).catch(() => {});
+    await wait(this.start ? 700 : 1800);
     await this.page.evaluate(OVERLAY);
     await this.place();
   }
@@ -154,7 +169,16 @@ export class Film {
   }
 
   /** Trouve un élément visible par son texte, le centre à l'écran et y amène la souris. */
-  async point(text, { selector = "button,a,[role=radio],[role=button],input,select,textarea,label,h1,h2,h3,summary", nth = 0 } = {}) {
+  async point(text, opts = {}) {
+    // La page peut finir de charger : un second essai après un court instant.
+    for (let i = 0; i < 3; i += 1) {
+      if (await this.pointOnce(text, opts, i === 2)) return true;
+      await wait(1200);
+    }
+    return false;
+  }
+
+  async pointOnce(text, { selector = "button,a,[role=radio],[role=button],input,select,textarea,label,h1,h2,h3,summary", nth = 0 } = {}, last = true) {
     const box = await this.page.evaluate((text, selector, nth) => {
       const norm = (s) => (s || "").replace(/\s+/g, " ").trim().toLowerCase();
       const want = norm(text);
@@ -174,7 +198,7 @@ export class Film {
       window.scrollTo({ top: Math.max(0, r.top + scrollY - innerHeight * 0.4), behavior: "smooth" });
       return true;
     }, text, selector, nth);
-    if (!box) { console.log(`  élément introuvable : ${text}`); return false; }
+    if (!box) { if (last) console.log(`  élément introuvable : ${text}`); return false; }
     await wait(650);
     const r = await this.page.evaluate(() => { const b = document.querySelector("[data-xp]").getBoundingClientRect(); return { x: b.left + Math.min(b.width * .5, 150), y: b.top + b.height * .55 }; });
     this.pos = { x: Math.round(r.x), y: Math.round(r.y) };
@@ -195,6 +219,7 @@ export class Film {
     }, this.pos);
     await wait(260);
     // Pour le guide PDF : l'image montre le bouton avant qu'on le touche.
+    const before = this.page.url();
     if (this.pending && !this.typing) { const t = this.pending; this.pending = null; await this.snap(t); }
     await this.page.evaluate(() => {
       const e = document.querySelector("[data-xp]");
@@ -204,8 +229,8 @@ export class Film {
       if (e.matches("input,textarea")) e.focus();
     });
     await wait(900);
-    // Le clic a pu ouvrir une autre page : on remet la souris et le calque.
-    await this.page.waitForNetworkIdle({ idleTime: 500, timeout: 8000, concurrency: 2 }).catch(() => {});
+    // Le clic a pu ouvrir une autre page : on attend qu'elle charge, puis on remet la souris et le calque.
+    if (this.page.url() !== before) await this.page.waitForNetworkIdle({ idleTime: 500, timeout: 8000, concurrency: 2 }).catch(() => {});
     await this.page.evaluate(() => document.querySelectorAll("[data-xp]").forEach((e) => e.removeAttribute("data-xp"))).catch(() => {});
     await this.page.evaluate(OVERLAY).catch(() => {});
     await this.place().catch(() => {});
@@ -308,12 +333,13 @@ export class Film {
     const raw = rec.list;
     this.start = Date.now();
     for (const scene of scenes) {
-      if (scene.before && scene !== scenes[0]) await scene.before(this);
       const t0 = Date.now();
+      // Changement de page en cours de chapitre : la voix commence pendant que la page s'ouvre (pas de blanc).
+      const move = scene.before && scene !== scenes[0] ? scene.before : null;
       const at = (t0 - this.start) / 1000;
       this.cues.push({ file: scene.file, at });
       if (scene.caption !== false) this.captions.push({ text: scene.say, at, end: at + scene.duration + 0.35 });
-      await Promise.all([(async () => { this.pending = scene.guide || null; await scene.do?.(this); if (this.pending) { const t = this.pending; this.pending = null; await this.snap(t); } })(), wait(scene.duration * 1000 + 450)]);
+      await Promise.all([(async () => { if (move) await move(this); this.pending = scene.guide || null; await scene.do?.(this); if (this.pending) { const t = this.pending; this.pending = null; await this.snap(t); } })(), wait(scene.duration * 1000 + 450)]);
       const over = Date.now() - t0 - scene.duration * 1000;
       if (over > 2500) console.log(`  scène longue de ${(over / 1000).toFixed(1)} s : ${scene.say.slice(0, 50)}`);
     }

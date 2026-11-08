@@ -252,8 +252,10 @@ GUIDES.hotel = {
       scenes: [
         { say: "Le client choisit sa date d'arrivée, sa date de départ et le nombre de personnes. Les chambres libres s'affichent avec le prix.",
           do: (f) => f.point("Arrivée", { selector: "label" }), guide: g("Le client choisit ses dates", "**Arrivée**, **Départ**, **Personnes** : les chambres disponibles s'affichent avec le **prix total**.") },
-        { say: "Il choisit une chambre, écrit son nom et son téléphone, puis demande la réservation. Il paie l'hôtel par Nita ou Amana.",
-          do: async (f) => { await f.point("Choisie"); await f.point("Demander la réservation"); }, guide: g("Le client réserve", "Il touche **Choisir**, remplit **Nom** et **Téléphone**, paie l'hôtel par Nita ou Amana, puis touche **Demander la réservation**.") },
+        { say: "Il touche Choisir sous la chambre qui lui plaît.",
+          do: (f) => f.click("Choisir", { selector: "button" }), guide: g("Le client choisit sa chambre", "Sous chaque chambre : prix par nuit, équipements, places. Il touche **Choisir**.") },
+        { say: "Il écrit son nom et son téléphone, paie l'hôtel par Nita ou Amana, puis touche Demander la réservation.",
+          do: async (f) => { await f.point("Nom complet", { selector: "label" }); await f.point("Demander la réservation"); }, guide: g("Le client réserve", "Il remplit **Nom complet** et **Téléphone**, paie l'hôtel par **Nita** ou **Amana**, puis touche **Demander la réservation**.") },
       ],
     },
     {
@@ -266,6 +268,8 @@ GUIDES.hotel = {
           do: (f) => f.point("À confirmer", { selector: "button" }), guide: g("Vos réservations", "Onglets **Arrivées**, **À confirmer**, **En séjour**, **À venir**, **Historique**.") },
         { say: "Vérifiez la référence du paiement, puis touchez Confirmer. Le client est prévenu.",
           do: (f) => f.point("Confirmer"), guide: g("Confirmez", "Vérifiez la **référence du paiement**, puis touchez **Confirmer** (ou **Refuser**). Vous pouvez **Appeler** le client.") },
+        { say: "Le jour venu, suivez vos clients dans Arrivées, puis En séjour.",
+          do: (f) => f.click("En séjour", { selector: "button" }), guide: g("Arrivées et séjours", "Les onglets **Arrivées** et **En séjour** montrent qui arrive aujourd'hui et qui est à l'hôtel.") },
       ],
     },
   ],
