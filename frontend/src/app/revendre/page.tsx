@@ -214,7 +214,8 @@ export default function RevendrePage() {
                     <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-field bg-surface-1">
                       <Image src={resolveProductImageUrl({ raw: item.image_url, width: 200 })} alt="" fill sizes="56px" unoptimized className="object-cover" />
                     </span>
-                    <div className="min-w-0 flex-1">
+                    {/* Largeur minimale : sur petit téléphone, le prix et les boutons passent à la ligne au lieu d'écraser le nom. */}
+                    <div className="min-w-36 flex-1">
                       <p className="truncate text-sm font-semibold text-ink-900">{item.product_name}</p>
                       <p className="text-xs text-ink-600">
                         Prix boutique {formatXOF(item.supplier_amount)} · vous gagnez{" "}
