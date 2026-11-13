@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
+import { Accordion, AccordionItem } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { getAdminFinanceDataError } from "@/lib/admin-finance-verification";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -21,65 +22,58 @@ const STATE_LABELS = {
 const formatDate = (value: string | null) => (value ? new Date(value).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "—");
 const percent = (rate: number) => `${Number((rate * 100).toFixed(1)).toLocaleString("fr-FR")} %`;
 
-/** Une boutique : ce qu'AMAZER lui doit, et le bouton pour enregistrer le reversement. */
-function VendorRow({ row, busy, onPay }: { row: AdminVendorPayout; busy: boolean; onPay: (row: AdminVendorPayout) => void }) {
-  const [open, setOpen] = useState(false);
+/** Une boutique (section dépliable) : ce qu'AMAZER lui doit, le détail et le bouton « Reversé ». */
+function VendorSection({ row, busy, onPay }: { row: AdminVendorPayout; busy: boolean; onPay: (row: AdminVendorPayout) => void }) {
   return (
-    <li className="space-y-2 p-3 text-sm">
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1 basis-56">
-          <p className="font-semibold text-ink-900">{row.name}</p>
-          <p className="text-xs text-ink-600">Numéro de reversement : {row.payout_phone || "non renseigné (à lui demander)"}</p>
+    <AccordionItem
+      id={row.vendor_id}
+      headingLevel={2}
+      title={row.name}
+      description={`Numéro de reversement : ${row.payout_phone || "non renseigné (à lui demander)"}`}
+      meta={row.to_pay > 0 ? `À reverser ${formatXOF(row.to_pay)}` : "Rien à reverser"}
+      tone={row.to_pay > 0 ? "warning" : "default"}
+    >
+      <div className="space-y-3 text-sm">
+        <p className="text-ink-700">
+          À reverser : <strong className="text-success">{formatXOF(row.to_pay)}</strong> ({row.orders_to_pay} commande{row.orders_to_pay > 1 ? "s" : ""}
+          {row.to_pay_commission > 0 ? `, commission ${formatXOF(row.to_pay_commission)} déduite` : ""}) · Pas encore livré : {formatXOF(row.awaiting_delivery)} ·
+          Déjà reversé : {formatXOF(row.paid)} · Commission AMAZER au total : {formatXOF(row.commission_total)}
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          {row.to_pay > 0 ? (
+            <Button size="sm" disabled={busy} onClick={() => onPay(row)}>
+              Reversé
+            </Button>
+          ) : null}
+          {row.payout_phone ? (
+            <WhatsAppButton
+              phone={row.payout_phone}
+              variant="link"
+              label="WhatsApp"
+              message={`Bonjour ${row.name}, AMAZER vous reverse ${formatXOF(row.to_pay)} pour vos ventes livrées.`}
+            />
+          ) : null}
         </div>
-        <div className="text-right">
-          <p className="text-base font-semibold text-success">{formatXOF(row.to_pay)}</p>
-          <p className="text-xs text-ink-600">
-            {row.orders_to_pay} commande{row.orders_to_pay > 1 ? "s" : ""}
-            {row.to_pay_commission > 0 ? ` · commission ${formatXOF(row.to_pay_commission)} déduite` : ""}
-          </p>
-        </div>
-      </div>
-      <p className="text-xs text-ink-700">
-        Pas encore livré : {formatXOF(row.awaiting_delivery)} ({row.orders_awaiting}) · Déjà reversé : {formatXOF(row.paid)} · Commission AMAZER au total :{" "}
-        {formatXOF(row.commission_total)}
-      </p>
-      <div className="flex flex-wrap items-center gap-3">
-        {row.to_pay > 0 ? (
-          <Button size="sm" disabled={busy} onClick={() => onPay(row)}>
-            Reversé
-          </Button>
+        {row.lines.length ? (
+          <ul className="divide-y divide-border rounded-field border border-border">
+            {row.lines.map((line) => {
+              const badge = STATE_LABELS[line.state];
+              return (
+                <li key={line.order_id} className="flex flex-wrap items-center gap-2 p-2 text-xs">
+                  <span className="font-medium text-ink-900">{line.tracking_code ?? line.order_id.slice(0, 8)}</span>
+                  <span className="text-ink-600">{formatDate(line.created_at)}</span>
+                  <span className={`rounded-pill px-2 py-0.5 font-medium ${badge.className}`}>{badge.label}</span>
+                  <span className="ml-auto text-ink-800">
+                    {formatXOF(line.amount)}
+                    {line.commission > 0 ? ` − ${percent(line.commission_rate)} (${formatXOF(line.commission)})` : ""} = <strong>{formatXOF(line.net)}</strong>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         ) : null}
-        {row.payout_phone ? (
-          <WhatsAppButton
-            phone={row.payout_phone}
-            variant="link"
-            label="WhatsApp"
-            message={`Bonjour ${row.name}, AMAZER vous reverse ${formatXOF(row.to_pay)} pour vos ventes livrées.`}
-          />
-        ) : null}
-        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="text-xs font-medium text-brand-700 hover:underline">
-          {open ? "Masquer le détail" : `Voir le détail (${row.lines.length})`}
-        </button>
       </div>
-      {open ? (
-        <ul className="divide-y divide-border rounded-field border border-border">
-          {row.lines.map((line) => {
-            const badge = STATE_LABELS[line.state];
-            return (
-              <li key={line.order_id} className="flex flex-wrap items-center gap-2 p-2 text-xs">
-                <span className="font-medium text-ink-900">{line.tracking_code ?? line.order_id.slice(0, 8)}</span>
-                <span className="text-ink-600">{formatDate(line.created_at)}</span>
-                <span className={`rounded-pill px-2 py-0.5 font-medium ${badge.className}`}>{badge.label}</span>
-                <span className="ml-auto text-ink-800">
-                  {formatXOF(line.amount)}
-                  {line.commission > 0 ? ` − ${percent(line.commission_rate)} (${formatXOF(line.commission)})` : ""} = <strong>{formatXOF(line.net)}</strong>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-    </li>
+    </AccordionItem>
   );
 }
 
@@ -141,11 +135,11 @@ export default function AdminVendorPayoutsPage() {
           </Button>
         </div>
       ) : data.length ? (
-        <ul className="divide-y divide-border rounded-card border border-border bg-card">
+        <Accordion>
           {data.map((row) => (
-            <VendorRow key={row.vendor_id} row={row} busy={pay.isPending} onPay={askPay} />
+            <VendorSection key={row.vendor_id} row={row} busy={pay.isPending} onPay={askPay} />
           ))}
-        </ul>
+        </Accordion>
       ) : (
         <p className="rounded-card border border-border bg-card p-4 text-sm text-ink-600">
           Aucune vente de boutique à suivre pour le moment. Les commandes passées à partir d&apos;aujourd&apos;hui apparaîtront ici.

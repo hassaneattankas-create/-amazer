@@ -42,7 +42,7 @@ const COPY: Record<ServiceKind, { title: string; subtitle: string; onlyLabel: st
 };
 
 // Carte chargée seulement quand le client l'ouvre (Leaflet n'alourdit pas la liste).
-const StationsMap = dynamic(() => import("@/components/services/StationsMap").then((m) => m.StationsMap), {
+const ServicesMap = dynamic(() => import("@/components/services/ServicesMap").then((m) => m.ServicesMap), {
   ssr: false,
   loading: () => <div className="aspect-square w-full animate-pulse rounded-card border border-border bg-surface-1 sm:aspect-video" aria-busy="true" />,
 });
@@ -193,18 +193,17 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
             <LocateFixed className="h-5 w-5" aria-hidden="true" />
             {locating ? "Localisation…" : position ? "Trié par distance" : "Près de moi"}
           </Button>
-          {stations ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={toggleView}
-              aria-pressed={view === "map"}
-              className="h-12 rounded-pill border-white/30 bg-transparent px-5 text-base text-white hover:bg-white/10"
-            >
-              {view === "map" ? <LayoutList className="h-5 w-5" aria-hidden="true" /> : <MapPinned className="h-5 w-5" aria-hidden="true" />}
-              {view === "map" ? "Voir la liste" : "Voir la carte"}
-            </Button>
-          ) : null}
+          {/* Carte : stations et pharmacies autour du client. */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={toggleView}
+            aria-pressed={view === "map"}
+            className="h-12 rounded-pill border-white/30 bg-transparent px-5 text-base text-white hover:bg-white/10"
+          >
+            {view === "map" ? <LayoutList className="h-5 w-5" aria-hidden="true" /> : <MapPinned className="h-5 w-5" aria-hidden="true" />}
+            {view === "map" ? "Voir la liste" : "Voir la carte"}
+          </Button>
         </div>
       </header>
 
@@ -281,12 +280,12 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
               Réessayer
             </Button>
           </div>
-        ) : stations && view === "map" ? (
+        ) : view === "map" ? (
           <div className="space-y-3">
             {items.length === 0 ? (
               <p className="text-sm text-ink-700">{dutyOnly ? "Aucune station de garde signalée ici pour le moment." : copy.empty}</p>
             ) : null}
-            <StationsMap items={items.map(({ item }) => item)} fuel={fuel} position={position} />
+            <ServicesMap kind={kind} items={items.map(({ item }) => item)} fuel={fuel} position={position} />
           </div>
         ) : items.length ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
