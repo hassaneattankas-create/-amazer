@@ -4,6 +4,10 @@ on:
   schedule:
     # Toutes les 14 minutes, 24h/24, 7j/7 (< 15 min = Render reste eveille)
     - cron: "*/14 * * * *"
+    # Reveil du matin (6 h a Niamey) : la nuit, le serveur ne se garde plus
+    # eveille lui-meme (voir backend/app/services/keep_awake.py).
+    - cron: "0 5 * * *"
+    - cron: "20 5 * * *"
   workflow_dispatch: # Permet de lancer manuellement si besoin
 
 jobs:

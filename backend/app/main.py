@@ -467,6 +467,9 @@ def on_startup() -> None:
         from app.services.payment_wait_alerts import start_payment_wait_worker
 
         start_payment_wait_worker()
+        from app.services.keep_awake import start_keep_awake_worker
+
+        start_keep_awake_worker()
     if settings.is_production() and settings.curated_public_catalog_mode:
         from seed_demo_storefronts import main as seed_storefronts_main
         from seed_demo_restaurants import main as seed_restaurants_main
