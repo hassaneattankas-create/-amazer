@@ -93,6 +93,7 @@ from app.services.reseller_account_service import ensure_account as ensure_resel
 from app.services.reseller_account_service import extend_subscription as extend_reseller_subscription
 from app.services.reseller_account_service import reseller_terms
 from app.services.vendor_visibility import reactivate_vendor_listings
+from app.services import vendor_payout_service as vendor_payouts
 from app.services.audit_log_service import append_audit_log
 from app.services.order_cancellation_service import cancel_order, ensure_not_cancelled, notify_order_cancelled
 from app.services.order_fulfillment_service import sync_fulfillments
@@ -181,6 +182,8 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
         ad_boost_price_7d=settings.ad_boost_price_7d,
         launch_mode_zero_commission=settings.launch_mode_zero_commission,
         max_products_basic_tier=int(settings.max_products_basic_tier or 10),
+        free_plan_max_products=int(getattr(settings, "free_plan_max_products", None) or 5),
+        free_plan_commission_rate=float(getattr(settings, "free_plan_commission_rate", None) if getattr(settings, "free_plan_commission_rate", None) is not None else 0.05),
         platform_wallet_phone=settings.platform_wallet_phone,
         seller_trial_days=int(getattr(settings, "seller_trial_days", 0) or 0),
         seller_launch_discount_percent=float(getattr(settings, "seller_launch_discount_percent", 0) or 0),
@@ -2464,6 +2467,105 @@ def record_reseller_payout(
         paid=totals.paid,
         to_pay=totals.to_pay,
     )
+
+
+# ---------------------------------------------------------------- reversements aux boutiques
+
+class AdminVendorPayoutLine(BaseModel):
+    order_id: str
+    tracking_code: str | None
+    created_at: str | None
+    state: str
+    amount: float
+    commission_rate: float
+    commission: float
+    net: float
+    paid_out_at: str | None
+    payout_reference: str | None
+
+
+class AdminVendorPayout(BaseModel):
+    vendor_id: str
+    name: str
+    payout_phone: str | None
+    to_pay: float
+    to_pay_gross: float
+    to_pay_commission: float
+    orders_to_pay: int
+    awaiting_delivery: float
+    orders_awaiting: int
+    paid: float
+    commission_total: float
+    lines: list[AdminVendorPayoutLine] = Field(default_factory=list)
+
+
+class AdminVendorPayoutCreate(BaseModel):
+    reference: str | None = Field(default=None, max_length=120)
+
+
+def _vendor_payout_response(bal) -> AdminVendorPayout:
+    return AdminVendorPayout(
+        vendor_id=bal.vendor_id,
+        name=bal.name,
+        payout_phone=bal.payout_phone,
+        to_pay=bal.to_pay,
+        to_pay_gross=bal.to_pay_gross,
+        to_pay_commission=bal.to_pay_commission,
+        orders_to_pay=bal.orders_to_pay,
+        awaiting_delivery=bal.awaiting_delivery,
+        orders_awaiting=bal.orders_awaiting,
+        paid=bal.paid,
+        commission_total=bal.commission_total,
+        lines=[AdminVendorPayoutLine(**line) for line in bal.lines],
+    )
+
+
+@router.get("/vendor-payouts", response_model=list[AdminVendorPayout])
+def list_vendor_payouts(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> list[AdminVendorPayout]:
+    """Boutiques : ce qu'AMAZER doit reverser (commandes livrees et payees, commission deduite) et ce qui suit."""
+    _require_finance_pin(request, admin_user)
+    return [_vendor_payout_response(bal) for bal in vendor_payouts.balances(db, with_lines=True)]
+
+
+@router.post("/vendor-payouts/{vendor_id}", response_model=AdminVendorPayout)
+def record_vendor_payout(
+    vendor_id: str,
+    payload: AdminVendorPayoutCreate,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminVendorPayout:
+    """Enregistre le reversement (fait hors plateforme) de tout ce qui est du a la boutique."""
+    enforce_csrf(request)
+    _require_finance_pin(request, admin_user)
+    amount, orders = vendor_payouts.record_payout(db, vendor_id, payload.reference)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == vendor_id))
+    if profile is not None and profile.user_id:
+        NotificationService(db).send_to_user(
+            user_id=profile.user_id,
+            payload=NotificationPayload(
+                title="Argent de vos ventes reversé",
+                body=f"AMAZER vous a reversé {amount:.0f} XOF pour {orders} commande(s) livrée(s).",
+                data={"tag": f"vendor-payout-{vendor_id}-{int(datetime.now(UTC).timestamp())}", "href": "/seller/dashboard"},
+            ),
+        )
+    append_audit_log(
+        db,
+        event_type="admin_vendor_payout_recorded",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="vendor",
+        entity_id=vendor_id,
+        details={"amount": amount, "orders": orders, "reference": (payload.reference or "").strip() or None},
+    )
+    db.commit()
+    balance = vendor_payouts.balances(db, vendor_id=vendor_id, with_lines=True)
+    return _vendor_payout_response(balance[0])
 
 
 class AdminResellerRow(BaseModel):

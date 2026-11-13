@@ -38,6 +38,7 @@ from app.schemas.content import (
     HomeRestaurantCard,
     HomeSectionResponse,
 )
+from app.services import shop_plan_service as shop_plan
 from app.services.public_catalog_policy import (
     is_allowed_public_home_brand,
     is_allowed_public_restaurant_name,
@@ -69,14 +70,8 @@ def _is_vendor_publicly_visible(vendor: Vendor | None) -> bool:
         return False
     # Abonnement expire => boutique masquee du public jusqu'au reabonnement.
     # (Les vendeurs catalogue sans profil restent visibles.)
-    if profile is not None:
-        until = getattr(profile, "subscription_paid_until", None)
-        if getattr(profile, "onboarding_fee_paid_at", None) is None or until is None:
-            return False
-        if until.tzinfo is None:
-            until = until.replace(tzinfo=UTC)
-        if until <= datetime.now(UTC):
-            return False
+    if profile is not None and not shop_plan.can_operate(profile):
+        return False
     return True
 
 

@@ -9,6 +9,9 @@ export type FinanceSettings = {
   seller_subscription_fee_premium: number;
   launch_mode_zero_commission: boolean;
   max_products_basic_tier: number;
+  /** Formule gratuite des boutiques : produits visibles et commission retenue (absents sur un ancien serveur). */
+  free_plan_max_products?: number;
+  free_plan_commission_rate?: number;
   platform_wallet_phone: string | null;
   support_email: string | null;
   support_phone: string | null;

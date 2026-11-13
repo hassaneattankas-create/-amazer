@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.services import shop_plan_service as shop_plan
 from app.database import SessionLocal
 from app.models.app_notification import AppNotification
 from app.models.seller_profile import SellerProfile
@@ -62,7 +63,12 @@ def maybe_send_seller_subscription_reminders(
             user_id=user_id,
             payload=NotificationPayload(
                 title="Abonnement vendeur expiré",
-                body="Renouvelez-le dans « Profil et abonnement » pour remettre votre boutique en ligne. Vos données sont conservées.",
+                body=(
+                    "Votre boutique reste en ligne en formule gratuite : 5 produits visibles et 5 % de commission par vente. "
+                    "Reprenez l'abonnement dans « Profil et abonnement » pour tout réafficher, sans commission."
+                    if shop_plan.is_shop(profile)
+                    else "Renouvelez-le dans « Profil et abonnement » pour remettre votre boutique en ligne. Vos données sont conservées."
+                ),
                 data={
                     "tag": tag,
                     "href": "/seller",
@@ -83,7 +89,8 @@ def maybe_send_seller_subscription_reminders(
         title = "Abonnement vendeur : dernier jour"
         body = (
             f"Votre abonnement expire le {until.strftime('%d/%m/%Y')}. "
-            "Renouvelez-le dans « Profil et abonnement » pour éviter la coupure."
+            + ("Sans renouvellement, votre boutique passe en formule gratuite (5 produits visibles, 5 % par vente)."
+               if shop_plan.is_shop(profile) else "Renouvelez-le dans « Profil et abonnement » pour éviter la coupure.")
         )
     elif 1 < days_left <= 3:
         bucket = "3d"

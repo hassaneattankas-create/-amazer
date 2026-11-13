@@ -466,7 +466,17 @@ function RegisterPageContent() {
                   , avec <span className="font-semibold">{sellerPricing?.seller_trial_days} jours d&apos;essai gratuit</span>
                 </>
               ) : null}
-              . Vous payerez ensuite l&apos;abonnement depuis votre espace vendeur.
+              .{" "}
+              {sellerType === "shop" ? (
+                <>
+                  Ensuite, votre boutique <span className="font-semibold">reste visible gratuitement</span> avec{" "}
+                  {sellerPricing?.free_plan_max_products ?? 5} produits, et AMAZER garde{" "}
+                  {Math.round((sellerPricing?.free_plan_commission_rate ?? 0.05) * 100)} % sur chaque vente. Avec l&apos;abonnement, vos
+                  produits sont illimités et sans commission.
+                </>
+              ) : (
+                <>Vous payerez ensuite l&apos;abonnement depuis votre espace vendeur.</>
+              )}
             </p>
           ) : null}
 

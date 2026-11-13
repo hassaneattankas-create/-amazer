@@ -14,10 +14,13 @@ from app.models.vendor import Vendor
 
 
 def active_subscription_clause():
-    """Condition SQL: un vendeur n'est visible au public que si son abonnement est paye et
-    non expire. Des qu'un abonnement arrive a echeance (peu importe le type), la boutique
-    disparait du public et ne revient qu'apres reabonnement. Les vendeurs catalogue sans
-    profil vendeur (crees par l'admin) restent toujours visibles."""
+    """Condition SQL : un vendeur est visible au public si son abonnement (ou essai) est en cours,
+    ou si c'est une boutique en formule gratuite (5 produits visibles, commission retenue).
+    Restaurants et Premium disparaissent du public a l'echeance et reviennent au reabonnement.
+    Les vendeurs catalogue sans profil vendeur (crees par l'admin) restent toujours visibles."""
+    # Import tardif : app.services importe deja ce module (import circulaire).
+    from app.services.shop_plan_service import free_plan_clause
+
     return or_(
         SellerProfile.user_id.is_(None),
         and_(
@@ -25,6 +28,8 @@ def active_subscription_clause():
             SellerProfile.subscription_paid_until.isnot(None),
             SellerProfile.subscription_paid_until > datetime.now(UTC),
         ),
+        # Formule gratuite : une boutique sans abonnement reste visible (5 produits au plus).
+        free_plan_clause(),
     )
 
 

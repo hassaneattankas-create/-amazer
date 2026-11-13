@@ -185,6 +185,43 @@ export async function updateSellerHotelBookingStatus(
   return response.data;
 }
 
+/** Ligne du relevé : une commande et ce qui revient à la boutique. */
+export type SellerEarningLine = {
+  order_id: string;
+  tracking_code: string | null;
+  created_at: string | null;
+  /** paid : reçu · due : à recevoir · waiting : pas encore livrée · blocked : litige ou remboursement */
+  state: "paid" | "due" | "waiting" | "blocked";
+  amount: number;
+  commission_rate: number;
+  commission: number;
+  net: number;
+  paid_out_at: string | null;
+};
+
+/** Formule de la boutique (gratuite ou abonnement) et argent de ses ventes. */
+export type SellerPlanEarnings = {
+  plan: "free" | "subscribed" | "inactive";
+  /** Seules les boutiques (hors restaurants et Premium) ont une formule gratuite. */
+  eligible_free_plan: boolean;
+  max_visible_products: number | null;
+  visible_products: number;
+  commission_rate: number;
+  free_plan_commission_rate: number;
+  free_plan_max_products: number;
+  subscription_paid_until: string | null;
+  to_receive: number;
+  awaiting_delivery: number;
+  received: number;
+  commission_total: number;
+  lines: SellerEarningLine[];
+};
+
+export async function getSellerPlanEarnings(): Promise<SellerPlanEarnings> {
+  const response = await api.get<SellerPlanEarnings>("/api/v1/seller/plan-earnings");
+  return response.data;
+}
+
 export async function getSellerSubscriptionStatus(): Promise<SellerSubscriptionStatus> {
   const response = await api.get<SellerSubscriptionStatus>("/api/v1/seller/subscription-status");
   return response.data;

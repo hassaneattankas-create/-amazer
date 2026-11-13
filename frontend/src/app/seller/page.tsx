@@ -373,6 +373,8 @@ function SellerPageContent() {
   const hasUnsavedPlanChange = Boolean(savedPlanBucket && savedPlanBucket !== selectedPlanBucket);
   const hasProfile = Boolean(profile?.id);
   const hasActiveSubscription = Boolean(subscriptionStatus?.subscription_active);
+  // Boutique (hors restaurants et Premium) : sans abonnement, elle reste en ligne en formule gratuite.
+  const isShopPlan = profile?.activity_type === "shop" && profile?.storefront_tier !== "premium";
   const subscriptionPaidUntilMs = subscriptionStatus?.subscription_paid_until
     ? Date.parse(subscriptionStatus.subscription_paid_until)
     : NaN;
@@ -476,7 +478,7 @@ function SellerPageContent() {
             <h2 className="text-lg font-semibold text-ink-900">Abonnement</h2>
             <p
               className={`mt-1 text-sm font-medium ${
-                hasActiveSubscription ? (showSubscriptionRenewHeadsUp ? "text-warning" : "text-success") : "text-danger"
+                hasActiveSubscription ? (showSubscriptionRenewHeadsUp ? "text-warning" : "text-success") : isShopPlan ? "text-ink-800" : "text-danger"
               }`}
             >
               {pendingPayment
@@ -484,7 +486,9 @@ function SellerPageContent() {
                 : hasActiveSubscription
                   ? `Actif${subscriptionUntil ? ` jusqu'au ${subscriptionUntil}` : ""}${showSubscriptionRenewHeadsUp ? " · à renouveler bientôt" : ""}`
                   : hasProfile
-                    ? "Inactif : votre boutique est masquée aux clients."
+                    ? isShopPlan
+                      ? "Sans abonnement : votre boutique reste en ligne en formule gratuite (5 produits visibles, commission par vente)."
+                      : "Inactif : votre boutique est masquée aux clients."
                     : "Enregistrez d'abord votre profil ci-dessous."}
             </p>
           </div>
@@ -497,6 +501,9 @@ function SellerPageContent() {
           Vous recevez le prix entier de vos articles. Commission AMAZER{" "}
           {pricingSnapshot.commissionRate !== null ? `${Number((pricingSnapshot.commissionRate * 100).toFixed(2))} %` : "—"} et frais de
           service {pricingSnapshot.serviceFee !== null ? formatXOF(pricingSnapshot.serviceFee) : "—"} : ajoutés au prix payé par le client.
+          {isShopPlan && !hasActiveSubscription && hasProfile
+            ? " En formule gratuite, AMAZER garde aussi 5 % de chaque vente avant de vous reverser votre part ; l'abonnement supprime cette commission."
+            : ""}
         </p>
         {latestSubscriptionPayment?.status === "rejected" ? (
           <p className="mt-3 rounded-field bg-surface-1 px-3 py-2 text-sm text-danger">

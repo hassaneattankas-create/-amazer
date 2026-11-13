@@ -31,6 +31,7 @@ const NAV_GROUPS: Array<{ title: string; items: NavItem[] }> = [
     title: "Argent à verser",
     items: [
       { href: "/admin/affilies", label: "Affiliés", icon: Share2 },
+      { href: "/admin/reversements", label: "Boutiques", icon: Wallet },
       { href: "/admin/revendeurs", label: "Revendeurs", icon: Wallet },
       { href: "/admin/remboursements", label: "Remboursements", icon: RotateCcw },
     ],

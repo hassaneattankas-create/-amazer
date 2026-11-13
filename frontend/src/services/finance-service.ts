@@ -614,3 +614,47 @@ export async function downloadAuditCsv(limit = 1000): Promise<Blob> {
   });
   return response.data as Blob;
 }
+
+/** Une part de commande d'une boutique : montant, commission (formule gratuite) et état du reversement. */
+export type VendorPayoutLine = {
+  order_id: string;
+  tracking_code: string | null;
+  created_at: string | null;
+  /** paid : reversé · due : à reverser · waiting : pas encore livrée ou payée · blocked : litige ou remboursement */
+  state: "paid" | "due" | "waiting" | "blocked";
+  amount: number;
+  commission_rate: number;
+  commission: number;
+  net: number;
+  paid_out_at: string | null;
+  payout_reference?: string | null;
+};
+
+export type AdminVendorPayout = {
+  vendor_id: string;
+  name: string;
+  payout_phone: string | null;
+  to_pay: number;
+  to_pay_gross: number;
+  to_pay_commission: number;
+  orders_to_pay: number;
+  awaiting_delivery: number;
+  orders_awaiting: number;
+  paid: number;
+  commission_total: number;
+  lines: VendorPayoutLine[];
+};
+
+/** Boutiques : argent à reverser (commandes livrées et payées, commission déduite). */
+export async function listVendorPayouts(): Promise<AdminVendorPayout[]> {
+  return adminProxyRequest<AdminVendorPayout[]>({ url: "/admin/finance/vendor-payouts", method: "GET" });
+}
+
+/** Enregistre le reversement (fait hors plateforme) de tout ce qui est dû à la boutique. */
+export async function recordVendorPayout(vendorId: string, reference: string): Promise<AdminVendorPayout> {
+  return adminProxyRequest<AdminVendorPayout>({
+    url: `/admin/finance/vendor-payouts/${vendorId}`,
+    method: "POST",
+    data: { reference: reference || null },
+  });
+}

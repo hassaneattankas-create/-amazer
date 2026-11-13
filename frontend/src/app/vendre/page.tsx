@@ -28,10 +28,11 @@ const PLANS: Plan[] = [
     audience: "Commerces, revendeurs, artisans",
     price: (p) => p.seller_subscription_fee_shop,
     features: (p) => [
-      `Jusqu'à ${p.max_products_basic_tier} produits`,
+      `Jusqu'à ${p.max_products_basic_tier} produits, sans commission`,
       "Boutique en ligne et messagerie clients",
       "Paiement contrôlé par AMAZER",
       "Livraison par les livreurs AMAZER",
+      `Sans abonnement : gratuit, ${p.free_plan_max_products ?? 5} produits visibles et ${Math.round((p.free_plan_commission_rate ?? 0.05) * 100)} % par vente`,
     ],
   },
   {
@@ -61,7 +62,11 @@ const PLANS: Plan[] = [
   },
 ];
 
-const STEPS = ["Créez votre boutique : elle est en ligne tout de suite", "Publiez vos produits et vendez", "Payez l'abonnement après l'essai gratuit"];
+const STEPS = [
+  "Créez votre boutique : elle est en ligne tout de suite, 14 jours d'essai avec tout",
+  "Publiez vos produits et vendez",
+  "Boutique : continuez gratuitement (5 produits, commission par vente) ou prenez l'abonnement. Restaurant et Premium : abonnement après l'essai",
+];
 
 export default function VendrePage() {
   const { data: pricing, isPending, isError } = useQuery({

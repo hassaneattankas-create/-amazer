@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Bell, ChevronDown, Menu, ShoppingCart, User } from "lucide-react";
+import { Bell, ChevronDown, ShoppingCart, User } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
@@ -410,10 +410,10 @@ export function FloatingNavbar() {
             aria-expanded={isMenuOpen}
             aria-controls="main-menu"
             aria-label="Menu"
-            className="inline-flex min-h-11 items-center gap-1 rounded-field px-3 text-sm font-medium text-ink-800 hover:bg-surface-1"
+            className="inline-flex min-h-11 items-center gap-1 rounded-field border border-border px-2 text-sm font-medium text-ink-800 hover:bg-surface-1 md:border-0 md:px-3"
           >
-            <Menu className="h-5 w-5 md:hidden" aria-hidden="true" />
-            <span className="hidden md:inline">{t("Menu")}</span>
+            {/* Le mot « Menu » aussi sur téléphone (à la place de l'icône, pour tenir sur 360 px). */}
+            <span>{t("Menu")}</span>
             <ChevronDown
               className={`hidden h-4 w-4 transition-transform duration-fast md:block ${isMenuOpen ? "rotate-180" : ""}`}
               aria-hidden="true"

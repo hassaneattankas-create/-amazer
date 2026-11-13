@@ -124,6 +124,7 @@ def test_checkout_with_arbitrary_transaction_code_stays_pending(monkeypatch) -> 
     monkeypatch.setattr(orders_route, "customer_bonus_for_order", lambda *a: (None, 0.0))
     monkeypatch.setattr(orders_route, "_notify_new_order", lambda *args, **kwargs: None)
     monkeypatch.setattr(orders_route, "_to_order_response", lambda order: order)
+    monkeypatch.setattr(orders_route.shop_plan, "price_fulfillments", lambda *args, **kwargs: None)
 
     price = SimpleNamespace(
         product_id="product-1",

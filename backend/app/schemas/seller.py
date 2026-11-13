@@ -473,3 +473,34 @@ class RoomAvailabilityResponse(BaseModel):
     nights: int
     # chambres libres par type pour toute la periode
     available: dict[str, int]
+
+
+class SellerEarningLine(BaseModel):
+    order_id: str
+    tracking_code: str | None = None
+    created_at: str | None = None
+    # paid (reverse) | due (a recevoir) | waiting (pas encore livree) | blocked (litige ou remboursement)
+    state: str
+    amount: float
+    commission_rate: float
+    commission: float
+    net: float
+    paid_out_at: str | None = None
+
+
+class SellerPlanEarningsResponse(BaseModel):
+    """Formule de la boutique (gratuite ou abonnement) et argent de ses ventes."""
+
+    plan: Literal["free", "subscribed", "inactive"]
+    eligible_free_plan: bool
+    max_visible_products: int | None = None
+    visible_products: int
+    commission_rate: float
+    free_plan_commission_rate: float
+    free_plan_max_products: int
+    subscription_paid_until: datetime | None = None
+    to_receive: float = 0
+    awaiting_delivery: float = 0
+    received: float = 0
+    commission_total: float = 0
+    lines: list[SellerEarningLine] = Field(default_factory=list)

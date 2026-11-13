@@ -25,6 +25,9 @@ class GlobalSettings(Base):
     ad_boost_price_7d: Mapped[float] = mapped_column(Float, nullable=False, default=2000)
     launch_mode_zero_commission: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     max_products_basic_tier: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+    # Formule gratuite des boutiques (sans abonnement) : produits visibles et commission retenue au commercant.
+    free_plan_max_products: Mapped[int] = mapped_column(Integer, nullable=False, default=5, server_default="5")
+    free_plan_commission_rate: Mapped[float] = mapped_column(Float, nullable=False, default=0.05, server_default="0.05")
     platform_wallet_phone: Mapped[str | None] = mapped_column(String(40), nullable=True, default=None)
     support_email: Mapped[str | None] = mapped_column(nullable=True, default=None)
     support_phone: Mapped[str | None] = mapped_column(nullable=True, default=None)

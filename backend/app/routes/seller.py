@@ -23,6 +23,8 @@ from app.models.hospitality import HotelBooking, RestaurantReservation
 from app.models.order import Order, OrderItem
 from app.models.price_history import PriceHistory
 from app.models.product import Price, Product
+from app.services import shop_plan_service as shop_plan
+from app.services import vendor_payout_service as vendor_payouts
 from app.services.payment_methods import require_active_method
 from app.services.image_service import compress_image_to_limit
 from app.services import (
@@ -47,6 +49,8 @@ from app.schemas.restaurant import (
     RestaurantReservationStatusUpdateRequest,
 )
 from app.schemas.seller import (
+    SellerEarningLine,
+    SellerPlanEarningsResponse,
     HotelBookingCreateRequest,
     HotelBookingResponse,
     RoomAvailabilityResponse,
@@ -194,11 +198,8 @@ def _mark_seller_deleted_listing(price: Price) -> None:
 
 
 def _has_active_subscription(profile: SellerProfile) -> bool:
-    return (
-        profile.onboarding_fee_paid_at is not None
-        and profile.subscription_paid_until is not None
-        and profile.subscription_paid_until > datetime.now(UTC)
-    )
+    """Boutique en ligne : abonnement (ou essai) en cours, ou boutique en formule gratuite."""
+    return shop_plan.can_operate(profile)
 
 
 def _profile_plan_bucket(profile: SellerProfile) -> str:
@@ -491,6 +492,28 @@ def get_subscription_status(
     return _build_subscription_status(profile, db)
 
 
+@router.get("/plan-earnings", response_model=SellerPlanEarningsResponse)
+def my_plan_and_earnings(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> SellerPlanEarningsResponse:
+    """Formule (gratuite : 5 produits visibles et commission ; abonnement : illimite, 0 %) et argent des ventes."""
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.user_id == current_user.id))
+    if profile is None:
+        raise NotFoundError("Create a seller profile first")
+    summary = shop_plan.plan_summary(db, profile)
+    balance = vendor_payouts.balances(db, vendor_id=profile.vendor_id, with_lines=True)[0]
+    return SellerPlanEarningsResponse(
+        **summary,
+        subscription_paid_until=profile.subscription_paid_until,
+        to_receive=balance.to_pay,
+        awaiting_delivery=balance.awaiting_delivery,
+        received=balance.paid,
+        commission_total=balance.commission_total,
+        lines=[SellerEarningLine(**{k: v for k, v in line.items() if k != "payout_reference"}) for line in balance.lines[:30]],
+    )
+
+
 @router.post("/subscription/pay", response_model=SellerSubscriptionStatusResponse)
 def pay_seller_subscription(
     payload: SellerSubscriptionPayRequest,
@@ -730,6 +753,8 @@ def create_product_listing(
             "Cette formule vendeur ne permet pas de publier des produits. "
             "Passez en boutique ou en Premium."
         )
+    # Formule gratuite : 5 produits visibles au plus (message clair, avant la limite habituelle).
+    shop_plan.ensure_free_slot(db, profile)
     if not is_premium_profile(profile):
         cap = max_products_for_basic_tier(db)
         current = count_vendor_catalog_products(db, profile.vendor_id)
@@ -1297,6 +1322,10 @@ def update_inventory_item(
             raise ConflictError(
                 "Ce produit a ete masque par l'equipe AMAZER. Contactez le support pour le reafficher."
             )
+        if payload.is_active and not price.is_active:
+            seller_profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == price.vendor_id))
+            if seller_profile is not None:
+                shop_plan.ensure_free_slot(db, seller_profile)
         price.is_active = payload.is_active
         if payload.is_active:
             specs.pop("seller_paused", None)

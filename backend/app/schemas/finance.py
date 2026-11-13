@@ -21,6 +21,9 @@ class FinanceSettingsResponse(BaseModel):
     ad_boost_price_7d: float
     launch_mode_zero_commission: bool
     max_products_basic_tier: int
+    # Formule gratuite des boutiques (sans abonnement).
+    free_plan_max_products: int = 5
+    free_plan_commission_rate: float = 0.05
     platform_wallet_phone: str | None = None
     support_email: str | None = None
     support_phone: str | None = None

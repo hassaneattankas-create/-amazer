@@ -14,6 +14,7 @@ from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.services.auth_service import AuthService
+from app.services import shop_plan_service as shop_plan
 from app.services.seller_profile_service import apply_seller_onboarding_and_trial, resolve_trial_days
 
 http_bearer = HTTPBearer(auto_error=False)
@@ -80,13 +81,11 @@ def get_seller_user(
         apply_seller_onboarding_and_trial(profile, allow_subscription_trial=True, trial_days=resolve_trial_days(db))
         vendor = db.get(Vendor, profile.vendor_id)
         if vendor is not None:
-            vendor.is_active = profile.subscription_paid_until is not None and profile.subscription_paid_until > datetime.now(
-                UTC
-            )
+            vendor.is_active = shop_plan.can_operate(profile)
         db.commit()
         db.refresh(profile)
 
-    if profile.subscription_paid_until is None or profile.subscription_paid_until <= datetime.now(UTC):
+    if not shop_plan.can_operate(profile):
         vendor = db.get(Vendor, profile.vendor_id)
         if vendor is not None and vendor.is_active:
             vendor.is_active = False

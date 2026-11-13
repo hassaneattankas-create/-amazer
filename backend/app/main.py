@@ -188,6 +188,14 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE restaurant_reservations ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) DEFAULT 'paid'",
         "ALTER TABLE hotel_bookings ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) DEFAULT 'paid'",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS max_products_basic_tier INTEGER DEFAULT 10",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS free_plan_max_products INTEGER NOT NULL DEFAULT 5",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS free_plan_commission_rate DOUBLE PRECISION NOT NULL DEFAULT 0.05",
+        "ALTER TABLE order_fulfillments ADD COLUMN IF NOT EXISTS vendor_amount DOUBLE PRECISION NOT NULL DEFAULT 0",
+        "ALTER TABLE order_fulfillments ADD COLUMN IF NOT EXISTS commission_rate DOUBLE PRECISION NOT NULL DEFAULT 0",
+        "ALTER TABLE order_fulfillments ADD COLUMN IF NOT EXISTS commission_amount DOUBLE PRECISION NOT NULL DEFAULT 0",
+        "ALTER TABLE order_fulfillments ADD COLUMN IF NOT EXISTS payout_status VARCHAR(12) NOT NULL DEFAULT 'legacy'",
+        "ALTER TABLE order_fulfillments ADD COLUMN IF NOT EXISTS paid_out_at TIMESTAMP WITH TIME ZONE",
+        "ALTER TABLE order_fulfillments ADD COLUMN IF NOT EXISTS payout_reference VARCHAR(120)",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS platform_wallet_phone VARCHAR(40)",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS seller_subscription_fee_shop DOUBLE PRECISION DEFAULT 5000",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS seller_subscription_fee_restaurant DOUBLE PRECISION DEFAULT 5000",
@@ -527,14 +535,23 @@ def ping(background_tasks: BackgroundTasks) -> dict[str, str]:
         now = datetime.now(UTC)
         db = SessionLocal()
         try:
-            expired_vendor_ids = list(
-                db.scalars(
-                    select(SellerProfile.vendor_id).where(
-                        SellerProfile.subscription_paid_until.is_not(None),
-                        SellerProfile.subscription_paid_until < now,
-                    )
-                ).all()
-            )
+            from app.services import shop_plan_service as shop_plan
+
+            expired_profiles = db.scalars(
+                select(SellerProfile).where(
+                    SellerProfile.subscription_paid_until.is_not(None),
+                    SellerProfile.subscription_paid_until < now,
+                )
+            ).all()
+            # Boutiques : formule gratuite (restent en ligne, 5 produits visibles au plus).
+            # Restaurants et Premium : hors ligne jusqu'au reabonnement, comme avant.
+            expired_vendor_ids = []
+            for expired in expired_profiles:
+                if shop_plan.is_free_plan(expired, now):
+                    shop_plan.apply_free_plan(db, expired)
+                else:
+                    expired_vendor_ids.append(expired.vendor_id)
+            db.commit()
             if expired_vendor_ids:
                 db.execute(
                     update(Vendor)

@@ -54,6 +54,7 @@ from app.services.notification_service import NotificationPayload, NotificationS
 from app.services.audit_log_service import append_audit_log
 from app.services.order_cancellation_service import cancel_order, ensure_not_cancelled, notify_order_cancelled
 from app.services.order_fulfillment_service import create_initial_fulfillments, sync_fulfillments
+from app.services import shop_plan_service as shop_plan
 from app.services.payment_security_service import (
     MANUAL_PAYMENT_PENDING_MESSAGE,
     build_payment_page_url,
@@ -593,6 +594,8 @@ def checkout(
         )
 
     create_initial_fulfillments(order)
+    # Part de chaque boutique et commission de la formule gratuite (figees a la commande).
+    shop_plan.price_fulfillments(db, order)
 
     db.add(order)
     db.flush()
