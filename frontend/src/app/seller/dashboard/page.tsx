@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PlusCircle, Settings2 } from "lucide-react";
+import { BarChart3, ClipboardList, LayoutGrid, Package, PlusCircle, Settings2, Share2, Star } from "lucide-react";
 
 import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
@@ -26,6 +26,7 @@ import { ShopDashboardSections } from "@/components/seller/ShopDashboardSections
 import { SellerOrderList } from "@/components/seller/SellerOrderList";
 import { SellerProductList } from "@/components/seller/SellerProductList";
 import { getShopRoute } from "@/lib/mobile-routes";
+import { Accordion, AccordionItem } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { normalizeImageInputForApi } from "@/lib/image";
@@ -54,6 +55,13 @@ import {
 } from "@/services/seller-service";
 
 type SellerTab = "accueil" | "commandes" | "produits" | "ajouter" | "reglages";
+const SECTION_ICONS: Record<SellerTab, ReactNode> = {
+  accueil: <LayoutGrid className="h-5 w-5" />,
+  commandes: <ClipboardList className="h-5 w-5" />,
+  produits: <Package className="h-5 w-5" />,
+  ajouter: <PlusCircle className="h-5 w-5" />,
+  reglages: <Settings2 className="h-5 w-5" />,
+};
 const SELLER_TABS: { key: SellerTab; label: string }[] = [
   { key: "accueil", label: "Accueil" },
   { key: "commandes", label: "Commandes" },
@@ -86,21 +94,22 @@ export default function SellerDashboardPage() {
     main_image_url: "",
     is_digital: false,
   });
-  const [tab, setTab] = useState<SellerTab>("accueil");
+  // Sections déroulantes : une seule ouverte à la fois (comme le menu), synchronisée avec l'ancre (#commandes…).
+  const [openSections, setOpenSections] = useState<string[]>(["accueil"]);
   useEffect(() => {
     const fromHash = () => {
       const hash = window.location.hash.replace("#", "");
       const target = hash === "catalogue" ? "produits" : hash;
-      if (SELLER_TABS.some((item) => item.key === target)) setTab(target as SellerTab);
+      if (SELLER_TABS.some((item) => item.key === target)) setOpenSections([target]);
     };
     fromHash();
     window.addEventListener("hashchange", fromHash);
     return () => window.removeEventListener("hashchange", fromHash);
   }, []);
   const openTab = (key: SellerTab) => {
-    setTab(key);
+    setOpenSections([key]);
     window.history.replaceState(null, "", `#${key}`);
-    window.scrollTo({ top: 0 });
+    window.requestAnimationFrame(() => document.getElementById(`vendeur-${key}`)?.scrollIntoView({ block: "start", behavior: "smooth" }));
   };
 
   const { data: profile, isPending: isProfilePending } = useQuery({
@@ -389,9 +398,20 @@ export default function SellerDashboardPage() {
   // Blocs communs à tous les vendeurs ; pour une marque de stations, ils sont rangés dans la dernière section repliée.
   const sellerShowcase = (
     <>
-      {profile?.vendor_id ? <AffiliateShareCard variant="seller" vendorId={profile.vendor_id} shopName={profile.business_name} /> : null}
-      <SellerStatsPanel />
-      <SellerReviewsPanel />
+      {/* Sous-sections dépliables : partage, statistiques et avis restent à portée sans allonger la page. */}
+      <Accordion>
+        {profile?.vendor_id ? (
+          <AccordionItem id="share" variant="row" headingLevel={3} icon={<Share2 className="h-5 w-5" />} title="Partager ma boutique">
+            <AffiliateShareCard variant="seller" vendorId={profile.vendor_id} shopName={profile.business_name} />
+          </AccordionItem>
+        ) : null}
+        <AccordionItem id="stats" variant="row" headingLevel={3} icon={<BarChart3 className="h-5 w-5" />} title="Mes statistiques">
+          <SellerStatsPanel />
+        </AccordionItem>
+        <AccordionItem id="reviews" variant="row" headingLevel={3} icon={<Star className="h-5 w-5" />} title="Avis de mes clients">
+          <SellerReviewsPanel />
+        </AccordionItem>
+      </Accordion>
       <p className="text-sm text-ink-600">
         Besoin d&apos;aide ?{" "}
         <Link href="/comment-ca-marche#vendre" className="font-medium text-brand-700 hover:underline">
@@ -405,53 +425,36 @@ export default function SellerDashboardPage() {
     </>
   );
 
-  return (
-    <section className="mx-auto w-full max-w-5xl space-y-4 px-gutter pb-14 pt-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-ink-900">{profile?.business_name || dashboardTitle}</h1>
-          <p className="text-sm text-ink-600">Espace vendeur</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {profile?.vendor_id ? (
-            <Button asChild variant="outline" size="sm">
-              <Link href={getShopRoute(profile.vendor_id)}>Voir ma boutique</Link>
-            </Button>
-          ) : null}
-          <Button asChild variant="outline" size="sm">
-            <Link href="/seller">
-              <Settings2 className="mr-1.5 h-4 w-4" />
-              Profil et abonnement
-            </Link>
-          </Button>
-        </div>
-      </header>
+  // Marque de stations : son espace (deja en sections) reste en tete ; seuls les réglages sont repliés en dessous.
+  const isFuelBrand = profile?.service_kind === "fuel_station";
+  const visibleSections = SELLER_TABS.filter((item) =>
+    item.key === "accueil"
+      ? !isFuelBrand
+      : item.key === "commandes"
+        ? showProductTools || showRestaurantTools || showHotelBookingTools
+        : item.key === "produits" || item.key === "ajouter"
+          ? !isLocalService
+          : true
+  );
+  const onlyRestaurant = showRestaurantTools && !showProductTools;
+  const onlyBookings = showHotelBookingTools && !showProductTools && !showRestaurantTools;
+  const sectionTitle = (key: SellerTab): string => {
+    if (key === "produits") return onlyRestaurant ? "Mon menu" : onlyBookings ? (isTransport ? "Mes trajets" : "Mes chambres") : "Mes produits";
+    if (key === "ajouter") return onlyRestaurant ? "Ajouter un plat" : onlyBookings ? (isTransport ? "Gérer mes trajets" : "Gérer mes chambres") : "Ajouter un produit";
+    return SELLER_TABS.find((item) => item.key === key)?.label ?? key;
+  };
+  const toPrepare =
+    shopOrders.filter((order) => order.payment_status === "paid" && order.status === "commande").length +
+    restaurantOrders.filter((order) => order.payment_status === "paid" && order.status === "commande").length;
+  const sectionMeta = (key: SellerTab): string | undefined => {
+    if (key === "commandes" && toPrepare > 0) return `${toPrepare} à préparer`;
+    if (key === "produits" && showProductTools && inventory.length) return `${inventory.length} produit${inventory.length > 1 ? "s" : ""}`;
+    return undefined;
+  };
 
-      <nav className="sticky top-14 z-sticky -mx-gutter border-b border-border bg-background/95 px-gutter backdrop-blur sm:top-16" aria-label="Sections vendeur">
-        <div className="flex gap-1 overflow-x-auto" role="tablist">
-          {SELLER_TABS.filter((item) =>
-            item.key === "commandes"
-              ? showProductTools || showRestaurantTools || showHotelBookingTools
-              : item.key === "produits" || item.key === "ajouter"
-                ? !isLocalService
-                : true
-          ).map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              role="tab"
-              aria-selected={tab === item.key}
-              onClick={() => openTab(item.key)}
-              className={`min-h-11 shrink-0 border-b-2 px-3 text-sm font-semibold transition-colors duration-fast ${
-                tab === item.key ? "border-brand-600 text-ink-900" : "border-transparent text-ink-600 hover:text-ink-900"
-              }`}
-            >
-              {item.key === "produits" && showRestaurantTools && !showProductTools ? "Menu" : item.label}
-            </button>
-          ))}
-        </div>
-      </nav>
-
+  /** Contenu d'une section (anciens onglets) : identique, seul le rangement change. */
+  const renderSection = (tab: SellerTab) => (
+    <div className="space-y-4">
       {tab === "accueil" ? <StationSpaceShortcut /> : null}
       {tab === "accueil" && profile?.service_kind === "fuel_station" ? <OwnerStationSpace vitrine={sellerShowcase} /> : null}
       {tab === "accueil" && profile?.service_kind !== "fuel_station" ? (
@@ -756,6 +759,42 @@ export default function SellerDashboardPage() {
           </article>
         ) : null}
       </div>
+    </div>
+  );
+
+  return (
+    <section className="mx-auto w-full max-w-5xl space-y-4 px-gutter pb-14 pt-4">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink-900">{profile?.business_name || dashboardTitle}</h1>
+          <p className="text-sm text-ink-600">Espace vendeur</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {profile?.vendor_id ? (
+            <Button asChild variant="outline" size="sm">
+              <Link href={getShopRoute(profile.vendor_id)}>Voir ma boutique</Link>
+            </Button>
+          ) : null}
+          <Button asChild variant="outline" size="sm">
+            <Link href="/seller">
+              <Settings2 className="mr-1.5 h-4 w-4" />
+              Profil et abonnement
+            </Link>
+          </Button>
+        </div>
+      </header>
+
+
+      {isFuelBrand ? renderSection("accueil") : null}
+      <Accordion single open={openSections} onOpenChange={setOpenSections}>
+        {visibleSections.map((item) => (
+          <div key={item.key} id={`vendeur-${item.key}`} className="scroll-mt-20">
+            <AccordionItem id={item.key} headingLevel={2} icon={SECTION_ICONS[item.key]} title={sectionTitle(item.key)} meta={sectionMeta(item.key)} tone="warning">
+              {renderSection(item.key)}
+            </AccordionItem>
+          </div>
+        ))}
+      </Accordion>
     </section>
   );
 }

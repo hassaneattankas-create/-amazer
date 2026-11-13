@@ -66,7 +66,7 @@ function EarningsDetails({ data }: { data: SellerPlanEarnings }) {
 }
 
 /**
- * Accueil d'une boutique, en sections dépliables : chiffres (ouverts), formule, argent des ventes.
+ * Accueil d'une boutique (dans la section « Accueil »), en sous-sections dépliables : chiffres (ouverts), formule, argent des ventes.
  * `kpis` : le bloc de chiffres existant, rangé dans la première section.
  */
 export function ShopDashboardSections({ kpis }: { kpis: ReactNode }) {
@@ -74,14 +74,15 @@ export function ShopDashboardSections({ kpis }: { kpis: ReactNode }) {
   const showPlan = Boolean(data?.eligible_free_plan);
   return (
     <Accordion defaultOpen="kpis">
-      <AccordionItem id="kpis" headingLevel={2} icon={<BarChart3 className={icon} />} title="Mes chiffres">
+      <AccordionItem id="kpis" variant="row" headingLevel={3} icon={<BarChart3 className={icon} />} title="Mes chiffres">
         {kpis}
       </AccordionItem>
       {showPlan && data ? (
         <>
           <AccordionItem
             id="plan"
-            headingLevel={2}
+            variant="row"
+            headingLevel={3}
             icon={<BadgeCheck className={icon} />}
             title="Ma formule"
             meta={data.plan === "free" ? `Gratuite · ${data.visible_products}/${data.max_visible_products ?? data.free_plan_max_products}` : "Abonnement"}
@@ -90,7 +91,8 @@ export function ShopDashboardSections({ kpis }: { kpis: ReactNode }) {
           </AccordionItem>
           <AccordionItem
             id="money"
-            headingLevel={2}
+            variant="row"
+            headingLevel={3}
             icon={<Wallet className={icon} />}
             title="L'argent de mes ventes"
             meta={data.to_receive > 0 ? `À recevoir ${formatXOF(data.to_receive)}` : undefined}
