@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+
+import { SellerPlanMessage } from "@/components/seller/SellerPlanMessage";
 import { useCallback, Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -22,6 +24,7 @@ import { normalizeImageInputForApi } from "@/lib/image";
 import { persistAppMode } from "@/lib/session-mode";
 import { getPublicFinanceSettings } from "@/services/finance-service";
 import {
+  getSellerPlanEarnings,
   getSellerProfile,
   listSellerSubscriptionPaymentRequests,
   getSellerSubscriptionStatus,
@@ -373,6 +376,8 @@ function SellerPageContent() {
   const hasUnsavedPlanChange = Boolean(savedPlanBucket && savedPlanBucket !== selectedPlanBucket);
   const hasProfile = Boolean(profile?.id);
   const hasActiveSubscription = Boolean(subscriptionStatus?.subscription_active);
+  // Message de la formule : ce que le vendeur a maintenant et ce qui l'attend (essai, gratuit, abonnement).
+  const { data: planEarnings } = useQuery({ queryKey: ["seller-plan-earnings"], queryFn: getSellerPlanEarnings, enabled: Boolean(profile?.id), staleTime: 60_000 });
   // Boutique (hors restaurants et Premium) : sans abonnement, elle reste en ligne en formule gratuite.
   const isShopPlan = profile?.activity_type === "shop" && profile?.storefront_tier !== "premium";
   const subscriptionPaidUntilMs = subscriptionStatus?.subscription_paid_until
@@ -497,6 +502,11 @@ function SellerPageContent() {
             par mois
           </p>
         </div>
+        {planEarnings ? (
+          <div className="mt-3 rounded-field bg-surface-1 p-3">
+            <SellerPlanMessage data={planEarnings} withLink={false} />
+          </div>
+        ) : null}
         <p className="mt-2 text-xs text-ink-600">
           Vous recevez le prix entier de vos articles. Commission AMAZER{" "}
           {pricingSnapshot.commissionRate !== null ? `${Number((pricingSnapshot.commissionRate * 100).toFixed(2))} %` : "—"} et frais de

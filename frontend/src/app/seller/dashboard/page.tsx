@@ -22,6 +22,7 @@ import { ServiceStatusPanel } from "@/components/seller/ServiceStatusPanel";
 import { OwnerStationSpace } from "@/components/stations/owner";
 import { AffiliateShareCard } from "@/components/affiliate/AffiliateShareCard";
 import { SellerKpis } from "@/components/seller/SellerKpis";
+import { SellerPlanItem } from "@/components/seller/SellerPlanMessage";
 import { ShopDashboardSections } from "@/components/seller/ShopDashboardSections";
 import { SellerOrderList } from "@/components/seller/SellerOrderList";
 import { SellerProductList } from "@/components/seller/SellerProductList";
@@ -400,6 +401,7 @@ export default function SellerDashboardPage() {
     <>
       {/* Sous-sections dépliables : partage, statistiques et avis restent à portée sans allonger la page. */}
       <Accordion>
+        {!showProductTools && profile?.service_kind !== "fuel_station" ? <SellerPlanItem /> : null}
         {profile?.vendor_id ? (
           <AccordionItem id="share" variant="row" headingLevel={3} icon={<Share2 className="h-5 w-5" />} title="Partager ma boutique">
             <AffiliateShareCard variant="seller" vendorId={profile.vendor_id} shopName={profile.business_name} />

@@ -147,10 +147,47 @@ def apply_free_plan(db: Session, profile: SellerProfile) -> tuple[int, int]:
     return hidden, restored
 
 
+def seller_kind(profile: SellerProfile) -> str:
+    """Formule vue par le vendeur : boutique, restaurant, pharmacie, station ou Premium (hotel, transport, entreprise)."""
+    if profile.service_kind in ("pharmacy", "fuel_station"):
+        return profile.service_kind
+    if is_shop(profile):
+        return "shop"
+    if (profile.activity_type or "") == "restaurant" and (profile.storefront_tier or "").strip().lower() != "premium":
+        return "restaurant"
+    return "premium"
+
+
+def in_trial(db: Session, profile: SellerProfile, now: datetime | None = None) -> bool:
+    """Essai gratuit en cours : acces ouvert, aucun paiement valide, duree compatible avec l'essai."""
+    from datetime import timedelta
+
+    from app.models.seller_subscription_payment import SellerSubscriptionPayment
+    from app.services.seller_profile_service import resolve_trial_days
+
+    if not has_paid_access(profile, now):
+        return False
+    paid = db.scalar(
+        select(func.count()).select_from(SellerSubscriptionPayment).where(
+            SellerSubscriptionPayment.seller_profile_id == profile.id, SellerSubscriptionPayment.status == "approved"
+        )
+    )
+    if paid:
+        return False
+    start, until = _aware(profile.onboarding_fee_paid_at), _aware(profile.subscription_paid_until)
+    return start is not None and until is not None and until - start <= timedelta(days=resolve_trial_days(db) + 1)
+
+
 def plan_summary(db: Session, profile: SellerProfile, now: datetime | None = None) -> dict[str, object]:
-    """Ce que le vendeur doit savoir de sa formule (espace vendeur)."""
+    """Ce que le vendeur doit savoir de sa formule (espace vendeur et page abonnement)."""
+    from app.services.seller_finance_service import build_effective_seller_finance_settings, get_or_create_global_settings
+
     free = is_free_plan(profile, now)
+    fee = float(build_effective_seller_finance_settings(get_or_create_global_settings(db), profile).seller_subscription_fee)
     return {
+        "kind": seller_kind(profile),
+        "in_trial": in_trial(db, profile, now),
+        "monthly_fee": fee,
         "plan": "free" if free else ("subscribed" if has_paid_access(profile, now) else "inactive"),
         "eligible_free_plan": is_shop(profile),
         "max_visible_products": max_free_products(db) if free else None,

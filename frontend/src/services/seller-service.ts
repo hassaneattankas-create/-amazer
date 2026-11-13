@@ -202,6 +202,10 @@ export type SellerEarningLine = {
 /** Formule de la boutique (gratuite ou abonnement) et argent de ses ventes. */
 export type SellerPlanEarnings = {
   plan: "free" | "subscribed" | "inactive";
+  /** Métier vu par le vendeur, essai en cours et prix mensuel : pour lui dire ce qui l'attend. */
+  kind: "shop" | "restaurant" | "premium" | "pharmacy" | "fuel_station";
+  in_trial: boolean;
+  monthly_fee: number;
   /** Seules les boutiques (hors restaurants et Premium) ont une formule gratuite. */
   eligible_free_plan: boolean;
   max_visible_products: number | null;

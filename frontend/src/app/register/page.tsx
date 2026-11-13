@@ -475,7 +475,12 @@ function RegisterPageContent() {
                   produits sont illimités et sans commission.
                 </>
               ) : (
-                <>Vous payerez ensuite l&apos;abonnement depuis votre espace vendeur.</>
+                <>
+                  Ensuite, l&apos;abonnement coûte{" "}
+                  <span className="font-semibold">{sellerPricing ? formatXOF(sellerSubscriptionFee(sellerPricing, sellerType)) : "—"} par mois</span>, payé depuis
+                  votre espace vendeur. Sans paiement, votre établissement n&apos;est plus visible des clients jusqu&apos;au paiement ; vos
+                  données sont gardées.
+                </>
               )}
             </p>
           ) : null}

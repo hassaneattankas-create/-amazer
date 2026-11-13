@@ -1,44 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BadgeCheck, BarChart3, Wallet } from "lucide-react";
+import { BarChart3, Wallet } from "lucide-react";
 
+import { SellerPlanItem } from "@/components/seller/SellerPlanMessage";
 import { Accordion, AccordionItem } from "@/components/ui/accordion";
 import { formatXOF } from "@/lib/currency";
 import { getSellerPlanEarnings, type SellerPlanEarnings } from "@/services/seller-service";
 
-const percent = (rate: number) => `${Number((rate * 100).toFixed(1)).toLocaleString("fr-FR")} %`;
-const formatDay = (value: string | null) => (value ? new Date(value).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "");
 const icon = "h-5 w-5";
-
-function PlanDetails({ data }: { data: SellerPlanEarnings }) {
-  if (data.plan !== "free") {
-    return (
-      <p className="text-sm text-ink-700">
-        Produits illimités, sans commission{data.subscription_paid_until ? ` · jusqu'au ${formatDay(data.subscription_paid_until)}` : ""}. Si vous ne
-        renouvelez pas, votre boutique reste en ligne en formule gratuite ({data.free_plan_max_products} produits visibles,{" "}
-        {percent(data.free_plan_commission_rate)} par vente).
-      </p>
-    );
-  }
-  const limit = data.max_visible_products ?? data.free_plan_max_products;
-  return (
-    <div className="space-y-2 text-sm text-ink-700">
-      <p>
-        <strong className="text-ink-900">
-          {data.visible_products} / {limit}
-        </strong>{" "}
-        produits visibles · AMAZER garde {percent(data.commission_rate)} sur chaque vente.
-      </p>
-      <p className="text-xs text-ink-600">Votre boutique reste en ligne. Vos autres produits sont mis de côté, pas supprimés.</p>
-      <Link href="/seller" className="inline-flex min-h-11 items-center font-semibold text-brand-700 hover:underline">
-        Prendre l&apos;abonnement : produits illimités, 0 % de commission
-      </Link>
-    </div>
-  );
-}
 
 function EarningsDetails({ data }: { data: SellerPlanEarnings }) {
   const cells: [string, number, string][] = [
@@ -79,16 +50,7 @@ export function ShopDashboardSections({ kpis }: { kpis: ReactNode }) {
       </AccordionItem>
       {showPlan && data ? (
         <>
-          <AccordionItem
-            id="plan"
-            variant="row"
-            headingLevel={3}
-            icon={<BadgeCheck className={icon} />}
-            title="Ma formule"
-            meta={data.plan === "free" ? `Gratuite · ${data.visible_products}/${data.max_visible_products ?? data.free_plan_max_products}` : "Abonnement"}
-          >
-            <PlanDetails data={data} />
-          </AccordionItem>
+          <SellerPlanItem />
           <AccordionItem
             id="money"
             variant="row"

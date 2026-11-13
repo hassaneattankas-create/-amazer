@@ -16,6 +16,7 @@ from app.models.order import Order, OrderFulfillment, OrderItem
 from app.models.product import Price, Product
 from app.models.refund import Refund
 from app.models.seller_profile import SellerProfile
+from app.models.seller_subscription_payment import SellerSubscriptionPayment
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.repositories.catalog_repository import active_subscription_clause
@@ -38,7 +39,7 @@ def _skip_postgres_only_index(create, compiler, **kw) -> str:
     return compiler.visit_create_index(create, **kw)
 
 
-TABLES = (User, Vendor, SellerProfile, GlobalSettings, Product, Price, Order, OrderItem, OrderFulfillment, Refund)
+TABLES = (User, Vendor, SellerProfile, GlobalSettings, Product, Price, Order, OrderItem, OrderFulfillment, Refund, SellerSubscriptionPayment)
 NOW = datetime.now(UTC)
 
 
@@ -210,3 +211,32 @@ def test_claims_refunds_and_old_orders_are_never_paid_out(db: Session) -> None:
     db.commit()
     bal = payouts.balances(db, vendor_id=shop.vendor_id)[0]
     assert bal.to_pay == 0 and bal.orders_to_pay == 0
+
+
+# ---------------------------------------------------------------- message de formule
+
+def test_each_seller_sees_its_kind_and_trial(db: Session, monkeypatch) -> None:
+    import app.services.seller_profile_service as sps
+
+    monkeypatch.setattr(sps, "resolve_trial_days", lambda _db: 14)
+    shop = seller(db, "essai", paid_days=None)
+    shop.onboarding_fee_paid_at = NOW
+    shop.subscription_paid_until = NOW + timedelta(days=14)
+    resto = seller(db, "resto", kind="restaurant")
+    hotel = seller(db, "hotel", kind="hotel", tier="premium")
+    pharma = seller(db, "pharma", tier="premium")
+    pharma.service_kind = "pharmacy"
+    db.commit()
+    assert [plan.seller_kind(p) for p in (shop, resto, hotel, pharma)] == ["shop", "restaurant", "premium", "pharmacy"]
+    assert plan.in_trial(db, shop) is True
+    # Abonnement de 30 jours accorde par l'admin (resto cree avec 10 jours mais demarre il y a 30) : pas un essai.
+    resto.subscription_paid_until = NOW + timedelta(days=30)
+    db.commit()
+    assert plan.in_trial(db, resto) is False
+    # Paiement valide : ce n'est plus un essai.
+    db.add(SellerSubscriptionPayment(seller_profile_id=shop.id, seller_user_id=shop.user_id, payment_mode="nita",
+                                     transaction_reference="NT-1", months=1, amount_claimed=2000, status="approved"))
+    db.commit()
+    assert plan.in_trial(db, shop) is False
+    summary = plan.plan_summary(db, shop)
+    assert summary["kind"] == "shop" and summary["monthly_fee"] > 0

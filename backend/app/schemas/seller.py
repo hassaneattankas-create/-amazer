@@ -492,6 +492,10 @@ class SellerPlanEarningsResponse(BaseModel):
     """Formule de la boutique (gratuite ou abonnement) et argent de ses ventes."""
 
     plan: Literal["free", "subscribed", "inactive"]
+    # Metier vu par le vendeur et ce qu'il paiera : message clair sur ce qui l'attend.
+    kind: Literal["shop", "restaurant", "premium", "pharmacy", "fuel_station"] = "shop"
+    in_trial: bool = False
+    monthly_fee: float = 0
     eligible_free_plan: bool
     max_visible_products: int | None = None
     visible_products: int
