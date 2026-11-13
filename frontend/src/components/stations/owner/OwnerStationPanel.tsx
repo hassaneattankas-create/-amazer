@@ -6,6 +6,7 @@ import {
   DeliveryForm,
   FuelAvailabilityEditor,
   ManagersEditor,
+  StationDutyEditor,
   StationInfoForm,
   StationPositionEditor,
   useStationActions,
@@ -67,6 +68,9 @@ export function OwnerStationPanel({ outlet, cityChoices }: { outlet: FuelOutlet;
         </AccordionItem>
         <AccordionItem id="info" variant="row" headingLevel={5} title="Informations et horaires">
           <StationInfoForm info={outlet.info} busy={station.busy} onSave={station.saveInfo.mutateAsync} />
+        </AccordionItem>
+        <AccordionItem id="duty" variant="row" headingLevel={5} title="Garde" meta={outlet.info.on_duty_now ? "De garde" : undefined}>
+          <StationDutyEditor info={outlet.info} busy={station.busy} onSave={station.saveInfo.mutateAsync} />
         </AccordionItem>
         <AccordionItem id="position" variant="row" headingLevel={5} title="Position Google Maps" meta={outlet.info.latitude == null ? "À enregistrer" : undefined} tone="warning">
           <StationPositionEditor

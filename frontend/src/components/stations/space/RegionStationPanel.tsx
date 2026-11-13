@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   FuelAvailabilityEditor,
   ManagersEditor,
+  StationDutyEditor,
   StationInfoForm,
   StationPositionEditor,
   useStationActions,
@@ -93,6 +94,10 @@ export function RegionStationPanel({ station, city }: RegionStationPanelProps) {
         {tab === "info" ? (
           <div className="space-y-4">
             <StationInfoForm info={station.info} busy={actions.busy} disabled={!writable} onSave={actions.saveInfo.mutateAsync} />
+            <div className="space-y-2 border-t border-border pt-3">
+              <p className="text-sm font-semibold text-ink-900">Garde</p>
+              <StationDutyEditor info={station.info} busy={actions.busy} disabled={!writable} onSave={actions.saveInfo.mutateAsync} />
+            </div>
             <div className="space-y-2 border-t border-border pt-3">
               <p className="text-sm font-semibold text-ink-900">Position Google Maps</p>
               <StationPositionEditor

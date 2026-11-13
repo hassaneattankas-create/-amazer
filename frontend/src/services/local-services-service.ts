@@ -27,12 +27,13 @@ export async function listPharmacies(params: { city?: string; onDuty?: boolean }
   return response.data;
 }
 
-export async function listStations(params: { city?: string; fuel?: FuelKey; available?: boolean }): Promise<LocalServiceList> {
+export async function listStations(params: { city?: string; fuel?: FuelKey; available?: boolean; onDuty?: boolean }): Promise<LocalServiceList> {
   const response = await api.get<LocalServiceList>("/api/v1/services/stations", {
     params: {
       ...(params.city ? { city: params.city } : {}),
       ...(params.fuel ? { fuel: params.fuel } : {}),
       ...(params.available ? { available: true } : {}),
+      ...(params.onDuty ? { on_duty: true } : {}),
     },
   });
   return response.data;

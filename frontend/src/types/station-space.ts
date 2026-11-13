@@ -108,6 +108,12 @@ export type StationInfo = {
   longitude: number | null;
   maps_url: string;
   info_updated_at: string | null;
+  /** Garde déclarée par la station (sans fin si duty_until est null). */
+  on_duty: boolean;
+  /** Date de fin incluse (AAAA-MM-JJ), ou null. */
+  duty_until: string | null;
+  /** Vrai si la garde est en cours aujourd'hui (heure de Niamey). */
+  on_duty_now: boolean;
 };
 
 /**
@@ -122,6 +128,9 @@ export type StationInfoUpdate = {
   latitude?: number;
   longitude?: number;
   maps_link?: string;
+  /** Garde : true = de garde, false = arrêtée. duty_until (AAAA-MM-JJ) seulement avec on_duty = true. */
+  on_duty?: boolean;
+  duty_until?: string | null;
 };
 
 export type ActivityItem = {

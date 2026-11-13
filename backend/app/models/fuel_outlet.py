@@ -6,10 +6,10 @@ de vente avec sa ville, son adresse, sa position et ses propres disponibilites (
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import uuid4
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint, func
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -37,6 +37,11 @@ class FuelOutlet(Base):
     opening_hours: Mapped[str | None] = mapped_column(String(120), nullable=True)
     services: Mapped[list | None] = mapped_column(JSON, nullable=True)
     info_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Garde : la station indique qu'elle est de garde (ouverte la nuit, le week-end...),
+    # sans date de fin ou jusqu'a une date incluse (heure de Niamey).
+    on_duty: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    duty_until: Mapped[date | None] = mapped_column(Date, nullable=True)
+    duty_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Les regles des stations (fraicheur, gaz livrable, itineraire) s'appliquent telles quelles.
     @property

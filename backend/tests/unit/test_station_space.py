@@ -381,3 +381,55 @@ def test_closed_station_refuses_writes_for_everyone_until_reopened(db: Session, 
     route.update_outlet(plateau.id, FuelOutletUpdate(is_active=False), None, db, owner)
     with pytest.raises(ForbiddenError):
         space.update_station_info(plateau.id, StationInfoUpdate(opening_hours="24 h/24"), None, db, owner)
+
+
+# ---------------------------------------------------------------- garde
+
+def test_station_duty_set_by_manager_owner_and_shown_to_public(db: Session, chain) -> None:
+    from datetime import date
+
+    from app.services import local_services as svc
+
+    ali, owner, plateau, koira = chain["ali"], chain["owner"], chain["plateau"], chain["koira"]
+    today = svc.niamey_today()
+
+    def public(outlet_id: str, on_duty: bool = False):
+        items = route.list_stations(db, city=None, fuel=None, available=False, on_duty=on_duty).items
+        return next((i for i in items if i.outlet_id == outlet_id), None)
+
+    # Par defaut : pas de garde.
+    assert public(plateau.id).on_duty is False
+    assert public(plateau.id, on_duty=True) is None
+
+    # Le gerant met sa station de garde sans date de fin.
+    view = space.update_station_info(plateau.id, StationInfoUpdate(on_duty=True), None, db, ali)
+    assert (view.info.on_duty, view.info.on_duty_now, view.info.duty_until) == (True, True, None)
+    item = public(plateau.id, on_duty=True)
+    assert item is not None and (item.on_duty, item.duty_label) == (True, "De garde")
+    assert public(koira.id, on_duty=True) is None  # filtre : seulement les stations de garde
+
+    # Jusqu'a une date : libelle avec la date.
+    until = today + timedelta(days=2)
+    view = space.update_station_info(plateau.id, StationInfoUpdate(on_duty=True, duty_until=until), None, db, ali)
+    assert view.info.duty_until == until.isoformat()
+    assert public(plateau.id).duty_label.startswith("De garde jusqu'au ")
+
+    # Date passee refusee, rien ne change.
+    with pytest.raises(ValidationDomainError, match="déjà passée"):
+        space.update_station_info(plateau.id, StationInfoUpdate(on_duty=True, duty_until=today - timedelta(days=1)), None, db, ali)
+    assert outlet_of(db, plateau.id).duty_until == until
+    # Une date sans activer la garde est refusee des la saisie.
+    with pytest.raises(ValueError):
+        StationInfoUpdate(duty_until=until)
+
+    # Garde finie hier : plus de garde pour le public, meme si on_duty reste enregistre.
+    outlet = outlet_of(db, plateau.id)
+    outlet.duty_until = date.fromordinal(today.toordinal() - 1)
+    db.commit()
+    assert public(plateau.id).on_duty is False
+
+    # Le proprietaire arrete la garde depuis son espace ; le journal le note.
+    route.update_outlet(plateau.id, FuelOutletUpdate(on_duty=False), None, db, owner)
+    assert (outlet_of(db, plateau.id).on_duty, outlet_of(db, plateau.id).duty_until) == (False, None)
+    details = [a.detail for a in db.scalars(select(FuelActivity).where(FuelActivity.outlet_id == plateau.id)).all()]
+    assert any("de garde" in (d or "") for d in details) and any("garde arrêtée" in (d or "") for d in details)

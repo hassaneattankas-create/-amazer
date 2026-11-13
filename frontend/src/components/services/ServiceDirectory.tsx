@@ -1,9 +1,10 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Fuel, LocateFixed, Pill, Share2 } from "lucide-react";
+import { Fuel, LayoutList, LocateFixed, MapPinned, Pill, Share2 } from "lucide-react";
 
 import { LocalServiceCard } from "@/components/services/LocalServiceCard";
 import { OfficialLists } from "@/components/services/OfficialLists";
@@ -40,6 +41,14 @@ const COPY: Record<ServiceKind, { title: string; subtitle: string; onlyLabel: st
   },
 };
 
+// Carte chargée seulement quand le client l'ouvre (Leaflet n'alourdit pas la liste).
+const StationsMap = dynamic(() => import("@/components/services/StationsMap").then((m) => m.StationsMap), {
+  ssr: false,
+  loading: () => <div className="aspect-square w-full animate-pulse rounded-card border border-border bg-surface-1 sm:aspect-video" aria-busy="true" />,
+});
+
+type StationFilter = "all" | "available" | "duty";
+
 const pillClass = (active: boolean) =>
   `inline-flex min-h-11 shrink-0 items-center gap-2 rounded-pill border px-4 text-sm font-medium transition-colors duration-fast ${
     active ? "border-ink-900 bg-ink-900 text-white" : "border-border bg-card text-ink-700 hover:border-ink-400"
@@ -54,13 +63,17 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
   const [fuel, setFuel] = useState<FuelKey | "">("");
   const [position, setPosition] = useState<GeoPoint | null>(null);
   const [locating, setLocating] = useState(false);
+  // Stations : seulement celles de garde (exclusif avec « Disponible maintenant »), et vue liste ou carte.
+  const [dutyOnly, setDutyOnly] = useState(false);
+  const [view, setView] = useState<"list" | "map">("list");
+  const stations = kind === "fuel_station";
 
   const { data, isPending, isError, refetch, dataUpdatedAt } = useQuery({
-    queryKey: ["local-services", kind, city, onlyActive, fuel],
+    queryKey: ["local-services", kind, city, onlyActive, fuel, dutyOnly],
     queryFn: () =>
       kind === "pharmacy"
         ? listPharmacies({ city: city || undefined, onDuty: onlyActive })
-        : listStations({ city: city || undefined, fuel: fuel || undefined, available: onlyActive }),
+        : listStations({ city: city || undefined, fuel: fuel || undefined, available: onlyActive, onDuty: dutyOnly }),
     // Une disponibilité change vite pendant une pénurie : rafraîchi toutes les minutes.
     refetchInterval: kind === "fuel_station" ? 60_000 : 300_000,
   });
@@ -108,6 +121,18 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 120000 }
     );
+  };
+
+  const stationFilter: StationFilter = dutyOnly ? "duty" : onlyActive ? "available" : "all";
+  const setStationFilter = (next: StationFilter) => {
+    setOnlyActive(next === "available");
+    setDutyOnly(next === "duty");
+  };
+  const toggleView = () => {
+    const next = view === "list" ? "map" : "list";
+    setView(next);
+    // « Autour de moi » : la carte se centre sur le client dès qu'il l'ouvre.
+    if (next === "map" && !position && !locating) locate();
   };
 
   const share = async () => {
@@ -168,17 +193,42 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
             <LocateFixed className="h-5 w-5" aria-hidden="true" />
             {locating ? "Localisation…" : position ? "Trié par distance" : "Près de moi"}
           </Button>
+          {stations ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={toggleView}
+              aria-pressed={view === "map"}
+              className="h-12 rounded-pill border-white/30 bg-transparent px-5 text-base text-white hover:bg-white/10"
+            >
+              {view === "map" ? <LayoutList className="h-5 w-5" aria-hidden="true" /> : <MapPinned className="h-5 w-5" aria-hidden="true" />}
+              {view === "map" ? "Voir la liste" : "Voir la carte"}
+            </Button>
+          ) : null}
         </div>
       </header>
 
       <div className="-mx-gutter mt-4 overflow-x-auto px-gutter">
         <div className="flex gap-2" role="group" aria-label="Filtres">
-          {/* Stations : « Toutes » d'abord ; pharmacies : « De garde » d'abord. */}
-          {(kind === "fuel_station" ? [false, true] : [true, false]).map((only) => (
-            <button key={String(only)} type="button" aria-pressed={onlyActive === only} onClick={() => setOnlyActive(only)} className={pillClass(onlyActive === only)}>
-              {only ? copy.onlyLabel : copy.allLabel}
-            </button>
-          ))}
+          {/* Stations : Toutes / Disponible maintenant / De garde ; pharmacies : « De garde » d'abord. */}
+          {stations
+            ? (
+                // Libellés courts : les trois boutons tiennent sur un téléphone de 360 px.
+                [
+                  ["all", "Toutes"],
+                  ["available", "Disponibles"],
+                  ["duty", "De garde"],
+                ] as const
+              ).map(([key, label]) => (
+                <button key={key} type="button" aria-pressed={stationFilter === key} onClick={() => setStationFilter(key)} className={pillClass(stationFilter === key)}>
+                  {label}
+                </button>
+              ))
+            : [true, false].map((only) => (
+                <button key={String(only)} type="button" aria-pressed={onlyActive === only} onClick={() => setOnlyActive(only)} className={pillClass(onlyActive === only)}>
+                  {only ? copy.onlyLabel : copy.allLabel}
+                </button>
+              ))}
         </div>
       </div>
       {kind === "fuel_station" ? (
@@ -231,6 +281,13 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
               Réessayer
             </Button>
           </div>
+        ) : stations && view === "map" ? (
+          <div className="space-y-3">
+            {items.length === 0 ? (
+              <p className="text-sm text-ink-700">{dutyOnly ? "Aucune station de garde signalée ici pour le moment." : copy.empty}</p>
+            ) : null}
+            <StationsMap items={items.map(({ item }) => item)} fuel={fuel} position={position} />
+          </div>
         ) : items.length ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map(({ item, distance }) => (
@@ -245,10 +302,18 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
           </p>
         ) : (
           <div className="rounded-card border border-border bg-card p-6 text-center">
-            <p className="font-semibold text-ink-900">{copy.empty}</p>
+            <p className="font-semibold text-ink-900">{dutyOnly ? "Aucune station de garde signalée ici pour le moment" : copy.empty}</p>
             <p className="mt-1 text-sm text-ink-600">{copy.emptyHint}</p>
-            {onlyActive ? (
-              <Button type="button" variant="outline" className="mt-3" onClick={() => setOnlyActive(false)}>
+            {onlyActive || dutyOnly ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-3"
+                onClick={() => {
+                  setOnlyActive(false);
+                  setDutyOnly(false);
+                }}
+              >
                 {copy.allLabel}
               </Button>
             ) : null}

@@ -133,6 +133,8 @@ def build_outlet_item(profile: SellerProfile, outlet: FuelOutlet, settings: obje
         fuel_updated_at=updated.isoformat() if updated else None,
         opening_hours=outlet.opening_hours,
         services=sa.clean_services(outlet.services),
+        on_duty=svc.outlet_on_duty(outlet, now),
+        duty_label=svc.outlet_duty_label(outlet, now),
     )
 
 
@@ -208,9 +210,13 @@ def list_stations(
     city: Annotated[str | None, Query(max_length=80)] = None,
     fuel: Annotated[Literal["super", "gasoil", "gaz"] | None, Query()] = None,
     available: Annotated[bool, Query()] = False,
+    on_duty: Annotated[bool, Query()] = False,
 ) -> LocalServiceListResponse:
-    """Stations : disponibles et a jour d'abord. available=true : seulement celles qui en ont (info recente)."""
-    key = build_cache_key(CACHE_PREFIX + "stations", city=svc.normalize_city(city), fuel=fuel or "", available=available)
+    """Stations : disponibles et a jour d'abord. available=true : seulement celles qui en ont (info recente).
+
+    on_duty=true : seulement les stations de garde maintenant.
+    """
+    key = build_cache_key(CACHE_PREFIX + "stations", city=svc.normalize_city(city), fuel=fuel or "", available=available, on_duty=on_duty)
     cached = cache_get_json(key)
     if cached is not None:
         return LocalServiceListResponse(**cached)
@@ -228,7 +234,7 @@ def list_stations(
         db,
         "fuel_station",
         city,
-        keep=lambda i: has(i) or not available,
+        keep=lambda i: (has(i) or not available) and (i.on_duty or not on_duty),
         sort_key=lambda i: (not has(i), not i.fuel_fresh, recency(i), i.business_name.lower()),
     )
     # Court : une disponibilite change vite pendant une penurie.

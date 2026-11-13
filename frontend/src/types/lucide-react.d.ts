@@ -117,4 +117,6 @@ declare module "lucide-react" {
   export const Pill: LucideIcon;
   export const RefreshCw: LucideIcon;
   export const XCircle: LucideIcon;
+  export const LayoutList: LucideIcon;
+  export const MapPinned: LucideIcon;
 }

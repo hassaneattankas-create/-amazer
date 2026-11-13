@@ -7,6 +7,7 @@ export { ManagersEditor, type ManagersEditorProps } from "./ManagersEditor";
 export { ReportList, type ReportListProps } from "./ReportList";
 export { StationDataState, type StationDataStateProps } from "./StationDataState";
 export { StationInfoForm, type StationInfoFormProps } from "./StationInfoForm";
+export { StationDutyEditor, type StationDutyEditorProps } from "./StationDutyEditor";
 export { StationPositionEditor, type StationPositionEditorProps, type StationPositionPatch } from "./StationPositionEditor";
 export { useStationActions } from "./use-station-actions";
 export {

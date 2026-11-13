@@ -1,15 +1,15 @@
 "use client";
 
-import { Clock3, Flag, Fuel, MapPin, Store, Truck } from "lucide-react";
+import { Clock3, Flag, Fuel, MapPin, Moon, Store, Truck } from "lucide-react";
 
-import { FuelAvailabilityEditor, StationInfoForm, StationPositionEditor, stationFreshness, useStationActions } from "@/components/stations/shared";
+import { FuelAvailabilityEditor, StationDutyEditor, StationInfoForm, StationPositionEditor, stationFreshness, useStationActions } from "@/components/stations/shared";
 import { Accordion, AccordionItem } from "@/components/ui/accordion";
 import { useNow } from "@/hooks/use-now";
 import type { ManagedOutlet } from "@/types/local-services";
 
 import { OutletActivity, OutletDeliveries, OutletReports } from "./OutletFeeds";
 
-/** Contenu d'une station du gérant : six sections repliables, disponibilités ouvertes d'abord. */
+/** Contenu d'une station du gérant : sections repliables (dont la garde), disponibilités ouvertes d'abord. */
 function ManagedStationPanel({ outlet }: { outlet: ManagedOutlet }) {
   const actions = useStationActions(outlet.id);
   const disabled = !outlet.can_update;
@@ -39,6 +39,9 @@ function ManagedStationPanel({ outlet }: { outlet: ManagedOutlet }) {
         </AccordionItem>
         <AccordionItem id="info" variant="row" headingLevel={4} title="Informations et horaires" icon={<Store className={icon} />}>
           <StationInfoForm info={outlet.info} busy={actions.busy} disabled={disabled} onSave={actions.saveInfo.mutateAsync} />
+        </AccordionItem>
+        <AccordionItem id="duty" variant="row" headingLevel={4} title="Garde" icon={<Moon className={icon} />} meta={outlet.info.on_duty_now ? "De garde" : undefined}>
+          <StationDutyEditor info={outlet.info} busy={actions.busy} disabled={disabled} onSave={actions.saveInfo.mutateAsync} />
         </AccordionItem>
         <AccordionItem
           id="position"

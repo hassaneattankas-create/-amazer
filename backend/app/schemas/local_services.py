@@ -38,9 +38,26 @@ class StationInfo(BaseModel):
     longitude: float | None
     maps_url: str
     info_updated_at: str | None
+    # Garde : declaree (on_duty), jusqu'a quand (date ISO ou None = sans fin), et en cours maintenant.
+    on_duty: bool = False
+    duty_until: str | None = None
+    on_duty_now: bool = False
 
 
-class StationInfoUpdate(BaseModel):
+class DutyFields(BaseModel):
+    """Garde d'une station : on_duty absent = inchangee ; duty_until (inclus) n'a de sens qu'avec on_duty=true."""
+
+    on_duty: bool | None = None
+    duty_until: date | None = None
+
+    @model_validator(mode="after")
+    def _until_needs_duty(self) -> DutyFields:
+        if self.duty_until is not None and self.on_duty is not True:
+            raise ValueError("Une date de fin de garde demande d'activer la garde.")
+        return self
+
+
+class StationInfoUpdate(DutyFields):
     """Champs absents = inchanges ; chaine vide = effacer (adresse, telephone, horaires).
 
     Position : latitude + longitude (GPS sur place) ou maps_link (lien Google Maps ou « lat, lng »).
@@ -184,7 +201,7 @@ class FuelOutletCreate(BaseModel):
     phone: str | None = Field(default=None, max_length=40, pattern=r"^[+0-9 ().-]*$")
 
 
-class FuelOutletUpdate(BaseModel):
+class FuelOutletUpdate(DutyFields):
     """Champs absents = inchanges. fuel / position : mise a jour en un geste depuis la station."""
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)

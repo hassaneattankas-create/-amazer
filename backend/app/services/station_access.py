@@ -328,9 +328,34 @@ def apply_info_update(outlet: FuelOutlet, payload: StationInfoUpdate | FuelOutle
         if (outlet.latitude, outlet.longitude) != position:
             outlet.latitude, outlet.longitude = position
             moved = True
+    duty = apply_duty_update(outlet, payload, now)
+    if duty:
+        touched = True
+        changed.append(duty)
     if touched:
         outlet.info_updated_at = now
     return touched, changed, moved
+
+
+def apply_duty_update(outlet: FuelOutlet, payload: StationInfoUpdate | FuelOutletUpdate, now: datetime) -> str | None:
+    """Garde : renvoie le libelle du changement (pour le journal) ou None si rien ne change.
+
+    duty_until doit etre aujourd'hui ou plus tard (heure de Niamey) : sinon la garde serait deja finie.
+    """
+    if payload.on_duty is None:
+        return None
+    until = payload.duty_until if payload.on_duty else None
+    if until is not None and until < svc.niamey_today(now):
+        raise ValidationDomainError("La date de fin de garde est déjà passée : choisissez aujourd'hui ou plus tard.")
+    if (bool(outlet.on_duty), outlet.duty_until) == (payload.on_duty, until):
+        return None
+    outlet.on_duty = payload.on_duty
+    outlet.duty_until = until
+    outlet.duty_updated_at = now
+    if not payload.on_duty:
+        return "garde arrêtée"
+    return f"de garde jusqu'au {until.strftime('%d/%m/%Y')}" if until else "de garde"
+
 
 
 def log_info_activity(db: Session, outlet: FuelOutlet, user: User, role: str, touched: bool, changed: list[str], moved: bool) -> None:
@@ -359,6 +384,9 @@ def station_info(outlet: FuelOutlet) -> StationInfo:
         longitude=outlet.longitude,
         maps_url=svc.maps_url(outlet),
         info_updated_at=updated.isoformat() if updated else None,
+        on_duty=bool(outlet.on_duty),
+        duty_until=outlet.duty_until.isoformat() if outlet.duty_until else None,
+        on_duty_now=svc.outlet_on_duty(outlet),
     )
 
 

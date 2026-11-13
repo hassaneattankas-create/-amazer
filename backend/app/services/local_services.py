@@ -71,9 +71,27 @@ def duty_label(profile: SellerProfile, now: datetime | None = None) -> str | Non
         return None
     end = getattr(profile, "duty_end", None)
     if end is not None and end >= niamey_today(now):
-        months = ("janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc.")
-        return f"De garde jusqu'au {end.day} {months[end.month - 1]}"
+        return f"De garde jusqu'au {end.day} {_MONTHS[end.month - 1]}"
     return "De garde"
+
+
+_MONTHS = ("janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc.")
+
+
+def outlet_on_duty(outlet: object, now: datetime | None = None) -> bool:
+    """Station de garde : declaree par la station, sans fin ou jusqu'a duty_until inclus (Niamey)."""
+    if not bool(getattr(outlet, "on_duty", False)):
+        return False
+    until = getattr(outlet, "duty_until", None)
+    return until is None or niamey_today(now) <= until
+
+
+def outlet_duty_label(outlet: object, now: datetime | None = None) -> str | None:
+    """« De garde » ou « De garde jusqu'au 15 nov. » pour le client ; None hors garde."""
+    if not outlet_on_duty(outlet, now):
+        return None
+    until = getattr(outlet, "duty_until", None)
+    return f"De garde jusqu'au {until.day} {_MONTHS[until.month - 1]}" if until else "De garde"
 
 
 def clean_fuel_status(raw: dict | None) -> dict[str, str]:
