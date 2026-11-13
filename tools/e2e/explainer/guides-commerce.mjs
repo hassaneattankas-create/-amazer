@@ -129,7 +129,7 @@ GUIDES.boutique = {
         { say: "Voici votre Espace vendeur. En haut : les commandes à préparer, vos ventes, vos produits en ligne, et le stock faible.",
           do: (f) => f.point("À préparer", TXT), guide: g("Votre Espace vendeur", "L'**Accueil** résume tout : **À préparer**, **Ventes sur 30 jours**, **Produits en ligne**, **Stock faible**.") },
         { say: "Pour ajouter un produit, touchez Ajouter un produit.",
-          do: (f) => f.click("Ajouter un produit"), guide: g("Ajoutez un produit", "Touchez **Ajouter un produit** (ou l'onglet **Ajouter**).") },
+          do: (f) => f.click("Ajouter un produit"), guide: g("Ajoutez un produit", "Touchez **Ajouter un produit** (ou la section **Ajouter un produit**).") },
         { say: "Écrivez le nom du produit, son prix et le stock disponible.",
           do: async (f) => { await f.type("Nom du produit", "Sac à main en cuir"); await f.type("Prix (XOF)", "12500"); await f.type("Stock", "10"); }, guide: g("Nom, prix, stock", "Remplissez **Nom du produit**, **Prix (XOF)** et **Stock**. La marque et la description sont facultatives.") },
         { say: "Ajoutez une belle photo, depuis la galerie ou l'appareil photo. Puis touchez Ajouter au catalogue.",
@@ -194,7 +194,7 @@ GUIDES.restaurant = {
     },
     {
       title: "Recevoir et préparer les commandes",
-      intro: "Dans votre **Espace vendeur**, onglet **Commandes**.",
+      intro: "Dans votre **Espace vendeur**, section **Commandes**.",
       persona: () => ({ ...P.restaurant }),
       route: "/seller/dashboard#commandes",
       scenes: [
@@ -260,7 +260,7 @@ GUIDES.hotel = {
     },
     {
       title: "Gérer les réservations",
-      intro: "Dans votre **Espace vendeur**, onglet **Commandes**.",
+      intro: "Dans votre **Espace vendeur**, section **Commandes**.",
       persona: () => ({ ...P.hotel }),
       route: "/seller/dashboard#commandes",
       scenes: [
@@ -314,7 +314,7 @@ GUIDES.transport = {
     },
     {
       title: "Gérer les départs",
-      intro: "Dans votre **Espace vendeur**, onglet **Commandes** : **Départs et passagers**.",
+      intro: "Dans votre **Espace vendeur**, section **Commandes** : **Départs et passagers**.",
       persona: () => ({ ...P.transport }),
       route: "/seller/dashboard#commandes",
       scenes: [

@@ -87,6 +87,8 @@ export class Film {
     this.browser = await puppeteer.launch({ headless: true, args: ["--force-device-scale-factor=3", "--hide-scrollbars", "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows"] });
     this.page = await this.browser.newPage();
     await this.page.setViewport({ width: VW, height: VH, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    // Bannière « Installez l'application » : hors sujet et cache les formulaires (même pour un visiteur).
+    await this.page.evaluateOnNewDocument(() => { try { localStorage.setItem("amazer_install_dismissed_until", String(Date.now() + 86400000)); } catch {} });
     await this.page.setRequestInterception(true);
     this.page.on("pageerror", (e) => console.log("erreur page :", e.message.slice(0, 160)));
     const cors = { "Access-Control-Allow-Origin": BASE, "Access-Control-Allow-Credentials": "true", "Access-Control-Allow-Headers": "*", "Access-Control-Allow-Methods": "*" };
@@ -200,7 +202,8 @@ export class Film {
     }, text, selector, nth);
     if (!box) { if (last) console.log(`  élément introuvable : ${text}`); return false; }
     await wait(650);
-    const r = await this.page.evaluate(() => { const b = document.querySelector("[data-xp]").getBoundingClientRect(); return { x: b.left + Math.min(b.width * .5, 150), y: b.top + b.height * .55 }; });
+    const r = await this.page.evaluate(() => { const e = document.querySelector("[data-xp]"); if (!e) return null; const b = e.getBoundingClientRect(); return { x: b.left + Math.min(b.width * .5, 150), y: b.top + b.height * .55 }; });
+    if (!r) return last ? this.pointOnce(text, { selector, nth }, false) : false; // élément redessiné entre-temps : on le recherche
     this.pos = { x: Math.round(r.x), y: Math.round(r.y) };
     if (this.start) this.focus.push({ t: (Date.now() - this.start) / 1000, x: this.pos.x / VW, y: this.pos.y / VH, z: 1.22 });
     await this.place();

@@ -8,6 +8,13 @@ const me = (email, full_name, role = "user") => [/\/auth\/me$/, { id: "u1", emai
 const subscription = [/\/seller\/subscription-status$/, { has_seller_profile: true, onboarding_fee_paid: true, onboarding_fee_paid_at: null, subscription_paid_until: iso(-30 * 1440), subscription_active: true, monthly_fee: 1000, onboarding_fee: 0, amount_due_now: 0, currency: "XOF", has_pending_payment_request: false }];
 const stats = [/\/seller\/stats$/, { is_premium: false, this_week: { views: 84, contacts: 19, orders: 7 }, last_week: { views: 61, contacts: 21, orders: 5 }, days: Array.from({ length: 7 }, (_, i) => ({ day: new Date(now - (6 - i) * 86400000).toISOString().slice(0, 10), views: [5, 9, 14, 8, 17, 12, 19][i], contacts: 2 })) }];
 const categories = [/\/categories/, { items: [] }];
+// « Ma formule » (espace vendeur) : essai en cours, prix mensuel, ce qui attend le vendeur ensuite.
+const plan = (kind, monthly_fee, o = {}) => [/\/seller\/plan-earnings$/, {
+  plan: "subscribed", kind, in_trial: true, monthly_fee, eligible_free_plan: kind === "shop", max_visible_products: null, visible_products: 6,
+  commission_rate: 0, free_plan_commission_rate: 0.05, free_plan_max_products: 5, subscription_paid_until: iso(-12 * 1440),
+  to_receive: 0, awaiting_delivery: 12500, received: 0, commission_total: 0, lines: [], ...o,
+}];
+
 // Moyens de paiement publics d'AMAZER (tels qu'affichés sur le site).
 const payMethods = [/\/payment-methods$/, [{ code: "nita", name: "Nita Transfert", kind: "manual", account_number: "+227 96953163", account_name: null, instructions: null }, { code: "amana", name: "Amana Transfert", kind: "amana", account_number: "+227 96953163", account_name: null, instructions: null }]];
 
@@ -48,7 +55,7 @@ export const boutique = {
     [/\/seller\/profile$/, { id: "sp1", vendor_id: "v1", business_name: "Bella Mode", activity_type: "shop", storefront_tier: "basic", offers_shop: true, offers_restaurant: false, city: "Niamey", phone: "+22790000001", address: "Grand marché" }],
     [/\/seller\/inventory$/, shopProducts],
     [/\/seller\/orders$/, shopOrders],
-    stats, subscription, categories, payMethods,
+    stats, subscription, categories, payMethods, plan("shop", 2000),
   ],
 };
 
@@ -79,7 +86,7 @@ export const restaurant = {
     [/\/restaurant\/seller\/orders$/, [rOrder("o1", "commande", 4), rOrder("o2", "commande", 52), rOrder("o4", "preparation", 15)]],
     [/\/restaurant\/seller\/settings$/, { weekly_hours: null, orders_paused: false, is_open: true, open_label: "Ouvert" }],
     [/\/restaurant\/(restaurants|list|places)/, { items: [resto], cities: [{ city: "Niamey", count: 1 }] }],
-    stats, subscription, categories, payMethods,
+    stats, subscription, categories, payMethods, plan("restaurant", 5000),
   ],
 };
 
@@ -98,7 +105,7 @@ export const hotel = {
     [/\/seller\/storefront\/h1\/availability$/, { check_in_date: day(0), check_out_date: day(1), nights: 1, available: { std: 2, suite: 0 } }],
     [/\/seller\/profile$/, { id: "sp1", vendor_id: "h1", business_name: "Hôtel du Fleuve", activity_type: "hotel", storefront_tier: "premium", accepts_hotel_bookings: true, offers_transport: false, room_types: rooms, city: "Niamey" }],
     [/\/seller\/hotel-bookings$/, [booking("b1", "pending", 2, 3, "Aïcha Mahamadou"), booking("b2", "confirmed", 0, 2, "Ibrahim Souley"), booking("b3", "checked_in", -1, 3, "Mariam Issa")]],
-    stats, subscription, categories, payMethods,
+    stats, subscription, categories, payMethods, plan("premium", 10000),
   ],
 };
 
@@ -119,7 +126,7 @@ export const transport = {
     [/\/seller\/hotel-bookings$/, [seat("p1", "confirmed", 1, "06:00", "Hadiza Ali", 2), seat("p2", "pending", 1, "06:00", "Saidou Amadou", 1), seat("p4", "confirmed", 2, "14:00", "Issa Garba", 3)]],
     [/\/seller\/my-bookings$/, [{ id: "p1", kind: "transport", vendor_id: "t1", place_name: "Sahel Voyages", item_name: "Niamey → Maradi", check_in_date: day(1), check_out_date: day(2), departure_time: "06:00", guest_count: 2, amount: 24000, status: "confirmed", payment_status: "paid", ticket_token: "p1.0123456789abcdef0123456789abcdef", created_at: iso() }]],
     [/\/api\/v1\/orders\/me$/, []],
-    stats, subscription, categories, payMethods,
+    stats, subscription, categories, payMethods, plan("premium", 10000),
   ],
 };
 
@@ -145,7 +152,7 @@ export const pharmacie = {
     [/\/seller\/storefront\/ph1$/, pharmaFront],
     [/\/seller\/profile$/, { id: "sp1", vendor_id: "ph1", business_name: "Pharmacie du Fleuve", activity_type: "enterprise", storefront_tier: "premium", service_kind: "pharmacy", offers_shop: false, room_types: [], city: "Niamey" }],
     [/\/api\/v1\/orders\/me$/, []],
-    stats, subscription, categories, payMethods,
+    stats, subscription, categories, payMethods, plan("pharmacy", 10000, { plan: "subscribed", in_trial: false }),
   ],
 };
 export const pharmaClient = { proxy: true, mocks: [[/\/services\/pharmacies$/, pharmacies]] };
