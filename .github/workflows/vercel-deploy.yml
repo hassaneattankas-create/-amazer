@@ -30,9 +30,11 @@ jobs:
     timeout-minutes: 20
     env:
       # Identifiants de projet, non secrets (visibles dans le dashboard Vercel).
-      # amazerniger-hub-amazer = le SEUL projet qui sert amazer.store.
-      VERCEL_ORG_ID: team_bL8FCYwfFX0DGa2Ppa1DYX7z
-      VERCEL_PROJECT_ID: prj_QWZPAAiIg4fl8GbkxAFTpfYP6ZWP
+      # Projet « amazer » du compte Vercel hassaneattankas-create = le SEUL qui sert
+      # amazer.store depuis le 2026-11-13 (ancien compte amazerniger-hub inaccessible :
+      # Vercel exige un code mail qui n'arrive plus).
+      VERCEL_ORG_ID: team_YiWJaLazRIafCMGvuAsx2TeK
+      VERCEL_PROJECT_ID: prj_lz99ZDxbBqF8A4COC7GCXKaW5ldN
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
     steps:
