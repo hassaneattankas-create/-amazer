@@ -4,8 +4,9 @@ name: Sauvegarde quotidienne de la base
 # quotidienne (format pg_dump compresse) est conservee 14 jours comme artefact.
 # Restauration : voir docs/RESTAURATION_BASE.md.
 #
-# Secret requis : NEON_DATABASE_URL (meme valeur que DATABASE_URL sur Render,
-# en remplacant "postgresql+psycopg://" par "postgresql://").
+# Adresse de la base : secret NEON_DATABASE_URL s'il existe, sinon lue a chaque
+# passage dans la variable DATABASE_URL du serveur Render (secret RENDER_API_KEY,
+# deja utilise pour les deploiements). Rien a recopier a la main.
 
 on:
   schedule:
@@ -21,14 +22,37 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Verifier le secret
+      - name: Recuperer l'adresse de la base
         env:
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: srv-d6jcoqngi27c73d335i0
         run: |
-          if [ -z "$NEON_DATABASE_URL" ]; then
-            echo "::error::Secret NEON_DATABASE_URL absent : ajoutez-le dans Settings > Secrets and variables > Actions."
+          url="$NEON_DATABASE_URL"
+          if [ -z "$url" ] && [ -n "$RENDER_API_KEY" ]; then
+            api() { curl -sS --fail -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1$1"; }
+            # 1) variables du service backend
+            url=$(api "/services/$RENDER_SERVICE_ID/env-vars?limit=100" \
+              | jq -r '.[] | (.envVar // .) | select(.key=="DATABASE_URL") | .value' | head -1)
+            # 2) sinon, groupes de variables partages
+            if [ -z "$url" ]; then
+              for g in $(api "/env-groups?limit=100" | jq -r '.[] | (.envGroup // .) | .id'); do
+                url=$(api "/env-groups/$g" | jq -r '.envVars[]? | select(.key=="DATABASE_URL") | .value' | head -1)
+                [ -n "$url" ] && break
+              done
+            fi
+          fi
+          if [ -z "$url" ]; then
+            echo "::error::Adresse de la base introuvable (ni secret NEON_DATABASE_URL, ni DATABASE_URL sur Render)."
             exit 1
           fi
+          echo "::add-mask::$url"
+          # pg_dump veut postgresql:// (pas le pilote SQLAlchemy) et une connexion
+          # directe : le « pooler » de Neon ne supporte pas pg_dump.
+          url=$(printf '%s' "$url" | sed -E 's#^postgres(ql)?\+[a-z0-9_]+://#postgresql://#; s#^postgres://#postgresql://#; s#-pooler\.#.#')
+          echo "::add-mask::$url"
+          echo "DB_URL=$url" >> "$GITHUB_ENV"
+          echo "Adresse de la base recuperee."
 
       - name: Installer le client PostgreSQL 17
         run: |
@@ -41,12 +65,10 @@ jobs:
           /usr/lib/postgresql/17/bin/pg_dump --version
 
       - name: Exporter la base
-        env:
-          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
         run: |
           STAMP=$(date -u +%Y-%m-%d_%H%M)
           echo "STAMP=$STAMP" >> "$GITHUB_ENV"
-          /usr/lib/postgresql/17/bin/pg_dump "$NEON_DATABASE_URL" \
+          /usr/lib/postgresql/17/bin/pg_dump "$DB_URL" \
             --format=custom --compress=9 --no-owner --no-privileges \
             --file="amazer_${STAMP}.dump"
           ls -lh "amazer_${STAMP}.dump"
