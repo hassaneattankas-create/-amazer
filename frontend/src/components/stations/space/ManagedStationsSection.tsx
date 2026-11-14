@@ -1,8 +1,8 @@
 "use client";
 
-import { Clock3, Flag, Fuel, MapPin, Moon, Store, Truck } from "lucide-react";
+import { BarChart3, Clock3, Flag, Fuel, MapPin, Moon, Store, Truck } from "lucide-react";
 
-import { FuelAvailabilityEditor, StationDutyEditor, StationInfoForm, StationPositionEditor, stationFreshness, useStationActions } from "@/components/stations/shared";
+import { FuelAvailabilityEditor, MeterReadingsPanel, StationDutyEditor, StationInfoForm, StationPositionEditor, stationFreshness, useStationActions } from "@/components/stations/shared";
 import { Accordion, AccordionItem } from "@/components/ui/accordion";
 import { useNow } from "@/hooks/use-now";
 import type { ManagedOutlet } from "@/types/local-services";
@@ -60,6 +60,9 @@ function ManagedStationPanel({ outlet }: { outlet: ManagedOutlet }) {
             disabled={disabled}
             onSave={actions.saveInfo.mutateAsync}
           />
+        </AccordionItem>
+        <AccordionItem id="sales" variant="row" headingLevel={4} title="Ventes (compteurs)" icon={<BarChart3 className={icon} />}>
+          <MeterReadingsPanel outletId={outlet.id} disabled={disabled} />
         </AccordionItem>
         <AccordionItem id="deliveries" variant="row" headingLevel={4} title="Livraisons" icon={<Truck className={icon} />}>
           <OutletDeliveries outletId={outlet.id} actions={actions} disabled={disabled} />

@@ -23,6 +23,7 @@ from app.core.deps import get_current_user, get_seller_user
 from app.core.exceptions import ForbiddenError, NotFoundError, ValidationDomainError
 from app.core.rate_limit import enforce_rate_limit
 from app.database import get_db
+from app.models.fuel_activity import FuelPump
 from app.models.fuel_history import StationReport
 from app.models.fuel_outlet import FuelOutlet, FuelOutletManager, FuelRegionManager
 from app.models.seller_profile import SellerProfile
@@ -46,7 +47,14 @@ from app.schemas.local_services import (
     StationManagerRef,
 )
 from app.schemas.station_space import (
+    BrandSales,
     DeliveryCreate,
+    MeterReadingsCreate,
+    PumpCreate,
+    PumpItem,
+    SalesDay,
+    StationMeters,
+    StationSales,
     RegionCity,
     RegionOutletCreate,
     RegionOutletUpdate,
@@ -55,6 +63,7 @@ from app.schemas.station_space import (
     StationSpaceMe,
 )
 from app.services import local_services as svc
+from app.services import fuel_sales_service as sales
 from app.services import station_access as sa
 from app.services.seller_finance_service import get_or_create_global_settings
 
@@ -479,3 +488,139 @@ def owner_resolve_report(
     if report is None or report.vendor_id != profile.vendor_id:
         raise NotFoundError("Retour introuvable.")
     return sa.resolve_report(db, report, current_user, "owner", payload.resolution, datetime.now(UTC))
+
+
+# ---------------------------------------------------------------- ventes de carburant (compteurs des pompes)
+SALES_DAYS = 14
+
+
+def _meters_view(db: Session, outlet: FuelOutlet, just_sold: dict[str, float] | None = None) -> StationMeters:
+    pumps = sales.active_pumps(db, [outlet.id])
+    last = sales.last_readings(db, [p.id for p in pumps])
+    per_day = sales.daily_sales(db, [outlet.id], SALES_DAYS)[outlet.id]
+    return StationMeters(
+        pumps=[
+            PumpItem(
+                id=p.id,
+                fuel=p.fuel,
+                name=p.name,
+                last_meter=last[p.id].meter if p.id in last else None,
+                last_read_at=svc._aware(last[p.id].read_at).isoformat() if p.id in last else None,
+            )
+            for p in pumps
+        ],
+        days=[SalesDay(**d) for d in sales.day_list(per_day, SALES_DAYS)],
+        just_sold={k: round(v) for k, v in (just_sold or {}).items()},
+    )
+
+
+@router.get("/station-manager/outlets/{outlet_id}/meters", response_model=StationMeters)
+def station_meters(
+    outlet_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> StationMeters:
+    """Pompes, derniers compteurs et litres vendus par jour (14 jours)."""
+    outlet, _role = sa.require_station(db, current_user, outlet_id)
+    return _meters_view(db, outlet)
+
+
+@router.post("/station-manager/outlets/{outlet_id}/pumps", response_model=StationMeters, status_code=201)
+def add_station_pump(
+    outlet_id: str,
+    payload: PumpCreate,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> StationMeters:
+    enforce_csrf(request)
+    enforce_rate_limit(request, key=f"station-manager:{current_user.id}", limit=120, window_seconds=600)
+    outlet, role = sa.require_station(db, current_user, outlet_id)
+    sa.ensure_writable(db, outlet, role, datetime.now(UTC), allow_closed=True)
+    sales.add_pump(db, outlet=outlet, user=current_user, role=role, fuel=payload.fuel, name=payload.name)
+    return _meters_view(db, outlet)
+
+
+@router.delete("/station-manager/outlets/{outlet_id}/pumps/{pump_id}", response_model=StationMeters)
+def remove_station_pump(
+    outlet_id: str,
+    pump_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> StationMeters:
+    enforce_csrf(request)
+    outlet, role = sa.require_station(db, current_user, outlet_id)
+    sa.ensure_writable(db, outlet, role, datetime.now(UTC), allow_closed=True)
+    pump = db.get(FuelPump, pump_id)
+    if pump is None or pump.outlet_id != outlet.id or not pump.is_active:
+        raise NotFoundError("Pompe introuvable.")
+    sales.remove_pump(db, outlet=outlet, pump=pump, user=current_user, role=role)
+    return _meters_view(db, outlet)
+
+
+@router.post("/station-manager/outlets/{outlet_id}/meter-readings", response_model=StationMeters, status_code=201)
+def record_station_meters(
+    outlet_id: str,
+    payload: MeterReadingsCreate,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> StationMeters:
+    """Relevé des compteurs : AMAZER calcule les litres vendus depuis le relevé précédent."""
+    enforce_csrf(request)
+    enforce_rate_limit(request, key=f"station-manager:{current_user.id}", limit=120, window_seconds=600)
+    outlet, role = sa.require_station(db, current_user, outlet_id)
+    now = datetime.now(UTC)
+    # Relever ses compteurs ne publie rien aux clients : permis aussi sur une station fermée.
+    sa.ensure_writable(db, outlet, role, now, allow_closed=True)
+    sold = sales.record_readings(
+        db, outlet=outlet, user=current_user, role=role, readings=[(r.pump_id, r.meter, r.reset) for r in payload.readings], now=now
+    )
+    return _meters_view(db, outlet, sold)
+
+
+@router.get("/seller/fuel-sales", response_model=BrandSales)
+def my_fuel_sales(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_seller_user)],
+    city: Annotated[str | None, Query(max_length=80)] = None,
+) -> BrandSales:
+    """Propriétaire : litres vendus par jour (toute la marque) et par station (aujourd'hui, hier, 7 jours)."""
+    profile = sa.owner_profile(db, current_user)
+    if profile is None:
+        raise ForbiddenError("Réservé au propriétaire de la marque.")
+    outlets = list(db.scalars(select(FuelOutlet).where(FuelOutlet.vendor_id == profile.vendor_id, FuelOutlet.is_active.is_(True)).order_by(FuelOutlet.city, FuelOutlet.name)).all())
+    if city:
+        key = svc.normalize_city(city)
+        outlets = [o for o in outlets if svc.normalize_city(o.city) == key]
+    ids = [o.id for o in outlets]
+    per_outlet = sales.daily_sales(db, ids, SALES_DAYS)
+    pumps = sales.active_pumps(db, ids)
+    last = sales.last_readings(db, [p.id for p in pumps])
+    brand: dict = {}
+    stations: list[StationSales] = []
+    for o in outlets:
+        days = sales.day_list(per_outlet[o.id], SALES_DAYS)
+        for d in days:
+            total = brand.setdefault(d["day"], {"day": d["day"], "super": 0, "gasoil": 0})
+            total["super"] += d["super"]
+            total["gasoil"] += d["gasoil"]
+        reads = [last[p.id].read_at for p in pumps if p.outlet_id == o.id and p.id in last]
+        stations.append(
+            StationSales(
+                outlet_id=o.id,
+                name=o.name,
+                city=o.city,
+                today=SalesDay(**days[0]),
+                yesterday=SalesDay(**days[1]),
+                week_super=sum(d["super"] for d in days[:7]),
+                week_gasoil=sum(d["gasoil"] for d in days[:7]),
+                pumps=sum(1 for p in pumps if p.outlet_id == o.id),
+                last_read_at=svc._aware(max(reads)).isoformat() if reads else None,
+            )
+        )
+    order = sorted(brand.values(), key=lambda d: d["day"], reverse=True)
+    if not order:
+        order = sales.day_list({}, SALES_DAYS)
+    return BrandSales(days=[SalesDay(**d) for d in order], stations=stations)

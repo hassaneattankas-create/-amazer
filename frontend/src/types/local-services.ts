@@ -61,6 +61,8 @@ export type ServiceStatus = {
   longitude: number | null;
   maps_url: string;
   delivery_phone: string | null;
+  /** Pharmacie inscrite présente sur la liste officielle de garde de la semaine. */
+  official_duty_label?: string | null;
 };
 
 export type ServiceStatusUpdate = {
@@ -245,4 +247,41 @@ export type StationReport = {
   resolved_at: string | null;
   resolution: string | null;
   resolved_by_name: string | null;
+};
+
+/** Une pharmacie de garde (liste officielle de la semaine ou garde déclarée sur AMAZER). */
+export type PharmacyDutyItem = {
+  name: string;
+  commune: string | null;
+  district: string | null;
+  location: string | null;
+  phone: string | null;
+  phone_link: string | null;
+  whatsapp_link: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  maps_url: string;
+  vendor_id: string | null;
+  logo_url: string | null;
+  is_verified: boolean;
+  until_label: string;
+  official: boolean;
+};
+
+export type PharmacyDutyWeek = {
+  title: string;
+  source: string;
+  starts_at: string;
+  ends_at: string;
+  period_label: string;
+  until_label: string;
+  items: PharmacyDutyItem[];
+};
+
+export type PharmacyDuty = {
+  city: string;
+  cities: string[];
+  current: PharmacyDutyWeek | null;
+  next: PharmacyDutyWeek | null;
+  declared: PharmacyDutyItem[];
 };

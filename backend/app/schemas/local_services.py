@@ -299,6 +299,51 @@ class ServiceStatusResponse(BaseModel):
     longitude: float | None
     maps_url: str
     delivery_phone: str | None
+    # Pharmacie inscrite qui figure sur la liste officielle de la semaine (garde automatique).
+    official_duty_label: str | None = None
+
+
+class PharmacyDutyItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    commune: str | None
+    district: str | None
+    location: str | None
+    phone: str | None
+    phone_link: str | None
+    whatsapp_link: str | None
+    latitude: float | None
+    longitude: float | None
+    maps_url: str
+    vendor_id: str | None
+    logo_url: str | None
+    is_verified: bool
+    until_label: str
+    official: bool
+
+
+class PharmacyDutyWeek(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str
+    source: str
+    starts_at: str
+    ends_at: str
+    period_label: str
+    until_label: str
+    items: list[PharmacyDutyItem]
+
+
+class PharmacyDutyResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    city: str
+    cities: list[str]
+    current: PharmacyDutyWeek | None
+    next: PharmacyDutyWeek | None
+    # Pharmacies inscrites sur AMAZER qui se sont déclarées de garde (hors liste officielle).
+    declared: list[PharmacyDutyItem]
 
 
 class FuelChangeItem(BaseModel):

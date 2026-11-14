@@ -33,10 +33,14 @@ def test_received_lists_are_seeded_once_with_every_line() -> None:
 
 
 def test_seed_is_idempotent_and_each_list_has_its_own_period(db: Session) -> None:
-    assert route.seed_official_lists(db) == 2
+    # Octobre (garde + Oriba) et la garde du 14 au 21 novembre.
+    assert route.seed_official_lists(db) == 3
     assert route.seed_official_lists(db) == 0
-    rows = {r.kind: r for r in db.scalars(select(OfficialList)).all()}
-    duty, fuel = rows["pharmacy_duty"], rows["fuel_supply"]
+    rows = {(r.kind, r.starts_at.month): r for r in db.scalars(select(OfficialList)).all()}
+    duty, fuel = rows[("pharmacy_duty", 10)], rows[("fuel_supply", 10)]
+    november = rows[("pharmacy_duty", 11)]
+    assert november.starts_at.replace(tzinfo=UTC) == datetime(2026, 11, 14, 7, 0, tzinfo=UTC)
+    assert db.scalar(select(func.count()).select_from(OfficialListEntry).where(OfficialListEntry.list_id == november.id)) == 44
     # Garde : du samedi 24/10 08 h au samedi 31/10 08 h (Niamey = UTC+1) ; communique Oriba : la journee du 24/10.
     assert duty.starts_at.replace(tzinfo=UTC) == datetime(2026, 10, 24, 7, 0, tzinfo=UTC)
     assert duty.ends_at.replace(tzinfo=UTC) == datetime(2026, 10, 31, 7, 0, tzinfo=UTC)

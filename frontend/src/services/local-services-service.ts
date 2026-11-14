@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import type {
+  PharmacyDuty,
   FuelChange,
   FuelDashboard,
   FuelPlan,
@@ -19,6 +20,12 @@ import type {
   StationReport,
   StationReportKind,
 } from "@/types/local-services";
+
+/** Pharmacies de garde de la ville : liste officielle de la semaine (et la suivante si publiée) + gardes déclarées. */
+export async function getPharmacyDuty(city = "Niamey"): Promise<PharmacyDuty> {
+  const response = await api.get<PharmacyDuty>("/api/v1/services/pharmacy-duty", { params: { city } });
+  return response.data;
+}
 
 export async function listPharmacies(params: { city?: string; onDuty?: boolean }): Promise<LocalServiceList> {
   const response = await api.get<LocalServiceList>("/api/v1/services/pharmacies", {

@@ -21,11 +21,15 @@ from app.database import get_db
 from app.models.fuel_history import FuelStatusChange, StationReport
 from app.models.fuel_outlet import FuelOutlet, FuelOutletManager, FuelRegionManager
 from app.models.fuel_outlet_stat import FuelOutletDailyStat
+from app.models.official_list import OfficialList
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.repositories.catalog_repository import active_subscription_clause
 from app.schemas.local_services import (
+    PharmacyDutyItem,
+    PharmacyDutyResponse,
+    PharmacyDutyWeek,
     CityCount,
     DashboardCity,
     DashboardOutage,
@@ -55,6 +59,7 @@ from app.schemas.local_services import (
     StationReportItem,
 )
 from app.services import local_services as svc
+from app.services import pharmacy_duty_service as duty_svc
 from app.services import station_access as sa
 from app.services.fuel_plan import PLAN_NAMES, FuelPlan, fuel_plan
 from app.services.seller_finance_service import get_or_create_global_settings
@@ -193,12 +198,63 @@ def list_pharmacies(
     cached = cache_get_json(key)
     if cached is not None:
         return LocalServiceListResponse(**cached)
+    official = duty_svc.official_duty(db)
+
+    def mark(i: LocalServiceItem) -> LocalServiceItem:
+        # Pharmacie inscrite présente sur la liste officielle de la semaine : de garde sans rien faire.
+        if not i.on_duty:
+            for name, ends in official.get(svc.normalize_city(i.city or "Niamey"), []):
+                if duty_svc.same_name(name, i.business_name):
+                    i.on_duty, i.duty_label = True, f"De garde {duty_svc.until_label(ends)}"
+                    break
+        return i
+
     response = _list(
         db,
         "pharmacy",
         city,
-        keep=lambda i: i.on_duty or not on_duty,
+        keep=lambda i: mark(i).on_duty or not on_duty,
         sort_key=lambda i: (not i.on_duty, not i.is_verified, i.business_name.lower()),
+    )
+    cache_set_json(key, response.model_dump(), ttl_seconds=60)
+    return response
+
+
+def _duty_week(week: duty_svc.BoardWeek | None) -> PharmacyDutyWeek | None:
+    if week is None:
+        return None
+    return PharmacyDutyWeek(
+        title=week.title,
+        source=week.source,
+        starts_at=week.starts_at.isoformat(),
+        ends_at=week.ends_at.isoformat(),
+        period_label=duty_svc.period_label(week.starts_at, week.ends_at),
+        until_label=duty_svc.until_label(week.ends_at),
+        items=[PharmacyDutyItem(**vars(i)) for i in week.items],
+    )
+
+
+@router.get("/services/pharmacy-duty", response_model=PharmacyDutyResponse)
+def pharmacy_duty(
+    db: Annotated[Session, Depends(get_db)],
+    city: Annotated[str, Query(min_length=2, max_length=80)] = "Niamey",
+) -> PharmacyDutyResponse:
+    """Pharmacies de garde de la ville : liste officielle de la semaine (et la suivante si publiée) + gardes déclarées."""
+    key = build_cache_key(CACHE_PREFIX + "pharmacy-duty", city=svc.normalize_city(city))
+    cached = cache_get_json(key)
+    if cached is not None:
+        return PharmacyDutyResponse(**cached)
+    profiles = _visible_profiles(db, "pharmacy")
+    current, upcoming, declared = duty_svc.board(db, city, profiles, decrypt_phone_value)
+    names = {(row.city or "").strip() for row in db.scalars(select(OfficialList).where(OfficialList.kind == "pharmacy_duty")).all()}
+    names.update((p.city or "").strip() for p in profiles)
+    cities = sorted({n for n in names if n}, key=lambda n: (svc.normalize_city(n) != "niamey", n))
+    response = PharmacyDutyResponse(
+        city=city.strip(),
+        cities=cities or ["Niamey"],
+        current=_duty_week(current),
+        next=_duty_week(upcoming),
+        declared=[PharmacyDutyItem(**vars(i)) for i in declared],
     )
     cache_set_json(key, response.model_dump(), ttl_seconds=60)
     return response
@@ -255,13 +311,15 @@ def _own_profile(db: Session, user: User) -> SellerProfile:
     return profile
 
 
-def _status(profile: SellerProfile, settings: object) -> ServiceStatusResponse:
+def _status(profile: SellerProfile, settings: object, db: Session | None = None) -> ServiceStatusResponse:
     now = datetime.now(UTC)
     updated = svc._aware(profile.fuel_updated_at)
+    official_end = duty_svc.official_end_for(profile, duty_svc.official_duty(db, now)) if db is not None and profile.service_kind == "pharmacy" else None
+    official_label = f"Votre pharmacie est sur la liste officielle de garde, {duty_svc.until_label(official_end)}." if official_end else None
     return ServiceStatusResponse(
         service_kind=profile.service_kind if profile.service_kind in svc.SERVICE_KINDS else None,
         on_duty=bool(profile.on_duty),
-        on_duty_now=svc.is_on_duty(profile, now),
+        on_duty_now=svc.is_on_duty(profile, now) or official_end is not None,
         duty_start=profile.duty_start,
         duty_end=profile.duty_end,
         duty_label=svc.duty_label(profile, now),
@@ -272,6 +330,7 @@ def _status(profile: SellerProfile, settings: object) -> ServiceStatusResponse:
         longitude=profile.longitude,
         maps_url=svc.maps_url(profile),
         delivery_phone=svc.delivery_phone(profile, settings, now),
+        official_duty_label=official_label,
     )
 
 
@@ -280,7 +339,7 @@ def get_service_status(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_seller_user)],
 ) -> ServiceStatusResponse:
-    return _status(_own_profile(db, current_user), get_or_create_global_settings(db))
+    return _status(_own_profile(db, current_user), get_or_create_global_settings(db), db)
 
 
 @router.put("/seller/service-status", response_model=ServiceStatusResponse)
@@ -345,7 +404,7 @@ def update_service_status(
 
     db.commit()
     invalidate_services_cache()
-    return _status(profile, get_or_create_global_settings(db))
+    return _status(profile, get_or_create_global_settings(db), db)
 
 
 

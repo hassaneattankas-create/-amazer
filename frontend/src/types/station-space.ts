@@ -53,9 +53,11 @@ export type ActivityAction =
   | "manager_added"
   | "manager_removed"
   | "city_added"
-  | "city_removed";
+  | "city_removed"
+  | "meters"
+  | "pump";
 
-const ACTIVITY_REPEATED_START = /^(Retour traité|Livraison|Position enregistrée|Gérant ajouté|Gérant retiré|Station ajoutée à|Station supprimée|Responsable de ville|Responsable retiré)\s*:?\s*/;
+const ACTIVITY_REPEATED_START = /^(Relevé des compteurs|Retour traité|Livraison|Position enregistrée|Gérant ajouté|Gérant retiré|Station ajoutée à|Station supprimée|Responsable de ville|Responsable retiré)\s*:?\s*/;
 
 /** Détail d'une ligne du journal, sans répéter le titre déjà affiché (« Livraison Gasoil 12 000 L » → « Gasoil 12 000 L »). */
 export function activityDetailText(detail: string | null): string | null {
@@ -78,6 +80,8 @@ export const ACTIVITY_ACTION_LABELS: Record<ActivityAction, string> = {
   manager_removed: "Gérant retiré",
   city_added: "Responsable de ville ajouté",
   city_removed: "Responsable de ville retiré",
+  meters: "Relevé des compteurs",
+  pump: "Pompes",
 };
 
 /** Libellé français d'un code d'action (code inconnu → « Action »). */
@@ -236,3 +240,39 @@ export type RegionOutletUpdate = { name?: string; is_active?: boolean };
 
 /** Filtres du journal du propriétaire (GET /seller/fuel-activity). */
 export type FuelActivityFilters = { city?: string; outlet_id?: string; role?: StationRole; limit?: number };
+
+// ── Ventes de carburant (compteurs des pompes) ──────────────────────────────
+export type PumpFuel = "super" | "gasoil";
+
+export type PumpItem = {
+  id: string;
+  fuel: PumpFuel;
+  name: string;
+  last_meter: number | null;
+  last_read_at: string | null;
+};
+
+export type SalesDay = { day: string; super: number; gasoil: number };
+
+export type StationMeters = {
+  pumps: PumpItem[];
+  days: SalesDay[];
+  /** Litres vendus depuis le relevé précédent (réponse à un relevé). */
+  just_sold: Partial<Record<PumpFuel, number>>;
+};
+
+export type MeterReadingInput = { pump_id: string; meter: number; reset?: boolean };
+
+export type StationSales = {
+  outlet_id: string;
+  name: string;
+  city: string;
+  today: SalesDay;
+  yesterday: SalesDay;
+  week_super: number;
+  week_gasoil: number;
+  pumps: number;
+  last_read_at: string | null;
+};
+
+export type BrandSales = { days: SalesDay[]; stations: StationSales[] };

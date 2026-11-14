@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -85,3 +86,76 @@ class DeliveryCreate(BaseModel):
     liters: int = Field(ge=1, le=200000)
     reference: str | None = Field(default=None, max_length=80)
     delivered_at: datetime | None = None
+
+
+# ---------------------------------------------------------------- ventes (compteurs des pompes)
+PumpFuel = Literal["super", "gasoil"]
+
+
+class PumpItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    fuel: PumpFuel
+    name: str
+    last_meter: float | None
+    last_read_at: str | None
+
+
+class PumpCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    fuel: PumpFuel
+    name: str = Field(min_length=1, max_length=60)
+
+
+class MeterReadingInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pump_id: str = Field(min_length=1, max_length=36)
+    meter: float = Field(ge=0, le=10_000_000_000)
+    reset: bool = False
+
+
+class MeterReadingsCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    readings: list[MeterReadingInput] = Field(min_length=1, max_length=24)
+
+
+class SalesDay(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    day: date
+    super: int
+    gasoil: int
+
+
+class StationMeters(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pumps: list[PumpItem]
+    days: list[SalesDay]
+    # Litres vendus depuis le relevé précédent (réponse à un relevé), sinon vide.
+    just_sold: dict[str, int] = Field(default_factory=dict)
+
+
+class StationSales(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    outlet_id: str
+    name: str
+    city: str
+    today: SalesDay
+    yesterday: SalesDay
+    week_super: int
+    week_gasoil: int
+    pumps: int
+    last_read_at: str | None
+
+
+class BrandSales(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    days: list[SalesDay]
+    stations: list[StationSales]

@@ -18,6 +18,8 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - Restaurant (5 000 F/mois) et Premium (10 000 F/mois : hôtels, transport, entreprises, pharmacies, stations) : 14 jours d'essai puis abonnement obligatoire ; sans paiement, l'établissement n'est plus visible des clients jusqu'au paiement (données gardées).
 - Chaque vendeur voit sa formule dans son espace (section « Ma formule ») : essai, date de fin, prix, et ce qui l'attend ensuite.
 - Clients : page « Où trouver de l'essence » et page « Pharmacies » avec bouton « Voir la carte » (autour de soi ; stations colorées selon le carburant, cercle = de garde ; pharmacies de garde en vert).
+- Pharmacies de garde : la page « Pharmacies » affiche la liste officielle de la semaine (affiche du ministère, du samedi 8 h au samedi 8 h) : recherche par nom ou quartier, filtre par commune, appel en un geste, itinéraire, semaine prochaine si publiée, partage WhatsApp. Une pharmacie inscrite qui figure sur la liste est de garde automatiquement ; sinon elle se met de garde en un geste (« Cette nuit », « Ce week-end », « Toute la semaine »).
+- Stations : chaque gérant peut relever le soir les compteurs de ses pompes (section « Ventes (compteurs) ») ; AMAZER calcule les litres de super et de gasoil vendus par jour ; le propriétaire voit les totaux (section « Ventes de carburant »).
 - Affiliés : part des abonnements des vendeurs amenés et bonus sur la 1re commande livrée des clients amenés. Revendeurs : ils fixent leur prix et gardent la marge.
 - Chaque nouveau compte reçoit un message de bienvenue (réglé par l'admin) avec les liens du groupe et de la chaîne WhatsApp d'AMAZER.
 - Contact public : amazer.niger2@gmail.com.
@@ -40,3 +42,6 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - 13 nov. : le bouton du haut s'appelle « Menu » aussi sur téléphone ; Pharmacies et Stations-essence sont dans la section « Premium » du menu, Affiliation et Revendre dans « Gagner avec AMAZER ».
 - 13 nov. : AMAZER est hébergé sur un nouveau compte Vercel ; le site se met à jour automatiquement à chaque modification.
 - 14 nov. : à chaque inscription, message de bienvenue réglable par l'admin (Admin → Messages → « Message de bienvenue ») avec les liens du groupe et de la chaîne WhatsApp d'AMAZER ; il ouvre la page « Bienvenue ».
+- 14 nov. : la caisse de l'admin ne compte plus les commandes annulées ni les faux paiements.
+- 14 nov. : page « Pharmacies » refaite autour de la liste officielle de garde de la semaine ; l'admin la publie en envoyant la photo de l'affiche (Admin → Gardes).
+- 14 nov. : ventes de carburant par compteurs des pompes pour les stations.

@@ -2,12 +2,13 @@
 
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, Clock3, CreditCard, Flag, LayoutGrid, Store, Truck, Users } from "lucide-react";
+import { BarChart3, Building2, Clock3, CreditCard, Flag, LayoutGrid, Store, Truck, Users } from "lucide-react";
 
 import { Accordion, AccordionItem } from "@/components/ui/accordion";
 import { getFuelDashboard, getFuelPlan, listMyOutlets, listRegionManagers } from "@/services/local-services-service";
 
 import { CityManagersSection } from "./CityManagersSection";
+import { FuelSalesSection } from "./FuelSalesSection";
 import { cityOptions } from "./CitySelect";
 import { OwnerActivity, OwnerDeliveries, OwnerReports, ownerReportsQuery } from "./OwnerFeeds";
 import { OwnerOverview, OwnerSummaryStrip } from "./OwnerOverview";
@@ -92,6 +93,9 @@ export function OwnerStationSpace({ vitrine }: OwnerStationSpaceProps) {
             onRetry={() => void outlets.refetch()}
             cityChoices={cities}
           />
+        </AccordionItem>
+        <AccordionItem id="sales" headingLevel={2} icon={<BarChart3 className="h-5 w-5" />} title="Ventes de carburant" description="Litres vendus, d'après les compteurs des pompes">
+          <FuelSalesSection />
         </AccordionItem>
         <AccordionItem id="activity" headingLevel={2} icon={<Clock3 className="h-5 w-5" />} title="Activité">
           <OwnerActivity />

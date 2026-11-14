@@ -9,7 +9,7 @@ from app.models.storefront_stat import StorefrontDailyStat
 from app.models.fuel_outlet import FuelOutlet, FuelOutletManager, FuelRegionManager
 from app.models.fuel_outlet_stat import FuelOutletDailyStat
 from app.models.fuel_history import FuelStatusChange, StationReport
-from app.models.fuel_activity import FuelActivity, FuelDelivery
+from app.models.fuel_activity import FuelActivity, FuelDelivery, FuelMeterReading, FuelPump
 from app.models.official_list import OfficialList, OfficialListEntry
 from app.models.vendor_review import VendorReview
 from app.models.affiliate import AffiliateAccount, AffiliateEarning, AffiliatePayout, AffiliateReferral
@@ -40,6 +40,8 @@ from app.models.global_settings import GlobalSettings
 from app.models.vendor import Vendor
 
 __all__ = [
+    "FuelPump",
+    "FuelMeterReading",
     "PaymentMethod",
     "OfficialList",
     "OfficialListEntry",

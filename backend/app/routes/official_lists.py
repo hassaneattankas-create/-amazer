@@ -6,6 +6,9 @@ Admin : publier une liste en collant ses lignes, voir les listes, en retirer une
 
 from __future__ import annotations
 
+import base64
+import binascii
+
 from datetime import UTC, datetime
 from typing import Annotated, Literal
 
@@ -21,10 +24,14 @@ from app.core.exceptions import NotFoundError, ValidationDomainError
 from app.database import get_db
 from app.models.official_list import OfficialList, OfficialListEntry
 from app.models.user import User
+from app.core.rate_limit import enforce_rate_limit
 from app.services import local_services as svc
+from app.services import pharmacy_duty_service as duty_svc
 
 router = APIRouter(tags=["official-lists"])
 CACHE_PREFIX = "official-lists:"
+# La page « Pharmacies de garde » et la liste des pharmacies dépendent aussi des listes officielles.
+SERVICES_PREFIX = "services:"
 MAX_ENTRIES = 300
 ListKind = Literal["pharmacy_duty", "fuel_supply"]
 
@@ -147,10 +154,11 @@ def create_list(db: Session, data: dict, entries: list[dict]) -> OfficialList:
 
 def seed_official_lists(db: Session) -> int:
     """Listes recues le 24/10/2026 : inserees une seule fois (meme titre et meme debut = deja la)."""
-    from app.data.official_lists_2026_10 import LISTS
+    from app.data.official_lists_2026_10 import LISTS as OCTOBER
+    from app.data.official_lists_2026_11 import LISTS as NOVEMBER
 
     added = 0
-    for data in LISTS:
+    for data in [*OCTOBER, *NOVEMBER]:
         exists = db.scalar(select(OfficialList.id).where(OfficialList.title == data["title"], OfficialList.starts_at == data["starts_at"].astimezone(UTC)))
         if exists:
             continue
@@ -162,7 +170,7 @@ def seed_official_lists(db: Session) -> int:
         added += 1
     db.commit()
     if added:
-        cache_delete_prefixes(CACHE_PREFIX)
+        cache_delete_prefixes(CACHE_PREFIX, SERVICES_PREFIX)
     return added
 
 
@@ -221,7 +229,7 @@ def admin_create_official_list(
     data.update(starts_at=starts, ends_at=ends, fuel=payload.fuel if payload.kind == "fuel_supply" else None)
     row = create_list(db, data, entries)
     db.commit()
-    cache_delete_prefixes(CACHE_PREFIX)
+    cache_delete_prefixes(CACHE_PREFIX, SERVICES_PREFIX)
     return _with_entries(db, [row])[0]
 
 
@@ -238,4 +246,63 @@ def admin_delete_official_list(
         raise NotFoundError("Liste introuvable.")
     db.delete(row)
     db.commit()
-    cache_delete_prefixes(CACHE_PREFIX)
+    cache_delete_prefixes(CACHE_PREFIX, SERVICES_PREFIX)
+
+
+class DutyPhotoRead(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    city: str
+    starts_at: str | None
+    ends_at: str | None
+    lines: str
+    count: int
+
+
+MAX_PHOTO_BYTES = 4 * 1024 * 1024
+
+
+class DutyPhotoInput(BaseModel):
+    """Photo de l'affiche, réduite par le navigateur puis envoyée en base64 (passe par le relais admin)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mime: Literal["image/jpeg", "image/png", "image/webp"]
+    data: str = Field(min_length=100, max_length=6_000_000)
+
+
+@router.post("/admin/official-lists/read-photo", response_model=DutyPhotoRead)
+def admin_read_duty_photo(
+    payload: DutyPhotoInput,
+    request: Request,
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> DutyPhotoRead:
+    """Lit la photo de l'affiche des pharmacies de garde : l'admin vérifie le résultat avant de publier."""
+    enforce_csrf(request)
+    enforce_rate_limit(request, key=f"duty-photo:{admin_user.id}", limit=20, window_seconds=3600)
+    try:
+        image = base64.b64decode(payload.data.split(",")[-1], validate=True)
+    except (ValueError, binascii.Error) as err:
+        raise ValidationDomainError("Photo illisible. Réessayez.") from err
+    if len(image) > MAX_PHOTO_BYTES:
+        raise ValidationDomainError("Photo trop lourde (4 Mo au maximum).")
+    try:
+        result = duty_svc.read_duty_photo(image, payload.mime)
+    except duty_svc.PhotoReadError as err:
+        raise ValidationDomainError(str(err)) from err
+    rows = result["rows"][:MAX_ENTRIES]
+
+    def when(value: object) -> str | None:
+        try:
+            moment = datetime.fromisoformat(str(value))
+        except ValueError:
+            return None
+        return moment.strftime("%Y-%m-%dT%H:%M")
+
+    return DutyPhotoRead(
+        city=str(result.get("city") or "Niamey").strip()[:80] or "Niamey",
+        starts_at=when(result.get("starts_at")),
+        ends_at=when(result.get("ends_at")),
+        lines=duty_svc.rows_to_lines(rows),
+        count=len(rows),
+    )

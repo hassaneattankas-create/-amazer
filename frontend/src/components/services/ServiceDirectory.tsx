@@ -8,6 +8,7 @@ import { Fuel, LayoutList, LocateFixed, MapPinned, Pill, Share2 } from "lucide-r
 
 import { LocalServiceCard } from "@/components/services/LocalServiceCard";
 import { OfficialLists } from "@/components/services/OfficialLists";
+import { PharmacyDutyBoard } from "@/components/services/PharmacyDutyBoard";
 import { Button } from "@/components/ui/button";
 import { NIGER_REGION_CITIES, distanceKm, type GeoPoint } from "@/lib/local-services";
 import { listOfficialLists, listPharmacies, listStations } from "@/services/local-services-service";
@@ -58,8 +59,9 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
   const copy = COPY[kind];
   const Icon = kind === "pharmacy" ? Pill : Fuel;
   const [city, setCity] = useState("");
-  // Stations : toutes par défaut ; pharmacies : celles de garde par défaut.
-  const [onlyActive, setOnlyActive] = useState(kind === "pharmacy");
+  // Stations : toutes par défaut. Pharmacies : les gardes de la semaine sont dans le bloc officiel au-dessus,
+  // la liste du bas montre toutes les pharmacies inscrites.
+  const [onlyActive, setOnlyActive] = useState(false);
   const [fuel, setFuel] = useState<FuelKey | "">("");
   const [position, setPosition] = useState<GeoPoint | null>(null);
   const [locating, setLocating] = useState(false);
@@ -207,6 +209,14 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
         </div>
       </header>
 
+      {kind === "pharmacy" ? (
+        <>
+          <PharmacyDutyBoard city={city} position={position} />
+          <h2 className="mt-10 text-lg font-semibold text-ink-900">Pharmacies inscrites sur AMAZER</h2>
+          <p className="mt-1 text-sm text-ink-600">Leur vitrine, leur position exacte et leurs gardes déclarées.</p>
+        </>
+      ) : null}
+
       <div className="-mx-gutter mt-4 overflow-x-auto px-gutter">
         <div className="flex gap-2" role="group" aria-label="Filtres">
           {/* Stations : Toutes / Disponible maintenant / De garde ; pharmacies : « De garde » d'abord. */}
@@ -260,10 +270,10 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
         {deliveryCities.length ? ` Livraison AMAZER : ${deliveryCities.join(", ")}.` : null}
       </p>
 
-      <OfficialLists kind={kind} city={city} fuel={fuel} />
+      {stations ? <OfficialLists kind={kind} city={city} fuel={fuel} /> : null}
 
-      {hasOfficial ? (
-        <h2 className="mt-6 text-lg font-semibold text-ink-900">{kind === "pharmacy" ? "Pharmacies inscrites sur AMAZER" : "Stations inscrites sur AMAZER"}</h2>
+      {hasOfficial && stations ? (
+        <h2 className="mt-6 text-lg font-semibold text-ink-900">Stations inscrites sur AMAZER</h2>
       ) : null}
 
       <div className="mt-4">

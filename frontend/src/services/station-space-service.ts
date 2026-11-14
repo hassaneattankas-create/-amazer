@@ -4,6 +4,10 @@ import { api } from "@/lib/api";
 import type { ManagedOutlet } from "@/types/local-services";
 import type {
   ActivityItem,
+  BrandSales,
+  MeterReadingInput,
+  PumpFuel,
+  StationMeters,
   DeliveryInput,
   DeliveryItem,
   FuelActivityFilters,
@@ -33,6 +37,8 @@ export const stationKeys = {
   outletActivity: (outletId: string) => ["outlet-activity", outletId] as const,
   fuelActivity: (filters: FuelActivityFilters = {}) => ["fuel-activity", filters] as const,
   fuelDeliveries: (city?: string) => ["fuel-deliveries", city ?? ""] as const,
+  outletMeters: (outletId: string) => ["outlet-meters", outletId] as const,
+  fuelSales: (city?: string) => ["fuel-sales", city ?? ""] as const,
 };
 
 /** Racines invalidées après toute écriture (propriétaire, ville, gérant). Inclut les clés existantes du tableau de bord vendeur. */
@@ -47,6 +53,8 @@ const STATION_QUERY_ROOTS = [
   "outlet-activity",
   "fuel-activity",
   "fuel-deliveries",
+  "outlet-meters",
+  "fuel-sales",
   "fuel-outlets",
   "fuel-network",
   "fuel-plan",
@@ -145,4 +153,27 @@ export async function listFuelDeliveries(city?: string): Promise<DeliveryItem[]>
 /** Marque un retour client comme traité (propriétaire, y compris les retours sans station). */
 export async function resolveSellerStationReport(reportId: string, payload: ReportResolveInput = {}): Promise<ReportItem> {
   return (await api.post<ReportItem>(`/api/v1/seller/station-reports/${reportId}/resolve`, payload)).data;
+}
+
+// ── Ventes de carburant (compteurs des pompes) ──────────────────────────────
+
+export async function getOutletMeters(outletId: string): Promise<StationMeters> {
+  return (await api.get<StationMeters>(`/api/v1/station-manager/outlets/${outletId}/meters`)).data;
+}
+
+export async function addOutletPump(outletId: string, payload: { fuel: PumpFuel; name: string }): Promise<StationMeters> {
+  return (await api.post<StationMeters>(`/api/v1/station-manager/outlets/${outletId}/pumps`, payload)).data;
+}
+
+export async function removeOutletPump(outletId: string, pumpId: string): Promise<StationMeters> {
+  return (await api.delete<StationMeters>(`/api/v1/station-manager/outlets/${outletId}/pumps/${pumpId}`)).data;
+}
+
+export async function recordOutletMeters(outletId: string, readings: MeterReadingInput[]): Promise<StationMeters> {
+  return (await api.post<StationMeters>(`/api/v1/station-manager/outlets/${outletId}/meter-readings`, { readings })).data;
+}
+
+/** Propriétaire : litres vendus par jour (toute la marque) et par station. */
+export async function getFuelSales(city?: string): Promise<BrandSales> {
+  return (await api.get<BrandSales>("/api/v1/seller/fuel-sales", { params: city ? { city } : {} })).data;
 }

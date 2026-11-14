@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 
-import {
-  FuelAvailabilityEditor,
-  ManagersEditor,
-  StationDutyEditor,
-  StationInfoForm,
-  StationPositionEditor,
-  useStationActions,
-} from "@/components/stations/shared";
+import { FuelAvailabilityEditor, ManagersEditor, MeterReadingsPanel, StationDutyEditor, StationInfoForm, StationPositionEditor, useStationActions } from "@/components/stations/shared";
 import { cn } from "@/lib/utils";
 import type { RegionCity, RegionStation } from "@/types/station-space";
 
@@ -17,12 +10,13 @@ import { OutletDeliveries } from "./OutletFeeds";
 import { RegionStationManage } from "./RegionStationManage";
 import { useRegionActions } from "./use-region-actions";
 
-type Tab = "fuel" | "managers" | "info" | "deliveries" | "manage";
+type Tab = "fuel" | "managers" | "info" | "sales" | "deliveries" | "manage";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "fuel", label: "Disponibilités" },
   { id: "managers", label: "Gérants" },
   { id: "info", label: "Infos et position" },
+  { id: "sales", label: "Ventes" },
   { id: "deliveries", label: "Livraisons" },
   { id: "manage", label: "Gestion" },
 ];
@@ -46,7 +40,7 @@ export function RegionStationPanel({ station, city }: RegionStationPanelProps) {
         <p className="rounded-field bg-warning/10 p-3 text-sm text-ink-800">Station fermée : rouvrez-la dans « Gestion » pour la mettre à jour.</p>
       ) : null}
 
-      <div role="group" aria-label={`Sections de « ${station.name} »`} className="grid grid-cols-2 gap-1 rounded-field bg-surface-1 p-1 sm:grid-cols-5">
+      <div role="group" aria-label={`Sections de « ${station.name} »`} className="grid grid-cols-2 gap-1 rounded-field bg-surface-1 p-1 sm:grid-cols-3">
         {TABS.map((entry) => (
           <button
             key={entry.id}
@@ -112,6 +106,7 @@ export function RegionStationPanel({ station, city }: RegionStationPanelProps) {
           </div>
         ) : null}
 
+        {tab === "sales" ? <MeterReadingsPanel outletId={station.id} disabled={!writable} /> : null}
         {tab === "deliveries" ? <OutletDeliveries outletId={station.id} actions={actions} disabled={!writable} /> : null}
 
         {tab === "manage" ? <RegionStationManage station={station} disabled={!city.can_update} /> : null}

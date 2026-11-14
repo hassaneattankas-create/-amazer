@@ -21,10 +21,28 @@ function frDate(iso: string | null): string {
 }
 
 /** Panneau du gérant : garde (pharmacie) ou disponibilités (station), en un geste depuis le téléphone. */
+/** Date du jour (heure locale) au format AAAA-MM-JJ, décalée de « days » jours. */
+function day(days = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Raccourcis de garde : un seul geste, sans calendrier. */
+function quickDuties(): { label: string; start: string; end: string }[] {
+  const toSaturday = (6 - new Date().getDay() + 7) % 7;
+  return [
+    { label: "Cette nuit", start: day(0), end: day(1) },
+    { label: "Ce week-end", start: day(toSaturday), end: day(toSaturday + 1) },
+    { label: "Toute la semaine", start: day(0), end: day(6) },
+  ];
+}
+
 export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
   const queryClient = useQueryClient();
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  const [otherDates, setOtherDates] = useState(false);
   const [locating, setLocating] = useState(false);
   const { data: status, isPending, isError, refetch } = useQuery({ queryKey: ["service-status"], queryFn: getServiceStatus });
   // Marque avec plusieurs stations : tout se règle par point de vente (gestionnaire en dessous).
@@ -87,13 +105,25 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
 
       {kind === "pharmacy" ? (
         <div className="mt-3 space-y-4">
-          <div className={`rounded-field p-4 ${status.on_duty_now ? "bg-success/10" : "bg-surface-1"}`}>
+          {status.official_duty_label ? (
+            // Sur la liste officielle de la semaine : AMAZER affiche la garde tout seul.
+            <div className="rounded-field bg-success/10 p-4">
+              <p className="flex items-center gap-2 text-base font-semibold text-success">
+                <Moon className="h-5 w-5" aria-hidden="true" />
+                Vous êtes de garde
+              </p>
+              <p className="mt-1 text-sm text-ink-700">{status.official_duty_label} Rien à faire : AMAZER vous affiche automatiquement aux clients.</p>
+            </div>
+          ) : null}
+          <div className={`rounded-field p-4 ${status.on_duty_now ? "bg-success/10" : "bg-surface-1"} ${status.official_duty_label ? "hidden" : ""}`}>
             <p className={`flex items-center gap-2 text-base font-semibold ${status.on_duty_now ? "text-success" : "text-ink-800"}`}>
               <Moon className="h-5 w-5" aria-hidden="true" />
               {status.on_duty_now ? status.duty_label ?? "Vous êtes de garde" : "Vous n'êtes pas de garde"}
             </p>
             <p className="mt-1 text-sm text-ink-600">
-              {status.on_duty_now ? "Vous apparaissez en tête de la page « Pharmacies »." : "Activez la garde pour apparaître en tête de la page « Pharmacies »."}
+              {status.on_duty_now
+                ? "Vous apparaissez en tête de la page « Pharmacies »."
+                : "Si votre pharmacie est sur la liste officielle de la semaine, AMAZER l'affiche tout seul. Sinon, un geste suffit :"}
             </p>
             {/* Garde programmee en cours : rien a activer ; elle s'arrete seule (ou via « Supprimer »). */}
             {status.on_duty_now && !status.on_duty ? null : (
@@ -115,7 +145,24 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
 
           <div>
             <p className="text-sm font-semibold text-ink-900">Programmer une garde</p>
-            <p className="text-sm text-ink-600">Elle s&apos;active et s&apos;arrête toute seule aux dates choisies (31 jours au plus).</p>
+            <p className="text-sm text-ink-600">Elle s&apos;active et s&apos;arrête toute seule.</p>
+            <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Garde rapide">
+              {quickDuties().map((q) => (
+                <Button
+                  key={q.label}
+                  type="button"
+                  variant="outline"
+                  className="min-h-11"
+                  disabled={busy}
+                  onClick={() => mutation.mutate({ duty_start: q.start, duty_end: q.end, done: `Garde programmée : ${q.label.toLowerCase()}.` })}
+                >
+                  {q.label}
+                </Button>
+              ))}
+              <Button type="button" variant="ghost" className="min-h-11" aria-expanded={otherDates} onClick={() => setOtherDates((v) => !v)}>
+                Autres dates
+              </Button>
+            </div>
             {status.duty_start && status.duty_end ? (
               <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-ink-800">
                 Garde programmée du <strong>{frDate(status.duty_start)}</strong> au <strong>{frDate(status.duty_end)}</strong>.
@@ -130,7 +177,7 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
               </p>
             ) : null}
             <form
-              className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+              className={`mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end ${otherDates ? "" : "hidden"}`}
               onSubmit={(event) => {
                 event.preventDefault();
                 if (!start || !end) {
