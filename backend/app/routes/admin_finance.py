@@ -96,7 +96,7 @@ from app.services.vendor_visibility import reactivate_vendor_listings
 from app.services import vendor_payout_service as vendor_payouts
 from app.services import welcome_service
 from app.services.audit_log_service import append_audit_log
-from app.services.order_cancellation_service import cancel_order, ensure_not_cancelled, notify_order_cancelled
+from app.services.order_cancellation_service import CANCELLED_STATUS, cancel_order, ensure_not_cancelled, notify_order_cancelled
 from app.services.order_fulfillment_service import sync_fulfillments
 from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.local_services import parse_cities, strip_unrelated_options
@@ -321,6 +321,14 @@ def _seller_profile_map(db: Session, vendor_ids: set[str]) -> dict[str, SellerPr
         return {}
     rows = db.scalars(select(SellerProfile).where(SellerProfile.vendor_id.in_(vendor_ids))).all()
     return {row.vendor_id: row for row in rows}
+
+
+def _in_cash(model):
+    """Argent réellement gardé en caisse : paiement confirmé et commande non annulée.
+
+    Une commande annulée (fausse commande, faux paiement refusé, ou remboursée) sort de la caisse.
+    """
+    return (model.payment_status == "paid", model.status != CANCELLED_STATUS)
 
 
 def _platform_fee_breakdown_for_order(
@@ -618,11 +626,11 @@ def get_finance_summary(
     revenue_map: dict[date, float] = {start_date + timedelta(days=i): 0 for i in range(30)}
     platform_orders = db.scalars(
         select(Order)
-        .where(Order.created_at >= start_dt)
+        .where(Order.created_at >= start_dt, *_in_cash(Order))
         .options(selectinload(Order.items))
     ).all()
     restaurant_orders = db.scalars(
-        select(RestaurantOrder).where(RestaurantOrder.created_at >= start_dt)
+        select(RestaurantOrder).where(RestaurantOrder.created_at >= start_dt, *_in_cash(RestaurantOrder))
     ).all()
     reset_at = _finance_counters_reset_at(settings)
     if reset_at is not None:
@@ -680,21 +688,23 @@ def get_wallet_summary(
     finance = _get_or_create_settings(db)
 
     platform_totals = db.execute(
-        select(Order.payment_mode, func.sum(Order.total_amount)).group_by(Order.payment_mode)
+        select(Order.payment_mode, func.sum(Order.total_amount)).where(*_in_cash(Order)).group_by(Order.payment_mode)
     ).all()
     restaurant_totals = db.execute(
-        select(RestaurantOrder.payment_mode, func.sum(RestaurantOrder.total_amount)).group_by(RestaurantOrder.payment_mode)
+        select(RestaurantOrder.payment_mode, func.sum(RestaurantOrder.total_amount))
+        .where(*_in_cash(RestaurantOrder))
+        .group_by(RestaurantOrder.payment_mode)
     ).all()
     reset_at = _finance_counters_reset_at(finance)
     if reset_at is not None:
         platform_totals = db.execute(
             select(Order.payment_mode, func.sum(Order.total_amount))
-            .where(Order.created_at >= reset_at)
+            .where(Order.created_at >= reset_at, *_in_cash(Order))
             .group_by(Order.payment_mode)
         ).all()
         restaurant_totals = db.execute(
             select(RestaurantOrder.payment_mode, func.sum(RestaurantOrder.total_amount))
-            .where(RestaurantOrder.created_at >= reset_at)
+            .where(RestaurantOrder.created_at >= reset_at, *_in_cash(RestaurantOrder))
             .group_by(RestaurantOrder.payment_mode)
         ).all()
     totals = {"nita": 0.0, "amana": 0.0, "cash_on_delivery": 0.0}
@@ -708,8 +718,8 @@ def get_wallet_summary(
         totals[mode] = totals.get(mode, 0.0) + float(amount)
 
     total_all = sum(totals.values())
-    platform_order_query = select(Order).options(selectinload(Order.items))
-    restaurant_order_query = select(RestaurantOrder)
+    platform_order_query = select(Order).where(*_in_cash(Order)).options(selectinload(Order.items))
+    restaurant_order_query = select(RestaurantOrder).where(*_in_cash(RestaurantOrder))
     if reset_at is not None:
         platform_order_query = platform_order_query.where(Order.created_at >= reset_at)
         restaurant_order_query = restaurant_order_query.where(RestaurantOrder.created_at >= reset_at)
@@ -759,8 +769,8 @@ def get_treasury_history(
     history: list[TreasuryTransactionResponse] = []
     settings_row = _get_or_create_settings(db)
     reset_at = _finance_counters_reset_at(settings_row)
-    platform_query = select(Order).order_by(Order.created_at.desc())
-    restaurant_query = select(RestaurantOrder).order_by(RestaurantOrder.created_at.desc())
+    platform_query = select(Order).where(*_in_cash(Order)).order_by(Order.created_at.desc())
+    restaurant_query = select(RestaurantOrder).where(*_in_cash(RestaurantOrder)).order_by(RestaurantOrder.created_at.desc())
     if reset_at is not None:
         platform_query = platform_query.where(Order.created_at >= reset_at)
         restaurant_query = restaurant_query.where(RestaurantOrder.created_at >= reset_at)

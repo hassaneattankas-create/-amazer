@@ -9,7 +9,9 @@ import { buildGuide } from "./guide-pdf.mjs";
 import { GUIDES as GUIDES_ALL } from "./guides-all.mjs";
 
 // GUIDES_SET=pas : guides « pas à pas » (du compte jusqu'au bout, chaque clic) — voir pas-a-pas.mjs.
-const GUIDES = process.env.GUIDES_SET === "pas" ? (await import("./pas-a-pas.mjs")).GUIDES : GUIDES_ALL;
+// GUIDES_SET=reel : guides tournés en vrai sur le site de test (EXPLAINER_BASE=http://localhost:3200) — voir pas-a-pas-reel.mjs.
+const SETS = { pas: "./pas-a-pas.mjs", reel: "./pas-a-pas-reel.mjs" };
+const GUIDES = SETS[process.env.GUIDES_SET] ? (await import(SETS[process.env.GUIDES_SET])).GUIDES : GUIDES_ALL;
 
 const VIDEOS = process.env.EXPLAINER_OUT || "C:/Users/User/Desktop/Videos AMAZER";
 const PDFS = process.env.GUIDES_OUT || "C:/Users/User/Desktop/Guides AMAZER";
@@ -60,7 +62,7 @@ async function make(name) {
   fs.mkdirSync(imgDir, { recursive: true });
   let n = 0;
   for (const c of chapters) for (const s of c.steps) { const to = path.join(imgDir, `${String(++n).padStart(2, "0")}.jpg`); fs.copyFileSync(s.img, to); s.img = to; }
-  await buildGuide({ ...g, chapters, video: `${g.video} (dossier « ${process.env.GUIDES_SET === "pas" ? "3. Videos pas a pas" : "1. Videos a partager (legeres)"} »).` }, `${PDFS}/${g.pdf}`);
+  await buildGuide({ ...g, chapters, video: `${g.video} (dossier « ${process.env.GUIDES_SET ? "3. Videos pas a pas" : "1. Videos a partager (legeres)"} »).` }, `${PDFS}/${g.pdf}`);
 }
 
 const wanted = process.argv.slice(2);

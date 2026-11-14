@@ -14,7 +14,79 @@ const API = "https://amazer-api.onrender.com";
 /** Écran de téléphone filmé : 360 × 640 points, rendu 1080 × 1920 pixels. */
 const VW = 360;
 const VH = 640;
-export const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+/** Images par seconde de la vidéo finale : chaque image est calculée exactement, quelle que soit la vitesse du PC. */
+const FPS = Number(process.env.EXPLAINER_FPS || 30);
+const FRAME = 1000 / FPS;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** Film en cours : pendant le tournage, les attentes suivent l'horloge de la vidéo (pas celle du PC). */
+let clock = null;
+export const wait = (ms) => (clock ? clock.hold(ms) : sleep(ms));
+
+/**
+ * Tournage image par image (Chrome « déterministe ») : chaque image est demandée à Chrome
+ * (HeadlessExperimental.beginFrame) et la page vit sur une horloge virtuelle qui avance
+ * d'exactement 1/FPS seconde par image. Souris, animations, minuteries : tout est parfaitement
+ * régulier, même si le PC calcule lentement. (Principe repris de puppeteer-capture, licence MIT.)
+ */
+const DETERMINISTIC = ["--deterministic-mode", "--enable-begin-frame-control", "--disable-new-content-rendering-timeout", "--run-all-compositor-stages-before-draw", "--disable-threaded-animation", "--disable-threaded-scrolling", "--disable-checker-imaging", "--disable-image-animation-resync", "--enable-surface-synchronization"];
+const VIRTUAL_CLOCK = () => {
+  if (window !== window.top || window.__xpClock) return;
+  const R = { now: performance.now.bind(performance), Date };
+  let t = 0;
+  let id = 1;
+  const timers = new Map();
+  let rafs = new Map();
+  const perf0 = R.now();
+  const date0 = R.Date.now();
+  window.setTimeout = (fn, ms = 0, ...a) => { const k = id++; timers.set(k, { at: t + Math.max(0, +ms || 0), fn, a, every: 0 }); return k; };
+  window.setInterval = (fn, ms = 0, ...a) => { const k = id++; const every = Math.max(4, +ms || 0); timers.set(k, { at: t + every, fn, a, every }); return k; };
+  window.clearTimeout = (k) => { timers.delete(k); };
+  window.clearInterval = window.clearTimeout;
+  window.requestAnimationFrame = (fn) => { const k = id++; rafs.set(k, fn); return k; };
+  window.cancelAnimationFrame = (k) => { rafs.delete(k); };
+  performance.now = () => perf0 + t;
+  function VDate(...a) {
+    if (!new.target) return new R.Date(date0 + t).toString();
+    return a.length ? new R.Date(...a) : new R.Date(date0 + t);
+  }
+  VDate.prototype = R.Date.prototype;
+  VDate.now = () => date0 + t;
+  VDate.parse = R.Date.parse;
+  VDate.UTC = R.Date.UTC;
+  window.Date = VDate;
+  const run = (fn, a) => { try { if (typeof fn === "function") fn(...a); else (0, eval)(String(fn)); } catch (e) { console.error(e); } };
+  window.__xpClock = {
+    tick(ms) {
+      const end = t + ms;
+      for (let n = 0; n < 5000; n += 1) {
+        let best = null;
+        for (const e of timers) if (e[1].at <= end && (!best || e[1].at < best[1].at)) best = e;
+        if (!best) break;
+        const [k, v] = best;
+        t = Math.max(t, v.at);
+        if (v.every) v.at += v.every; else timers.delete(k);
+        run(v.fn, v.a);
+      }
+      t = end;
+      const list = rafs;
+      rafs = new Map();
+      for (const fn of list.values()) run(fn, [perf0 + t]);
+    },
+  };
+  // Défilement doux calculé image par image (le défilement « smooth » du navigateur sauterait d'un coup).
+  window.__xpScroll = (top, ms = 600) => {
+    const from = scrollY;
+    const to = Math.max(0, Math.min(top, document.documentElement.scrollHeight - innerHeight));
+    const t0 = performance.now();
+    const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+    const step = () => {
+      const k = Math.min(1, (performance.now() - t0) / ms);
+      window.scrollTo(0, from + (to - from) * ease(k));
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+};
 const VOICE = "fr-FR-HenriNeural";
 const SAY = [[/AMAZER/g, "Amazaire"], [/amazer\.store/gi, "amazaire point store"]];
 const spoken = (text) => SAY.reduce((t, [a, b]) => t.replace(a, b), text);
@@ -90,8 +162,10 @@ export class Film {
   }
 
   async open() {
-    this.browser = await puppeteer.launch({ headless: true, args: ["--force-device-scale-factor=3", "--hide-scrollbars", "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows"] });
+    this.browser = await puppeteer.launch({ headless: "shell", args: ["--force-device-scale-factor=3", "--hide-scrollbars", "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows", ...DETERMINISTIC] });
     this.page = await this.browser.newPage();
+    await this.page.evaluateOnNewDocument(VIRTUAL_CLOCK);
+    await this.startPump();
     await this.page.setViewport({ width: VW, height: VH, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
     // Bannière « Installez l'application » : hors sujet et cache les formulaires (même pour un visiteur).
     await this.page.evaluateOnNewDocument(() => { try { localStorage.setItem("amazer_install_dismissed_until", String(Date.now() + 86400000)); } catch {} });
@@ -152,6 +226,81 @@ export class Film {
     }
   }
 
+  /** Pompe d'images : fait avancer la page d'une image à la fois, et garde l'image quand on filme. */
+  async startPump() {
+    this.cdp = await this.page.createCDPSession();
+    await this.cdp.send("HeadlessExperimental.enable").catch(() => {});
+    this.vt = 0;
+    this.ticks = 0;
+    this.waiters = [];
+    this.alive = true;
+    this.saving = null;
+    clock = this;
+    const name = (n) => path.join(this.saving, `${String(n).padStart(6, "0")}.jpg`);
+    this.pumping = (async () => {
+      while (this.alive) {
+        const began = Date.now();
+        await this.cdp.send("Runtime.evaluate", { expression: `window.__xpClock && window.__xpClock.tick(${FRAME})` }).catch(() => {});
+        const grab = this.grab;
+        const shoot = this.saving || grab;
+        const r = await this.cdp.send("HeadlessExperimental.beginFrame", { frameTimeTicks: this.ticks + FRAME, interval: FRAME, noDisplayUpdates: false, ...(shoot ? { screenshot: { format: "jpeg", quality: 90 } } : {}) }).catch((error) => ({ error }));
+        if (r.error) {
+          if (!this.alive) break;
+          await sleep(20);
+          continue;
+        }
+        this.ticks += FRAME;
+        this.vt += FRAME;
+        if (this.saving) {
+          // Image de l'aide PDF (élément entouré) : la vidéo garde l'image précédente à cet instant.
+          if (r.screenshotData && !(grab && this.frameNo > 0)) fs.writeFileSync(name(this.frameNo), Buffer.from(r.screenshotData, "base64"));
+          else if (this.frameNo > 0) fs.copyFileSync(name(this.frameNo - 1), name(this.frameNo));
+          if (fs.existsSync(name(this.frameNo))) this.frameNo += 1;
+        }
+        if (grab && r.screenshotData) {
+          fs.writeFileSync(grab.file, Buffer.from(r.screenshotData, "base64"));
+          this.grab = null;
+          grab.done();
+        }
+        const due = this.waiters.filter((w) => w.at <= this.vt);
+        if (due.length) {
+          this.waiters = this.waiters.filter((w) => w.at > this.vt);
+          due.forEach((w) => w.done());
+        }
+        // Hors tournage, la page vit au rythme normal (pas plus vite que le temps réel).
+        if (!this.saving) await sleep(Math.max(0, FRAME - (Date.now() - began)));
+        else await new Promise((done) => setImmediate(done));
+      }
+    })();
+  }
+
+  /** Attente en temps de vidéo. */
+  hold(ms) {
+    return new Promise((done) => this.waiters.push({ at: this.vt + Math.max(0, ms), done }));
+  }
+
+  /** Temps écoulé dans la vidéo, en secondes. */
+  now() {
+    return (this.vt - this.start) / 1000;
+  }
+
+  async shut() {
+    this.alive = false;
+    await this.pumping?.catch(() => {});
+    this.waiters.forEach((w) => w.done());
+    if (this.grab) this.grab.done();
+    if (clock === this) clock = null;
+    await this.browser.close();
+  }
+
+  /** Frappe lettre par lettre, au rythme de la vidéo. */
+  async keys(value, delay = 70) {
+    for (const ch of String(value)) {
+      await this.page.keyboard.type(ch);
+      await wait(delay);
+    }
+  }
+
   async goto(route) {
     const target = new URL(`${BASE}${route}`);
     const here = new URL(this.page.url() === "about:blank" ? BASE : this.page.url());
@@ -161,8 +310,8 @@ export class Film {
     else await this.page.goto(target.href, { waitUntil: "domcontentloaded", timeout: 120000 }).catch(() => {});
     // Le site interroge le serveur en continu : on attend un court calme réseau, pas un silence total.
     // Pendant le tournage, pas de longue attente à l'image : la page est prête en quelques secondes.
-    await this.page.waitForNetworkIdle({ idleTime: 600, timeout: this.start ? 4500 : 20000, concurrency: 2 }).catch(() => {});
-    await wait(this.start ? 700 : 1800);
+    await this.page.waitForNetworkIdle({ idleTime: 600, timeout: this.start != null ? 4500 : 20000, concurrency: 2 }).catch(() => {});
+    await wait(this.start != null ? 700 : 1800);
     await this.page.evaluate(OVERLAY);
     await this.place();
   }
@@ -212,7 +361,8 @@ export class Film {
       document.querySelectorAll("[data-xp-last]").forEach((e) => e.removeAttribute("data-xp-last"));
       el.setAttribute("data-xp-last", "1");
       const r = el.getBoundingClientRect();
-      window.scrollTo({ top: Math.max(0, r.top + scrollY - innerHeight * 0.4), behavior: "smooth" });
+      const top = Math.max(0, r.top + scrollY - innerHeight * 0.4);
+      if (window.__xpScroll) window.__xpScroll(top); else window.scrollTo(0, top);
       return true;
     }, text, selector, nth);
     if (!box) { if (last) console.log(`  élément introuvable : ${text}`); return false; }
@@ -220,7 +370,7 @@ export class Film {
     const r = await this.page.evaluate(() => { const e = document.querySelector("[data-xp]"); if (!e) return null; const b = e.getBoundingClientRect(); return { x: b.left + Math.min(b.width * .5, 150), y: b.top + b.height * .55 }; });
     if (!r) return last ? this.pointOnce(text, { selector, nth }, false) : false; // élément redessiné entre-temps : on le recherche
     this.pos = { x: Math.round(r.x), y: Math.round(r.y) };
-    if (this.start) this.focus.push({ t: (Date.now() - this.start) / 1000, x: this.pos.x / VW, y: this.pos.y / VH, z: 1.22 });
+    if (this.start != null) this.focus.push({ t: this.now(), x: this.pos.x / VW, y: this.pos.y / VH, z: 1.22 });
     await this.place();
     await wait(850);
     return true;
@@ -261,12 +411,12 @@ export class Film {
     const ok = await this.click(field, { selector: "input,textarea", ...opts });
     this.typing = false;
     if (!ok) return;
-    await this.page.keyboard.type(value, { delay: 45 });
+    await this.keys(value);
     await wait(300);
   }
 
   scroll(y) {
-    return this.page.evaluate((y) => window.scrollBy({ top: y, behavior: "smooth" }), y).then(() => wait(900));
+    return this.page.evaluate((y) => (window.__xpScroll ? window.__xpScroll(scrollY + y, 750) : window.scrollBy(0, y)), y).then(() => wait(950));
   }
 
   /** Génère la voix de chaque scène avant de filmer : sa durée règle le rythme. */
@@ -286,50 +436,19 @@ export class Film {
     }
   }
 
-  /**
-   * Enregistreur image par image (protocole Chrome) : chaque image est accusée tout de suite
-   * et gardée avec son heure exacte. Plus de retard ni de défilement oublié.
-   */
+  /** Enregistreur : chaque image calculée par la pompe est gardée, numérotée, à FPS images par seconde. */
   async record() {
     const dir = path.join(this.dir, "images");
     fs.mkdirSync(dir, { recursive: true });
-    const frames = [];
-    const writes = [];
-    const cdp = await this.page.createCDPSession();
-    let running = true;
-    // Trois captures en vol à la fois : environ 16 images par seconde en 1080 × 1920.
-    const worker = async () => {
-      while (running) {
-        const sent = Date.now();
-        const shot = await cdp.send("Page.captureScreenshot", { format: "jpeg", quality: 86, optimizeForSpeed: true }).catch(() => null);
-        if (!shot || !running) continue;
-        const file = path.join(dir, `${sent}-${frames.length}.jpg`);
-        frames.push({ file, at: (sent + Date.now()) / 2 });
-        writes.push(fs.promises.writeFile(file, Buffer.from(shot.data, "base64")));
-      }
-    };
-    const workers = [worker(), worker(), worker()];
-    const list = path.join(this.dir, "images.txt");
+    this.frameNo = 0;
+    this.saving = dir;
     return {
-      list,
+      list: path.join(dir, "%06d.jpg"),
       stop: async () => {
-        running = false;
-        await Promise.all(workers);
-        await Promise.all(writes);
-        await cdp.detach().catch(() => {});
-        if (!frames.length) throw new Error("Aucune image enregistrée");
-        frames.sort((x, y) => x.at - y.at);
-        const start = this.start ?? frames[0].at;
-        const end = Date.now();
-        const lines = ["ffconcat version 1.0"];
-        frames.forEach((f, i) => {
-          const from = i === 0 ? start : f.at;
-          const next = i + 1 < frames.length ? frames[i + 1].at : end;
-          lines.push(`file '${f.file.replaceAll("\\", "/")}'`, `duration ${Math.max(0.001, (next - from) / 1000).toFixed(3)}`);
-        });
-        lines.push(`file '${frames.at(-1).file.replaceAll("\\", "/")}'`);
-        fs.writeFileSync(list, lines.join(String.fromCharCode(10)));
-        console.log(`  ${frames.length} images en ${((end - start) / 1000).toFixed(1)} s`);
+        this.saving = null;
+        await sleep(50);
+        if (!this.frameNo) throw new Error("Aucune image enregistrée");
+        console.log(`  ${this.frameNo} images (${(this.frameNo / FPS).toFixed(1)} s de vidéo)`);
       },
     };
   }
@@ -338,41 +457,51 @@ export class Film {
   async snap(text) {
     const file = path.join(this.dir, `g${this.snaps.length}.jpg`);
     await this.page.evaluate(() => document.querySelector("[data-xp-last]")?.classList.add("xp-spot"));
-    await this.page.screenshot({ path: file, type: "jpeg", quality: 84 });
+    await new Promise((done) => { this.grab = { file, done }; });
     await this.page.evaluate(() => document.querySelectorAll(".xp-spot").forEach((e) => e.classList.remove("xp-spot")));
     this.snaps.push({ file, text });
   }
 
   async play(scenes) {
     await this.voices(scenes);
+    try {
+      return await this.shoot(scenes);
+    } catch (err) {
+      if (this.alive) await this.shut().catch(() => {});
+      throw err;
+    }
+  }
+
+  async shoot(scenes) {
     await this.open();
     await scenes[0].before?.(this);
     const rec = await this.record();
     const raw = rec.list;
-    this.start = Date.now();
+    this.start = this.vt;
     for (const scene of scenes) {
-      const t0 = Date.now();
+      const t0 = this.vt;
       // Changement de page en cours de chapitre : la voix commence pendant que la page s'ouvre (pas de blanc).
       const move = scene.before && scene !== scenes[0] ? scene.before : null;
-      const at = (t0 - this.start) / 1000;
+      const at = this.now();
       this.cues.push({ file: scene.file, at });
       if (scene.caption !== false) this.captions.push({ text: scene.say, at, end: at + scene.duration + 0.35 });
       await Promise.all([(async () => { if (move) await move(this); this.pending = scene.guide || null; await scene.do?.(this); if (this.pending) { const t = this.pending; this.pending = null; await this.snap(t); } })(), wait(scene.duration * 1000 + 450)]);
-      const over = Date.now() - t0 - scene.duration * 1000;
+      const over = this.vt - t0 - scene.duration * 1000;
       if (over > 2500) console.log(`  scène longue de ${(over / 1000).toFixed(1)} s : ${scene.say.slice(0, 50)}`);
     }
     await wait(500);
     await rec.stop();
-    this.length = (Date.now() - this.start) / 1000;
+    this.length = this.frameNo / FPS;
+    await this.shut();
     await this.renderCaptions();
-    await this.browser.close();
     return raw;
   }
 
   /** Sous-titres dessinés à part en haute définition : ils restent nets pendant les zooms. */
   async renderCaptions() {
     if (!this.captions.length) return;
-    const page = await this.browser.newPage();
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
     await page.setViewport({ width: 1080, height: 700, deviceScaleFactor: 1 });
     for (const [i, c] of this.captions.entries()) {
       c.png = path.join(this.dir, `cap${i}.png`);
@@ -381,7 +510,7 @@ export class Film {
       const el = await page.$("#c");
       await el.screenshot({ path: c.png, omitBackground: true });
     }
-    await page.close();
+    await browser.close();
   }
 
   /** Zoom doux vers chaque endroit montré, comme un monteur qui recadre. */
@@ -404,16 +533,16 @@ export class Film {
     const cx = `0.5${segs.map((s) => `+(${n(Math.min(0.85, Math.max(0.15, s.x)) - 0.5)})*${on(s)}`).join("")}`;
     const cy = `0.5${segs.map((s) => `+(${n(Math.min(0.85, Math.max(0.15, s.y)) - 0.5)})*${on(s)}`).join("")}`;
     const z = `1+${env}`;
-    return `zoompan=z='${z}':x='clip(iw*(${cx})-iw/zoom/2,0,iw-iw/zoom)':y='clip(ih*(${cy})-ih/zoom/2,0,ih-ih/zoom)':d=1:s=1080x1920:fps=30`;
+    return `zoompan=z='${z}':x='clip(iw*(${cx})-iw/zoom/2,0,iw-iw/zoom)':y='clip(ih*(${cy})-ih/zoom/2,0,ih-ih/zoom)':d=1:s=1080x1920:fps=${FPS}`;
   }
 
   /** Assemble l'image, le zoom, les sous-titres et les voix posées à leur moment exact. */
   compose(raw, outFile) {
-    const inputs = ["-y", "-f", "concat", "-safe", "0", "-i", raw];
+    const inputs = raw.includes("%06d") ? ["-y", "-framerate", String(FPS), "-i", raw] : ["-y", "-f", "concat", "-safe", "0", "-i", raw];
     const filters = [];
     const zoom = this.zoomFilter();
     const D = this.length || 10;
-    filters.push(`[0:v]fps=30,scale=2160:3840:flags=bicubic,setsar=1${zoom ? `,${zoom}` : ",scale=1080:1920:flags=lanczos"},format=yuv420p[z0]`);
+    filters.push(`[0:v]fps=${FPS},scale=2160:3840:flags=bicubic,setsar=1${zoom ? `,${zoom}` : ",scale=1080:1920:flags=lanczos"},format=yuv420p[z0]`);
     let last = "z0";
     let k = 1;
     for (const [i, c] of this.captions.entries()) {
@@ -432,7 +561,7 @@ export class Film {
     filters.push(`${this.cues.map((_, i) => `[a${i}]`).join("")}amix=inputs=${this.cues.length}:normalize=0,loudnorm=I=-16:TP=-1.5,apad,atrim=0:${D.toFixed(2)}[a]`);
     fs.writeFileSync(path.join(this.dir, "filtre.txt"), filters.join(";\n"));
     try {
-      execFileSync("ffmpeg", [...inputs, "-filter_complex", filters.join(";"), "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-r", "30", "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "160k", "-movflags", "+faststart", outFile], { stdio: ["ignore", "ignore", "pipe"], maxBuffer: 64 * 1024 * 1024 });
+      execFileSync("ffmpeg", [...inputs, "-filter_complex", filters.join(";"), "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-r", String(FPS), "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "160k", "-movflags", "+faststart", outFile], { stdio: ["ignore", "ignore", "pipe"], maxBuffer: 64 * 1024 * 1024 });
     } catch (err) {
       throw new Error(`Montage impossible : ${String(err.stderr).trim().split("\n").slice(-4).join(" | ")}`);
     }

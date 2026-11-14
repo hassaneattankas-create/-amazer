@@ -36,7 +36,7 @@ async function fill(f, field, value, opts = {}) {
   await f.page.keyboard.down("Control");
   await f.page.keyboard.press("KeyA");
   await f.page.keyboard.up("Control");
-  await f.page.keyboard.type(value, { delay: 45 });
+  await f.keys(value);
   await wait(300);
 }
 
