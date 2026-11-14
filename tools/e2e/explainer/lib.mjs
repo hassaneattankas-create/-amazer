@@ -202,6 +202,9 @@ export class Film {
         const r = await fetch(`${API}/api/v1/${full.split("/api/v1/")[1]}`);
         // Écran connecté non simulé : réponse vide plutôt qu'une déconnexion.
         if (r.status === 401 || r.status === 403) return json(request, 200, []);
+        // Photos (media/file) : relayées octet par octet, avec leur vrai type.
+        const type = r.headers.get("content-type") || "application/json";
+        if (!type.includes("json")) return request.respond({ status: r.status, contentType: type, headers: cors, body: Buffer.from(await r.arrayBuffer()) });
         return request.respond({ status: r.status, contentType: "application/json", headers: cors, body: await r.text() });
       } catch {
         return json(request, 502, {});
