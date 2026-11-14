@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>AMAZER Pro — habillage des guides pas à pas (vertical)</title>
+<style>
+@font-face{font-family:Geist;src:url(assets/fonts/GeistVF.woff) format('woff');font-weight:100 900}
+*{box-sizing:border-box;transition:none!important;animation:none!important}
+html,body{margin:0;background:#000;overflow:hidden}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:#0B1220;font-family:Geist,sans-serif;color:#fff;-webkit-font-smoothing:antialiased}
+#scenes{position:absolute;inset:0}
+.scene{position:absolute;left:0;top:0;width:1080px;height:1920px;overflow:hidden;display:none}
+.abs{position:absolute;left:0;top:0}
+</style>
+</head>
+<body>
+<div id="stage"><div id="scenes"></div></div>
+<script src="src/engine.js"></script>
+<script src="src/kit/icons.js"></script>
+<script src="src/kit/type.js"></script>
+<script src="src/kit/pap.js"></script>
+<script>
+// window.PAP = { kind: 'intro' | 'chapter' | 'outro', duration, ... } est posé par le moteur de rendu avant le chargement.
+window.JDE_READY = (async () => {
+  await document.fonts.load('800 40px Geist');
+  await document.fonts.ready;
+  window.FILM = A.PAP.film(window.PAP);
+  A.mount(window.FILM);
+  await Promise.all([...document.images].map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; })));
+  window.seek(0);
+  return true;
+})();
+</script>
+</body>
+</html>

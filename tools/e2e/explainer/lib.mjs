@@ -578,6 +578,19 @@ export class Film {
   }
 }
 
+/** Voix off d'un texte (même voix que les guides) ; renvoie sa durée en secondes. */
+export async function speak(text, file) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      execFileSync("python", ["-m", "edge_tts", "--voice", VOICE, "--rate=+4%", "--text", spoken(text), "--write-media", file], { stdio: "pipe" });
+      return seconds(file);
+    } catch (err) {
+      if (attempt >= 5) throw new Error(`Voix impossible : ${String(err.stderr).slice(-200)}`);
+      await sleep(3000 * attempt);
+    }
+  }
+}
+
 /** Petite musique d'ambiance libre de droits, fabriquée sur place (une seule fois). */
 export function music() {
   const file = path.resolve("explainer/.work/musique.wav");

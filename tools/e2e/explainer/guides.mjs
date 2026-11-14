@@ -4,7 +4,8 @@
 import fs from "fs";
 import path from "path";
 
-import { Film, assemble, wait } from "./lib.mjs";
+import { Film, assemble, speak, wait } from "./lib.mjs";
+import { assembleSmooth, renderMotion } from "./motion.mjs";
 import { buildGuide } from "./guide-pdf.mjs";
 import { GUIDES as GUIDES_ALL } from "./guides-all.mjs";
 
@@ -53,16 +54,42 @@ async function make(name) {
     parts.push(out);
     return snaps;
   };
-  await film("intro", g.chapters[0].persona, [{ say: g.intro, caption: false, before: card(g.chapters[0].route ?? "/", g.title, g.subtitle) }]);
+  // Habillage animé (motion/amazer-pro/pap.html) : ouverture, carton avant chaque chapitre, carte de fin.
+  // EXPLAINER_MOTION=0 : anciens cartons filmés.
+  const motionOn = process.env.EXPLAINER_MOTION !== "0";
+  const animated = async (id, params, say, extra) => {
+    const dir = path.resolve("explainer/.work", `${name}-${id}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const out = path.resolve("explainer/.work", `${name}-${id}.mp4`);
+    let voice = null;
+    let duration = params.duration;
+    if (say) {
+      voice = path.join(dir, "voix.mp3");
+      duration = 0.35 + (await speak(say, voice)) + extra;
+    }
+    await renderMotion(`${name}-${id}`, { ...params, duration }, out, { voice });
+    parts.push(out);
+  };
+  if (motionOn) {
+    await animated("intro", { kind: "intro", who: g.who, title: g.title, subtitle: g.subtitle, chapters: g.chapters.map((c) => c.title) }, g.intro, 0.9);
+  } else {
+    await film("intro", g.chapters[0].persona, [{ say: g.intro, caption: false, before: card(g.chapters[0].route ?? "/", g.title, g.subtitle) }]);
+  }
   for (const [i, c] of g.chapters.entries()) {
+    if (motionOn) await animated(`carton${i}`, { kind: "chapter", duration: 2.6, n: i + 1, total: g.chapters.length, title: c.title, sub: c.intro ?? "" });
     const scenes = c.scenes.map((s, k) => (k === 0 && !s.before ? { ...s, before: (f) => f.goto(c.route) } : s));
     const snaps = await film(`c${i}`, c.persona, scenes);
     chapters.push({ title: c.title, intro: c.intro, steps: snaps.map((s) => ({ img: s.file, ...s.text })) });
   }
-  await film("outro", g.chapters[0].persona, [{ say: g.outro, caption: false, before: card(g.chapters[0].route ?? "/", g.end[0], g.end[1]) }]);
+  if (motionOn) {
+    await animated("fin", { kind: "outro", tag: g.end[0], foot: g.end[1] }, g.outro, 2.2);
+  } else {
+    await film("outro", g.chapters[0].persona, [{ say: g.outro, caption: false, before: card(g.chapters[0].route ?? "/", g.end[0], g.end[1]) }]);
+  }
   fs.mkdirSync(VIDEOS, { recursive: true });
   const video = `${VIDEOS}/${g.video}`;
-  assemble(parts, video);
+  if (motionOn) assembleSmooth(parts, video);
+  else assemble(parts, video);
   // les images du guide sont gardées à côté du PDF
   const imgDir = path.resolve("explainer/.work", `${name}-images`);
   fs.rmSync(imgDir, { recursive: true, force: true });
