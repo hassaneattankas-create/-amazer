@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -11,7 +10,6 @@ import { BadgeCheck, ChevronRight, Package, Phone, ShieldCheck, Store, Truck } f
 import { PRODUCT_GRID_CLASS, ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { ReviewSystem } from "@/components/ReviewSystem";
-import { VendorOffer } from "@/components/VendorOffer";
 import { Button } from "@/components/ui/button";
 import { formatXOF } from "@/lib/currency";
 import { getCategoryRoute, getShopRoute } from "@/lib/mobile-routes";
@@ -21,11 +19,6 @@ import { useCartStore } from "@/store/cartStore";
 import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 import { ConvertedPrice } from "@/components/ConvertedPrice";
 import { ShareAndEarn } from "@/components/product/ShareAndEarn";
-
-const ProductPriceHistoryChart = dynamic(
-  () => import("@/components/product/ProductPriceHistoryChart").then((mod) => mod.ProductPriceHistoryChart),
-  { ssr: false, loading: () => <div className="mt-4 h-48 animate-pulse rounded-field bg-surface-2" /> }
-);
 
 const sectionClass = "rounded-card border border-border bg-card";
 const summaryClass =
@@ -59,15 +52,6 @@ export function ProductDetailView({ productId }: { productId: string }) {
     return Array.from(new Set(resolved));
   }, [data]);
 
-  const chartData = useMemo(
-    () =>
-      (data?.price_history ?? []).map((point) => ({
-        ...point,
-        date: new Date(point.changed_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }),
-      })),
-    [data?.price_history]
-  );
-  const minAmount = chartData.length ? Math.floor(Math.min(...chartData.map((point) => point.amount)) - 2) : 0;
 
   if (isPending) {
     return (
@@ -284,28 +268,6 @@ export function ProductDetailView({ productId }: { productId: string }) {
           </details>
         ) : null}
 
-        {offers.length > 1 ? (
-          <details open className={sectionClass}>
-            <summary className={summaryClass}>
-              {offers.length} offres pour ce produit
-              <span className="text-sm font-normal text-ink-600">du moins cher au plus cher</span>
-            </summary>
-            <div className="space-y-3 px-4 pb-4">
-              {offers.map((offer) => (
-                <VendorOffer key={offer.price_id} offer={offer} />
-              ))}
-            </div>
-          </details>
-        ) : null}
-
-        {chartData.length > 1 ? (
-          <details className={sectionClass}>
-            <summary className={summaryClass}>Évolution du prix</summary>
-            <div className="px-4 pb-4">
-              <ProductPriceHistoryChart chartData={chartData} minAmount={minAmount} />
-            </div>
-          </details>
-        ) : null}
       </div>
 
       <div className="mt-8">

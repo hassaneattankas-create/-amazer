@@ -45,3 +45,4 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - 14 nov. : la caisse de l'admin ne compte plus les commandes annulées ni les faux paiements.
 - 14 nov. : page « Pharmacies » refaite autour de la liste officielle de garde de la semaine ; l'admin la publie en envoyant la photo de l'affiche (Admin → Gardes).
 - 14 nov. : ventes de carburant par compteurs des pompes pour les stations.
+- 15 nov. : la comparaison de prix est retirée de la fiche produit (plus de liste d'offres « du moins cher au plus cher » ni de courbe d'évolution du prix).
