@@ -344,8 +344,9 @@ export class Film {
     return false;
   }
 
-  async pointOnce(text, { selector = "button,a,[role=radio],[role=button],input,select,textarea,label,h1,h2,h3,summary", nth = 0 } = {}, last = true) {
-    const box = await this.page.evaluate((text, selector, nth) => {
+  /** scroll: false → la page ne bouge pas (ex. garder une carte entière à l'image). */
+  async pointOnce(text, { selector = "button,a,[role=radio],[role=button],input,select,textarea,label,h1,h2,h3,summary", nth = 0, scroll = true } = {}, last = true) {
+    const box = await this.page.evaluate((text, selector, nth, scroll) => {
       const norm = (s) => (s || "").replace(/\s+/g, " ").trim().toLowerCase();
       const want = norm(text);
       const label = (e) => norm(e.matches("input,textarea,select") ? e.placeholder || e.getAttribute("aria-label") || e.labels?.[0]?.innerText || e.value : e.innerText || e.getAttribute("aria-label"));
@@ -362,13 +363,15 @@ export class Film {
       el.setAttribute("data-xp-last", "1");
       const r = el.getBoundingClientRect();
       const top = Math.max(0, r.top + scrollY - innerHeight * 0.4);
-      if (window.__xpScroll) window.__xpScroll(top); else window.scrollTo(0, top);
+      if (scroll) {
+        if (window.__xpScroll) window.__xpScroll(top); else window.scrollTo(0, top);
+      }
       return true;
-    }, text, selector, nth);
+    }, text, selector, nth, scroll);
     if (!box) { if (last) console.log(`  élément introuvable : ${text}`); return false; }
     await wait(650);
     const r = await this.page.evaluate(() => { const e = document.querySelector("[data-xp]"); if (!e) return null; const b = e.getBoundingClientRect(); return { x: b.left + Math.min(b.width * .5, 150), y: b.top + b.height * .55 }; });
-    if (!r) return last ? this.pointOnce(text, { selector, nth }, false) : false; // élément redessiné entre-temps : on le recherche
+    if (!r) return last ? this.pointOnce(text, { selector, nth, scroll }, false) : false; // élément redessiné entre-temps : on le recherche
     this.pos = { x: Math.round(r.x), y: Math.round(r.y) };
     if (this.start != null) this.focus.push({ t: this.now(), x: this.pos.x / VW, y: this.pos.y / VH, z: 1.22 });
     await this.place();
@@ -597,4 +600,15 @@ export function assemble(parts, outFile, { withMusic = true } = {}) {
     execFileSync("ffmpeg", ["-y", "-i", joined, "-stream_loop", "-1", "-i", music(), "-filter_complex", `${graph};[a]afade=t=out:st=${(D - 2).toFixed(2)}:d=2[af]`, "-map", "0:v", "-map", "[af]", "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-t", D.toFixed(2), "-movflags", "+faststart", outFile], { stdio: "ignore" });
   }
   console.log(`${outFile} : ${seconds(outFile).toFixed(1)} s, ${(fs.statSync(outFile).size / 1048576).toFixed(1)} Mo`);
+}
+
+/** Fait défiler la page pour que l'élément (sélecteur CSS) soit en haut de l'écran, avec une marge. */
+export async function reveal(f, selector, margin = 70) {
+  await f.page.evaluate((selector, margin) => {
+    const el = document.querySelector(selector);
+    if (!el) return;
+    const top = Math.max(0, el.getBoundingClientRect().top + scrollY - margin);
+    if (window.__xpScroll) window.__xpScroll(top, 700); else window.scrollTo(0, top);
+  }, selector, margin);
+  await wait(900);
 }

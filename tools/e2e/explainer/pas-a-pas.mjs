@@ -126,7 +126,7 @@ function formule(persona, say, text, pointAt = "Sans paiement") {
   };
 }
 
-function compteVendeur({ plan, planSay, shop, name, email, phone }) {
+export function compteVendeur({ plan, planSay, shop, name, email, phone }) {
   return {
     title: "Créer votre compte vendeur",
     intro: "Ouvrez **amazer.store** dans le navigateur de votre téléphone. Tout se fait en quelques minutes.",

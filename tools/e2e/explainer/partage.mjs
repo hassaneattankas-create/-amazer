@@ -10,7 +10,11 @@ import { execFileSync } from "child_process";
 import { createRequire } from "module";
 
 import { assemble } from "./lib.mjs";
-import { GUIDES } from "./pas-a-pas.mjs";
+import { GUIDES as PAS } from "./pas-a-pas.mjs";
+import { GUIDES as REEL } from "./pas-a-pas-reel.mjs";
+
+// Station et pharmacie : versions tournées en vrai sur le site de test (mêmes étapes que leurs images).
+const GUIDES = { ...PAS, ...REEL };
 
 const require = createRequire(import.meta.url);
 const puppeteer = require("puppeteer");

@@ -40,8 +40,15 @@ async function make(name) {
   console.log(`\n=== ${name} : ${g.title}`);
   const parts = [];
   const chapters = [];
+  // GUIDES_REFILM="c4,outro" : seulement ces parties sont retournées ; les autres (déjà tournées) sont reprises telles quelles.
+  const refilm = (process.env.GUIDES_REFILM || "").split(",").map((x) => x.trim()).filter(Boolean);
   const film = async (id, persona, scenes) => {
     const out = path.resolve("explainer/.work", `${name}-${id}.mp4`);
+    if (refilm.length && !refilm.includes(id) && fs.existsSync(out)) {
+      parts.push(out);
+      const dir = path.resolve("explainer/.work", `${name}-${id}`);
+      return scenes.filter((s) => s.guide).map((s, k) => ({ file: path.join(dir, `g${k}.jpg`), text: s.guide })).filter((s) => fs.existsSync(s.file));
+    }
     const snaps = await attempt(() => new Film(`${name}-${id}`, typeof persona === "function" ? persona() : persona).make(scenes, out));
     parts.push(out);
     return snaps;

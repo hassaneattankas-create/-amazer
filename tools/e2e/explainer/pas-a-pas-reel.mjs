@@ -3,15 +3,17 @@
 // Usage : remettre la base de démonstration (restore_demo.py), puis
 //   EXPLAINER_BASE=http://localhost:3200 DEMO_PASSWORD=… GUIDES_SET=reel node explainer/guides.mjs station
 import { g } from "./guides-data.mjs";
-import { wait } from "./lib.mjs";
+import { reveal, wait } from "./lib.mjs";
+import { compteVendeur } from "./pas-a-pas.mjs";
 
 export const GUIDES = {};
 
-const PASSWORD = process.env.DEMO_PASSWORD;
-if (!PASSWORD) throw new Error("DEMO_PASSWORD manquant (mot de passe des comptes fictifs du site de test)");
-
-/** Compte fictif du site de test, connecté hors caméra. */
-const as = (email) => () => ({ real: true, login: { email, password: PASSWORD } });
+/** Compte fictif du site de test, connecté hors caméra (mot de passe commun : DEMO_PASSWORD). */
+const as = (email) => () => {
+  const password = process.env.DEMO_PASSWORD;
+  if (!password) throw new Error("DEMO_PASSWORD manquant (mot de passe des comptes fictifs du site de test)");
+  return { real: true, login: { email, password } };
+};
 const visitor = () => ({ real: true });
 
 const MENU = { selector: "button" };
@@ -52,9 +54,9 @@ const intro = (who) => `Cette vidéo est tournée sur une copie du vrai site AMA
 
 // ================================================================ Stations-essence : les trois rôles, en vrai
 GUIDES.station = {
-  who: "Stations-essence", title: "Mes stations, en vrai", subtitle: "Propriétaire · Responsable de ville · Gérant",
+  who: "Stations-essence", title: "Mes stations, pas à pas", subtitle: "Propriétaire · Responsable de ville · Gérant",
   video: "AMAZER_pas-a-pas-station.mp4", pdf: "AMAZER-Pas-a-pas-station.pdf",
-  lead: "Le **propriétaire** nomme un responsable par ville, le **responsable de ville** nomme les gérants, le **gérant** tient sa station à jour : **carburants**, **horaires**, **garde**, **position**, **livraisons**, **retours clients**.",
+  lead: "Le **propriétaire** nomme un responsable par ville, le **responsable de ville** nomme les gérants, le **gérant** tient sa station à jour : **carburants**, **horaires**, **garde**, **position**, **ventes**, **livraisons**, **retours clients**.",
   points: [["Le propriétaire", "Nomme et suit tout."], ["Le responsable", "Nomme les gérants de sa ville."], ["Le gérant", "Met sa station à jour."]],
   intro: intro("Aujourd'hui : la marque Sahel Énergie et sa station du Plateau, à Niamey."),
   outro: "Le propriétaire nomme, le responsable organise, le gérant met à jour : vos clients savent où trouver du carburant. Rendez-vous sur amazer.store.",
@@ -138,6 +140,16 @@ GUIDES.station = {
             await f.point("Position enregistrée", TEXT);
           },
           guide: g("La position", "**Position Google Maps** → **Je suis à la station**, une seule fois, **à la station**.") },
+        { say: "Le soir, dans Ventes, elle recopie le chiffre du compteur de chaque pompe, puis touche Enregistrer. AMAZER calcule tout seul les litres vendus.",
+          do: async (f) => {
+            await open(f, "Ventes (compteurs)");
+            await fill(f, "Dernier", "101250", { nth: 0 });
+            await fill(f, "Dernier", "52300", { nth: 1 });
+            await f.click("Enregistrer les 2 compteurs", BTN);
+            await wait(2500);
+            await f.point("Vendu ces 7 derniers jours", TEXT);
+          },
+          guide: g("Les ventes", "**Ventes (compteurs)** : le soir, le chiffre du **compteur** de chaque pompe, puis **Enregistrer**. AMAZER calcule les **litres vendus**.") },
         { say: "Un camion arrive. Dans Livraisons, elle choisit le carburant, écrit la quantité, puis touche Enregistrer la livraison.",
           do: async (f) => {
             await open(f, "Livraisons");
@@ -163,6 +175,8 @@ GUIDES.station = {
       scenes: [
         { say: "De son côté, le propriétaire voit tout dans Activité : qui a fait quoi, dans quelle station, et quand.",
           do: async (f) => { await open(f, "Activité"); await f.scroll(140); }, guide: g("L'activité", "**Activité** : chaque mise à jour, avec son auteur et l'heure.") },
+        { say: "Et dans Ventes de carburant, les litres de super et de gasoil vendus, jour par jour, pour toute la marque et pour chaque station.",
+          do: async (f) => { await open(f, "Ventes de carburant"); await wait(1200); await f.point("Super, 7 jours", TEXT); }, guide: g("Les ventes", "**Ventes de carburant** : litres vendus par jour, pour la marque et chaque station.") },
       ],
     },
     {
@@ -180,7 +194,9 @@ GUIDES.station = {
             await f.click("Toutes", BTN);
             await f.click("Voir la carte", BTN);
             await wait(3500);
-            await f.point("Cerclé : de garde", { selector: "li" });
+            // La carte entière à l'image, puis la souris sur la légende sans faire bouger la page.
+            await reveal(f, ".leaflet-container");
+            await f.point("Cerclé : de garde", { selector: "li", scroll: false });
           },
           guide: g("La carte", "**Voir la carte** : vert = disponible, orange = stock faible, rouge = rupture, **cercle = de garde**.") },
       ],
@@ -188,4 +204,62 @@ GUIDES.station = {
   ],
   tips: ["Mettez à jour **dès qu'un carburant change**.", "Enregistrez la position **une seule fois, à la station**.", "Notez **chaque livraison** de camion."],
   faq: [["Je ne vois pas Espace station ?", "Votre responsable de ville doit vous ajouter avec **le même e-mail** que votre compte."], ["Qui peut nommer qui ?", "Le **propriétaire** nomme les responsables de ville ; chaque **responsable** nomme les gérants de ses stations."]],
+};
+
+// ================================================================ Pharmacies : la garde, en vrai
+GUIDES.pharmacie = {
+  who: "Pharmacies", title: "Ma pharmacie de garde", subtitle: "Du compte à la garde, chaque clic",
+  video: "AMAZER_pas-a-pas-pharmacie.mp4", pdf: "AMAZER-Pas-a-pas-pharmacie.pdf",
+  lead: "Le **compte Premium** de la pharmacie, la **garde** (automatique si vous êtes sur la liste officielle, sinon en un geste), la **position**, et ce que voient les **clients**.",
+  points: [["Automatique", "Sur la liste officielle : rien à faire."], ["Un geste", "Cette nuit, ce week-end, la semaine."], ["Les clients", "Appel et itinéraire en un geste."]],
+  intro: intro("Aujourd'hui : votre pharmacie et ses gardes."),
+  outro: "Sur la liste officielle, AMAZER vous affiche tout seul ; sinon, un geste suffit. Vos clients vous trouvent, même la nuit. Rendez-vous sur amazer.store.",
+  end: ["Votre pharmacie, trouvée", "amazer.store · Pharmacies"],
+  chapters: [
+    compteVendeur({ plan: "Premium", planSay: "Pour une pharmacie, c'est la formule Premium.", shop: "Pharmacie Kalley", name: "Dr Zara Hamani", email: "pharmacie@exemple.com", phone: "90000006" }),
+    {
+      title: "Votre garde",
+      intro: "AMAZER active la fonction **pharmacie** après vérification. La carte **Ma garde** apparaît dans votre espace.",
+      persona: as("kalley@exemple.com"), route: "/seller/dashboard",
+      scenes: [
+        { say: "Dans votre espace, ouvrez Ma garde. Si votre pharmacie est sur la liste officielle de la semaine, AMAZER vous met de garde tout seul : rien à faire.",
+          do: async (f) => { await f.point("Ma garde", { selector: "h2" }); await wait(600); await f.point("Vous n'êtes pas de garde", TEXT); },
+          guide: g("Ma garde", "Sur la **liste officielle** de la semaine, vous êtes de garde **automatiquement**.") },
+        { say: "Une garde en plus ? Un seul geste : Cette nuit, Ce week-end, ou Toute la semaine. Elle s'arrête toute seule.",
+          do: async (f) => { await f.click("Cette nuit", BTN); await wait(1800); await f.point("De garde jusqu'au", TEXT); },
+          guide: g("Une garde en plus", "**Cette nuit**, **Ce week-end** ou **Toute la semaine** : elle s'arrête toute seule.") },
+        { say: "Debout dans votre pharmacie, enregistrez votre position avec ce bouton : l'itinéraire mènera les clients jusqu'à vous.",
+          do: async (f) => { await gps(f, 13.506, 2.118); await f.click("ma position", BTN); await wait(2000); await f.point("Position enregistrée", TEXT); },
+          guide: g("Votre position", "**Enregistrer ma position**, une seule fois, **dans la pharmacie**.") },
+      ],
+    },
+    {
+      title: "Ce que voient les clients",
+      intro: "**Menu** → **Premium** → **Pharmacies** : la liste officielle de la semaine.",
+      persona: visitor, route: "/",
+      scenes: [
+        { say: "Les clients touchent Menu, puis Premium, puis Pharmacies.",
+          do: async (f) => { await f.click("Menu", MENU); await f.click("Premium", MENU); await f.click("Pharmacies", LINK); await wait(1500); },
+          guide: g("La page Pharmacies", "**Menu** → **Premium** → **Pharmacies**.") },
+        { say: "En haut, les pharmacies de garde de la semaine, d'après la liste officielle du ministère, jusqu'au samedi huit heures.",
+          do: (f) => f.point("De garde à Niamey, cette semaine", { selector: "h2" }),
+          guide: g("La garde de la semaine", "La **liste officielle**, du **samedi 8 h** au **samedi 8 h**.") },
+        { say: "Le client écrit son quartier, par exemple Koira Kano : la pharmacie de garde la plus proche apparaît.",
+          do: async (f) => { await fill(f, "Nom ou quartier", "Koira Kano"); await wait(1000); await f.point("Pharmacie Gobi", TEXT); },
+          guide: g("Chercher", "Écrivez un **nom** ou un **quartier**.") },
+        { say: "Un geste pour appeler, un autre pour l'itinéraire. Il peut aussi choisir sa commune, et partager la liste sur WhatsApp.",
+          do: async (f) => {
+            await f.point("Itinéraire", { selector: "a" });
+            await fill(f, "Nom ou quartier", " ");
+            await f.page.keyboard.press("Backspace");
+            await wait(600);
+            await f.click("Commune V", BTN);
+            await f.point("Partager", BTN);
+          },
+          guide: g("Appeler, venir, partager", "**Appeler**, **Itinéraire**, filtre par **commune**, **Partager** sur WhatsApp.") },
+      ],
+    },
+  ],
+  tips: ["Vérifiez votre nom sur la **liste officielle** : AMAZER vous y reconnaît.", "Enregistrez la position **dans la pharmacie**."],
+  faq: [["Je suis sur la liste mais pas de garde ?", "Écrivez à AMAZER : le nom de la vitrine doit correspondre à celui de la liste."]],
 };
