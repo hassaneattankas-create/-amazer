@@ -22,7 +22,7 @@ from app.core.permissions import is_admin, is_principal_admin
 from app.core.cache import cache_delete_prefixes
 from app.core.crypto import decrypt_payment_code, decrypt_phone_value, encrypt_payment_code
 from app.core.csrf import enforce_csrf
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.core.deps import get_admin_user
 from app.core.exceptions import UnauthorizedError, ValidationDomainError
 from app.core.rate_limit import enforce_rate_limit
@@ -94,6 +94,7 @@ from app.services.reseller_account_service import extend_subscription as extend_
 from app.services.reseller_account_service import reseller_terms
 from app.services.vendor_visibility import reactivate_vendor_listings
 from app.services import vendor_payout_service as vendor_payouts
+from app.services import welcome_service
 from app.services.audit_log_service import append_audit_log
 from app.services.order_cancellation_service import cancel_order, ensure_not_cancelled, notify_order_cancelled
 from app.services.order_fulfillment_service import sync_fulfillments
@@ -871,6 +872,67 @@ def reset_finance_counters(
         finance_counters_reset_at=now.isoformat(),
         ad_click_counters_reset_at=now.isoformat(),
     )
+
+
+class WelcomeSettings(BaseModel):
+    """Message de bienvenue envoyé à chaque inscription ({prenom} = prénom) et liens WhatsApp d'AMAZER."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    title: str = Field(min_length=3, max_length=80)
+    message: str = Field(min_length=10, max_length=1500)
+    whatsapp_group_url: str | None = Field(default=None, max_length=300)
+    whatsapp_channel_url: str | None = Field(default=None, max_length=300)
+
+    @field_validator("whatsapp_group_url", "whatsapp_channel_url")
+    @classmethod
+    def _https_link(cls, value: str | None) -> str | None:
+        if not value:
+            return None
+        if not value.startswith("https://"):
+            raise ValueError("Le lien doit commencer par https:// (copiez-le depuis WhatsApp).")
+        return value
+
+
+@router.get("/public-welcome", response_model=WelcomeSettings)
+def get_public_welcome(db: Annotated[Session, Depends(get_db)]) -> WelcomeSettings:
+    """Page « Bienvenue » : message et liens WhatsApp (public)."""
+    return WelcomeSettings(**welcome_service.current(db))
+
+
+@router.get("/welcome", response_model=WelcomeSettings)
+def get_welcome_settings(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> WelcomeSettings:
+    _require_finance_pin(request, admin_user)
+    return WelcomeSettings(**welcome_service.current(db))
+
+
+@router.put("/welcome", response_model=WelcomeSettings)
+def update_welcome_settings(
+    payload: WelcomeSettings,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> WelcomeSettings:
+    """Modifie le message envoyé après chaque création de compte."""
+    enforce_csrf(request)
+    _require_finance_pin(request, admin_user)
+    saved = welcome_service.save(db, **payload.model_dump())
+    append_audit_log(
+        db,
+        event_type="admin_welcome_message_updated",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="global_settings",
+        entity_id="welcome",
+        details={"title": saved["title"], "group": bool(saved["whatsapp_group_url"]), "channel": bool(saved["whatsapp_channel_url"])},
+    )
+    db.commit()
+    return WelcomeSettings(**saved)
 
 
 @router.get("/public-settings", response_model=FinanceSettingsResponse)

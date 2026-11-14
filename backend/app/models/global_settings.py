@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, func
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -28,6 +28,11 @@ class GlobalSettings(Base):
     # Formule gratuite des boutiques (sans abonnement) : produits visibles et commission retenue au commercant.
     free_plan_max_products: Mapped[int] = mapped_column(Integer, nullable=False, default=5, server_default="5")
     free_plan_commission_rate: Mapped[float] = mapped_column(Float, nullable=False, default=0.05, server_default="0.05")
+    # Message de bienvenue à chaque inscription ({prenom} remplacé) et liens de la communauté WhatsApp.
+    welcome_title: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    welcome_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    whatsapp_group_url: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    whatsapp_channel_url: Mapped[str | None] = mapped_column(String(300), nullable=True)
     platform_wallet_phone: Mapped[str | None] = mapped_column(String(40), nullable=True, default=None)
     support_email: Mapped[str | None] = mapped_column(nullable=True, default=None)
     support_phone: Mapped[str | None] = mapped_column(nullable=True, default=None)

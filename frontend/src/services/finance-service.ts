@@ -658,3 +658,25 @@ export async function recordVendorPayout(vendorId: string, reference: string): P
     data: { reference: reference || null },
   });
 }
+
+/** Message de bienvenue envoyé à chaque inscription ({prenom} = prénom) et liens WhatsApp d'AMAZER. */
+export type WelcomeSettings = {
+  title: string;
+  message: string;
+  whatsapp_group_url: string | null;
+  whatsapp_channel_url: string | null;
+};
+
+export async function getAdminWelcome(): Promise<WelcomeSettings> {
+  return adminProxyRequest<WelcomeSettings>({ url: "/admin/finance/welcome", method: "GET" });
+}
+
+export async function updateAdminWelcome(payload: WelcomeSettings): Promise<WelcomeSettings> {
+  return adminProxyRequest<WelcomeSettings>({ url: "/admin/finance/welcome", method: "PUT", data: payload });
+}
+
+/** Page « Bienvenue » (publique). */
+export async function getPublicWelcome(): Promise<WelcomeSettings> {
+  const response = await api.get<WelcomeSettings>("/api/v1/admin/finance/public-welcome");
+  return response.data;
+}

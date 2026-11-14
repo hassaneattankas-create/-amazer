@@ -19,6 +19,7 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - Chaque vendeur voit sa formule dans son espace (section « Ma formule ») : essai, date de fin, prix, et ce qui l'attend ensuite.
 - Clients : page « Où trouver de l'essence » et page « Pharmacies » avec bouton « Voir la carte » (autour de soi ; stations colorées selon le carburant, cercle = de garde ; pharmacies de garde en vert).
 - Affiliés : part des abonnements des vendeurs amenés et bonus sur la 1re commande livrée des clients amenés. Revendeurs : ils fixent leur prix et gardent la marge.
+- Chaque nouveau compte reçoit un message de bienvenue (réglé par l'admin) avec les liens du groupe et de la chaîne WhatsApp d'AMAZER.
 - Contact public : amazer.niger2@gmail.com.
 
 ## Formules et prix
@@ -38,3 +39,4 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - 13 nov. : chaque vendeur voit un message clair sur sa formule (section « Ma formule » et page « Profil et abonnement »).
 - 13 nov. : le bouton du haut s'appelle « Menu » aussi sur téléphone ; Pharmacies et Stations-essence sont dans la section « Premium » du menu, Affiliation et Revendre dans « Gagner avec AMAZER ».
 - 13 nov. : AMAZER est hébergé sur un nouveau compte Vercel ; le site se met à jour automatiquement à chaque modification.
+- 14 nov. : à chaque inscription, message de bienvenue réglable par l'admin (Admin → Messages → « Message de bienvenue ») avec les liens du groupe et de la chaîne WhatsApp d'AMAZER ; il ouvre la page « Bienvenue ».

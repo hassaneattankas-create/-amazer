@@ -196,14 +196,8 @@ def notify_seller_welcome(db: Session, user_id: str, vendor_id: str) -> None:
 
 @_safe
 def notify_welcome(db: Session, user_id: str, full_name: str | None) -> None:
-    first = (full_name or "").strip().split(" ")[0]
-    _send(
-        db,
-        user_id,
-        "Bienvenue sur AMAZER",
-        f"Bonjour {first}, votre compte est prêt. Achetez en toute confiance : paiement contrôlé et livraison suivie. Astuce : devenez affilié gratuitement dans « Affiliation » et gagnez de l'argent en partageant AMAZER.".replace(
-            "Bonjour , ", "Bonjour, "
-        ),
-        f"welcome-{user_id}",
-        "/",
-    )
+    """Message de bienvenue réglé par l'admin, avec les liens du groupe et de la chaîne WhatsApp."""
+    from app.services import welcome_service
+
+    title, body = welcome_service.render(welcome_service.current(db), full_name)
+    _send(db, user_id, title, body, f"welcome-{user_id}", welcome_service.WELCOME_PAGE)

@@ -49,11 +49,11 @@ const OVERLAY = () => {
     <svg id="xp-cursor" viewBox="0 0 24 24"><path d="M4 2l15 12-7 1 4 7-3 2-4-7-5 5z" fill="#fff" stroke="#0F172A" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
   document.body.append(root);
   // Le site est servi en local pour le tournage : à l'image, les liens gardent l'adresse publique.
-  const pub = (t) => t.replace(/http:\/\/localhost:3100/g, "https://amazer.store");
+  const pub = (t) => t.replace(/http:\/\/(localhost|127\.0\.0\.1):\d+/g, "https://amazer.store");
   const fix = (root) => {
     const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    for (let n = walk.nextNode(); n; n = walk.nextNode()) if (n.nodeValue.includes("localhost:3100")) n.nodeValue = pub(n.nodeValue);
-    document.querySelectorAll("input,textarea").forEach((e) => { if (e.value.includes("localhost:3100")) e.value = pub(e.value); });
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) if (/localhost:\d+|127\.0\.0\.1:\d+/.test(n.nodeValue)) n.nodeValue = pub(n.nodeValue);
+    document.querySelectorAll("input,textarea").forEach((e) => { if (/localhost:\d+|127\.0\.0\.1:\d+/.test(e.value)) e.value = pub(e.value); });
   };
   fix(document.body);
   new MutationObserver(() => fix(document.body)).observe(document.body, { childList: true, subtree: true, characterData: true });
@@ -66,7 +66,11 @@ const OVERLAY = () => {
 };
 
 export class Film {
-  constructor(name, { mocks, user, onWrite, proxy, forward } = {}) {
+  /**
+   * real : site de test réel (aucune simulation, chaque clic enregistre vraiment) ;
+   * login : { email, password } — connexion faite hors caméra avant le tournage.
+   */
+  constructor(name, { mocks, user, onWrite, proxy, forward, real, login } = {}) {
     this.name = name;
     this.dir = path.resolve("explainer/.work", name);
     fs.rmSync(this.dir, { recursive: true, force: true });
@@ -76,6 +80,8 @@ export class Film {
     this.onWrite = onWrite;
     this.proxy = !!proxy;
     this.forward = forward;
+    this.real = !!real;
+    this.login = login;
     this.cues = [];
     this.snaps = [];
     this.focus = [];
@@ -96,6 +102,7 @@ export class Film {
     this.page.on("request", async (request) => {
       const full = request.url();
       const url = full.split("?")[0];
+      if (this.real) return request.continue();
       if (url.includes("/api/admin-proxy/")) return json(request, 403, {});
       if (!url.includes("/api/v1/")) return request.continue();
       if (request.method() === "OPTIONS") {
@@ -126,7 +133,15 @@ export class Film {
         return json(request, 502, {});
       }
     });
-    if (this.user) {
+    if (this.login) {
+      // Vraie connexion, hors caméra : le tournage commence déjà connecté.
+      await this.page.goto(`${BASE}/login`, { waitUntil: "networkidle2", timeout: 120000 });
+      await this.page.type('input[placeholder^="nom@exemple.com"]', this.login.email);
+      await this.page.type('input[type="password"]', this.login.password);
+      await this.page.evaluate(() => [...document.querySelectorAll("button")].find((b) => b.innerText.trim() === "Se connecter")?.click());
+      await this.page.waitForFunction(() => !location.pathname.startsWith("/login"), { timeout: 60000 });
+      await wait(1500);
+    } else if (this.user) {
       await this.page.setCookie({ name: "access_token", value: "demo", url: BASE });
       await this.page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 120000 });
       await this.page.evaluate(() => {

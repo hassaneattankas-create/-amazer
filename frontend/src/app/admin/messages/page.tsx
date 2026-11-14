@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Send } from "lucide-react";
+import { PartyPopper, Send } from "lucide-react";
 
+import { WelcomeMessageSettings } from "@/components/admin/WelcomeMessageSettings";
+import { Accordion, AccordionItem } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { getAdminFinanceDataError } from "@/lib/admin-finance-verification";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -67,7 +69,9 @@ export default function AdminMessagesPage() {
         </p>
       </header>
 
-      <form onSubmit={onSubmit} className="space-y-4 rounded-card border border-border bg-card p-5">
+      <Accordion single defaultOpen="send">
+        <AccordionItem id="send" headingLevel={2} icon={<Send className="h-5 w-5" />} title="Envoyer un message">
+      <form onSubmit={onSubmit} className="space-y-4">
         <fieldset>
           <legend className="text-sm font-medium text-ink-800">Destinataires</legend>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -137,6 +141,11 @@ export default function AdminMessagesPage() {
           </p>
         ) : null}
       </form>
+        </AccordionItem>
+        <AccordionItem id="welcome" headingLevel={2} icon={<PartyPopper className="h-5 w-5" />} title="Message de bienvenue" description="Envoyé après chaque création de compte, avec les liens WhatsApp">
+          <WelcomeMessageSettings />
+        </AccordionItem>
+      </Accordion>
     </section>
   );
 }
