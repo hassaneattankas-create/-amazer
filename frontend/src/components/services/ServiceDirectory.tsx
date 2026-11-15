@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { preconnect } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Fuel, LocateFixed, Pill, Share2 } from "lucide-react";
 
@@ -88,6 +89,8 @@ const pillClass = (active: boolean) =>
   }`;
 
 export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
+  // La carte (en haut) affiche des tuiles OpenStreetMap : connexion ouverte dès l'arrivée de la page.
+  preconnect("https://tile.openstreetmap.org");
   const copy = COPY[kind];
   const Icon = kind === "pharmacy" ? Pill : Fuel;
   const [city, setCity] = useState("");
