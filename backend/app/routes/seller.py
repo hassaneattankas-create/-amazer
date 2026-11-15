@@ -755,7 +755,8 @@ def create_product_listing(
         )
     # Formule gratuite : 5 produits visibles au plus (message clair, avant la limite habituelle).
     shop_plan.ensure_free_slot(db, profile)
-    if not is_premium_profile(profile):
+    # Premium, abonnement Boutique ou essai en cours : produits illimités ; la limite ne vise que la formule gratuite.
+    if shop_plan.catalog_capped(profile):
         cap = max_products_for_basic_tier(db)
         current = count_vendor_catalog_products(db, profile.vendor_id)
         if current >= cap:

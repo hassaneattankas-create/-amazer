@@ -240,3 +240,10 @@ def test_each_seller_sees_its_kind_and_trial(db: Session, monkeypatch) -> None:
     assert plan.in_trial(db, shop) is False
     summary = plan.plan_summary(db, shop)
     assert summary["kind"] == "shop" and summary["monthly_fee"] > 0
+
+
+def test_paying_shop_has_no_catalogue_cap_but_free_plan_does(db: Session) -> None:
+    # Abonnement Boutique 2 000 F : produits illimites ; formule gratuite : limite du catalogue maintenue.
+    assert not plan.catalog_capped(seller(db, "abonne", paid_days=10))
+    assert plan.catalog_capped(seller(db, "gratuit", paid_days=-1))
+    assert not plan.catalog_capped(seller(db, "premium", tier="premium", paid_days=-1))

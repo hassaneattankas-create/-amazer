@@ -28,7 +28,7 @@ const PLANS: Plan[] = [
     audience: "Commerces, revendeurs, artisans",
     price: (p) => p.seller_subscription_fee_shop,
     features: (p) => [
-      `Jusqu'à ${p.max_products_basic_tier} produits, sans commission`,
+      "Produits illimités, sans commission",
       "Boutique en ligne et messagerie clients",
       "Paiement contrôlé par AMAZER",
       "Livraison par les livreurs AMAZER",
@@ -166,7 +166,10 @@ export default function VendrePage() {
       {pricing ? (
         <article className="mt-6 rounded-card border border-border bg-card p-5">
           <h2 className="font-semibold text-ink-900">Frais transparents</h2>
-          <p className="mt-1 text-sm text-ink-700">Vous recevez le prix entier de vos articles : les frais AMAZER sont payés par le client.</p>
+          <p className="mt-1 text-sm text-ink-700">
+            Avec un abonnement, vous recevez le prix entier de vos articles : les frais ci-dessous sont payés par le client. En formule
+            gratuite (boutiques), AMAZER garde {Math.round((pricing.free_plan_commission_rate ?? 0.05) * 100)} % de chaque vente.
+          </p>
           <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
             <div>
               <dt className="text-ink-600">Commission AMAZER (payée par le client)</dt>

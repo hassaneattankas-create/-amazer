@@ -54,6 +54,18 @@ def is_free_plan(profile: SellerProfile | None, now: datetime | None = None) -> 
     return is_shop(profile) and profile is not None and profile.onboarding_fee_paid_at is not None and not has_paid_access(profile, now)
 
 
+def catalog_capped(profile: SellerProfile | None, now: datetime | None = None) -> bool:
+    """Limite du catalogue (reglage admin) : seulement sans abonnement ni essai en cours.
+
+    Premium et abonnement Boutique (ou essai) en cours : produits illimites (decision du 13/11/2026).
+    """
+    if profile is None:
+        return True
+    if (profile.storefront_tier or "").strip().lower() == "premium":
+        return False
+    return not has_paid_access(profile, now)
+
+
 def can_operate(profile: SellerProfile | None, now: datetime | None = None) -> bool:
     """Le vendeur peut gerer sa boutique et vendre : abonne, ou boutique en formule gratuite."""
     return has_paid_access(profile, now) or is_free_plan(profile, now)

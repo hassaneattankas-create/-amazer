@@ -21,22 +21,26 @@ export function SellerPitchKit({ sellerLink }: { sellerLink: string | null }) {
   const trial = pricing?.seller_trial_days ?? 0;
   const shopFee = pricing?.seller_subscription_fee_shop;
   const link = sellerLink ?? "https://amazer.store/vendre";
-  const trialText = trial > 0 ? `${trial} jours d'essai gratuit` : "une mise en ligne immédiate";
-  const feeText = shopFee ? `ensuite ${formatXOF(shopFee)} par mois` : "un petit abonnement mensuel";
+  const trialText = trial > 0 ? `${trial} jours d'essai gratuit` : "Mise en ligne immédiate";
+  const feeText = shopFee ? `${formatXOF(shopFee)} par mois` : "un petit abonnement mensuel";
+  // Formule gratuite des boutiques (réglages admin) : 5 produits visibles, 5 % retenus par vente.
+  const freeProducts = pricing?.free_plan_max_products ?? 5;
+  const freeRate = Math.round((pricing?.free_plan_commission_rate ?? 0.05) * 100);
+  const freeText = `la formule gratuite (${freeProducts} produits visibles, ${freeRate} % par vente)`;
 
   const arguments_ = [
     "Votre boutique en ligne en 10 minutes, depuis votre téléphone : photos, prix, stock.",
-    "Vous recevez le prix entier de vos articles : la commission et les frais AMAZER sont payés par le client.",
+    `Au choix : ${freeText}, ou l'abonnement à ${feeText} avec produits illimités et 0 % : vous recevez alors le prix entier.`,
     "Le client paie avant que vous prépariez : AMAZER vérifie le paiement (Nita, Amana). Fini les commandes fantômes.",
     "AMAZER livre : pas besoin de livreur, la commande part de chez vous et arrive chez le client.",
     "Des clients de tout le Niger vous trouvent : recherche, promotions, boutiques à la une, messages directs.",
-    `${trial > 0 ? `${trial} jours gratuits pour essayer` : "Mise en ligne immédiate"}, ${feeText}. Sans engagement.`,
+    `${trial > 0 ? `${trial} jours gratuits pour tout essayer` : "Mise en ligne immédiate"}, puis vous choisissez. Sans engagement.`,
   ];
 
   const scripts: Script[] = [
     {
       title: "Message court (WhatsApp)",
-      text: `Bonjour ! Vous vendez déjà sur WhatsApp ? Mettez votre boutique sur AMAZER : le client paie avant, AMAZER livre, et vous recevez le prix entier. ${trialText}. Inscription en 10 minutes : ${link}`,
+      text: `Bonjour ! Vous vendez déjà sur WhatsApp ? Mettez votre boutique sur AMAZER : le client paie avant et AMAZER livre. ${trialText}, puis ${freeText} ou abonnement sans commission. Inscription en 10 minutes : ${link}`,
     },
     {
       title: "Message complet",
@@ -45,8 +49,8 @@ export function SellerPitchKit({ sellerLink }: { sellerLink: string | null }) {
         `• Votre boutique en ligne en 10 minutes, depuis votre téléphone\n` +
         `• Le client paie avant la préparation (Nita / Amana, vérifié par AMAZER)\n` +
         `• AMAZER livre vos commandes\n` +
-        `• Vous recevez le prix entier : les frais sont payés par le client\n` +
-        `• ${trialText}, ${feeText}\n\n` +
+        `• ${trialText}, puis ${freeText}\n` +
+        `• Ou l'abonnement à ${feeText} : produits illimités, 0 % de commission\n\n` +
         `Inscrivez-vous ici : ${link}\nJe peux vous aider à mettre vos premiers produits en ligne.`,
     },
     {
@@ -56,7 +60,7 @@ export function SellerPitchKit({ sellerLink }: { sellerLink: string | null }) {
   ];
 
   const objections: Script[] = [
-    { title: "« C'est trop cher »", text: `C'est ${shopFee ? formatXOF(shopFee) : "un petit montant"} par mois, moins qu'une seule vente pour la plupart des boutiques, et ${trialText} pour voir les résultats avant de payer.` },
+    { title: "« C'est trop cher »", text: `Vous pouvez commencer gratuitement : ${freeProducts} produits visibles, AMAZER garde ${freeRate} % par vente. L'abonnement coûte ${feeText} (produits illimités, 0 %), moins qu'une seule vente pour la plupart des boutiques.` },
     { title: "« Je vends déjà sur WhatsApp »", text: "Gardez WhatsApp ! AMAZER vous amène des clients que vous ne connaissez pas encore, et le paiement est vérifié avant la livraison." },
     { title: "« Je n'ai pas le temps »", text: "Dix minutes suffisent : on prend 5 photos ensemble, maintenant, et votre boutique est en ligne." },
     { title: "« Et si on ne me paie pas ? »", text: "Le client paie AMAZER avant que vous prépariez. Vous ne préparez que les commandes payées." },

@@ -207,7 +207,7 @@ const SECTIONS: Section[] = [
           </>,
           "Une commande « Paiement en attente » ne peut pas encore être traitée : attendez la confirmation du paiement.",
           "Une fois payée, faites-la avancer : « Préparer la commande », puis « Remise au livreur ».",
-          "Vous recevez le prix entier de vos articles : la commission et les frais AMAZER sont payés par le client.",
+          "Avec l'abonnement Boutique, vous recevez le prix entier de vos articles (0 % de commission). En formule gratuite, AMAZER garde 5 % de chaque vente.",
           "Dans une commande partagée avec d'autres boutiques, vous ne faites avancer que votre partie.",
           "Les questions de vos clients arrivent dans Messages ; répondez depuis la même page.",
         ],

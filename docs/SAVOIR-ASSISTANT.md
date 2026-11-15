@@ -47,3 +47,4 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - 14 nov. : ventes de carburant par compteurs des pompes pour les stations.
 - 15 nov. : la comparaison de prix est retirée de la fiche produit (plus de liste d'offres « du moins cher au plus cher » ni de courbe d'évolution du prix).
 - 15 nov. : la carte des pharmacies et des stations s'affiche en haut de la page ; les pharmacies de garde de l'affiche officielle y apparaissent (adresse retrouvée sur OpenStreetMap, sinon centre du quartier).
+- 15 nov. : abonnement Boutique : produits vraiment illimités (la limite du catalogue ne vise plus que la formule gratuite) ; nombreuses petites corrections sur téléphone (bandeau d'installation, espaces pharmacie et stations, page Vendre).
