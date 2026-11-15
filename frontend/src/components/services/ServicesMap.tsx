@@ -69,14 +69,6 @@ function itemLevel(kind: ServiceKind, item: LocalServiceItem, fuel: FuelKey | ""
   return states.includes("out") ? "out" : "unknown";
 }
 
-const DOT_ICON = L.divIcon({
-  className: "",
-  html: '<span class="block h-3 w-3 rounded-full border-2 border-white bg-ink-400 shadow-raised"></span>',
-  iconSize: [12, 12],
-  iconAnchor: [6, 6],
-  popupAnchor: [0, -6],
-});
-
 function markerIcon(level: Level, onDuty: boolean, approximate = false): L.DivIcon {
   const ring = onDuty ? " ring-2 ring-ink-900 ring-offset-1" : "";
   if (approximate) {
@@ -220,7 +212,10 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
   const me = useRef<L.Marker | null>(null);
   const framed = useRef("");
   // Marqueurs par clé, pour que la recherche ouvre la bonne bulle.
-  const markers = useRef(new Map<string, L.Marker>());
+  const markers = useRef(new Map<string, L.Marker | L.CircleMarker>());
+  // Petits points gris (des centaines) dessinés sur une seule toile : bien plus léger pour un téléphone
+  // que des centaines d'éléments de page ; tolérance large pour les toucher du doigt.
+  const dotsRenderer = useRef<L.Canvas | null>(null);
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState("");
 
@@ -234,11 +229,13 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(created);
     stations.current = L.layerGroup().addTo(created);
+    dotsRenderer.current = L.canvas({ padding: 0.5, tolerance: 8 });
     map.current = created;
     return () => {
       created.remove();
       map.current = null;
       stations.current = null;
+      dotsRenderer.current = null;
       me.current = null;
     };
   }, []);
@@ -262,17 +259,39 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
       markers.current.set(`r:${item.outlet_id ?? item.vendor_id}`, marker);
     }
     for (const point of points) {
+      if (point.variant === "dot") continue;
       const marker = L.marker([point.latitude, point.longitude], {
-        icon: point.variant === "dot" ? DOT_ICON : markerIcon(point.level, false, point.approximate),
+        icon: markerIcon(point.level, false, point.approximate),
         title: point.name,
-        keyboard: point.variant !== "dot",
-        // Les points sûrs passent devant les points approximatifs, eux-mêmes devant les petits points gris.
-        zIndexOffset: point.variant === "dot" ? -500 : point.approximate ? 0 : 500,
+        keyboard: true,
+        // Les points sûrs passent devant les points approximatifs.
+        zIndexOffset: point.approximate ? 0 : 500,
       })
         .bindPopup(() => pointContent(point), POPUP)
         .addTo(layer);
       markers.current.set(`p:${point.id}`, marker);
     }
+    // Petits points gris : sur la toile, juste après l'affichage (la carte et les marqueurs principaux d'abord).
+    const dots = points.filter((point) => point.variant === "dot");
+    let cancelled = false;
+    const addDots = () => {
+      if (cancelled || !stations.current) return;
+      for (const point of dots) {
+        const dot = L.circleMarker([point.latitude, point.longitude], {
+          renderer: dotsRenderer.current ?? undefined,
+          radius: 5,
+          color: "#ffffff",
+          weight: 1.5,
+          fillColor: "#94a3b8",
+          fillOpacity: 1,
+        })
+          .bindPopup(() => pointContent(point), POPUP)
+          .addTo(layer);
+        markers.current.set(`p:${point.id}`, dot);
+      }
+    };
+    const idle = typeof window.requestIdleCallback === "function" ? window.requestIdleCallback(addDots, { timeout: 1200 }) : null;
+    const timer = idle === null ? window.setTimeout(addDots, 300) : null;
     // Cadrage : les listes officielles d'abord (gardes de la semaine), sinon les établissements inscrits ;
     // sur « Tout le Niger », autour de Niamey s'il y en a (une station de Maradi ne dézoome pas tout le pays).
     // Les petits points gris (stations non inscrites) ne décident du cadrage que s'il n'y a rien d'autre.
@@ -289,6 +308,11 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
       framed.current = key;
       current.fitBounds(L.latLngBounds(spots), { padding: [32, 32], maxZoom: 14 });
     }
+    return () => {
+      cancelled = true;
+      if (idle !== null) window.cancelIdleCallback(idle);
+      if (timer !== null) window.clearTimeout(timer);
+    };
   }, [kind, items, fuel, position, points, home]);
 
   // Le client : son point et la carte centrée sur lui.
