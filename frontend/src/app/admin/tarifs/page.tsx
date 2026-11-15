@@ -25,6 +25,7 @@ import {
 } from "@/services/finance-service";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { type AdminSeller, FinanceSettings } from "@/types/finance";
+import { formatXOF } from "@/lib/currency";
 
 function parseNonNegativeNumber(value: string, fallback: number) {
   const normalized = value.replace(",", ".").trim();
@@ -226,7 +227,6 @@ export default function AdminTarifsPage() {
   });
   const {
     data: sellers,
-    isError: isSellersError,
     error: sellersError,
   } = useQuery({
     queryKey: ["admin-sellers"],
@@ -235,7 +235,6 @@ export default function AdminTarifsPage() {
   });
   const {
     data: districtFees,
-    isError: isDistrictError,
     error: districtError,
   } = useQuery({
     queryKey: ["admin-district-fees"],
@@ -971,8 +970,8 @@ export default function AdminTarifsPage() {
               </div>
               <details className="mt-3">
                 <summary className="cursor-pointer text-xs font-medium text-ink-600">
-                  Tarif personnalisé · commission {(seller.effective_commission_rate * 100).toFixed(2)} %, frais {seller.effective_service_fee} XOF,
-                  abonnement {seller.effective_seller_subscription_fee} XOF
+                  Tarif personnalisé · commission {(seller.effective_commission_rate * 100).toLocaleString("fr-FR", { maximumFractionDigits: 2 })}&nbsp;%,
+                  frais {formatXOF(seller.effective_service_fee)}, abonnement {formatXOF(seller.effective_seller_subscription_fee)}
                 </summary>
               <div className="mt-3 grid gap-3 md:grid-cols-3">
                 <input
