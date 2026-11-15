@@ -123,6 +123,21 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
     enabled: kind === "pharmacy",
   });
 
+  // Stations : toutes les stations-service de Niamey connues d'OpenStreetMap, en petits points gris,
+  // pour que la carte ne soit jamais vide (seulement sur « Toutes », sans filtre de carburant).
+  const showOsmStations = stations && (!city || city.toLowerCase() === "niamey") && !onlyActive && !dutyOnly && !fuel;
+  const { data: osmStations } = useQuery({
+    queryKey: ["osm-stations-niamey"],
+    queryFn: async () => {
+      const response = await fetch("/data/niamey-stations-osm.json");
+      if (!response.ok) return [];
+      const body = (await response.json()) as { stations: { n: string; b: string; lat: number; lng: number }[] };
+      return body.stations;
+    },
+    staleTime: Infinity,
+    enabled: showOsmStations,
+  });
+
   const dutyWeek = duty?.current?.items;
   const dutyDeclared = duty?.declared;
 
@@ -176,8 +191,31 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
       }
     }
     const registered = items.map(({ item }) => item).filter((item) => !listed.has(item.vendor_id));
+    if (showOsmStations && osmStations?.length) {
+      // Pas de point gris là où une station inscrite (ou du communiqué) est déjà placée (~100 m).
+      const taken = [
+        ...registered.filter((item) => item.latitude != null && item.longitude != null).map((item) => [item.latitude as number, item.longitude as number]),
+        ...points.map((point) => [point.latitude, point.longitude]),
+      ];
+      for (const station of osmStations) {
+        if (taken.some(([lat, lng]) => Math.abs(lat - station.lat) < 0.001 && Math.abs(lng - station.lng) < 0.001)) continue;
+        points.push({
+          id: `osm:${station.lat},${station.lng}`,
+          name: station.b ? `${station.n} (${station.b})` : station.n,
+          latitude: station.lat,
+          longitude: station.lng,
+          level: "unknown",
+          approximate: false,
+          area: null,
+          lines: ["Pas encore sur AMAZER : disponibilités inconnues, appelez ou passez voir."],
+          phone: null,
+          mapsUrl: `https://www.google.com/maps/dir/?api=1&destination=${station.lat},${station.lng}`,
+          variant: "dot",
+        });
+      }
+    }
     return { points, unplaced, registered };
-  }, [kind, dutyWeek, dutyDeclared, official, fuel, items]);
+  }, [kind, dutyWeek, dutyDeclared, official, fuel, items, showOsmStations, osmStations]);
 
   const locate = () => {
     if (!("geolocation" in navigator)) {

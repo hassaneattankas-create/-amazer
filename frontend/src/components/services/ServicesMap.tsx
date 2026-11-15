@@ -26,6 +26,8 @@ export type MapPoint = {
   lines: string[];
   phone: string | null;
   mapsUrl: string;
+  /** Petit point gris : établissement connu d'OpenStreetMap mais pas (encore) inscrit sur AMAZER. */
+  variant?: "dot";
 };
 
 /** Niamey : centre par défaut quand ni la position du client ni aucune station ne sont connues. */
@@ -65,6 +67,14 @@ function itemLevel(kind: ServiceKind, item: LocalServiceItem, fuel: FuelKey | ""
   if (states.includes("low")) return "low";
   return states.includes("out") ? "out" : "unknown";
 }
+
+const DOT_ICON = L.divIcon({
+  className: "",
+  html: '<span class="block h-3 w-3 rounded-full border-2 border-white bg-ink-400 shadow-raised"></span>',
+  iconSize: [12, 12],
+  iconAnchor: [6, 6],
+  popupAnchor: [0, -6],
+});
 
 function markerIcon(level: Level, onDuty: boolean, approximate = false): L.DivIcon {
   const ring = onDuty ? " ring-2 ring-ink-900 ring-offset-1" : "";
@@ -231,20 +241,24 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
     }
     for (const point of points) {
       L.marker([point.latitude, point.longitude], {
-        icon: markerIcon(point.level, false, point.approximate),
+        icon: point.variant === "dot" ? DOT_ICON : markerIcon(point.level, false, point.approximate),
         title: point.name,
-        keyboard: true,
-        // Les points sûrs passent devant les points approximatifs.
-        zIndexOffset: point.approximate ? 0 : 500,
+        keyboard: point.variant !== "dot",
+        // Les points sûrs passent devant les points approximatifs, eux-mêmes devant les petits points gris.
+        zIndexOffset: point.variant === "dot" ? -500 : point.approximate ? 0 : 500,
       })
         .bindPopup(() => pointContent(point), POPUP)
         .addTo(layer);
     }
     // Cadrage : les listes officielles d'abord (gardes de la semaine), sinon les établissements inscrits ;
     // sur « Tout le Niger », autour de Niamey s'il y en a (une station de Maradi ne dézoome pas tout le pays).
-    const all: L.LatLngTuple[] = points.length
-      ? points.map((point): L.LatLngTuple => [point.latitude, point.longitude])
-      : placed.map((item): L.LatLngTuple => [item.latitude, item.longitude]);
+    // Les petits points gris (stations non inscrites) ne décident du cadrage que s'il n'y a rien d'autre.
+    const main = points.filter((point) => point.variant !== "dot");
+    const listed = main.length ? main : placed.length ? [] : points;
+    const all: L.LatLngTuple[] = [
+      ...listed.map((point): L.LatLngTuple => [point.latitude, point.longitude]),
+      ...(main.length ? [] : placed.map((item): L.LatLngTuple => [item.latitude, item.longitude])),
+    ];
     const near = home ? all.filter(([lat, lng]) => Math.abs(lat - home.lat) < 0.4 && Math.abs(lng - home.lng) < 0.4) : [];
     const spots = near.length ? near : all;
     const key = [...placed.map((item) => item.outlet_id ?? item.vendor_id), ...points.map((point) => point.id)].sort().join("|");
@@ -284,6 +298,12 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
           <li className="inline-flex items-center gap-1.5">
             <span className="inline-block h-3 w-3 rounded-full bg-card ring-2 ring-ink-900" aria-hidden="true" />
             Cerclé : de garde
+          </li>
+        ) : null}
+        {points.some((point) => point.variant === "dot") ? (
+          <li className="inline-flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-ink-400" aria-hidden="true" />
+            Petit point gris : station pas encore sur AMAZER (disponibilités inconnues)
           </li>
         ) : null}
         {points.some((point) => point.approximate) ? (
