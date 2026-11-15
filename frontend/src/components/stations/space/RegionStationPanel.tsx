@@ -49,7 +49,7 @@ export function RegionStationPanel({ station, city }: RegionStationPanelProps) {
             aria-controls={panelId}
             onClick={() => setTab(entry.id)}
             className={cn(
-              "min-h-11 rounded-field px-2 text-sm transition-colors duration-fast last:col-span-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:last:col-span-1",
+              "min-h-11 rounded-field px-2 text-sm transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500",
               tab === entry.id ? "bg-card font-semibold text-ink-900 shadow-hairline" : "text-ink-700 hover:bg-surface-2",
             )}
           >

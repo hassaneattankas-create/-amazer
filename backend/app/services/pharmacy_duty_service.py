@@ -63,18 +63,19 @@ def local(moment: datetime) -> datetime:
 
 
 def _hour(moment: datetime) -> str:
-    return f"{moment.hour} h" + (f"{moment.minute:02d}" if moment.minute else "")
+    # Espaces insécables : « 8 h » ne se coupe jamais en fin de ligne.
+    return f"{moment.hour} h" + (f"{moment.minute:02d}" if moment.minute else "")
 
 
 def until_label(moment: datetime) -> str:
     """« jusqu'au samedi 21 nov. à 8 h » (heure de Niamey)."""
     t = local(moment)
-    return f"jusqu'au {DAYS[t.weekday()]} {t.day} {MONTHS[t.month - 1]} à {_hour(t)}"
+    return f"jusqu'au {DAYS[t.weekday()]} {t.day} {MONTHS[t.month - 1]} à {_hour(t)}"
 
 
 def period_label(start: datetime, end: datetime) -> str:
     a, b = local(start), local(end)
-    return f"du {DAYS[a.weekday()]} {a.day} {MONTHS[a.month - 1]} {_hour(a)} au {DAYS[b.weekday()]} {b.day} {MONTHS[b.month - 1]} {_hour(b)}"
+    return f"du {DAYS[a.weekday()]} {a.day} {MONTHS[a.month - 1]} {_hour(a)} au {DAYS[b.weekday()]} {b.day} {MONTHS[b.month - 1]} {_hour(b)}"
 
 
 def _lists(db: Session, city: str | None, now: datetime) -> tuple[list[OfficialList], list[OfficialList]]:

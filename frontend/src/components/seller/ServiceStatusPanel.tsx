@@ -122,7 +122,7 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
             </p>
             <p className="mt-1 text-sm text-ink-600">
               {status.on_duty_now
-                ? "Vous apparaissez en tête de la page « Pharmacies »."
+                ? "Les clients vous voient en vert sur la carte et dans la liste des pharmacies de garde."
                 : "Si votre pharmacie est sur la liste officielle de la semaine, AMAZER l'affiche tout seul. Sinon, un geste suffit :"}
             </p>
             {/* Garde programmee en cours : rien a activer ; elle s'arrete seule (ou via « Supprimer »). */}
@@ -295,7 +295,7 @@ export function ServiceStatusPanel({ kind }: { kind: ServiceKind }) {
             ? "Quand vous indiquez du gaz disponible, les clients peuvent en commander avec livraison AMAZER (le carburant ne se vend pas en ligne)."
             : status.delivery_phone
               ? "Les clients peuvent se faire livrer depuis chez vous par AMAZER."
-              : "La livraison AMAZER n'est pas encore disponible dans votre ville."}
+              : "La livraison AMAZER depuis votre établissement n'est pas encore ouverte."}
         </p>
       </div>
     </section>

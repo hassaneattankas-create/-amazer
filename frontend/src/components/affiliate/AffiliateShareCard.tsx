@@ -13,7 +13,7 @@ import { toast } from "@/store/toast-store";
 
 type Props =
   /** Vendeur : le lien de SA boutique, avec son code d'affilié. */
-  | { variant: "seller"; vendorId: string; shopName?: string }
+  | { variant: "seller"; vendorId: string; shopName?: string; serviceKind?: string | null }
   /** Client : son lien AMAZER personnel. */
   | { variant: "client" };
 
@@ -27,8 +27,14 @@ export function AffiliateShareCard(props: Props) {
   const seller = props.variant === "seller";
   const link = withAffiliateRef(seller ? `${siteOrigin()}/shop/${props.vendorId}` : `${siteOrigin()}/`, data.code);
   const bonus = formatXOF(data.customer_bonus);
+  // Pharmacie et station : pas de vente en ligne (AMAZER ne vend pas de médicaments ni de carburant).
+  const name = seller ? (props.shopName ?? "").trim() : "";
   const message = seller
-    ? `Découvrez ma boutique ${props.shopName ?? ""} sur AMAZER : commandez en ligne, paiement sécurisé. ${link}`.replace("  ", " ")
+    ? props.serviceKind === "pharmacy"
+      ? `${name || "Notre pharmacie"} sur AMAZER : horaires, gardes et itinéraire jusqu'à nous. ${link}`
+      : props.serviceKind === "fuel_station"
+        ? `${name || "Nos stations"} sur AMAZER : carburants disponibles en ce moment, horaires et itinéraire. ${link}`
+        : `Découvrez ma boutique ${name} sur AMAZER : commandez en ligne, paiement sécurisé. ${link}`.replace("  ", " ")
     : `Boutiques, restaurants, hôtels, pharmacies de garde… tout le Niger dans une seule application : ${link}`;
 
   const copy = async () => {
@@ -44,7 +50,7 @@ export function AffiliateShareCard(props: Props) {
     <section className="rounded-card border border-brand-200 bg-brand-50 p-4 sm:p-5" aria-labelledby="share-card-title">
       <h2 id="share-card-title" className="flex items-center gap-2 text-lg font-semibold text-ink-900">
         <Gift className="h-5 w-5 text-brand-600" aria-hidden="true" />
-        {seller ? "Partagez votre boutique, gagnez plus" : "Gagnez de l'argent avec AMAZER"}
+        {seller ? "Partagez votre vitrine, gagnez plus" : "Gagnez de l'argent avec AMAZER"}
       </h2>
       <p className="mt-1 text-sm text-ink-700">
         {seller

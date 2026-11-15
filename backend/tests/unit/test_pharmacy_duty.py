@@ -31,9 +31,9 @@ def test_phone_link_adds_niger_prefix() -> None:
 
 def test_labels_use_niamey_time() -> None:
     end = datetime(2026, 11, 21, 7, 0, tzinfo=UTC)  # 8 h à Niamey
-    assert duty.until_label(end) == "jusqu'au samedi 21 nov. à 8 h"
+    assert duty.until_label(end) == "jusqu'au samedi 21 nov. à 8 h"  # « 8 h » jamais coupé
     start = datetime(2026, 11, 14, 8, 0, tzinfo=NIAMEY)
-    assert duty.period_label(start, end) == "du samedi 14 nov. 8 h au samedi 21 nov. 8 h"
+    assert duty.period_label(start, end).replace(" ", " ") == "du samedi 14 nov. 8 h au samedi 21 nov. 8 h"
 
 
 def test_listed_registered_pharmacy_is_on_duty_automatically() -> None:
@@ -51,7 +51,7 @@ def test_listed_registered_pharmacy_is_on_duty_automatically() -> None:
         listed = SimpleNamespace(city="Niamey", business_name="Pharmacie Ar Rahma")
         other = SimpleNamespace(city="Niamey", business_name="Pharmacie Issa-Beri")
         ends = duty.official_end_for(listed, official)
-        assert ends is not None and duty.until_label(ends) == "jusqu'au samedi 21 nov. à 8 h"
+        assert ends is not None and duty.until_label(ends).replace(" ", " ") == "jusqu'au samedi 21 nov. à 8 h"
         assert duty.official_end_for(other, official) is None
 
 

@@ -403,8 +403,8 @@ export default function SellerDashboardPage() {
       <Accordion>
         {!showProductTools && profile?.service_kind !== "fuel_station" ? <SellerPlanItem /> : null}
         {profile?.vendor_id ? (
-          <AccordionItem id="share" variant="row" headingLevel={3} icon={<Share2 className="h-5 w-5" />} title="Partager ma boutique">
-            <AffiliateShareCard variant="seller" vendorId={profile.vendor_id} shopName={profile.business_name} />
+          <AccordionItem id="share" variant="row" headingLevel={3} icon={<Share2 className="h-5 w-5" />} title={profile.service_kind === "pharmacy" ? "Partager ma pharmacie" : profile.service_kind === "fuel_station" ? "Partager mes stations" : "Partager ma boutique"}>
+            <AffiliateShareCard variant="seller" vendorId={profile.vendor_id} shopName={profile.business_name} serviceKind={profile.service_kind} />
           </AccordionItem>
         ) : null}
         <AccordionItem id="stats" variant="row" headingLevel={3} icon={<BarChart3 className="h-5 w-5" />} title="Mes statistiques">
@@ -486,7 +486,8 @@ export default function SellerDashboardPage() {
 
       {tab === "reglages" && showRestaurantTools ? <RestaurantSettingsPanel /> : null}
 
-      {tab === "reglages" && (profile?.storefront_tier === "premium" ||
+      {/* Catalogue et comptabilité : sans objet pour une pharmacie ou une station (pas de produits en ligne). */}
+      {tab === "reglages" && !isLocalService && (profile?.storefront_tier === "premium" ||
       profile?.activity_type === "enterprise" ||
       profile?.activity_type === "hotel") ? (
         <article className="premium-card border border-indigo-200 bg-indigo-50/50 p-5">

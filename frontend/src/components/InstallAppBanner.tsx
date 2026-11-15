@@ -117,7 +117,8 @@ export function InstallAppBanner() {
       aria-label="Installer l'application AMAZER"
       className="fixed inset-x-0 bottom-0 z-sticky border-t border-border bg-brand-50 pb-[env(safe-area-inset-bottom)] shadow-floating"
     >
-      <div className="mx-auto flex w-full max-w-7xl items-center gap-3 py-2 pl-gutter pr-20 md:pr-24">
+      {/* Téléphone : texte sur toute la largeur, bouton « Installer » dessous (à gauche, loin de la bulle d'aide). */}
+      <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-3 gap-y-1 py-2 pl-gutter pr-2 md:flex-nowrap md:pr-24">
         <Image src="/logo-amazer-mark-128.png" alt="" width={36} height={36} className="h-9 w-9 shrink-0" />
         <div className="min-w-0 flex-1 text-sm">
           <p className="font-semibold text-ink-900">Installez l&apos;application AMAZER</p>
@@ -137,14 +138,16 @@ export function InstallAppBanner() {
           )}
         </div>
         {mode === "android" ? (
-          <button
-            type="button"
-            onClick={() => void install()}
-            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-pill bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700"
-          >
-            <Download className="h-4 w-4" aria-hidden="true" />
-            Installer
-          </button>
+          <div className="order-last w-full pb-1 pl-12 md:order-none md:w-auto md:pb-0 md:pl-0">
+            <button
+              type="button"
+              onClick={() => void install()}
+              className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-pill bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700"
+            >
+              <Download className="h-4 w-4" aria-hidden="true" />
+              Installer
+            </button>
+          </div>
         ) : null}
         <button
           type="button"
