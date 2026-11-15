@@ -6,7 +6,7 @@ import "leaflet/dist/leaflet.css";
 
 import L from "leaflet";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapPin, Search, X } from "lucide-react";
+import { Layers, MapPin, Search, X } from "lucide-react";
 
 import type { GeoPoint } from "@/lib/local-services";
 import { FUEL_LABELS, FUEL_STATE_LABELS, type FuelKey, type FuelState, type LocalServiceItem, type ServiceKind } from "@/types/local-services";
@@ -100,6 +100,14 @@ const ME_ICON = L.divIcon({
   iconAnchor: [8, 8],
 });
 
+/** Clé publique Mapbox (restreinte au domaine) : sans elle, pas de bouton satellite dans la carte. */
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+const LAYER_KEY = "amazer_map_layer";
+
+/** Google Maps en vue satellite, centré sur l'établissement (sans clé ni compte). */
+const satelliteUrl = (lat: number, lng: number) =>
+  `https://www.google.com/maps/@?api=1&map_action=map&center=${lat},${lng}&zoom=19&basemap=satellite`;
+
 /** Bulle d'un établissement, construite en DOM (textContent) : aucun nom n'est interprété comme du HTML. */
 function popupContent(kind: ServiceKind, item: LocalServiceItem): HTMLElement {
   const box = document.createElement("div");
@@ -139,6 +147,7 @@ function popupContent(kind: ServiceKind, item: LocalServiceItem): HTMLElement {
   };
   link(item.maps_url, "Itinéraire", true);
   if (item.phone) link(`tel:${item.phone.replace(/[^+0-9]/g, "")}`, "Appeler", false);
+  if (item.latitude != null && item.longitude != null) link(satelliteUrl(item.latitude, item.longitude), "Vue satellite", true);
   box.appendChild(actions);
   return box;
 }
@@ -171,6 +180,8 @@ function pointContent(point: MapPoint): HTMLElement {
   };
   if (point.phone) link(point.phone, "Appeler", false);
   link(point.mapsUrl, "Itinéraire", true);
+  // Position approximative (centre du quartier) : la vue satellite ne montrerait pas le bon bâtiment.
+  if (!point.approximate) link(satelliteUrl(point.latitude, point.longitude), "Vue satellite", true);
   box.appendChild(actions);
   return box;
 }
@@ -218,16 +229,38 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
   const dotsRenderer = useRef<L.Canvas | null>(null);
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState("");
+  // Fond de carte : plan (OpenStreetMap, léger) ou satellite (Mapbox, si une clé est réglée). Choix gardé sur le téléphone.
+  const planLayer = useRef<L.TileLayer | null>(null);
+  const satelliteLayer = useRef<L.TileLayer | null>(null);
+  // Carte chargée seulement sur le téléphone (ssr: false) : la préférence se lit dès la création.
+  const [base, setBase] = useState<"plan" | "satellite">(() => {
+    if (!MAPBOX_TOKEN) return "plan";
+    try {
+      return window.localStorage.getItem(LAYER_KEY) === "satellite" ? "satellite" : "plan";
+    } catch {
+      return "plan";
+    }
+  });
 
   // Création unique de la carte.
   useEffect(() => {
     if (!holder.current || map.current) return;
     const created = L.map(holder.current, { center: NIAMEY, zoom: 12, zoomControl: true });
     created.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    planLayer.current = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(created);
+    if (MAPBOX_TOKEN) {
+      // Images de 512 px une zone sur deux : 4 fois moins de requêtes (offre gratuite Mapbox) pour la même netteté.
+      satelliteLayer.current = L.tileLayer(`https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=${MAPBOX_TOKEN}`, {
+        maxZoom: 19,
+        tileSize: 512,
+        zoomOffset: -1,
+        attribution:
+          '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.maxar.com/">Maxar</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      });
+    }
     stations.current = L.layerGroup().addTo(created);
     dotsRenderer.current = L.canvas({ padding: 0.5, tolerance: 8 });
     map.current = created;
@@ -236,9 +269,25 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
       map.current = null;
       stations.current = null;
       dotsRenderer.current = null;
+      planLayer.current = null;
+      satelliteLayer.current = null;
       me.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const current = map.current;
+    if (!current || !planLayer.current) return;
+    const show = base === "satellite" && satelliteLayer.current ? satelliteLayer.current : planLayer.current;
+    const hide = show === planLayer.current ? satelliteLayer.current : planLayer.current;
+    if (hide && current.hasLayer(hide)) current.removeLayer(hide);
+    if (!current.hasLayer(show)) show.addTo(current);
+    try {
+      window.localStorage.setItem(LAYER_KEY, base);
+    } catch {
+      /* préférence non gardée */
+    }
+  }, [base]);
 
   // Stations : marqueurs refaits à chaque liste ; cadrage seulement quand l'ensemble change.
   useEffect(() => {
@@ -433,12 +482,25 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
           </p>
         )
       ) : null}
-      <div
-        ref={holder}
-        className="isolate aspect-[4/3] w-full overflow-hidden rounded-card border border-border bg-surface-1 sm:aspect-video"
-        role="region"
-        aria-label={kind === "pharmacy" ? "Carte des pharmacies" : "Carte des stations"}
-      />
+      <div className="relative">
+        <div
+          ref={holder}
+          className="isolate aspect-[4/3] w-full overflow-hidden rounded-card border border-border bg-surface-1 sm:aspect-video"
+          role="region"
+          aria-label={kind === "pharmacy" ? "Carte des pharmacies" : "Carte des stations"}
+        />
+        {MAPBOX_TOKEN ? (
+          <button
+            type="button"
+            onClick={() => setBase((value) => (value === "plan" ? "satellite" : "plan"))}
+            aria-pressed={base === "satellite"}
+            className="absolute right-2 top-2 z-[1000] inline-flex min-h-11 items-center gap-1.5 rounded-pill border border-border bg-card px-3 text-sm font-semibold text-ink-900 shadow-raised hover:bg-surface-1"
+          >
+            <Layers className="h-4 w-4" aria-hidden="true" />
+            {base === "plan" ? "Satellite" : "Plan"}
+          </button>
+        ) : null}
+      </div>
       <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-700" aria-label="Légende de la carte">
         {(legend ?? LEGEND[kind]).map(({ level, label }) => (
           <li key={level} className="inline-flex items-center gap-1.5">
