@@ -42,15 +42,17 @@ function EarningsDetails({ data }: { data: SellerPlanEarnings }) {
  */
 export function ShopDashboardSections({ kpis }: { kpis: ReactNode }) {
   const { data } = useQuery({ queryKey: ["seller-plan-earnings"], queryFn: getSellerPlanEarnings, staleTime: 60_000 });
-  const showPlan = Boolean(data?.eligible_free_plan);
+  // « Ma formule » pour tous (essai, abonnement Premium ou Restaurant, formule gratuite) ;
+  // « L'argent de mes ventes » seulement pour la formule gratuite (AMAZER encaisse et reverse).
+  const showMoney = Boolean(data?.eligible_free_plan);
   return (
     <Accordion defaultOpen="kpis">
       <AccordionItem id="kpis" variant="row" headingLevel={3} icon={<BarChart3 className={icon} />} title="Mes chiffres">
         {kpis}
       </AccordionItem>
-      {showPlan && data ? (
+      <SellerPlanItem />
+      {showMoney && data ? (
         <>
-          <SellerPlanItem />
           <AccordionItem
             id="money"
             variant="row"
