@@ -363,6 +363,17 @@ function SellerPageContent() {
   const isPremium = profileForm.activity_type === "hotel" || profileForm.activity_type === "enterprise";
   // Pharmacie ou station : ni boutique, ni restaurant, ni réservations (hors sujet pour ces services).
   const isLocalService = profile?.service_kind === "pharmacy" || profile?.service_kind === "fuel_station";
+  // Nom du bloc « Ma boutique » selon le commerce (une pharmacie ou une marque de stations n'est pas une boutique).
+  const shopTitle =
+    profile?.service_kind === "pharmacy"
+      ? { title: "Ma pharmacie", name: "Nom de la pharmacie", about: "Description (services, spécialités)" }
+      : profile?.service_kind === "fuel_station"
+        ? { title: "Ma marque", name: "Nom de la marque", about: "Description (vos stations, vos services)" }
+        : profile?.activity_type === "restaurant"
+          ? { title: "Mon restaurant", name: "Nom du restaurant", about: "Description (votre cuisine)" }
+          : profile?.activity_type === "hotel"
+            ? { title: "Mon établissement", name: "Nom de l'établissement", about: "Description (chambres, services)" }
+            : { title: "Ma boutique", name: "Nom de la boutique", about: "Description (ce que vous vendez)" };
   const showRestaurantSection = (isRestaurant || isPremium) && !isLocalService;
   const showRoomTypes = isPremium || isTransport;
   const { data: publicFinance } = useQuery({
@@ -489,7 +500,7 @@ function SellerPageContent() {
               {pendingPayment
                 ? "Paiement envoyé : AMAZER le vérifie. Vous serez prévenu."
                 : hasActiveSubscription
-                  ? `Actif${subscriptionUntil ? ` jusqu'au ${subscriptionUntil}` : ""}${showSubscriptionRenewHeadsUp ? " · à renouveler bientôt" : ""}`
+                  ? `${planEarnings?.in_trial ? "Essai gratuit" : "Actif"}${subscriptionUntil ? ` jusqu'au ${subscriptionUntil}` : ""}${showSubscriptionRenewHeadsUp ? " · à renouveler bientôt" : ""}`
                   : hasProfile
                     ? isShopPlan
                       ? "Sans abonnement : votre boutique reste en ligne en formule gratuite (5 produits visibles, commission par vente)."
@@ -507,6 +518,8 @@ function SellerPageContent() {
             <SellerPlanMessage data={planEarnings} withLink={false} />
           </div>
         ) : null}
+        {/* Pharmacies et stations ne vendent pas en ligne : pas de commission à expliquer. */}
+        {isLocalService ? null : (
         <p className="mt-2 text-xs text-ink-600">
           Vous recevez le prix entier de vos articles. Commission AMAZER{" "}
           {pricingSnapshot.commissionRate !== null ? `${Number((pricingSnapshot.commissionRate * 100).toFixed(2))} %` : "—"} et frais de
@@ -515,6 +528,7 @@ function SellerPageContent() {
             ? " En formule gratuite, AMAZER garde aussi 5 % de chaque vente avant de vous reverser votre part ; l'abonnement supprime cette commission."
             : ""}
         </p>
+        )}
         {latestSubscriptionPayment?.status === "rejected" ? (
           <p className="mt-3 rounded-field bg-surface-1 px-3 py-2 text-sm text-danger">
             Dernier paiement refusé
@@ -598,15 +612,15 @@ function SellerPageContent() {
         <ProductCardSkeleton />
       ) : (
         <article className="space-y-5 rounded-card border border-border bg-card p-5">
-          <h2 className="text-lg font-semibold text-ink-900">Ma boutique</h2>
+          <h2 className="text-lg font-semibold text-ink-900">{shopTitle.title}</h2>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className={`${labelClass} sm:col-span-2`}>
-              Nom de la boutique
+              {shopTitle.name}
               <input className={fieldClass} value={profileForm.business_name} onChange={(e) => setField("business_name")(e.target.value)} />
             </label>
             <label className={`${labelClass} sm:col-span-2`}>
-              Description (ce que vous vendez)
+              {shopTitle.about}
               <textarea
                 className={`${fieldClass} h-auto min-h-24 py-2`}
                 value={profileForm.description}
