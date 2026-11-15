@@ -12,7 +12,7 @@ import { PharmacyDutyBoard } from "@/components/services/PharmacyDutyBoard";
 import type { MapLevel, MapPoint } from "@/components/services/ServicesMap";
 import { Button } from "@/components/ui/button";
 import { NIGER_REGION_CITIES, distanceKm, type GeoPoint } from "@/lib/local-services";
-import { getPharmacyDuty, listOfficialLists, listPharmacies, listStations } from "@/services/local-services-service";
+import { getPharmacyDirectory, getPharmacyDuty, listOfficialLists, listPharmacies, listStations } from "@/services/local-services-service";
 import { toast } from "@/store/toast-store";
 import { FUEL_LABELS, type FuelKey, type ServiceKind } from "@/types/local-services";
 
@@ -50,7 +50,17 @@ const ServicesMap = dynamic(() => import("@/components/services/ServicesMap").th
 });
 
 /** Établissement ou quartier de Niamey tiré d'OpenStreetMap (fichiers de public/data). */
-type OsmPlace = { n: string; b?: string; lat: number; lng: number };
+type OsmPlace = {
+  n: string;
+  b?: string;
+  lat: number;
+  lng: number;
+  /** Annuaire des pharmacies : numéro (format tel), repère, position approximative (quartier). */
+  phone?: string | null;
+  where?: string;
+  approximate?: boolean;
+  area?: string | null;
+};
 
 /** Nom sans accents ni « Pharmacie » : « Pharmacie le Gorouol » → « le gorouol ». */
 const bareName = (value: string) =>
@@ -136,21 +146,34 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
     enabled: kind === "pharmacy",
   });
 
-  // Niamey (OpenStreetMap) : toutes les stations-service et pharmacies en petits points gris, pour que la carte
-  // ne soit jamais vide et qu'on puisse chercher n'importe laquelle ; quartiers pour la recherche.
+  // Toutes les stations-service (OpenStreetMap) et toutes les pharmacies (annuaire AMAZER : position et numéro
+  // gardés, de garde ou non) en petits points gris : la carte n'est jamais vide et on peut chercher n'importe laquelle.
   const inNiamey = !city || city.toLowerCase() === "niamey";
   // Stations : seulement sur « Toutes », sans filtre de carburant (une station inconnue n'est pas « disponible »).
-  const showOsm = inNiamey && (stations ? !onlyActive && !dutyOnly && !fuel : true);
+  const showOsm = stations ? inNiamey && !onlyActive && !dutyOnly && !fuel : true;
   const { data: osmPlaces } = useQuery({
-    queryKey: ["osm-niamey", kind],
-    queryFn: async () => {
-      const file = stations ? "niamey-stations-osm.json" : "niamey-pharmacies-osm.json";
-      const response = await fetch(`/data/${file}`);
+    queryKey: ["osm-niamey", kind, dutyCity],
+    queryFn: async (): Promise<OsmPlace[]> => {
+      if (!stations) {
+        const listings = await getPharmacyDirectory(dutyCity);
+        return listings
+          .filter((p) => p.latitude != null && p.longitude != null)
+          .map((p) => ({
+            n: p.name,
+            lat: p.latitude as number,
+            lng: p.longitude as number,
+            phone: p.phone_link,
+            where: [p.location, p.district].filter(Boolean).join(" · "),
+            approximate: p.approximate,
+            area: p.area,
+          }));
+      }
+      const response = await fetch("/data/niamey-stations-osm.json");
       if (!response.ok) return [];
-      const body = (await response.json()) as { stations?: OsmPlace[]; pharmacies?: OsmPlace[] };
-      return body.stations ?? body.pharmacies ?? [];
+      const body = (await response.json()) as { stations: OsmPlace[] };
+      return body.stations;
     },
-    staleTime: Infinity,
+    staleTime: stations ? Infinity : 5 * 60_000,
     enabled: showOsm,
   });
   const { data: quartiers = [] } = useQuery({
@@ -237,16 +260,17 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
           latitude: place.lat,
           longitude: place.lng,
           level: "unknown",
-          approximate: false,
-          area: null,
+          approximate: Boolean(place.approximate),
+          area: place.area ?? null,
           lines: [
             stations
               ? "Pas encore sur AMAZER : disponibilités inconnues, appelez ou passez voir."
               : onDutyList
                 ? "Pas de garde cette semaine d'après la liste officielle : horaires habituels."
                 : "Horaires habituels : appelez avant de vous déplacer.",
-          ],
-          phone: null,
+            place.where ?? "",
+          ].filter(Boolean),
+          phone: place.phone ? `tel:${place.phone}` : null,
           mapsUrl: `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`,
           variant: "dot",
         });

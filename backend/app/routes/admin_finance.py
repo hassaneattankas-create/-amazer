@@ -16,6 +16,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.orm import Session, selectinload
 
+from app.services import priority_service as priority
 from app.config import get_settings
 from app.core.phone import normalize_phone
 from app.core.permissions import is_admin, is_principal_admin
@@ -51,6 +52,7 @@ from app.schemas.finance import (
     AdminSellerSubscriptionPaymentDecisionRequest,
     AdminSellerSubscriptionPaymentRequestResponse,
     AdminSellerPricingUpdateRequest,
+    AdminSellerPriorityRequest,
     AdminSellerTypeUpdateRequest,
     AdminUserResponse,
     AdminUserRoleUpdateRequest,
@@ -285,6 +287,7 @@ def _build_admin_seller_response(
         service_kind=getattr(profile, "service_kind", None),
         email=getattr(getattr(profile, "user", None), "email", None),
         subscription_paid_until=profile.subscription_paid_until.isoformat() if profile.subscription_paid_until else None,
+        priority_until=profile.priority_until.isoformat() if priority.is_priority(profile) and profile.priority_until else None,
         commission_rate_override=profile.commission_rate_override,
         service_fee_override=profile.service_fee_override,
         seller_subscription_fee_override=profile.seller_subscription_fee_override,
@@ -1765,6 +1768,39 @@ def verify_seller(
     db.commit()
     db.refresh(profile)
     _invalidate_public_marketplace_cache()
+    vendor = db.get(Vendor, profile.vendor_id)
+    return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
+
+
+@router.post("/sellers/{profile_id}/priority", response_model=AdminSellerResponse)
+def set_seller_priority(
+    profile_id: str,
+    payload: AdminSellerPriorityRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminSellerResponse:
+    """Visibilité prioritaire : en tête des listes et « À la une » pendant `days` jours (0 = retirer)."""
+    enforce_csrf(request)
+    _require_finance_pin(request, admin_user)
+    profile = db.get(SellerProfile, profile_id)
+    if profile is None:
+        raise ValidationDomainError("Profil vendeur introuvable")
+    profile.priority_until = priority.until_for(payload.days)
+    append_audit_log(
+        db,
+        event_type="admin_seller_priority_updated",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="seller_profile",
+        entity_id=profile.id,
+        details={"days": payload.days},
+    )
+    db.commit()
+    db.refresh(profile)
+    _invalidate_public_marketplace_cache()
+    cache_delete_prefixes("services:")
     vendor = db.get(Vendor, profile.vendor_id)
     return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
 

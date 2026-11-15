@@ -1,4 +1,6 @@
 export type VendorStorefront = {
+  /** Visibilité prioritaire choisie par l'admin (« À la une »). */
+  is_priority?: boolean;
   id: string;
   name: string;
   slug: string;

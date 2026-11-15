@@ -168,6 +168,8 @@ export type AdminSeller = {
   service_kind?: "pharmacy" | "fuel_station" | null;
   /** E-mail du compte (actions sur le compte dans « Utilisateurs »). */
   email?: string | null;
+  /** Visibilité prioritaire (« À la une ») jusqu'à cette date ; absente = aucune. */
+  priority_until?: string | null;
   subscription_paid_until: string | null;
   commission_rate_override: number | null;
   service_fee_override: number | null;

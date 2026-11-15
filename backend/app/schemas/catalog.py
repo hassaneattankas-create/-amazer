@@ -20,6 +20,8 @@ class VendorListResponse(BaseModel):
 class VendorStorefrontResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    # Visibilité prioritaire choisie par l'admin (« À la une »).
+    is_priority: bool = False
     id: str
     name: str
     slug: str

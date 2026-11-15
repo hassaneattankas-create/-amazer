@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Camera, ClipboardList, Fuel, Pill, Trash2 } from "lucide-react";
+import { BookOpen, CalendarClock, Camera, ClipboardList, Fuel, Pill, Trash2 } from "lucide-react";
 
+import { PharmacyDirectoryAdmin } from "@/components/admin/PharmacyDirectoryAdmin";
 import { Accordion, AccordionItem } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -289,6 +290,16 @@ export default function AdminDutyListsPage() {
               })}
             </ul>
           )}
+        </AccordionItem>
+
+        <AccordionItem
+          id="directory"
+          headingLevel={2}
+          icon={<BookOpen className="h-5 w-5" />}
+          title="Annuaire des pharmacies"
+          description="Positions et numéros, gardés même hors garde"
+        >
+          <PharmacyDirectoryAdmin />
         </AccordionItem>
 
         <AccordionItem id="fuel" headingLevel={2} icon={<Fuel className="h-5 w-5" />} title="Stations approvisionnées" description="Communiqué d'une marque (ex. Oriba), pour un jour">

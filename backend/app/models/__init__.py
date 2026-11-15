@@ -11,6 +11,7 @@ from app.models.fuel_outlet_stat import FuelOutletDailyStat
 from app.models.fuel_history import FuelStatusChange, StationReport
 from app.models.fuel_activity import FuelActivity, FuelDelivery, FuelMeterReading, FuelPump
 from app.models.official_list import OfficialList, OfficialListEntry
+from app.models.pharmacy_directory import PharmacyListing
 from app.models.vendor_review import VendorReview
 from app.models.affiliate import AffiliateAccount, AffiliateEarning, AffiliatePayout, AffiliateReferral
 from app.models.price_alert import PriceAlert
@@ -45,6 +46,7 @@ __all__ = [
     "PaymentMethod",
     "OfficialList",
     "OfficialListEntry",
+    "PharmacyListing",
     "FuelOutlet",
     "FuelOutletManager",
     "FuelRegionManager",

@@ -94,9 +94,15 @@ export function StorefrontShowcaseCard({
         <span className="absolute left-3 top-3 rounded-pill bg-card/95 px-2.5 py-1 text-xs font-semibold text-ink-800">
           {meta.label}
         </span>
-        {store.badge_label ? (
-          <span className="absolute right-3 top-3 rounded-pill bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white">
-            {store.badge_label}
+        {store.is_priority || store.badge_label ? (
+          <span className="absolute right-3 top-3 flex flex-col items-end gap-1">
+            {/* À la une : visibilité prioritaire choisie par AMAZER. */}
+            {store.is_priority ? (
+              <span className="rounded-pill bg-ink-900 px-2.5 py-1 text-xs font-semibold text-white">À la une</span>
+            ) : null}
+            {store.badge_label ? (
+              <span className="rounded-pill bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white">{store.badge_label}</span>
+            ) : null}
           </span>
         ) : null}
       </div>

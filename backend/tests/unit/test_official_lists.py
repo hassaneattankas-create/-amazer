@@ -6,6 +6,7 @@ import pytest
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session
 
+from app.models.pharmacy_directory import PharmacyListing
 from app.core.exceptions import ValidationDomainError
 from app.database import Base
 from app.models.official_list import OfficialList, OfficialListEntry
@@ -16,7 +17,7 @@ from app.routes.official_lists import OfficialListCreate
 @pytest.fixture
 def db(monkeypatch):
     engine = create_engine("sqlite://")
-    Base.metadata.create_all(engine, tables=[OfficialList.__table__, OfficialListEntry.__table__])
+    Base.metadata.create_all(engine, tables=[OfficialList.__table__, OfficialListEntry.__table__, PharmacyListing.__table__])
     monkeypatch.setattr(route, "cache_get_json", lambda _key: None)
     monkeypatch.setattr(route, "cache_set_json", lambda *_a, **_k: None)
     monkeypatch.setattr(route, "cache_delete_prefixes", lambda *_a: None)

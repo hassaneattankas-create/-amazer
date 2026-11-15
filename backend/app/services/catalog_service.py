@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
+from app.services import priority_service as priority
 from app.core.crypto import decrypt_phone_value
 from app.repositories.catalog_repository import CatalogRepository
 from app.schemas.catalog import (
@@ -94,6 +95,7 @@ class CatalogService:
         return VendorStorefrontListResponse(
             items=[
                 VendorStorefrontResponse(
+                    is_priority=priority.is_priority(getattr(vendor, "seller_profile", None)),
                     id=vendor.id,
                     name=vendor.name,
                     slug=vendor.slug,

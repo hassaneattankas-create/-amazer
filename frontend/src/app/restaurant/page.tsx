@@ -24,7 +24,7 @@ export default function RestaurantPage() {
 
   const visibleRestaurants = useMemo(() => {
     const copy = [...restaurants];
-    copy.sort((a, b) => Number(b.is_verified) - Number(a.is_verified));
+    copy.sort((a, b) => Number(Boolean(b.is_priority)) - Number(Boolean(a.is_priority)) || Number(b.is_verified) - Number(a.is_verified));
     return copy;
   }, [restaurants]);
 

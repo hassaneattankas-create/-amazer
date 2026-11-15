@@ -63,6 +63,7 @@ from app.services import pharmacy_duty_service as duty_svc
 from app.services import station_access as sa
 from app.services.fuel_plan import PLAN_NAMES, FuelPlan, fuel_plan
 from app.services.seller_finance_service import get_or_create_global_settings
+from app.services import priority_service as priority
 
 router = APIRouter(tags=["services"])
 CACHE_PREFIX = "services:"
@@ -99,6 +100,7 @@ def build_item(profile: SellerProfile, settings: object, now: datetime) -> Local
         whatsapp_contact=profile.whatsapp_contact,
         logo_url=profile.logo_url,
         is_verified=bool(profile.is_verified),
+        is_priority=priority.is_priority(profile, now),
         latitude=profile.latitude,
         longitude=profile.longitude,
         maps_url=svc.maps_url(profile),
@@ -129,6 +131,7 @@ def build_outlet_item(profile: SellerProfile, outlet: FuelOutlet, settings: obje
         whatsapp_contact=profile.whatsapp_contact,
         logo_url=profile.logo_url,
         is_verified=bool(profile.is_verified),
+        is_priority=priority.is_priority(profile, now),
         latitude=outlet.latitude,
         longitude=outlet.longitude,
         maps_url=svc.maps_url(outlet),
@@ -214,7 +217,7 @@ def list_pharmacies(
         "pharmacy",
         city,
         keep=lambda i: mark(i).on_duty or not on_duty,
-        sort_key=lambda i: (not i.on_duty, not i.is_verified, i.business_name.lower()),
+        sort_key=lambda i: (not i.on_duty, not i.is_priority, not i.is_verified, i.business_name.lower()),
     )
     cache_set_json(key, response.model_dump(), ttl_seconds=60)
     return response
@@ -291,7 +294,7 @@ def list_stations(
         "fuel_station",
         city,
         keep=lambda i: (has(i) or not available) and (i.on_duty or not on_duty),
-        sort_key=lambda i: (not has(i), not i.fuel_fresh, recency(i), i.business_name.lower()),
+        sort_key=lambda i: (not has(i), not i.is_priority, not i.fuel_fresh, recency(i), i.business_name.lower()),
     )
     # Court : une disponibilite change vite pendant une penurie.
     cache_set_json(key, response.model_dump(), ttl_seconds=30)

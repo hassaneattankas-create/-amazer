@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm import Session
 
@@ -89,7 +89,11 @@ class CatalogRepository:
             .options(selectinload(Vendor.seller_profile))
             .where(Vendor.is_active.is_(True), User.is_active.is_(True))
             .where(active_subscription_clause())
-            .order_by(Vendor.updated_at.desc(), Vendor.name.asc())
+            .order_by(
+                case((SellerProfile.priority_until > datetime.now(UTC), 0), else_=1),
+                Vendor.updated_at.desc(),
+                Vendor.name.asc(),
+            )
             .offset(offset)
             .limit(limit)
         )

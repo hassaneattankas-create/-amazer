@@ -54,6 +54,9 @@ export function LocalServiceCard({ item, kind, distanceKm, compact = false, inSh
           <h2 className="flex items-center gap-1.5 text-base font-semibold text-ink-900">
             <span className="truncate">{item.business_name}</span>
             {item.is_verified ? <BadgeCheck className="h-4 w-4 shrink-0 text-brand-600" aria-label="Établissement vérifié" /> : null}
+            {item.is_priority ? (
+              <span className="shrink-0 rounded-pill bg-ink-900 px-2 py-0.5 text-xs font-semibold text-white">À la une</span>
+            ) : null}
           </h2>
           <p className="mt-0.5 flex items-start gap-1 text-sm text-ink-600">
             <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />

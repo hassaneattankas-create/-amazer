@@ -7,6 +7,8 @@ export type FuelState = "available" | "low" | "out";
 export type FuelStatus = Partial<Record<FuelKey, FuelState | null>>;
 
 export type LocalServiceItem = {
+  /** Visibilité prioritaire choisie par l'admin (« À la une »). */
+  is_priority?: boolean;
   vendor_id: string;
   vendor_slug: string;
   service_kind: ServiceKind;
@@ -261,6 +263,22 @@ export type StationReport = {
 };
 
 /** Une pharmacie de garde (liste officielle de la semaine ou garde déclarée sur AMAZER). */
+/** Pharmacie de l'annuaire permanent (position et numéro gardés, de garde ou non). */
+export type PharmacyListing = {
+  id: string;
+  name: string;
+  district: string | null;
+  location: string | null;
+  phone: string | null;
+  phone_link: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  /** osm (OpenStreetMap), quartier (centre du quartier), admin (corrigée par AMAZER). */
+  position_source: "osm" | "quartier" | "admin" | null;
+  approximate: boolean;
+  area: string | null;
+};
+
 export type PharmacyDutyItem = {
   name: string;
   commune: string | null;

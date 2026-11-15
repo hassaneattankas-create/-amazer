@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from app.models.pharmacy_directory import PharmacyListing
 from app.database import Base
 from app.models.official_list import OfficialList, OfficialListEntry
 from app.routes.official_lists import create_list, parse_lines
@@ -38,7 +39,7 @@ def test_labels_use_niamey_time() -> None:
 
 def test_listed_registered_pharmacy_is_on_duty_automatically() -> None:
     engine = create_engine("sqlite://")
-    Base.metadata.create_all(engine, tables=[OfficialList.__table__, OfficialListEntry.__table__])
+    Base.metadata.create_all(engine, tables=[OfficialList.__table__, OfficialListEntry.__table__, PharmacyListing.__table__])
     now = datetime(2026, 11, 16, 12, 0, tzinfo=UTC)
     with Session(engine) as db:
         lines = "Commune IV | AR RAHMA |  | Niamey 2000, face au CSP Assifa | 91 01 01 84\nCommune V | LAMORDE |  | Derrière l'ex-CHU | 92 19 80 95"

@@ -32,6 +32,11 @@ export default function BoutiquesPage() {
         (!verifiedOnly || store.is_verified)
     );
     copy.sort((a, b) => {
+      // À la une (choisi par AMAZER) d'abord.
+      const byPriority = Number(Boolean(b.is_priority)) - Number(Boolean(a.is_priority));
+      if (byPriority !== 0) {
+        return byPriority;
+      }
       const byProducts = b.product_count - a.product_count;
       if (byProducts !== 0) {
         return byProducts;

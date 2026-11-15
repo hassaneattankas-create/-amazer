@@ -3,7 +3,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { searchProducts } from "@/services/product-service";
-import type { SearchSort } from "@/types/product";
+import type { ProductSearchResult, SearchSort } from "@/types/product";
 
 export type ProductSearchFilters = {
   categorySlug?: string;
@@ -18,6 +18,8 @@ type ProductSearchParams = ProductSearchFilters & {
   barcode?: string;
   /** Nombre de produits a charger (bouton « Voir plus » : on augmente la limite). */
   limit?: number;
+  /** Resultat deja prepare par le serveur pour ces memes criteres (accueil) : affiche tout de suite. */
+  initialData?: ProductSearchResult;
 };
 
 export function useProductSearch({
@@ -29,6 +31,7 @@ export function useProductSearch({
   minPrice,
   maxPrice,
   inStockOnly = true,
+  initialData,
 }: ProductSearchParams) {
   const normalizedQuery = query.trim();
   const normalizedBarcode = barcode.trim();
@@ -59,6 +62,7 @@ export function useProductSearch({
         inStockOnly,
         limit,
       }),
+    initialData,
     staleTime: hasTextFilter ? 60_000 : 120_000,
     gcTime: 5 * 60_000,
     placeholderData: keepPreviousData,

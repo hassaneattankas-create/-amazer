@@ -172,8 +172,15 @@ def _week(db: Session, row: OfficialList, profiles: list[SellerProfile], decrypt
         lng = getattr(profile, "longitude", None)
         spot = None
         if lat is None or lng is None:
-            # Pas inscrite (ou sans position) : retrouvée sur OpenStreetMap, sinon au centre de son quartier.
-            spot = geo_lookup.locate("pharmacy_duty", row.city, entry.name, entry.district, entry.location)
+            # Pas inscrite (ou sans position) : l'annuaire (position corrigée par AMAZER, OpenStreetMap ou quartier),
+            # sinon le calcul direct.
+            from app.services import pharmacy_directory_service as directory
+
+            known = directory.position_of(db, row.city, entry.name)
+            if known:
+                spot = geo_lookup.Spot(known[0], known[1], approximate=known[2], area=known[3])
+            else:
+                spot = geo_lookup.locate("pharmacy_duty", row.city, entry.name, entry.district, entry.location)
             if spot:
                 lat, lng = spot.latitude, spot.longitude
         approximate = bool(spot and spot.approximate)

@@ -137,6 +137,8 @@ class LocalServiceItem(BaseModel):
     business_name: str
     # Point de vente d'une marque (ex. « Oriba · Plateau ») : identifiant et nom de la marque.
     outlet_id: str | None = None
+    # Visibilité prioritaire choisie par l'admin (« À la une »).
+    is_priority: bool = False
     brand_name: str | None = None
     # Nombre de stations de la marque (lien « Voir les N stations »).
     brand_outlets: int = 0

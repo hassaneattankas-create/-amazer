@@ -115,8 +115,8 @@ export function PromotionsRail({ items, loading = false }: { items: PromotionIte
 export function FeaturedShopsRail({ shops, loading = false }: { shops: VendorStorefront[]; loading?: boolean }) {
   const t = useT();
   const featured = shops
-    .filter((shop) => !shop.service_kind && (shop.is_verified || shop.storefront_tier === "premium"))
-    .sort((a, b) => b.product_count - a.product_count)
+    .filter((shop) => !shop.service_kind && (shop.is_priority || shop.is_verified || shop.storefront_tier === "premium"))
+    .sort((a, b) => Number(Boolean(b.is_priority)) - Number(Boolean(a.is_priority)) || b.product_count - a.product_count)
     .slice(0, 12);
   // Pas d'emplacement de chargement : la rangée est souvent vide (boutiques vérifiées ou Premium seulement),
   // et un emplacement qui disparaît fait remonter toute la page (décalage mesuré par Google, CLS).

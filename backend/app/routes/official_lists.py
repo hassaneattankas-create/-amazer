@@ -26,6 +26,7 @@ from app.models.official_list import OfficialList, OfficialListEntry
 from app.models.user import User
 from app.core.rate_limit import enforce_rate_limit
 from app.services import geo_lookup
+from app.services import pharmacy_directory_service as directory
 from app.services import local_services as svc
 from app.services import pharmacy_duty_service as duty_svc
 
@@ -164,6 +165,9 @@ def create_list(db: Session, data: dict, entries: list[dict]) -> OfficialList:
     db.flush()
     for position, entry in enumerate(entries):
         db.add(OfficialListEntry(list_id=row.id, position=position, **entry))
+    # Pharmacies de l'affiche : gardées dans l'annuaire (position et numéro), même hors garde.
+    if row.kind == "pharmacy_duty":
+        directory.upsert_entries(db, row.city, entries)
     return row
 
 
@@ -184,7 +188,8 @@ def seed_official_lists(db: Session) -> int:
         create_list(db, data, entries)
         added += 1
     db.commit()
-    if added:
+    # Annuaire des pharmacies : OpenStreetMap + toutes les affiches (idempotent).
+    if directory.ensure_seeded(db) or added:
         cache_delete_prefixes(CACHE_PREFIX, SERVICES_PREFIX)
     return added
 
@@ -321,3 +326,100 @@ def admin_read_duty_photo(
         lines=duty_svc.rows_to_lines(rows),
         count=len(rows),
     )
+
+
+# ---------------------------------------------------------------- annuaire permanent des pharmacies
+class PharmacyDirectoryItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    district: str | None
+    location: str | None
+    phone: str | None
+    phone_link: str | None
+    latitude: float | None
+    longitude: float | None
+    # osm (OpenStreetMap), quartier (centre du quartier, approximative), admin (corrigée par AMAZER).
+    position_source: str | None
+    approximate: bool
+    area: str | None
+
+
+class PharmacyPositionUpdate(BaseModel):
+    """Lien Google Maps (ou « latitude, longitude ») de la pharmacie, et son numéro si besoin."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    maps_link: str | None = Field(default=None, max_length=1000)
+    phone: str | None = Field(default=None, max_length=40, pattern=r"^[+0-9 ().-]*$")
+
+
+def _directory_item(row) -> PharmacyDirectoryItem:
+    return PharmacyDirectoryItem(
+        id=row.id,
+        name=row.name,
+        district=row.district,
+        location=row.location,
+        phone=row.phone,
+        phone_link=duty_svc.phone_link(row.phone),
+        latitude=row.latitude,
+        longitude=row.longitude,
+        position_source=row.position_source,
+        approximate=row.position_source == "quartier",
+        area=row.area,
+    )
+
+
+@router.get("/services/pharmacy-directory", response_model=list[PharmacyDirectoryItem])
+def pharmacy_directory(
+    db: Annotated[Session, Depends(get_db)],
+    city: Annotated[str, Query(min_length=2, max_length=80)] = "Niamey",
+) -> list[PharmacyDirectoryItem]:
+    """Toutes les pharmacies connues de la ville (position et numéro), de garde ou non."""
+    key = build_cache_key(SERVICES_PREFIX + "pharmacy-directory", city=svc.normalize_city(city))
+    cached = cache_get_json(key)
+    if cached is not None:
+        return [PharmacyDirectoryItem(**i) for i in cached]
+    items = [_directory_item(row) for row in directory.directory(db, city) if row.latitude is not None and row.longitude is not None]
+    cache_set_json(key, [i.model_dump() for i in items], ttl_seconds=300)
+    return items
+
+
+@router.get("/admin/pharmacy-directory", response_model=list[PharmacyDirectoryItem])
+def admin_pharmacy_directory(
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+    city: Annotated[str, Query(min_length=2, max_length=80)] = "Niamey",
+) -> list[PharmacyDirectoryItem]:
+    """L'annuaire complet, y compris les pharmacies sans position (à placer)."""
+    return [_directory_item(row) for row in directory.directory(db, city)]
+
+
+@router.patch("/admin/pharmacy-directory/{listing_id}", response_model=PharmacyDirectoryItem)
+def admin_update_pharmacy_listing(
+    listing_id: str,
+    payload: PharmacyPositionUpdate,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> PharmacyDirectoryItem:
+    """Corrige la position (définitive) et/ou le numéro d'une pharmacie de l'annuaire."""
+    from app.models.pharmacy_directory import PharmacyListing
+    from app.services.station_access import parse_maps_link
+
+    enforce_csrf(request)
+    row = db.get(PharmacyListing, listing_id)
+    if row is None:
+        raise NotFoundError("Pharmacie introuvable dans l'annuaire.")
+    if payload.maps_link:
+        lat, lng = parse_maps_link(payload.maps_link)
+        if not svc.valid_position(lat, lng):
+            raise ValidationDomainError("Cette position n'est pas au Niger : vérifiez le lien ou les coordonnées.")
+        directory.set_position(row, lat, lng)
+    if payload.phone is not None:
+        row.phone = payload.phone or None
+    db.commit()
+    db.refresh(row)
+    cache_delete_prefixes(SERVICES_PREFIX)
+    return _directory_item(row)

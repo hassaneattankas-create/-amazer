@@ -265,6 +265,8 @@ class AdminSellerResponse(BaseModel):
     # E-mail du compte : lien direct vers « Utilisateurs » pour les actions sur le compte.
     email: str | None = None
     subscription_paid_until: str | None = None
+    # Visibilité prioritaire (« À la une ») jusqu'à cette date ; None = aucune.
+    priority_until: str | None = None
     commission_rate_override: float | None = None
     service_fee_override: float | None = None
     seller_subscription_fee_override: float | None = None
@@ -280,6 +282,14 @@ class AdminSellerPricingUpdateRequest(BaseModel):
     commission_rate_override: float | None = Field(default=None, ge=0)
     service_fee_override: float | None = Field(default=None, ge=0)
     seller_subscription_fee_override: float | None = Field(default=None, ge=0)
+
+
+class AdminSellerPriorityRequest(BaseModel):
+    """Visibilité prioritaire : nombre de jours à partir d'aujourd'hui (0 = retirer)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    days: int = Field(..., ge=0, le=366)
 
 
 class AdminSellerTypeUpdateRequest(BaseModel):

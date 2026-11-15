@@ -1,5 +1,5 @@
 import { adminProxyRequest } from "@/lib/admin-proxy-client";
-import type { FuelKey, OfficialList } from "@/types/local-services";
+import type { FuelKey, OfficialList, PharmacyListing } from "@/types/local-services";
 
 export type OfficialListInput = {
   kind: OfficialList["kind"];
@@ -25,6 +25,16 @@ export function createAdminOfficialList(payload: OfficialListInput): Promise<Off
 
 export function deleteAdminOfficialList(id: string): Promise<void> {
   return adminProxyRequest<void>({ url: `/admin/official-lists/${id}`, method: "DELETE" });
+}
+
+/** Annuaire complet des pharmacies (y compris celles à placer). */
+export function listAdminPharmacyDirectory(city = "Niamey"): Promise<PharmacyListing[]> {
+  return adminProxyRequest<PharmacyListing[]>({ url: "/admin/pharmacy-directory", method: "GET", params: { city } });
+}
+
+/** Corrige la position (lien Google Maps ou « latitude, longitude ») et/ou le numéro d'une pharmacie. */
+export function updateAdminPharmacyListing(id: string, payload: { maps_link?: string; phone?: string }): Promise<PharmacyListing> {
+  return adminProxyRequest<PharmacyListing>({ url: `/admin/pharmacy-directory/${id}`, method: "PATCH", data: payload });
 }
 
 export type DutyPhotoRead = { city: string; starts_at: string | null; ends_at: string | null; lines: string; count: number };

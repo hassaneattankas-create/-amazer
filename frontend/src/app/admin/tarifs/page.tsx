@@ -22,6 +22,7 @@ import {
   updateAdminFinanceSettings,
   updateAdminSellerPricing,
   verifyAdminSeller,
+  setAdminSellerPriority,
 } from "@/services/finance-service";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { type AdminSeller, FinanceSettings } from "@/types/finance";
@@ -77,7 +78,7 @@ const AFFILIATE_SECURITY_FIELDS: Array<{
   { key: "ambassador_monthly_top_bonus", label: "Ambassadeurs : prime du n°1 du mois", suffix: "XOF", fallback: 10000, min: 0, max: 100_000_000, step: "1000", helper: "Affichée dans le classement. Versée par l'admin (page Affiliés) si le mois a rapporté plus." },
 ];
 
-type SellerFilter = "tous" | "abonnes" | "sans-abonnement" | "hors-ligne" | "non-verifies";
+type SellerFilter = "tous" | "abonnes" | "sans-abonnement" | "hors-ligne" | "non-verifies" | "a-la-une";
 
 const SELLER_FILTERS: Array<[SellerFilter, string]> = [
   ["tous", "Tous"],
@@ -85,6 +86,17 @@ const SELLER_FILTERS: Array<[SellerFilter, string]> = [
   ["sans-abonnement", "Sans abonnement / expiré"],
   ["hors-ligne", "Hors ligne"],
   ["non-verifies", "Non vérifiés"],
+  ["a-la-une", "À la une"],
+];
+
+/** Visibilité prioritaire en cours ? */
+const priorityRunning = (until: string | null | undefined) => Boolean(until && new Date(until) > new Date());
+
+/** Durées proposées pour la visibilité prioritaire. */
+const PRIORITY_DAYS: Array<[number, string]> = [
+  [7, "7 jours"],
+  [30, "30 jours"],
+  [90, "90 jours"],
 ];
 
 /** Libellés lisibles de l'historique ; un code inconnu reste affiché tel quel. */
@@ -125,6 +137,7 @@ function filterSellers(list: AdminSeller[], filter: SellerFilter, search: string
     if (filter === "sans-abonnement" && subscriptionRunning(seller.subscription_paid_until)) return false;
     if (filter === "hors-ligne" && seller.is_active) return false;
     if (filter === "non-verifies" && seller.is_verified) return false;
+    if (filter === "a-la-une" && !priorityRunning(seller.priority_until)) return false;
     if (!needle) return true;
     return (
       [seller.business_name, seller.city, seller.email ?? ""].some((value) => (value ?? "").toLowerCase().includes(needle)) ||
@@ -291,6 +304,19 @@ export default function AdminTarifsPage() {
       setStatus("Statut vendeur mis a jour.");
     },
     onError: () => setStatus("Vérification vendeur impossible."),
+  });
+  const priorityMutation = useMutation({
+    mutationFn: ({ profileId, days }: { profileId: string; days: number }) => setAdminSellerPriority(profileId, days),
+    onSuccess: (seller, { days }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
+      setStatus(
+        days > 0 && seller.priority_until
+          ? `${seller.business_name} est à la une jusqu'au ${new Date(seller.priority_until).toLocaleDateString("fr-FR")}.`
+          : `${seller.business_name} n'est plus à la une.`
+      );
+    },
+    onError: (error) => setStatus(getApiErrorMessage(error, "Visibilité prioritaire impossible à modifier.")),
   });
   const grantSubscriptionMutation = useMutation({
     mutationFn: ({ profileId, months }: { profileId: string; months: number }) =>
@@ -900,6 +926,11 @@ export default function AdminTarifsPage() {
                   <div className="mt-1 flex flex-wrap gap-1 text-xs">
                     <span className="rounded-pill bg-brand-50 px-2 py-0.5 font-semibold text-brand-700">{activityLabel(sellerActivity(seller))}</span>
                     {seller.is_verified ? <span className="rounded-pill bg-success/10 px-2 py-0.5 font-semibold text-success">Vérifié</span> : null}
+                    {priorityRunning(seller.priority_until) ? (
+                      <span className="rounded-pill bg-brand-600 px-2 py-0.5 font-semibold text-white">
+                        À la une jusqu&apos;au {new Date(seller.priority_until as string).toLocaleDateString("fr-FR")}
+                      </span>
+                    ) : null}
                     {!seller.is_active ? <span className="rounded-pill bg-warning/15 px-2 py-0.5 font-semibold text-ink-800">Hors ligne</span> : null}
                     {seller.subscription_paid_until && new Date(seller.subscription_paid_until) > new Date() ? (
                       <span className="rounded-pill bg-surface-2 px-2 py-0.5 text-ink-700">
@@ -967,6 +998,42 @@ export default function AdminTarifsPage() {
                 >
                   Offrir 1 mois
                 </Button>
+              </div>
+              {/* Visibilité prioritaire : en tête des listes et « À la une » de l'accueil, avec un badge. */}
+              <div className="mt-3 rounded-field border border-border bg-surface-1 p-3">
+                <p className="text-xs font-semibold text-ink-900">Visibilité prioritaire (« À la une »)</p>
+                <p className="mt-0.5 text-xs text-ink-600">
+                  {priorityRunning(seller.priority_until)
+                    ? `En tête des listes jusqu'au ${new Date(seller.priority_until as string).toLocaleDateString("fr-FR")}. Une nouvelle durée repart d'aujourd'hui.`
+                    : "En tête des listes, dans « À la une » de l'accueil et avec un badge, pendant la durée choisie."}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {PRIORITY_DAYS.map(([days, label]) => (
+                    <Button
+                      key={days}
+                      size="sm"
+                      variant="outline"
+                      disabled={priorityMutation.isPending}
+                      onClick={() => priorityMutation.mutate({ profileId: seller.profile_id, days })}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                  {priorityRunning(seller.priority_until) ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={priorityMutation.isPending}
+                      onClick={() => {
+                        if (window.confirm(`Retirer ${seller.business_name} de « À la une » ?`)) {
+                          priorityMutation.mutate({ profileId: seller.profile_id, days: 0 });
+                        }
+                      }}
+                    >
+                      Retirer
+                    </Button>
+                  ) : null}
+                </div>
               </div>
               <details className="mt-3">
                 <summary className="cursor-pointer text-xs font-medium text-ink-600">

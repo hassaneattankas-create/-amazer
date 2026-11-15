@@ -231,6 +231,15 @@ export async function permanentlyDeleteAdminSeller(profileId: string): Promise<v
   });
 }
 
+/** Visibilité prioritaire (« À la une ») pendant `days` jours ; 0 = retirer. */
+export async function setAdminSellerPriority(profileId: string, days: number): Promise<AdminSeller> {
+  return adminProxyRequest<AdminSeller>({
+    url: `/admin/finance/sellers/${profileId}/priority`,
+    method: "POST",
+    data: { days },
+  });
+}
+
 export async function verifyAdminSeller(profileId: string, verified: boolean): Promise<AdminSeller> {
   return adminProxyRequest<AdminSeller>({
     url: `/admin/finance/sellers/${profileId}/verify`,

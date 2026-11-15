@@ -1,25 +1,11 @@
 import { api } from "@/lib/api";
-import type {
-  PharmacyDuty,
-  FuelChange,
-  FuelDashboard,
-  FuelPlan,
-  FuelManager,
-  FuelKey,
-  FuelNetwork,
-  FuelOutlet,
-  FuelStatus,
-  FuelOutletInput,
-  FuelOutletUpdate,
-  LocalServiceList,
-  ManagedOutlet,
-  OfficialList,
-  RegionManager,
-  ServiceStatus,
-  ServiceStatusUpdate,
-  StationReport,
-  StationReportKind,
-} from "@/types/local-services";
+import type { PharmacyDuty, FuelChange, FuelDashboard, FuelPlan, FuelManager, FuelKey, FuelNetwork, FuelOutlet, FuelStatus, FuelOutletInput, FuelOutletUpdate, LocalServiceList, ManagedOutlet, OfficialList, RegionManager, ServiceStatus, ServiceStatusUpdate, StationReport, StationReportKind, PharmacyListing } from "@/types/local-services";
+
+/** Toutes les pharmacies connues de la ville (position et numéro), de garde ou non. */
+export async function getPharmacyDirectory(city = "Niamey"): Promise<PharmacyListing[]> {
+  const response = await api.get<PharmacyListing[]>("/api/v1/services/pharmacy-directory", { params: { city } });
+  return response.data;
+}
 
 /** Pharmacies de garde de la ville : liste officielle de la semaine (et la suivante si publiée) + gardes déclarées. */
 export async function getPharmacyDuty(city = "Niamey"): Promise<PharmacyDuty> {

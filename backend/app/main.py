@@ -257,6 +257,8 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS on_duty BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS duty_start DATE",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS duty_end DATE",
+        # Visibilité prioritaire (admin) : en tête des listes jusqu'à cette date.
+        "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS priority_until TIMESTAMPTZ",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS duty_updated_at TIMESTAMPTZ",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS fuel_status JSONB",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS fuel_updated_at TIMESTAMPTZ",

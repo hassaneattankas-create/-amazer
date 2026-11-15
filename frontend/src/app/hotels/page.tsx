@@ -86,7 +86,12 @@ export default function PremiumPage() {
     () =>
       stores
         .filter((store) => filter === "all" || premiumKind(store) === filter)
-        .sort((a, b) => Number(b.is_verified) - Number(a.is_verified) || b.product_count - a.product_count),
+        .sort(
+          (a, b) =>
+            Number(Boolean(b.is_priority)) - Number(Boolean(a.is_priority)) ||
+            Number(b.is_verified) - Number(a.is_verified) ||
+            b.product_count - a.product_count
+        ),
     [stores, filter]
   );
 
