@@ -89,7 +89,8 @@ export function InstallAppBanner() {
   }, []);
 
   // Pas pendant un paiement ni dans l'espace admin.
-  if (mode === "hidden" || /^\/(admin|order|restaurant\/order|gerant-station|seller)/.test(pathname ?? "")) return null;
+  // Pas sur les pages qui ont déjà une barre d'action en bas (fiche produit, panier, paiement) ni dans les espaces de travail.
+  if (mode === "hidden" || /^\/(admin|order|restaurant\/order|gerant-station|seller|product|cart)/.test(pathname ?? "")) return null;
 
   const dismiss = () => {
     try {

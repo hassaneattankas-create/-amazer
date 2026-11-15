@@ -95,7 +95,8 @@ export default function CartPage() {
   const { data: quote } = useQuery({
     queryKey: ["checkout-quote", quoteInput],
     queryFn: () => quoteCheckout(JSON.parse(quoteInput)),
-    enabled: Boolean(result?.optimizedPlan.length) && result?.status !== "unavailable_item",
+    // La valeur retardée (300 ms) peut encore être l'ancien panier vide : pas d'appel tant qu'elle n'a pas d'article.
+    enabled: Boolean(result?.optimizedPlan.length) && result?.status !== "unavailable_item" && quoteInput.includes('"product_id"'),
     staleTime: 30_000,
     retry: false,
   });
