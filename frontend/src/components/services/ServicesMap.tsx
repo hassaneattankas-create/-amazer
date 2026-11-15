@@ -5,7 +5,8 @@
 import "leaflet/dist/leaflet.css";
 
 import L from "leaflet";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MapPin, Search, X } from "lucide-react";
 
 import type { GeoPoint } from "@/lib/local-services";
 import { FUEL_LABELS, FUEL_STATE_LABELS, type FuelKey, type FuelState, type LocalServiceItem, type ServiceKind } from "@/types/local-services";
@@ -194,15 +195,34 @@ export type ServicesMapProps = {
   legend?: { level: MapLevel; label: string }[];
   /** « Tout le Niger » : cadrer d'abord autour de Niamey quand des points s'y trouvent. */
   home?: GeoPoint | null;
+  /** Quartiers proposés par la recherche (la carte s'y centre). */
+  places?: { name: string; lat: number; lng: number }[];
 };
 
+type Hit = { key: string; name: string; sub: string; lat: number; lng: number; zoom: number };
+
+/** Minuscules, sans accents ni mots inutiles : « Pharmacie Gobi » = « gobi ». */
+function plain(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(pharmacie|station|service|de|du|la|le|les|des)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 /** Établissements placés sur la carte (inscrits avec leur position, listes officielles), et le client s'il s'est localisé. */
-export function ServicesMap({ kind, items, fuel, position, points = [], unplaced = 0, legend, home = null }: ServicesMapProps) {
+export function ServicesMap({ kind, items, fuel, position, points = [], unplaced = 0, legend, home = null, places = [] }: ServicesMapProps) {
   const holder = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const stations = useRef<L.LayerGroup | null>(null);
   const me = useRef<L.Marker | null>(null);
   const framed = useRef("");
+  // Marqueurs par clé, pour que la recherche ouvre la bonne bulle.
+  const markers = useRef(new Map<string, L.Marker>());
+  const [query, setQuery] = useState("");
+  const [picked, setPicked] = useState("");
 
   // Création unique de la carte.
   useEffect(() => {
@@ -229,18 +249,20 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
     const current = map.current;
     if (!layer || !current) return;
     layer.clearLayers();
+    markers.current.clear();
     const placed = items.filter(isPlaced);
     for (const item of placed) {
-      L.marker([item.latitude, item.longitude], {
+      const marker = L.marker([item.latitude, item.longitude], {
         icon: markerIcon(itemLevel(kind, item, fuel), kind === "fuel_station" && item.on_duty),
         title: item.business_name,
         keyboard: true,
       })
         .bindPopup(() => popupContent(kind, item), POPUP)
         .addTo(layer);
+      markers.current.set(`r:${item.outlet_id ?? item.vendor_id}`, marker);
     }
     for (const point of points) {
-      L.marker([point.latitude, point.longitude], {
+      const marker = L.marker([point.latitude, point.longitude], {
         icon: point.variant === "dot" ? DOT_ICON : markerIcon(point.level, false, point.approximate),
         title: point.name,
         keyboard: point.variant !== "dot",
@@ -249,6 +271,7 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
       })
         .bindPopup(() => pointContent(point), POPUP)
         .addTo(layer);
+      markers.current.set(`p:${point.id}`, marker);
     }
     // Cadrage : les listes officielles d'abord (gardes de la semaine), sinon les établissements inscrits ;
     // sur « Tout le Niger », autour de Niamey s'il y en a (une station de Maradi ne dézoome pas tout le pays).
@@ -278,9 +301,114 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
     current.setView(at, 13);
   }, [position]);
 
+  // Recherche : établissements de la carte (inscrits, listes officielles, OpenStreetMap) puis quartiers.
+  const hits = useMemo((): Hit[] => {
+    const words = plain(query).split(" ").filter(Boolean);
+    if (!words.length) return [];
+    const match = (text: string) => {
+      const value = plain(text);
+      return words.every((word) => value.includes(word));
+    };
+    const found: Hit[] = [];
+    for (const item of items.filter(isPlaced)) {
+      if (match(`${item.business_name} ${item.address ?? ""} ${item.city ?? ""}`)) {
+        found.push({
+          key: `r:${item.outlet_id ?? item.vendor_id}`,
+          name: item.business_name,
+          sub: item.address || item.city || "Inscrit sur AMAZER",
+          lat: item.latitude,
+          lng: item.longitude,
+          zoom: 16,
+        });
+      }
+    }
+    for (const point of points) {
+      if (match(`${point.name} ${point.lines.join(" ")} ${point.area ?? ""}`)) {
+        found.push({ key: `p:${point.id}`, name: point.name, sub: point.lines[0] ?? "", lat: point.latitude, lng: point.longitude, zoom: 16 });
+      }
+    }
+    // Les noms qui commencent par le mot cherché d'abord, puis les quartiers.
+    const ranked = found.sort((a, b) => Number(!plain(a.name).startsWith(words[0])) - Number(!plain(b.name).startsWith(words[0])));
+    const zones = places
+      .filter((place) => match(place.name))
+      .map((place): Hit => ({ key: `q:${place.name}`, name: place.name, sub: "Quartier : la carte se centre dessus", lat: place.lat, lng: place.lng, zoom: 15 }));
+    return [...ranked.slice(0, 6), ...zones.slice(0, 3)];
+  }, [query, items, points, places]);
+
+  const goTo = (hit: Hit) => {
+    const current = map.current;
+    if (!current) return;
+    setPicked(hit.name);
+    current.setView([hit.lat, hit.lng], hit.zoom);
+    markers.current.get(hit.key)?.openPopup();
+    holder.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  };
+
   const hidden = items.length - items.filter(isPlaced).length;
+  const what = kind === "pharmacy" ? "une pharmacie" : "une station";
   return (
     <div className="space-y-2">
+      {/* Recherche sur la carte : un nom (« Gobi », « Total ») ou un quartier (« Koira Kano »). */}
+      <div className="relative">
+        <label htmlFor={`${kind}-map-search`} className="sr-only">
+          Chercher {what} ou un quartier sur la carte
+        </label>
+        <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-500" aria-hidden="true" />
+        <input
+          id={`${kind}-map-search`}
+          type="text"
+          inputMode="search"
+          enterKeyHint="search"
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setPicked("");
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && hits[0]) {
+              event.preventDefault();
+              goTo(hits[0]);
+            }
+          }}
+          placeholder={`Chercher ${what} ou un quartier`}
+          autoComplete="off"
+          className="h-12 w-full rounded-pill border border-border bg-card pl-12 pr-12 text-base text-ink-900 placeholder:text-ink-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+        />
+        {query ? (
+          <button
+            type="button"
+            onClick={() => {
+              setQuery("");
+              setPicked("");
+            }}
+            aria-label="Effacer la recherche"
+            className="absolute right-1 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-pill text-ink-600 hover:bg-surface-1"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
+      {query.trim().length >= 2 && !picked ? (
+        hits.length ? (
+          <ul className="overflow-hidden rounded-card border border-border bg-card shadow-raised" aria-label="Résultats sur la carte">
+            {hits.map((hit) => (
+              <li key={hit.key} className="border-b border-border last:border-b-0">
+                <button type="button" onClick={() => goTo(hit)} className="flex min-h-12 w-full items-center gap-3 px-4 py-2 text-left hover:bg-surface-1">
+                  <MapPin className="h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-ink-900">{hit.name}</span>
+                    <span className="block truncate text-xs text-ink-600">{hit.sub}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="rounded-card border border-border bg-card px-4 py-3 text-sm text-ink-700" role="status">
+            Rien trouvé sur la carte pour « {query.trim()} ». Essayez un autre nom ou le quartier.
+          </p>
+        )
+      ) : null}
       <div
         ref={holder}
         className="isolate aspect-[4/3] w-full overflow-hidden rounded-card border border-border bg-surface-1 sm:aspect-video"
@@ -303,7 +431,9 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
         {points.some((point) => point.variant === "dot") ? (
           <li className="inline-flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-ink-400" aria-hidden="true" />
-            Petit point gris : station pas encore sur AMAZER (disponibilités inconnues)
+            {kind === "pharmacy"
+              ? "Petit point gris : autre pharmacie (horaires habituels)"
+              : "Petit point gris : station pas encore sur AMAZER (disponibilités inconnues)"}
           </li>
         ) : null}
         {points.some((point) => point.approximate) ? (

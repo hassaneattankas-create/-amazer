@@ -49,6 +49,19 @@ const ServicesMap = dynamic(() => import("@/components/services/ServicesMap").th
   loading: () => <div className="aspect-[4/3] w-full animate-pulse rounded-card border border-border bg-surface-1 sm:aspect-video" aria-busy="true" />,
 });
 
+/** Établissement ou quartier de Niamey tiré d'OpenStreetMap (fichiers de public/data). */
+type OsmPlace = { n: string; b?: string; lat: number; lng: number };
+
+/** Nom sans accents ni « Pharmacie » : « Pharmacie le Gorouol » → « le gorouol ». */
+const bareName = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/\b(pharmacie|phamacie|pharamcie)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
 /** Niamey : cadrage par défaut sur « Tout le Niger » (la plupart des établissements y sont). */
 const NIAMEY_CENTER: GeoPoint = { lat: 13.5116, lng: 2.1254 };
 
@@ -123,19 +136,33 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
     enabled: kind === "pharmacy",
   });
 
-  // Stations : toutes les stations-service de Niamey connues d'OpenStreetMap, en petits points gris,
-  // pour que la carte ne soit jamais vide (seulement sur « Toutes », sans filtre de carburant).
-  const showOsmStations = stations && (!city || city.toLowerCase() === "niamey") && !onlyActive && !dutyOnly && !fuel;
-  const { data: osmStations } = useQuery({
-    queryKey: ["osm-stations-niamey"],
+  // Niamey (OpenStreetMap) : toutes les stations-service et pharmacies en petits points gris, pour que la carte
+  // ne soit jamais vide et qu'on puisse chercher n'importe laquelle ; quartiers pour la recherche.
+  const inNiamey = !city || city.toLowerCase() === "niamey";
+  // Stations : seulement sur « Toutes », sans filtre de carburant (une station inconnue n'est pas « disponible »).
+  const showOsm = inNiamey && (stations ? !onlyActive && !dutyOnly && !fuel : true);
+  const { data: osmPlaces } = useQuery({
+    queryKey: ["osm-niamey", kind],
     queryFn: async () => {
-      const response = await fetch("/data/niamey-stations-osm.json");
+      const file = stations ? "niamey-stations-osm.json" : "niamey-pharmacies-osm.json";
+      const response = await fetch(`/data/${file}`);
       if (!response.ok) return [];
-      const body = (await response.json()) as { stations: { n: string; b: string; lat: number; lng: number }[] };
-      return body.stations;
+      const body = (await response.json()) as { stations?: OsmPlace[]; pharmacies?: OsmPlace[] };
+      return body.stations ?? body.pharmacies ?? [];
     },
     staleTime: Infinity,
-    enabled: showOsmStations,
+    enabled: showOsm,
+  });
+  const { data: quartiers = [] } = useQuery({
+    queryKey: ["niamey-quartiers"],
+    queryFn: async () => {
+      const response = await fetch("/data/niamey-quartiers.json");
+      if (!response.ok) return [];
+      const body = (await response.json()) as { quartiers: OsmPlace[] };
+      return body.quartiers.map((q) => ({ name: q.n, lat: q.lat, lng: q.lng }));
+    },
+    staleTime: Infinity,
+    enabled: inNiamey,
   });
 
   const dutyWeek = duty?.current?.items;
@@ -191,31 +218,42 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
       }
     }
     const registered = items.map(({ item }) => item).filter((item) => !listed.has(item.vendor_id));
-    if (showOsmStations && osmStations?.length) {
-      // Pas de point gris là où une station inscrite (ou du communiqué) est déjà placée (~100 m).
+    if (showOsm && osmPlaces?.length) {
+      // Pas de point gris là où un établissement inscrit (ou de la liste officielle) est déjà placé (~100 m),
+      // ni pour une pharmacie de garde de la liste (même nom écrit autrement, placée au quartier).
       const taken = [
         ...registered.filter((item) => item.latitude != null && item.longitude != null).map((item) => [item.latitude as number, item.longitude as number]),
         ...points.map((point) => [point.latitude, point.longitude]),
       ];
-      for (const station of osmStations) {
-        if (taken.some(([lat, lng]) => Math.abs(lat - station.lat) < 0.001 && Math.abs(lng - station.lng) < 0.001)) continue;
+      const dutyNames = stations ? [] : (dutyWeek ?? []).map((item) => bareName(item.name)).filter((name) => name.length >= 4);
+      const onDutyList = !stations && Boolean(dutyWeek?.length);
+      for (const place of osmPlaces) {
+        if (taken.some(([lat, lng]) => Math.abs(lat - place.lat) < 0.001 && Math.abs(lng - place.lng) < 0.001)) continue;
+        const bare = bareName(place.n);
+        if (dutyNames.some((name) => bare.includes(name) || (bare.length >= 4 && name.includes(bare)))) continue;
         points.push({
-          id: `osm:${station.lat},${station.lng}`,
-          name: station.b ? `${station.n} (${station.b})` : station.n,
-          latitude: station.lat,
-          longitude: station.lng,
+          id: `osm:${place.lat},${place.lng}`,
+          name: stations ? (place.b ? `${place.n} (${place.b})` : place.n) : /^pharmacie/i.test(place.n) ? place.n : `Pharmacie ${place.n}`,
+          latitude: place.lat,
+          longitude: place.lng,
           level: "unknown",
           approximate: false,
           area: null,
-          lines: ["Pas encore sur AMAZER : disponibilités inconnues, appelez ou passez voir."],
+          lines: [
+            stations
+              ? "Pas encore sur AMAZER : disponibilités inconnues, appelez ou passez voir."
+              : onDutyList
+                ? "Pas de garde cette semaine d'après la liste officielle : horaires habituels."
+                : "Horaires habituels : appelez avant de vous déplacer.",
+          ],
           phone: null,
-          mapsUrl: `https://www.google.com/maps/dir/?api=1&destination=${station.lat},${station.lng}`,
+          mapsUrl: `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`,
           variant: "dot",
         });
       }
     }
     return { points, unplaced, registered };
-  }, [kind, dutyWeek, dutyDeclared, official, fuel, items, showOsmStations, osmStations]);
+  }, [kind, stations, dutyWeek, dutyDeclared, official, fuel, items, showOsm, osmPlaces]);
 
   const locate = () => {
     if (!("geolocation" in navigator)) {
@@ -316,6 +354,7 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
           unplaced={map.unplaced}
           legend={kind === "pharmacy" ? PHARMACY_LEGEND : undefined}
           home={city ? null : NIAMEY_CENTER}
+          places={quartiers}
         />
       </section>
 
