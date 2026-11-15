@@ -118,8 +118,9 @@ export function FeaturedShopsRail({ shops, loading = false }: { shops: VendorSto
     .filter((shop) => !shop.service_kind && (shop.is_verified || shop.storefront_tier === "premium"))
     .sort((a, b) => b.product_count - a.product_count)
     .slice(0, 12);
-  if (loading) return <RailSkeleton kind="shops" />;
-  if (!featured.length) return null;
+  // Pas d'emplacement de chargement : la rangée est souvent vide (boutiques vérifiées ou Premium seulement),
+  // et un emplacement qui disparaît fait remonter toute la page (décalage mesuré par Google, CLS).
+  if (loading || !featured.length) return null;
   return (
     <section className="mt-6" aria-label={t("Boutiques à la une")}>
       <SectionHeader title={t("Boutiques à la une")} href="/boutiques" linkLabel={t("Voir tout")} />

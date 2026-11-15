@@ -176,10 +176,8 @@ export function FloatingNavbar() {
     if (!isClient || !user?.id) {
       return;
     }
-    if (getPendingSellerPreReg()) {
-      clearPendingSellerPreReg();
-      setPendingPreReg(null);
-    }
+    // clearPendingSellerPreReg() émet PENDING_SELLER_EVENT : l'écouteur ci-dessous remet l'état à jour.
+    if (getPendingSellerPreReg()) clearPendingSellerPreReg();
   }, [isClient, user?.id]);
 
   // Charge la pre-inscription locale et reagit a ses mises a jour (soumission/clear).
@@ -213,17 +211,15 @@ export function FloatingNavbar() {
         tag: `prereg-approved-${pendingPreReg.id}`,
         href: `/login?next=${encodeURIComponent("/seller/dashboard")}`,
       });
-      // Marque comme notifie (garde l'entree pour eviter une 2e notif) puis nettoie.
+      // Marque comme notifie (garde l'entree pour eviter une 2e notif) ; l'evenement emis met l'etat a jour.
       setPendingSellerPreReg({ ...pendingPreReg, notified: true });
-      setPendingPreReg((prev) => (prev ? { ...prev, notified: true } : prev));
     } else if (preRegStatus.status === "rejected") {
       void notifyLocalOrderEvent({
         title: "Demande vendeur refusée",
         body: "Votre demande n'a pas été validée. Contactez le support AMAZER.",
         tag: `prereg-rejected-${pendingPreReg.id}`,
       });
-      clearPendingSellerPreReg();
-      setPendingPreReg(null);
+      clearPendingSellerPreReg(); // émet l'événement : l'état se remet à jour tout seul
     }
   }, [isClient, pendingPreReg, preRegStatus]);
 

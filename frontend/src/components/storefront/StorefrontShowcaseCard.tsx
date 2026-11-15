@@ -88,7 +88,7 @@ export function StorefrontShowcaseCard({
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
-            <span className="select-none text-5xl font-bold text-ink-300">{getInitials(name)}</span>
+            <span className="select-none text-5xl font-bold text-ink-500">{getInitials(name)}</span>
           </div>
         )}
         <span className="absolute left-3 top-3 rounded-pill bg-card/95 px-2.5 py-1 text-xs font-semibold text-ink-800">

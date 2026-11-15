@@ -11,7 +11,7 @@ pydantic-settings==2.10.1
 email-validator==2.3.0
 redis==5.2.1
 boto3==1.35.24
-python-multipart==0.0.20
+python-multipart==0.0.31
 firebase-admin==7.1.0
 httpx==0.28.1
 Pillow>=10.4,<12
