@@ -181,24 +181,23 @@ GUIDES.station = {
     },
     {
       title: "Ce que voient les clients",
-      intro: "**Menu** → **Premium** → **Stations-essence** : la liste et la **carte**.",
+      intro: "**Menu** → **Premium** → **Stations-essence** : la **carte** en haut, puis la liste.",
       persona: visitor, route: "/",
       scenes: [
         { say: "Les clients touchent Menu, puis Premium, puis Stations-essence.",
           do: async (f) => { await f.click("Menu", MENU); await f.click("Premium", MENU); await f.click("Stations-essence", LINK); }, guide: g("La page Stations", "**Menu** → **Premium** → **Stations-essence**.") },
-        { say: "Chaque station montre ses carburants, à jour. Le filtre De garde montre les stations ouvertes cette nuit : voici le Plateau.",
-          do: async (f) => { await f.click("De garde", BTN); await wait(1200); await f.point("Plateau", TEXT); }, guide: g("De garde", "Le filtre **De garde** montre les stations de garde.") },
-        { say: "Avec Voir la carte, les stations autour du client : vert, disponible ; orange, stock faible ; rouge, rupture. Le cercle, c'est la station de garde.",
+        { say: "Tout en haut, la carte : vert, disponible ; orange, stock faible ; rouge, rupture. Le cercle, c'est la station de garde. Près de moi la centre sur le client.",
           do: async (f) => {
             await gps(f, 13.5137, 2.1098);
-            await f.click("Toutes", BTN);
-            await f.click("Voir la carte", BTN);
-            await wait(3500);
+            await f.click("Près de moi", BTN);
+            await wait(3000);
             // La carte entière à l'image, puis la souris sur la légende sans faire bouger la page.
             await reveal(f, ".leaflet-container");
             await f.point("Cerclé : de garde", { selector: "li", scroll: false });
           },
-          guide: g("La carte", "**Voir la carte** : vert = disponible, orange = stock faible, rouge = rupture, **cercle = de garde**.") },
+          guide: g("La carte", "La **carte**, en haut : vert = disponible, orange = stock faible, rouge = rupture, **cercle = de garde**.") },
+        { say: "Dessous, chaque station montre ses carburants, à jour. Le filtre De garde montre les stations ouvertes cette nuit : voici le Plateau.",
+          do: async (f) => { await f.click("De garde", BTN); await wait(1200); await f.point("Plateau", TEXT); }, guide: g("De garde", "Le filtre **De garde** montre les stations de garde.") },
       ],
     },
   ],
@@ -235,13 +234,21 @@ GUIDES.pharmacie = {
     },
     {
       title: "Ce que voient les clients",
-      intro: "**Menu** → **Premium** → **Pharmacies** : la liste officielle de la semaine.",
+      intro: "**Menu** → **Premium** → **Pharmacies** : la **carte** des gardes, puis la liste officielle de la semaine.",
       persona: visitor, route: "/",
       scenes: [
         { say: "Les clients touchent Menu, puis Premium, puis Pharmacies.",
           do: async (f) => { await f.click("Menu", MENU); await f.click("Premium", MENU); await f.click("Pharmacies", LINK); await wait(1500); },
           guide: g("La page Pharmacies", "**Menu** → **Premium** → **Pharmacies**.") },
-        { say: "En haut, les pharmacies de garde de la semaine, d'après la liste officielle du ministère, jusqu'au samedi huit heures.",
+        { say: "Tout en haut, la carte : en vert, les pharmacies de garde. Entourée de pointillés, la position est approximative : on appelle avant d'y aller.",
+          do: async (f) => {
+            await gps(f, 13.5137, 2.1098);
+            await wait(3000);
+            await reveal(f, ".leaflet-container");
+            await f.point("Pointillés", { selector: "li", scroll: false });
+          },
+          guide: g("La carte des gardes", "La **carte**, en haut : les pharmacies **de garde** en vert ; **pointillés** = position approximative.") },
+        { say: "Dessous, les pharmacies de garde de la semaine, d'après la liste officielle du ministère, jusqu'au samedi huit heures.",
           do: (f) => f.point("De garde à Niamey, cette semaine", { selector: "h2" }),
           guide: g("La garde de la semaine", "La **liste officielle**, du **samedi 8 h** au **samedi 8 h**.") },
         { say: "Le client écrit son quartier, par exemple Koira Kano : la pharmacie de garde la plus proche apparaît.",

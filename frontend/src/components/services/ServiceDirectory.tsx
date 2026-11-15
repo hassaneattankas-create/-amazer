@@ -4,14 +4,15 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Fuel, LayoutList, LocateFixed, MapPinned, Pill, Share2 } from "lucide-react";
+import { Fuel, LocateFixed, Pill, Share2 } from "lucide-react";
 
 import { LocalServiceCard } from "@/components/services/LocalServiceCard";
 import { OfficialLists } from "@/components/services/OfficialLists";
 import { PharmacyDutyBoard } from "@/components/services/PharmacyDutyBoard";
+import type { MapLevel, MapPoint } from "@/components/services/ServicesMap";
 import { Button } from "@/components/ui/button";
 import { NIGER_REGION_CITIES, distanceKm, type GeoPoint } from "@/lib/local-services";
-import { listOfficialLists, listPharmacies, listStations } from "@/services/local-services-service";
+import { getPharmacyDuty, listOfficialLists, listPharmacies, listStations } from "@/services/local-services-service";
 import { toast } from "@/store/toast-store";
 import { FUEL_LABELS, type FuelKey, type ServiceKind } from "@/types/local-services";
 
@@ -42,11 +43,19 @@ const COPY: Record<ServiceKind, { title: string; subtitle: string; onlyLabel: st
   },
 };
 
-// Carte chargée seulement quand le client l'ouvre (Leaflet n'alourdit pas la liste).
+// Carte en haut de page, chargée côté client seulement (Leaflet).
 const ServicesMap = dynamic(() => import("@/components/services/ServicesMap").then((m) => m.ServicesMap), {
   ssr: false,
-  loading: () => <div className="aspect-square w-full animate-pulse rounded-card border border-border bg-surface-1 sm:aspect-video" aria-busy="true" />,
+  loading: () => <div className="aspect-[4/3] w-full animate-pulse rounded-card border border-border bg-surface-1 sm:aspect-video" aria-busy="true" />,
 });
+
+/** Niamey : cadrage par défaut sur « Tout le Niger » (la plupart des établissements y sont). */
+const NIAMEY_CENTER: GeoPoint = { lat: 13.5116, lng: 2.1254 };
+
+const PHARMACY_LEGEND: { level: MapLevel; label: string }[] = [
+  { level: "available", label: "De garde" },
+  { level: "unknown", label: "Inscrite, pas de garde (horaires habituels)" },
+];
 
 type StationFilter = "all" | "available" | "duty";
 
@@ -65,9 +74,8 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
   const [fuel, setFuel] = useState<FuelKey | "">("");
   const [position, setPosition] = useState<GeoPoint | null>(null);
   const [locating, setLocating] = useState(false);
-  // Stations : seulement celles de garde (exclusif avec « Disponible maintenant »), et vue liste ou carte.
+  // Stations : seulement celles de garde (exclusif avec « Disponible maintenant »).
   const [dutyOnly, setDutyOnly] = useState(false);
-  const [view, setView] = useState<"list" | "map">("list");
   const stations = kind === "fuel_station";
 
   const { data, isPending, isError, refetch, dataUpdatedAt } = useQuery({
@@ -105,6 +113,71 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
     staleTime: 60_000,
   });
   const hasOfficial = official.length > 0;
+  // Pharmacies de garde de la semaine (même requête et même cache que le tableau de garde) : placées sur la carte.
+  const dutyCity = city || "Niamey";
+  const { data: duty } = useQuery({
+    queryKey: ["pharmacy-duty", dutyCity],
+    queryFn: () => getPharmacyDuty(dutyCity),
+    staleTime: 60_000,
+    refetchInterval: 600_000,
+    enabled: kind === "pharmacy",
+  });
+
+  const dutyWeek = duty?.current?.items;
+  const dutyDeclared = duty?.declared;
+
+  // Carte : listes officielles (affiche de garde, communiqué des stations) + établissements inscrits, sans doublon.
+  const map = useMemo(() => {
+    const points: MapPoint[] = [];
+    let unplaced = 0;
+    const listed = new Set<string>();
+    if (kind === "pharmacy") {
+      for (const item of [...(dutyWeek ?? []), ...(dutyDeclared ?? [])]) {
+        if (item.vendor_id) listed.add(item.vendor_id);
+        if (item.latitude == null || item.longitude == null) {
+          unplaced += 1;
+          continue;
+        }
+        points.push({
+          id: `duty:${item.vendor_id ?? item.name}`,
+          name: `Pharmacie ${item.name}`,
+          latitude: item.latitude,
+          longitude: item.longitude,
+          level: "available",
+          approximate: Boolean(item.approximate),
+          area: item.area ?? null,
+          lines: [`De garde ${item.until_label}`, [item.location, item.commune].filter(Boolean).join(" · ")].filter(Boolean),
+          phone: item.phone_link ? `tel:${item.phone_link}` : null,
+          mapsUrl: item.maps_url,
+        });
+      }
+    } else {
+      for (const list of official) {
+        if (fuel && list.fuel && list.fuel !== fuel) continue;
+        for (const entry of list.entries) {
+          if (entry.latitude == null || entry.longitude == null) {
+            unplaced += 1;
+            continue;
+          }
+          const brand = list.brand ? `${list.brand} ` : "";
+          points.push({
+            id: `${list.id}:${entry.name}`,
+            name: `Station ${brand}${entry.name}`,
+            latitude: entry.latitude,
+            longitude: entry.longitude,
+            level: "available",
+            approximate: Boolean(entry.approximate),
+            area: entry.area ?? null,
+            lines: [`Approvisionnée${list.fuel ? ` en ${FUEL_LABELS[list.fuel].toLowerCase()}` : ""} selon le communiqué`, entry.location ?? ""].filter(Boolean),
+            phone: list.contact_phone ? `tel:${list.contact_phone.replace(/[^+0-9]/g, "")}` : null,
+            mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Station ${brand}${entry.name}, ${list.city}, Niger`)}`,
+          });
+        }
+      }
+    }
+    const registered = items.map(({ item }) => item).filter((item) => !listed.has(item.vendor_id));
+    return { points, unplaced, registered };
+  }, [kind, dutyWeek, dutyDeclared, official, fuel, items]);
 
   const locate = () => {
     if (!("geolocation" in navigator)) {
@@ -130,13 +203,6 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
     setOnlyActive(next === "available");
     setDutyOnly(next === "duty");
   };
-  const toggleView = () => {
-    const next = view === "list" ? "map" : "list";
-    setView(next);
-    // « Autour de moi » : la carte se centre sur le client dès qu'il l'ouvre.
-    if (next === "map" && !position && !locating) locate();
-  };
-
   const share = async () => {
     const url = `https://amazer.store${copy.path}`;
     const text = `${copy.share}${city ? ` à ${city}` : ""} sur AMAZER : ${url}`;
@@ -195,19 +261,25 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
             <LocateFixed className="h-5 w-5" aria-hidden="true" />
             {locating ? "Localisation…" : position ? "Trié par distance" : "Près de moi"}
           </Button>
-          {/* Carte : stations et pharmacies autour du client. */}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={toggleView}
-            aria-pressed={view === "map"}
-            className="h-12 rounded-pill border-white/30 bg-transparent px-5 text-base text-white hover:bg-white/10"
-          >
-            {view === "map" ? <LayoutList className="h-5 w-5" aria-hidden="true" /> : <MapPinned className="h-5 w-5" aria-hidden="true" />}
-            {view === "map" ? "Voir la liste" : "Voir la carte"}
-          </Button>
         </div>
       </header>
+
+      {/* La carte d'abord : on voit tout de suite où aller (« Près de moi » la centre sur le client). */}
+      <section aria-labelledby={`${kind}-map-title`} className="mt-4">
+        <h2 id={`${kind}-map-title`} className="sr-only">
+          {kind === "pharmacy" ? "Carte des pharmacies de garde" : "Carte des stations"}
+        </h2>
+        <ServicesMap
+          kind={kind}
+          items={map.registered}
+          fuel={fuel}
+          position={position}
+          points={map.points}
+          unplaced={map.unplaced}
+          legend={kind === "pharmacy" ? PHARMACY_LEGEND : undefined}
+          home={city ? null : NIAMEY_CENTER}
+        />
+      </section>
 
       {kind === "pharmacy" ? (
         <>
@@ -289,13 +361,6 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
             <Button type="button" variant="outline" className="mt-3" onClick={() => void refetch()}>
               Réessayer
             </Button>
-          </div>
-        ) : view === "map" ? (
-          <div className="space-y-3">
-            {items.length === 0 ? (
-              <p className="text-sm text-ink-700">{dutyOnly ? "Aucune station de garde signalée ici pour le moment." : copy.empty}</p>
-            ) : null}
-            <ServicesMap kind={kind} items={items.map(({ item }) => item)} fuel={fuel} position={position} />
           </div>
         ) : items.length ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

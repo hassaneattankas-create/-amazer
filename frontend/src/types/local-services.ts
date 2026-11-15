@@ -216,7 +216,18 @@ export type RegionManager = {
   last_activity_at: string | null;
 };
 
-export type OfficialEntry = { name: string; district: string | null; location: string | null; phone: string | null; group_label: string | null };
+export type OfficialEntry = {
+  name: string;
+  district: string | null;
+  location: string | null;
+  phone: string | null;
+  group_label: string | null;
+  /** Position sur la carte : retrouvée sur OpenStreetMap, ou centre du quartier quand `approximate`. */
+  latitude?: number | null;
+  longitude?: number | null;
+  approximate?: boolean;
+  area?: string | null;
+};
 
 /** Liste officielle datée (pharmacies de garde, stations approvisionnées), publiée par AMAZER avec sa source. */
 export type OfficialList = {
@@ -266,6 +277,9 @@ export type PharmacyDutyItem = {
   is_verified: boolean;
   until_label: string;
   official: boolean;
+  /** Placée au centre de son quartier (affiche sans adresse précise) : à confirmer par téléphone. */
+  approximate?: boolean;
+  area?: string | null;
 };
 
 export type PharmacyDutyWeek = {

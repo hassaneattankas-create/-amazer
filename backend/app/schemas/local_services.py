@@ -321,6 +321,9 @@ class PharmacyDutyItem(BaseModel):
     is_verified: bool
     until_label: str
     official: bool
+    # Placée au centre de son quartier (affiche sans adresse précise) : à confirmer par téléphone.
+    approximate: bool = False
+    area: str | None = None
 
 
 class PharmacyDutyWeek(BaseModel):

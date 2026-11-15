@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from app.models.official_list import OfficialList, OfficialListEntry
 from app.models.seller_profile import SellerProfile
+from app.services import geo_lookup
 from app.services import local_services as svc
 
 logger = logging.getLogger(__name__)
@@ -136,6 +137,9 @@ class BoardItem:
     is_verified: bool
     until_label: str
     official: bool
+    # Position déduite de l'affiche (centre du quartier) et non relevée sur place.
+    approximate: bool = False
+    area: str | None = None
 
 
 @dataclass
@@ -165,15 +169,25 @@ def _week(db: Session, row: OfficialList, profiles: list[SellerProfile], decrypt
         profile = next((p for p in profiles if same_name(p.business_name, entry.name)), None)
         lat = getattr(profile, "latitude", None)
         lng = getattr(profile, "longitude", None)
+        spot = None
+        if lat is None or lng is None:
+            # Pas inscrite (ou sans position) : retrouvée sur OpenStreetMap, sinon au centre de son quartier.
+            spot = geo_lookup.locate("pharmacy_duty", row.city, entry.name, entry.district, entry.location)
+            if spot:
+                lat, lng = spot.latitude, spot.longitude
+        approximate = bool(spot and spot.approximate)
         phone = entry.phone or (decrypt(profile.phone) if profile else None)
         week.items.append(
             BoardItem(
                 name=entry.name, commune=entry.group_label, district=entry.district, location=entry.location,
                 phone=phone, phone_link=phone_link(phone), whatsapp_link=_wa(profile),
-                latitude=lat, longitude=lng, maps_url=_maps(entry.name, entry.location, row.city, lat, lng),
+                latitude=lat, longitude=lng,
+                # Position approximative : l'itinéraire cherche la pharmacie par son nom plutôt que le centre du quartier.
+                maps_url=_maps(entry.name, entry.location, row.city, None if approximate else lat, None if approximate else lng),
                 vendor_id=profile.vendor_id if profile else None,
                 logo_url=getattr(profile, "logo_url", None), is_verified=bool(getattr(profile, "is_verified", False)),
                 until_label=until_label(row.ends_at), official=True,
+                approximate=approximate, area=spot.area if spot else None,
             )
         )
     return week

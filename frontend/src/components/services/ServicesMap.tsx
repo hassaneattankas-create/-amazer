@@ -1,7 +1,7 @@
 "use client";
 
-// Carte des stations et des pharmacies (Leaflet + fond OpenStreetMap, sans clé). Chargée à la demande depuis
-// ServiceDirectory (next/dynamic, ssr: false) : la liste reste légère tant que la carte n'est pas ouverte.
+// Carte des stations et des pharmacies (Leaflet + fond OpenStreetMap, sans clé), en haut de la page.
+// Chargée côté client seulement (next/dynamic, ssr: false) depuis ServiceDirectory.
 import "leaflet/dist/leaflet.css";
 
 import L from "leaflet";
@@ -10,7 +10,23 @@ import { useEffect, useRef } from "react";
 import type { GeoPoint } from "@/lib/local-services";
 import { FUEL_LABELS, FUEL_STATE_LABELS, type FuelKey, type FuelState, type LocalServiceItem, type ServiceKind } from "@/types/local-services";
 
-type Level = FuelState | "unknown";
+export type MapLevel = FuelState | "unknown";
+type Level = MapLevel;
+
+/** Point d'une liste officielle (pharmacie de garde de l'affiche, station approvisionnée du communiqué). */
+export type MapPoint = {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  level: MapLevel;
+  /** Centre du quartier : la position exacte n'est pas connue. */
+  approximate: boolean;
+  area: string | null;
+  lines: string[];
+  phone: string | null;
+  mapsUrl: string;
+};
 
 /** Niamey : centre par défaut quand ni la position du client ni aucune station ne sont connues. */
 const NIAMEY: L.LatLngExpression = [13.5116, 2.1254];
@@ -50,16 +66,29 @@ function itemLevel(kind: ServiceKind, item: LocalServiceItem, fuel: FuelKey | ""
   return states.includes("out") ? "out" : "unknown";
 }
 
-function markerIcon(level: Level, onDuty: boolean): L.DivIcon {
+function markerIcon(level: Level, onDuty: boolean, approximate = false): L.DivIcon {
   const ring = onDuty ? " ring-2 ring-ink-900 ring-offset-1" : "";
+  if (approximate) {
+    // Position approximative : pastille plus petite, cerclée de pointillés.
+    return L.divIcon({
+      className: "",
+      html: `<span class="block h-5 w-5 rounded-full border-2 border-dashed border-ink-900 p-0.5 shadow-raised"><span class="block h-full w-full rounded-full ${LEVEL_CLASS[level]}"></span></span>`,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+      popupAnchor: [0, -10],
+    });
+  }
   return L.divIcon({
     className: "",
-    html: `<span class="block h-7 w-7 rounded-full border-2 border-white shadow-raised ${LEVEL_CLASS[level]}${ring}"></span>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -14],
+    html: `<span class="block h-6 w-6 rounded-full border-2 border-white shadow-raised ${LEVEL_CLASS[level]}${ring}"></span>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12],
   });
 }
+
+/** Bulles assez étroites pour un téléphone de 360 px (la carte fait ~330 px de large). */
+const POPUP: L.PopupOptions = { maxWidth: 240, autoPanPaddingTopLeft: [48, 16], autoPanPaddingBottomRight: [16, 16] };
 
 const ME_ICON = L.divIcon({
   className: "",
@@ -111,15 +140,54 @@ function popupContent(kind: ServiceKind, item: LocalServiceItem): HTMLElement {
   return box;
 }
 
+/** Bulle d'un point de liste officielle (même construction DOM que ci-dessus). */
+function pointContent(point: MapPoint): HTMLElement {
+  const box = document.createElement("div");
+  box.className = "space-y-1 text-sm";
+  const add = (text: string, className: string) => {
+    const el = document.createElement("p");
+    el.className = className;
+    el.textContent = text;
+    box.appendChild(el);
+  };
+  add(point.name, "font-semibold text-ink-900");
+  for (const line of point.lines) add(line, "text-ink-700");
+  if (point.approximate) add(`Position approximative${point.area ? ` (quartier ${point.area})` : ""} : appelez avant de vous déplacer.`, "text-ink-600");
+  const actions = document.createElement("p");
+  actions.className = "flex gap-3 pt-1";
+  const link = (href: string, text: string, external: boolean) => {
+    const a = document.createElement("a");
+    a.href = href;
+    a.textContent = text;
+    a.className = "font-semibold text-brand-700 underline";
+    if (external) {
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+    }
+    actions.appendChild(a);
+  };
+  if (point.phone) link(point.phone, "Appeler", false);
+  link(point.mapsUrl, "Itinéraire", true);
+  box.appendChild(actions);
+  return box;
+}
+
 export type ServicesMapProps = {
   kind: ServiceKind;
   items: LocalServiceItem[];
   fuel: FuelKey | "";
   position: GeoPoint | null;
+  /** Listes officielles : pharmacies de garde de la semaine, stations approvisionnées. */
+  points?: MapPoint[];
+  /** Lignes des listes officielles qu'on n'a pas su placer (restent dans la liste). */
+  unplaced?: number;
+  legend?: { level: MapLevel; label: string }[];
+  /** « Tout le Niger » : cadrer d'abord autour de Niamey quand des points s'y trouvent. */
+  home?: GeoPoint | null;
 };
 
-/** Établissements placés sur la carte (ceux qui ont enregistré leur position), et le client s'il s'est localisé. */
-export function ServicesMap({ kind, items, fuel, position }: ServicesMapProps) {
+/** Établissements placés sur la carte (inscrits avec leur position, listes officielles), et le client s'il s'est localisé. */
+export function ServicesMap({ kind, items, fuel, position, points = [], unplaced = 0, legend, home = null }: ServicesMapProps) {
   const holder = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const stations = useRef<L.LayerGroup | null>(null);
@@ -158,18 +226,33 @@ export function ServicesMap({ kind, items, fuel, position }: ServicesMapProps) {
         title: item.business_name,
         keyboard: true,
       })
-        .bindPopup(() => popupContent(kind, item), { autoPanPaddingTopLeft: [56, 24], autoPanPaddingBottomRight: [24, 24] })
+        .bindPopup(() => popupContent(kind, item), POPUP)
         .addTo(layer);
     }
-    const key = placed.map((item) => item.outlet_id ?? item.vendor_id).sort().join("|");
-    if (key !== framed.current && !position && placed.length) {
-      framed.current = key;
-      current.fitBounds(L.latLngBounds(placed.map((item): L.LatLngTuple => [item.latitude, item.longitude])), {
-        padding: [32, 32],
-        maxZoom: 14,
-      });
+    for (const point of points) {
+      L.marker([point.latitude, point.longitude], {
+        icon: markerIcon(point.level, false, point.approximate),
+        title: point.name,
+        keyboard: true,
+        // Les points sûrs passent devant les points approximatifs.
+        zIndexOffset: point.approximate ? 0 : 500,
+      })
+        .bindPopup(() => pointContent(point), POPUP)
+        .addTo(layer);
     }
-  }, [kind, items, fuel, position]);
+    // Cadrage : les listes officielles d'abord (gardes de la semaine), sinon les établissements inscrits ;
+    // sur « Tout le Niger », autour de Niamey s'il y en a (une station de Maradi ne dézoome pas tout le pays).
+    const all: L.LatLngTuple[] = points.length
+      ? points.map((point): L.LatLngTuple => [point.latitude, point.longitude])
+      : placed.map((item): L.LatLngTuple => [item.latitude, item.longitude]);
+    const near = home ? all.filter(([lat, lng]) => Math.abs(lat - home.lat) < 0.4 && Math.abs(lng - home.lng) < 0.4) : [];
+    const spots = near.length ? near : all;
+    const key = [...placed.map((item) => item.outlet_id ?? item.vendor_id), ...points.map((point) => point.id)].sort().join("|");
+    if (key !== framed.current && !position && spots.length) {
+      framed.current = key;
+      current.fitBounds(L.latLngBounds(spots), { padding: [32, 32], maxZoom: 14 });
+    }
+  }, [kind, items, fuel, position, points, home]);
 
   // Le client : son point et la carte centrée sur lui.
   useEffect(() => {
@@ -186,12 +269,12 @@ export function ServicesMap({ kind, items, fuel, position }: ServicesMapProps) {
     <div className="space-y-2">
       <div
         ref={holder}
-        className="isolate aspect-square w-full overflow-hidden rounded-card border border-border bg-surface-1 sm:aspect-video"
+        className="isolate aspect-[4/3] w-full overflow-hidden rounded-card border border-border bg-surface-1 sm:aspect-video"
         role="region"
         aria-label={kind === "pharmacy" ? "Carte des pharmacies" : "Carte des stations"}
       />
       <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-700" aria-label="Légende de la carte">
-        {LEGEND[kind].map(({ level, label }) => (
+        {(legend ?? LEGEND[kind]).map(({ level, label }) => (
           <li key={level} className="inline-flex items-center gap-1.5">
             <span className={`inline-block h-3 w-3 rounded-full ${LEVEL_CLASS[level]}`} aria-hidden="true" />
             {label}
@@ -203,7 +286,19 @@ export function ServicesMap({ kind, items, fuel, position }: ServicesMapProps) {
             Cerclé : de garde
           </li>
         ) : null}
+        {points.some((point) => point.approximate) ? (
+          <li className="inline-flex items-center gap-1.5">
+            <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-dashed border-ink-900" aria-hidden="true" />
+            Pointillés : position approximative (quartier)
+          </li>
+        ) : null}
       </ul>
+      {unplaced > 0 ? (
+        <p className="text-xs text-ink-600">
+          {unplaced === 1 ? "1 adresse de la liste officielle n'a pas pu être placée" : `${unplaced} adresses de la liste officielle n'ont pas pu être placées`} : voir la
+          liste ci-dessous.
+        </p>
+      ) : null}
       {hidden > 0 ? (
         <p className="text-xs text-ink-600">
           {hidden === 1

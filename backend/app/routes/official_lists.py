@@ -25,6 +25,7 @@ from app.database import get_db
 from app.models.official_list import OfficialList, OfficialListEntry
 from app.models.user import User
 from app.core.rate_limit import enforce_rate_limit
+from app.services import geo_lookup
 from app.services import local_services as svc
 from app.services import pharmacy_duty_service as duty_svc
 
@@ -44,6 +45,20 @@ class OfficialEntry(BaseModel):
     location: str | None
     phone: str | None
     group_label: str | None
+    # Position sur la carte : nom retrouvé sur OpenStreetMap, ou centre du quartier (approximate).
+    latitude: float | None = None
+    longitude: float | None = None
+    approximate: bool = False
+    area: str | None = None
+
+
+def _entry(row: OfficialList, e: OfficialListEntry) -> OfficialEntry:
+    spot = geo_lookup.locate(row.kind, row.city, e.name, e.district, e.location)
+    return OfficialEntry(
+        name=e.name, district=e.district, location=e.location, phone=e.phone, group_label=e.group_label,
+        latitude=spot.latitude if spot else None, longitude=spot.longitude if spot else None,
+        approximate=bool(spot and spot.approximate), area=spot.area if spot else None,
+    )
 
 
 class OfficialListItem(BaseModel):
@@ -98,7 +113,7 @@ def _item(row: OfficialList, entries: list[OfficialListEntry]) -> OfficialListIt
         contact_address=row.contact_address,
         starts_at=_iso(row.starts_at),
         ends_at=_iso(row.ends_at),
-        entries=[OfficialEntry(name=e.name, district=e.district, location=e.location, phone=e.phone, group_label=e.group_label) for e in entries],
+        entries=[_entry(row, e) for e in entries],
     )
 
 
