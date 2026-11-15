@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Session
 
+from app.models.fuel_alert import FuelAlert, FuelSignal
 from app.models.pharmacy_directory import PharmacyListing
 from app.core.exceptions import ForbiddenError, NotFoundError, ValidationDomainError
 from app.database import Base
@@ -112,7 +113,7 @@ def test_position_must_be_in_niger() -> None:
 @pytest.fixture
 def db(monkeypatch):
     engine = create_engine("sqlite://")
-    Base.metadata.create_all(engine, tables=[t.__table__ for t in (User, Vendor, SellerProfile, GlobalSettings, FuelOutlet, FuelOutletDailyStat, FuelStatusChange, StationReport, FuelOutletManager, FuelRegionManager, FuelActivity, FuelDelivery, OfficialList, OfficialListEntry, PharmacyListing)])
+    Base.metadata.create_all(engine, tables=[t.__table__ for t in (User, Vendor, SellerProfile, GlobalSettings, FuelOutlet, FuelOutletDailyStat, FuelStatusChange, StationReport, FuelOutletManager, FuelRegionManager, FuelActivity, FuelDelivery, OfficialList, OfficialListEntry, PharmacyListing, FuelAlert, FuelSignal)])
     monkeypatch.setattr(route, "cache_get_json", lambda _key: None)
     monkeypatch.setattr(route, "cache_set_json", lambda *_a, **_k: None)
     monkeypatch.setattr(route, "invalidate_services_cache", lambda: None)

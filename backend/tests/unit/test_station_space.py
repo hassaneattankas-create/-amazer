@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Session
 
+from app.models.fuel_alert import FuelAlert, FuelSignal
 from app.core.exceptions import ForbiddenError, NotFoundError, ValidationDomainError
 from app.database import Base
 from app.models.fuel_activity import FuelActivity, FuelDelivery
@@ -45,7 +46,7 @@ def _jsonb_on_sqlite(_type, _compiler, **_kw) -> str:
 
 TABLES = (
     User, Vendor, SellerProfile, GlobalSettings, FuelOutlet, FuelOutletDailyStat, FuelStatusChange, StationReport,
-    FuelOutletManager, FuelRegionManager, FuelActivity, FuelDelivery,
+    FuelOutletManager, FuelRegionManager, FuelActivity, FuelDelivery, FuelAlert, FuelSignal,
 )
 
 

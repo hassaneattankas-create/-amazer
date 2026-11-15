@@ -37,6 +37,9 @@ export type RestaurantOrderRequest = {
   customer_name: string;
   customer_phone: string;
   delivery_address: string;
+  /** Position exacte du lieu de livraison (bouton « Utiliser ma position »). */
+  delivery_latitude?: number;
+  delivery_longitude?: number;
   payment_mode: string;
   items: Array<{
     menu_item_id: string;
@@ -53,6 +56,8 @@ export type RestaurantOrder = {
   customer_name: string;
   customer_phone: string;
   delivery_address: string;
+  /** Itinéraire jusqu'à la position exacte du client (si donnée). */
+  delivery_maps_url?: string | null;
   distance_km: number;
   delivery_fee: number;
   delivery_minutes: number;

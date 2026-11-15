@@ -259,6 +259,11 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS duty_end DATE",
         # Visibilité prioritaire (admin) : en tête des listes jusqu'à cette date.
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS priority_until TIMESTAMPTZ",
+        # Position GPS de livraison donnée par le client (commandes et repas).
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_latitude DOUBLE PRECISION",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_longitude DOUBLE PRECISION",
+        "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS delivery_latitude DOUBLE PRECISION",
+        "ALTER TABLE restaurant_orders ADD COLUMN IF NOT EXISTS delivery_longitude DOUBLE PRECISION",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS duty_updated_at TIMESTAMPTZ",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS fuel_status JSONB",
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS fuel_updated_at TIMESTAMPTZ",

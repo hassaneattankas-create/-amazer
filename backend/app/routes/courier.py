@@ -26,6 +26,7 @@ from app.models.order import Order
 from app.models.product import Product
 from app.models.seller_profile import SellerProfile
 from app.models.user import User
+from app.services import delivery_position
 from app.services.order_delivery_service import mark_order_delivered
 from app.services.audit_log_service import append_audit_log
 from app.services.notification_service import NotificationPayload, NotificationService
@@ -147,7 +148,11 @@ def _build(db: Session, order: Order, courier: User) -> CourierOrder:
     deliver_before = start + timedelta(minutes=minutes) if start is not None and minutes > 0 else None
     address = order.delivery_address if mine else None
     customer_maps = None
-    if address:
+    exact = delivery_position.directions_url(getattr(order, "delivery_latitude", None), getattr(order, "delivery_longitude", None))
+    if mine and exact:
+        # Position donnée par le client : itinéraire exact.
+        customer_maps = exact
+    elif address:
         query = ", ".join(part for part in (address, order.delivery_district, "Niger") if part)
         customer_maps = f"https://www.google.com/maps/search/?api=1&query={quote(query)}"
     return CourierOrder(

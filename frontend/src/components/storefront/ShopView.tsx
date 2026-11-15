@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { DeliveryPositionButton, type DeliveryPosition } from "@/components/checkout/DeliveryPositionButton";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -96,6 +97,7 @@ export function ShopView({ vendorId }: { vendorId: string }) {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryPosition, setDeliveryPosition] = useState<DeliveryPosition | null>(null);
   const [paymentMode, setPaymentMode] = useState("nita");
   const [reservationForm, setReservationForm] = useState({
     customer_name: "",
@@ -352,6 +354,7 @@ export function ShopView({ vendorId }: { vendorId: string }) {
       customer_name: customerName.trim(),
       customer_phone: customerPhone.trim(),
       delivery_address: deliveryAddress.trim(),
+      ...(deliveryPosition ? { delivery_latitude: deliveryPosition.latitude, delivery_longitude: deliveryPosition.longitude } : {}),
       payment_mode: paymentMode,
       items: selectedItems.map((item) => ({
         menu_item_id: item.menu_item_id,
@@ -562,6 +565,8 @@ export function ShopView({ vendorId }: { vendorId: string }) {
               customerName={customerName}
               customerPhone={customerPhone}
               deliveryAddress={deliveryAddress}
+              deliveryPosition={deliveryPosition}
+              onDeliveryPositionChange={setDeliveryPosition}
               paymentMode={paymentMode}
               isSubmitting={orderMutation.isPending}
               onCustomerNameChange={setCustomerName}
@@ -862,6 +867,8 @@ type RestaurantOrderPanelProps = {
   customerName: string;
   customerPhone: string;
   deliveryAddress: string;
+  deliveryPosition: DeliveryPosition | null;
+  onDeliveryPositionChange: (value: DeliveryPosition | null) => void;
   paymentMode: string;
   isSubmitting: boolean;
   statusMessage?: string;
@@ -884,6 +891,8 @@ function RestaurantOrderPanel({
   customerName,
   customerPhone,
   deliveryAddress,
+  deliveryPosition,
+  onDeliveryPositionChange,
   paymentMode,
   isSubmitting,
   statusMessage,
@@ -973,6 +982,9 @@ function RestaurantOrderPanel({
           Adresse de livraison (quartier, repère)
           <input className={fieldClass} value={deliveryAddress} onChange={(event) => onDeliveryAddressChange(event.target.value)} />
         </label>
+        <div className="sm:col-span-2">
+          <DeliveryPositionButton value={deliveryPosition} onChange={onDeliveryPositionChange} />
+        </div>
       </div>
       <fieldset className="min-w-0">
         <legend className="text-sm font-medium text-ink-800">Paiement</legend>

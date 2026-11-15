@@ -29,6 +29,9 @@ class CheckoutRequest(BaseModel):
     # Ou et a qui livrer (indispensable au livreur).
     delivery_address: str | None = Field(default=None, min_length=3, max_length=255)
     delivery_phone: str | None = Field(default=None, min_length=8, max_length=40)
+    # Position exacte (bouton « Utiliser ma position »), facultative ; vérifiée au Niger.
+    delivery_latitude: float | None = Field(default=None, ge=-90, le=90)
+    delivery_longitude: float | None = Field(default=None, ge=-180, le=180)
 
 
 class CheckoutQuoteRequest(BaseModel):

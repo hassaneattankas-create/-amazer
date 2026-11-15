@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Request, Response
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -16,7 +17,7 @@ from app.core.crypto import decrypt_phone_value
 from app.core.csrf import enforce_csrf
 from app.core.deps import get_current_user, get_seller_user
 from app.core.exceptions import ForbiddenError, NotFoundError, ValidationDomainError
-from app.core.rate_limit import enforce_rate_limit
+from app.core.rate_limit import client_ip, enforce_rate_limit
 from app.database import get_db
 from app.models.fuel_history import FuelStatusChange, StationReport
 from app.models.fuel_outlet import FuelOutlet, FuelOutletManager, FuelRegionManager
@@ -64,6 +65,7 @@ from app.services import station_access as sa
 from app.services.fuel_plan import PLAN_NAMES, FuelPlan, fuel_plan
 from app.services.seller_finance_service import get_or_create_global_settings
 from app.services import priority_service as priority
+from app.services import fuel_alert_service as fuel_alerts
 
 router = APIRouter(tags=["services"])
 CACHE_PREFIX = "services:"
@@ -296,6 +298,15 @@ def list_stations(
         keep=lambda i: (has(i) or not available) and (i.on_duty or not on_duty),
         sort_key=lambda i: (not has(i), not i.is_priority, not i.fuel_fresh, recency(i), i.business_name.lower()),
     )
+    # Signalements des clients sur place (2 dernières heures), affichés « selon des clients ».
+    signals = fuel_alerts.crowd(db)
+    for item in response.items:
+        seen = signals.get((item.vendor_id, item.outlet_id))
+        if seen:
+            item.crowd_found = sorted(seen.found)
+            item.crowd_out = sorted(seen.out)
+            item.crowd_queue = seen.queue
+            item.crowd_at = seen.last.isoformat() if seen.last else None
     # Court : une disponibilite change vite pendant une penurie.
     cache_set_json(key, response.model_dump(), ttl_seconds=30)
     return response
@@ -303,8 +314,11 @@ def list_stations(
 
 def _log_fuel_changes(db: Session, vendor_id: str, outlet_id: str | None, before: dict | None, after: dict | None, user_id: str) -> None:
     """Historique immuable : un enregistrement par changement reel (une simple confirmation n'en cree pas)."""
-    for fuel, old, new in svc.fuel_changes(before, after):
+    changes = svc.fuel_changes(before, after)
+    for fuel, old, new in changes:
         db.add(FuelStatusChange(vendor_id=vendor_id, outlet_id=outlet_id, fuel=fuel, old_state=old, new_state=new, user_id=user_id))
+    # « Me prévenir » : les clients abonnés sont alertés après l'enregistrement (en arrière-plan).
+    fuel_alerts.queue_changes(db, vendor_id, outlet_id, changes)
 
 
 def _own_profile(db: Session, user: User) -> SellerProfile:
@@ -1189,3 +1203,120 @@ def export_fuel_data(
         outlet = outlets[stat.outlet_id]
         rows.append([f"{stat.day:%d/%m/%Y}", outlet.name, outlet.city, str(stat.routes), str(stat.calls), str(stat.gas_orders)])
     return _csv(rows, "amazer-stations-statistiques.csv")
+
+
+# ---------------------------------------------------------------- « Vous y êtes ? » et « Me prévenir »
+class FuelSignalInput(BaseModel):
+    """Signalement d'un client sur place : il y en a / plus rien (pour un carburant), ou longue file."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    vendor_id: str = Field(min_length=1, max_length=36)
+    outlet_id: str | None = Field(default=None, max_length=36)
+    kind: Literal["found", "out", "queue"]
+    fuel: Literal["super", "gasoil", "gaz"] | None = None
+
+
+class FuelAlertInput(BaseModel):
+    """Me prévenir : une station (outlet_id), une station seule ou une marque (vendor_id), ou toute une ville."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    fuel: Literal["super", "gasoil", "gaz", "any"]
+    outlet_id: str | None = Field(default=None, max_length=36)
+    vendor_id: str | None = Field(default=None, max_length=36)
+    city: str | None = Field(default=None, min_length=2, max_length=80)
+
+
+class FuelAlertItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    fuel: str
+    label: str
+
+
+def _alert_item(db: Session, alert) -> FuelAlertItem:
+    fuel = fuel_alerts.FUEL_NAMES.get(alert.fuel, alert.fuel)
+    if alert.outlet_id:
+        outlet = db.get(FuelOutlet, alert.outlet_id)
+        profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == outlet.vendor_id)) if outlet else None
+        where = f"{profile.business_name if profile else 'Station'} · {outlet.name}" if outlet else "Station"
+    elif alert.vendor_id:
+        profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == alert.vendor_id))
+        where = profile.business_name if profile else "Station"
+    else:
+        where = f"toutes les stations de {alert.city}"
+    return FuelAlertItem(id=alert.id, fuel=alert.fuel, label=f"{fuel} · {where}")
+
+
+@router.post("/services/fuel-signals", status_code=201, response_model=None)
+def report_fuel_signal(payload: FuelSignalInput, request: Request, db: Annotated[Session, Depends(get_db)]) -> dict:
+    """Un client sur place signale en un geste (sans compte, limité par appareil)."""
+    if payload.kind in ("found", "out") and not payload.fuel:
+        raise ValidationDomainError("Choisissez le carburant.")
+    ip = client_ip(request)
+    enforce_rate_limit(request, key=f"fuel-signal:{ip}:{payload.vendor_id}:{payload.outlet_id or ''}", limit=4, window_seconds=1800)
+    enforce_rate_limit(request, key=f"fuel-signal-ip:{ip}", limit=30, window_seconds=3600)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == payload.vendor_id, SellerProfile.service_kind == "fuel_station"))
+    if profile is None:
+        raise NotFoundError("Station introuvable.")
+    if payload.outlet_id:
+        outlet = db.get(FuelOutlet, payload.outlet_id)
+        if outlet is None or outlet.vendor_id != payload.vendor_id or not outlet.is_active:
+            raise NotFoundError("Station introuvable.")
+    from app.models.fuel_alert import FuelSignal
+
+    db.add(FuelSignal(vendor_id=payload.vendor_id, outlet_id=payload.outlet_id, kind=payload.kind, fuel=payload.fuel if payload.kind != "queue" else None))
+    db.commit()
+    cache_delete_prefixes(CACHE_PREFIX + "stations")
+    return {"ok": True}
+
+
+@router.get("/services/fuel-alerts", response_model=list[FuelAlertItem])
+def my_fuel_alerts(db: Annotated[Session, Depends(get_db)], current_user: Annotated[User, Depends(get_current_user)]) -> list[FuelAlertItem]:
+    from app.models.fuel_alert import FuelAlert
+
+    rows = db.scalars(select(FuelAlert).where(FuelAlert.user_id == current_user.id).order_by(FuelAlert.created_at)).all()
+    return [_alert_item(db, a) for a in rows]
+
+
+@router.post("/services/fuel-alerts", status_code=201, response_model=FuelAlertItem)
+def add_fuel_alert(
+    payload: FuelAlertInput,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> FuelAlertItem:
+    """Me prévenir dès que ce carburant est disponible (station, marque ou ville)."""
+    enforce_csrf(request)
+    scopes = [x for x in (payload.outlet_id, payload.vendor_id, payload.city) if x]
+    if len(scopes) != 1:
+        raise ValidationDomainError("Choisissez une station ou une ville.")
+    vendor_id = payload.vendor_id
+    if payload.outlet_id:
+        outlet = db.get(FuelOutlet, payload.outlet_id)
+        if outlet is None or not outlet.is_active:
+            raise NotFoundError("Station introuvable.")
+    elif vendor_id and db.scalar(select(SellerProfile.id).where(SellerProfile.vendor_id == vendor_id, SellerProfile.service_kind == "fuel_station")) is None:
+        raise NotFoundError("Station introuvable.")
+    alert = fuel_alerts.subscribe(db, current_user.id, payload.fuel, outlet_id=payload.outlet_id, vendor_id=vendor_id, city=payload.city)
+    db.commit()
+    return _alert_item(db, alert)
+
+
+@router.delete("/services/fuel-alerts/{alert_id}", status_code=204, response_model=None)
+def remove_fuel_alert(
+    alert_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> None:
+    enforce_csrf(request)
+    from app.models.fuel_alert import FuelAlert
+
+    alert = db.get(FuelAlert, alert_id)
+    if alert is None or alert.user_id != current_user.id:
+        raise NotFoundError("Alerte introuvable.")
+    db.delete(alert)
+    db.commit()

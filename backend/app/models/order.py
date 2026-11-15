@@ -56,6 +56,9 @@ class Order(Base):
     delivery_address: Mapped[str | None] = mapped_column(String(255), nullable=True)
     delivery_phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     delivery_district: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # Position exacte donnée par le client (bouton « Utiliser ma position ») : itinéraire direct du livreur.
+    delivery_latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    delivery_longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     courier_user_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )

@@ -162,6 +162,11 @@ class LocalServiceItem(BaseModel):
     # Station : horaires et services (codes STATION_SERVICES).
     opening_hours: str | None = None
     services: list[str] = Field(default_factory=list)
+    # Signalements des clients sur place (2 dernières heures) : « il y en a », « plus rien », « longue file ».
+    crowd_found: list[str] = Field(default_factory=list)
+    crowd_out: list[str] = Field(default_factory=list)
+    crowd_queue: int = 0
+    crowd_at: str | None = None
 
 
 class CityCount(BaseModel):

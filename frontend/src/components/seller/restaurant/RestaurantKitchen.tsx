@@ -123,7 +123,17 @@ export function RestaurantKitchen({ orders }: { orders: RestaurantOrder[] }) {
                     </li>
                   ))}
                 </ul>
-                <p className="mt-2 text-xs text-ink-600">{order.delivery_address}</p>
+                <p className="mt-2 text-xs text-ink-600">
+                  {order.delivery_address}
+                  {order.delivery_maps_url ? (
+                    <>
+                      {" · "}
+                      <a href={order.delivery_maps_url} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-700 hover:underline">
+                        Itinéraire exact
+                      </a>
+                    </>
+                  ) : null}
+                </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {!paid && view === "nouvelles" ? (
                     <span className="rounded-pill bg-warning/25 px-3 py-1 text-xs font-semibold text-ink-900">Paiement en vérification</span>

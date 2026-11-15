@@ -40,6 +40,11 @@ export type LocalServiceItem = {
   opening_hours?: string | null;
   /** Stations : codes de services (voir STATION_SERVICE_LABELS). */
   services?: string[];
+  /** Signalements des clients sur place (2 dernières heures). */
+  crowd_found?: FuelKey[];
+  crowd_out?: FuelKey[];
+  crowd_queue?: number;
+  crowd_at?: string | null;
 };
 
 export type LocalServiceList = {
@@ -317,3 +322,6 @@ export type PharmacyDuty = {
   next: PharmacyDutyWeek | null;
   declared: PharmacyDutyItem[];
 };
+
+/** Alerte « Me prévenir » d'un client (station, marque ou ville). */
+export type FuelAlert = { id: string; fuel: FuelKey | "any"; label: string };

@@ -104,6 +104,9 @@ class RestaurantOrderCreateRequest(BaseModel):
     customer_name: str = Field(min_length=2, max_length=120)
     customer_phone: str = Field(min_length=6, max_length=40)
     delivery_address: str = Field(min_length=4, max_length=220)
+    # Position exacte (bouton « Utiliser ma position »), facultative ; vérifiée au Niger.
+    delivery_latitude: float | None = Field(default=None, ge=-90, le=90)
+    delivery_longitude: float | None = Field(default=None, ge=-180, le=180)
     payment_mode: str = Field(pattern="^[a-z0-9-]{2,30}$")
     transaction_code: str | None = Field(default=None, max_length=120)
     items: list[RestaurantOrderLineRequest] = Field(min_length=1, max_length=20)
@@ -131,6 +134,8 @@ class RestaurantOrderResponse(BaseModel):
     customer_name: str
     customer_phone: str
     delivery_address: str
+    # Itinéraire jusqu'à la position exacte du client (si donnée).
+    delivery_maps_url: str | None = None
     distance_km: float
     delivery_fee: float
     delivery_minutes: int

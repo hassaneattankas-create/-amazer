@@ -26,6 +26,7 @@ from app.models.order import Order, OrderFulfillment, OrderItem
 from app.models.product import Price, Product
 from app.models.receipt_scan import ReceiptScan
 from app.models.reseller import ResellerListing
+from app.services import delivery_position
 from app.services.payment_methods import intent_details, require_active_method
 from app.services.order_delivery_service import mark_order_delivered
 from app.services.reseller_account_service import reseller_terms, split_margin, subscription_active
@@ -556,6 +557,8 @@ def checkout(
     )
 
     require_active_method(db, payload.payment_mode)
+    # Position exacte facultative (bouton « Utiliser ma position ») : vérifiée au Niger.
+    position = delivery_position.checked(payload.delivery_latitude, payload.delivery_longitude)
     order = Order(
         user_id=current_user.id,
         affiliate_user_id=affiliate_user_id if affiliate_amount > 0 else None,
@@ -575,6 +578,8 @@ def checkout(
         delivery_address=payload.delivery_address,
         delivery_phone=payload.delivery_phone,
         delivery_district=payload.district,
+        delivery_latitude=position[0],
+        delivery_longitude=position[1],
     )
     reseller_percent = reseller_terms(db)[1] if any(row[2] for row in validated_items) else 0.0
     for price, quantity, listing in validated_items:

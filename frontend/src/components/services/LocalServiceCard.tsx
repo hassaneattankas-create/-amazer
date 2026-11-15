@@ -7,6 +7,7 @@ import { resolveImageUrl } from "@/lib/image";
 import { getShopRoute } from "@/lib/mobile-routes";
 import { recordOutletEvent } from "@/services/local-services-service";
 import { ReportStationButton } from "@/components/services/ReportStationButton";
+import { StationCrowd } from "@/components/services/StationCrowd";
 import { FUEL_LABELS, FUEL_STATE_LABELS, type FuelKey, type LocalServiceItem, type ServiceKind } from "@/types/local-services";
 import { STATION_SERVICE_LABELS, isStationServiceCode } from "@/types/station-space";
 
@@ -124,6 +125,9 @@ export function LocalServiceCard({ item, kind, distanceKm, compact = false, inSh
           )}
         </div>
       )}
+
+      {/* Stations : ce que disent les clients sur place, « Vous y êtes ? » et « Me prévenir ». */}
+      {kind === "fuel_station" ? <StationCrowd item={item} /> : null}
 
       {item.opening_hours || services.length ? (
         <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-ink-700">

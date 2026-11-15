@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Fuel, LocateFixed, Pill, Share2 } from "lucide-react";
 
 import { LocalServiceCard } from "@/components/services/LocalServiceCard";
+import { FuelAlertsPanel } from "@/components/services/FuelAlertsPanel";
 import { OfficialLists } from "@/components/services/OfficialLists";
 import { PharmacyDutyBoard } from "@/components/services/PharmacyDutyBoard";
 import type { MapLevel, MapPoint } from "@/components/services/ServicesMap";
@@ -445,6 +446,8 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
         {refreshedAt ? ` Actualisé à ${refreshedAt}.` : null}
         {deliveryCities.length ? ` Livraison AMAZER : ${deliveryCities.join(", ")}.` : null}
       </p>
+
+      {stations ? <FuelAlertsPanel city={city} /> : null}
 
       {stations ? <OfficialLists kind={kind} city={city} fuel={fuel} /> : null}
 

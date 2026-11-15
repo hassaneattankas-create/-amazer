@@ -44,6 +44,7 @@ from app.schemas.restaurant import (
     RestaurantStorefrontListResponse,
     RestaurantStorefrontResponse,
 )
+from app.services import delivery_position
 from app.services import order_event_notifications as order_events
 from app.services import restaurant_service
 from app.services.payment_methods import intent_details, require_active_method
@@ -151,6 +152,9 @@ def _order_response(order: RestaurantOrder, vendor_name: str, dish_map: dict[str
         customer_name=order.customer_name,
         customer_phone=order.customer_phone,
         delivery_address=order.delivery_address,
+        delivery_maps_url=delivery_position.directions_url(
+            getattr(order, "delivery_latitude", None), getattr(order, "delivery_longitude", None)
+        ),
         distance_km=order.distance_km,
         delivery_fee=order.delivery_fee,
         delivery_minutes=order.delivery_minutes,
@@ -710,12 +714,16 @@ def create_restaurant_order(
         code_hash = payment_code_hash(payload.transaction_code)
 
     require_active_method(db, payload.payment_mode)
+    # Position exacte facultative (bouton « Utiliser ma position ») : vérifiée au Niger.
+    position = delivery_position.checked(payload.delivery_latitude, payload.delivery_longitude)
     order = RestaurantOrder(
         vendor_id=payload.vendor_id,
         user_id=current_user.id,
         customer_name=payload.customer_name,
         customer_phone=payload.customer_phone,
         delivery_address=payload.delivery_address,
+        delivery_latitude=position[0],
+        delivery_longitude=position[1],
         distance_km=_INTERNAL_DELIVERY_DISTANCE_KM,
         delivery_fee=delivery_fee,
         delivery_minutes=delivery_minutes,

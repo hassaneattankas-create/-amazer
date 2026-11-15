@@ -250,6 +250,11 @@ def admin_create_official_list(
     row = create_list(db, data, entries)
     db.commit()
     cache_delete_prefixes(CACHE_PREFIX, SERVICES_PREFIX)
+    if row.kind == "fuel_supply":
+        # « Me prévenir » : les abonnés de la ville sont alertés du communiqué (en arrière-plan).
+        from app.services import fuel_alert_service
+
+        fuel_alert_service.queue_supply_list(row.city, row.fuel, row.title, len(entries))
     return _with_entries(db, [row])[0]
 
 

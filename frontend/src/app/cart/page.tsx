@@ -1,5 +1,6 @@
 "use client";
 
+import { DeliveryPositionButton, type DeliveryPosition } from "@/components/checkout/DeliveryPositionButton";
 import { ShoppingCart, Store, Zap } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -36,6 +37,8 @@ export default function CartPage() {
   const [deliveryType, setDeliveryType] = useState<"standard" | "express_niamey">("standard");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryPhone, setDeliveryPhone] = useState("");
+  // Position exacte du lieu de livraison (facultative) : itinéraire direct pour le livreur.
+  const [deliveryPosition, setDeliveryPosition] = useState<DeliveryPosition | null>(null);
   // Sans adresse ni telephone, le livreur ne peut pas livrer : on les exige avant la commande.
   // Panier 100 % numerique : pas de livraison, seul le telephone est demande (envoi du produit).
   const allDigital = items.length > 0 && items.every((item) => item.isDigital);
@@ -127,6 +130,9 @@ export default function CartPage() {
         district: deliveryType === "standard" && district ? district : undefined,
         delivery_address: deliveryAddress.trim() || undefined,
         delivery_phone: deliveryPhone.trim(),
+        ...(deliveryPosition && !allDigital
+          ? { delivery_latitude: deliveryPosition.latitude, delivery_longitude: deliveryPosition.longitude }
+          : {}),
         affiliate_code: getActiveAffiliateCode(),
       });
       let receiptHref: string | undefined;
@@ -297,16 +303,19 @@ export default function CartPage() {
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div className={`sm:col-span-2 ${allDigital ? "hidden" : ""}`}>
                 <label htmlFor="delivery-address" className="text-sm font-medium text-ink-800">
-                  Adresse de livraison
+                  Adresse et repère
                 </label>
                 <Input
                   id="delivery-address"
                   value={deliveryAddress}
                   onChange={(event) => setDeliveryAddress(event.target.value)}
-                  placeholder="Quartier, rue, repère (ex. près de la pharmacie)"
+                  placeholder="Quartier et repère (ex. portail bleu face à la mosquée)"
                   autoComplete="street-address"
                   className="mt-1 h-11"
                 />
+                <div className="mt-2">
+                  <DeliveryPositionButton value={deliveryPosition} onChange={setDeliveryPosition} />
+                </div>
               </div>
               <div>
                 <label htmlFor="delivery-phone" className="text-sm font-medium text-ink-800">

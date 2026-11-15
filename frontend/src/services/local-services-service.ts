@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { PharmacyDuty, FuelChange, FuelDashboard, FuelPlan, FuelManager, FuelKey, FuelNetwork, FuelOutlet, FuelStatus, FuelOutletInput, FuelOutletUpdate, LocalServiceList, ManagedOutlet, OfficialList, RegionManager, ServiceStatus, ServiceStatusUpdate, StationReport, StationReportKind, PharmacyListing } from "@/types/local-services";
+import type { PharmacyDuty, FuelChange, FuelDashboard, FuelPlan, FuelManager, FuelKey, FuelNetwork, FuelOutlet, FuelStatus, FuelOutletInput, FuelOutletUpdate, LocalServiceList, ManagedOutlet, OfficialList, RegionManager, ServiceStatus, ServiceStatusUpdate, StationReport, StationReportKind, PharmacyListing, FuelAlert } from "@/types/local-services";
 
 /** Toutes les pharmacies connues de la ville (position et numéro), de garde ou non. */
 export async function getPharmacyDirectory(city = "Niamey"): Promise<PharmacyListing[]> {
@@ -127,6 +127,24 @@ export async function listMyStationReports(): Promise<StationReport[]> {
 
 export async function reportStation(payload: { vendor_id: string; outlet_id: string | null; kind: StationReportKind; comment: string | null }): Promise<void> {
   await api.post("/api/v1/services/report", payload);
+}
+
+/** « Vous y êtes ? » : un client sur place signale en un geste (sans compte). */
+export async function reportFuelSignal(payload: { vendor_id: string; outlet_id: string | null; kind: "found" | "out" | "queue"; fuel?: FuelKey }): Promise<void> {
+  await api.post("/api/v1/services/fuel-signals", payload);
+}
+
+/** « Me prévenir » : alertes carburant du client connecté. */
+export async function listFuelAlerts(): Promise<FuelAlert[]> {
+  return (await api.get<FuelAlert[]>("/api/v1/services/fuel-alerts")).data;
+}
+
+export async function addFuelAlert(payload: { fuel: FuelKey | "any"; outlet_id?: string; vendor_id?: string; city?: string }): Promise<FuelAlert> {
+  return (await api.post<FuelAlert>("/api/v1/services/fuel-alerts", payload)).data;
+}
+
+export async function removeFuelAlert(id: string): Promise<void> {
+  await api.delete(`/api/v1/services/fuel-alerts/${id}`);
 }
 
 /** Statistiques de la station (appel, itinéraire, commande de gaz). Ne bloque jamais l'action du client. */

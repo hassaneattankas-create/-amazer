@@ -50,6 +50,9 @@ export type CheckoutPayload = {
   affiliate_code?: string;
   delivery_address?: string;
   delivery_phone?: string;
+  /** Position exacte du lieu de livraison (bouton « Utiliser ma position »). */
+  delivery_latitude?: number;
+  delivery_longitude?: number;
 };
 
 export type ReceiptLink = {
