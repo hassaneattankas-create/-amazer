@@ -103,3 +103,27 @@ def test_duplicate_listings_are_shown_once(monkeypatch) -> None:
     monkeypatch.setattr(product_service, "ProductService", FakeService)
     products = route.catalog_matches(Mock(), "telephone samsung")
     assert [p.id for p in products] == ["a", "c"]
+
+
+def test_public_knowledge_is_current_and_never_internal() -> None:
+    data = route.savoir()
+    titres = [fiche["titre"] for fiche in data["fiches"]]
+    assert titres and not any(t.lower().startswith(("admin", "démarcher")) for t in titres)
+    prompt = route.build_system_prompt([], None, "Combien coûte l'abonnement boutique ?")
+    # Prix réels, formule gratuite, et plus jamais « le vendeur reçoit le prix entier ».
+    assert "FAITS A JOUR" in prompt and "2 000 F" in prompt and "formule gratuite" in prompt
+    assert "prix entier" not in prompt and "Admin ·" not in prompt
+
+
+def test_question_brings_the_right_fiche() -> None:
+    assert route.savoir_matches("comment je reçois l'argent de mes ventes ?")[0]["titre"].startswith("Espace vendeur")
+    assert any("pharmacie" in f["titre"].lower() for f in route.savoir_matches("mettre ma pharmacie de garde"))
+
+
+def test_without_ai_a_fiche_answers_instead_of_a_generic_hello(monkeypatch) -> None:
+    monkeypatch.delenv("ASSISTANT_API_KEY", raising=False)
+    monkeypatch.setattr(route, "catalog_matches", lambda _db, _msg: [])
+    response = route.chat(
+        route.ChatRequest(messages=[{"role": "user", "content": "Comment relever les compteurs des pompes ?"}]), _request(), Mock()
+    )
+    assert response.mode == "faq" and response.reply != route._DEFAULT_REPLY

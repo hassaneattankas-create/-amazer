@@ -677,6 +677,26 @@ function SellerPageContent() {
             </div>
           </div>
 
+          {/* Boutiques : les clients paient AMAZER, qui reverse la part de la boutique sur ce numéro. */}
+          {!isRestaurant && !isPremium && !isLocalService ? (
+            <div className="border-t border-border pt-4">
+              <h3 className="font-semibold text-ink-900">Argent de vos ventes</h3>
+              <label className={`${labelClass} mt-2`}>
+                Numéro de reversement (Nita, Amana, Wave ou Airtel Money)
+                <input
+                  className={fieldClass}
+                  inputMode="tel"
+                  placeholder="Ex. 90 00 00 00"
+                  value={profileForm.payout_phone}
+                  onChange={(e) => setField("payout_phone")(e.target.value)}
+                />
+                <span className="mt-1 block text-xs font-normal text-ink-600">
+                  AMAZER y envoie votre part de chaque commande livrée. Il n&apos;est pas montré aux clients.
+                </span>
+              </label>
+            </div>
+          ) : null}
+
           <div className="border-t border-border pt-4">
             <h3 className="font-semibold text-ink-900">Formule</h3>
             <label className={`${labelClass} mt-2`}>

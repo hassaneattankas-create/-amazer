@@ -104,3 +104,26 @@ const write = (name, data) => {
 write("guides-amazer.json", fiches);
 write("faits-amazer.json", { maj: new Date().toISOString(), faits });
 console.log(`Savoir de l'Assistant : ${fiches.length} fiches, ${faits.length} faits → ${OUT}`);
+
+// Bulle « Assistant AMAZER » du site (clients et vendeurs) : même savoir, SANS l'administration ni la méthode commerciale interne.
+const interne = (titre) => /^admin\b|^démarcher/i.test(titre);
+const publicFiches = fiches
+  .filter((f) => !interne(f.titre))
+  .map((f) => ({
+    titre: f.titre,
+    pour: f.pour,
+    texte: [
+      f.resume,
+      ...(f.points ?? []),
+      ...(f.etapes ?? []).map((e) => (e.titre && e.titre !== f.titre ? `${e.titre} : ${e.texte}` : e.texte)),
+      ...(f.faq ?? []).map((q) => `Q : ${q.q} R : ${q.r}`),
+    ]
+      .filter(Boolean)
+      .join("\n")
+      .slice(0, 4000),
+  }));
+const publicFaits = faits.filter((l) => !/administration d'AMAZER|outil connaissance_amazer/i.test(l));
+const SITE_FILE = path.resolve(HERE, "../../../backend/app/data/savoir_public.json");
+fs.writeFileSync(`${SITE_FILE}.tmp`, JSON.stringify({ maj: new Date().toISOString(), faits: publicFaits, fiches: publicFiches }, null, 1), "utf-8");
+fs.renameSync(`${SITE_FILE}.tmp`, SITE_FILE);
+console.log(`Bulle d'aide du site : ${publicFiches.length} fiches publiques, ${publicFaits.length} faits → backend/app/data/savoir_public.json`);

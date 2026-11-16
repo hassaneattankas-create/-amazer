@@ -50,10 +50,10 @@ SYSTEM_PROMPT = (
     "- Affiliation : page Affiliation (gagner sur les abonnements des vendeurs amenes et un bonus par nouveau "
     "client).\n"
     "- Mot de passe oublie : page « Mot de passe oublie », code envoye par e-mail ou WhatsApp.\n"
-    "- Vendre : page « Devenir vendeur », choisir une formule (Boutique, Restaurant ou Premium), publier ses "
-    "produits. Le vendeur recoit le prix entier de ses articles ; la commission et les frais AMAZER sont payes "
-    "par le client.\n"
+    "- Vendre : page « Devenir vendeur », 14 jours d'essai, puis formules et prix : voir FAITS A JOUR.\n"
     "- Aide complete : page « Comment ca marche ? ».\n"
+    "- Les FAITS A JOUR et les FICHES ci-dessous priment sur tout le reste : suis leurs etapes et les noms de "
+    "boutons exacts, et cite les prix tels qu'ils y figurent.\n"
     "\n"
     "REGLES :\n"
     "- Tu n'as acces a aucun compte, commande ni paiement : ne pretends jamais le contraire.\n"
@@ -86,13 +86,14 @@ _FAQ = [
     (("commander", "acheter", "commande", "panier"),
      "Ajoutez les produits au panier, indiquez adresse et téléphone, choisissez le paiement puis « Commander »."),
     (("vendeur", "vendre", "ouvrir une boutique", "ma boutique", "restaurateur"),
-     "Ouvrez la page « Devenir vendeur », choisissez votre formule, puis publiez vos produits."),
+     "Ouvrez la page « Devenir vendeur » : 14 jours d'essai tout compris, puis choisissez votre formule et publiez vos produits."),
     (("message", "contacter la boutique", "ecrire"),
      "Sur la page d'une boutique, cliquez « Écrire à la boutique ». Vos échanges sont dans « Messages »."),
     (("promo", "promotion", "reduction", "solde"),
      "Les promotions du moment sont sur la page Promotions."),
-    (("abonnement", "renouveler", "expire"),
-     "L'abonnement vendeur se règle depuis l'espace vendeur ; la boutique reste visible tant qu'il est actif."),
+    (("abonnement", "renouveler", "expire", "formule", "tarif"),
+     "Boutique : 14 jours d'essai, puis formule gratuite (5 produits visibles, 5 % par vente) ou abonnement "
+     "Boutique (illimité, 0 %). Restaurant et Premium : abonnement mensuel. Tout se paie dans « Profil et abonnement »."),
     (("pharmacie", "de garde", "medicament"),
      "Ouvrez la page « Pharmacies » : les pharmacies de garde maintenant, avec appel et itinéraire. AMAZER ne vend pas de médicaments."),
     (("essence", "carburant", "station", "gasoil", "gaz"),
@@ -118,6 +119,50 @@ _STOPWORDS = {
     "aussi", "comment", "faire", "peut", "peux", "pouvez", "disponible", "dispo", "y", "a", "en", "de",
     "du", "la", "le", "et", "au", "aux", "c", "d", "l", "j", "s", "t", "n", "qu",
 }
+
+
+# Savoir public (généré par tools/e2e/explainer/savoir.mjs depuis docs/SAVOIR-ASSISTANT.md) : faits + fiches utiles.
+_SAVOIR_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "savoir_public.json")
+_savoir_cache: dict = {"mtime": None, "data": {"faits": [], "fiches": []}}
+_SAVOIR_STOP = {
+    "les", "des", "une", "est", "pour", "dans", "avec", "sur", "par", "qui", "que", "quoi", "comment", "faire",
+    "fait", "quel", "quelle", "quels", "quelles", "mon", "mes", "son", "ses", "leur", "aux", "ces", "cette",
+    "tout", "tous", "peut", "peux", "veux", "dois", "doit", "faut", "elle", "ils", "nous", "vous", "moi",
+    "pas", "plus", "bien", "amazer", "site", "bonjour", "merci", "svp",
+}
+
+
+def savoir() -> dict:
+    """Savoir public d'AMAZER (faits et fiches), relu quand le fichier change. Jamais d'erreur."""
+    try:
+        mtime = os.path.getmtime(_SAVOIR_FILE)
+        if mtime != _savoir_cache["mtime"]:
+            with open(_SAVOIR_FILE, encoding="utf-8") as handle:
+                _savoir_cache["data"] = json.load(handle)
+            _savoir_cache["mtime"] = mtime
+    except (OSError, ValueError):  # pragma: no cover - fichier absent ou illisible : le chat continue
+        pass
+    return _savoir_cache["data"]
+
+
+def savoir_matches(message: str, limit: int = 2) -> list[dict]:
+    """Fiches les plus utiles pour la question (titre prioritaire, corps plafonné)."""
+    words = [w for w in re.findall(r"[a-z0-9]+", _norm(message)) if len(w) > 2 and w not in _SAVOIR_STOP]
+    if not words:
+        return []
+    scored = []
+    for fiche in savoir().get("fiches", []):
+        head = _norm(f"{fiche.get('titre', '')} {fiche.get('pour', '')}")
+        body = _norm(fiche.get("texte", ""))
+        score = 0
+        for word in words:
+            root = re.sub(r"(s|x|es|er|ez|ent)$", "", word) if len(word) > 5 else word
+            score += (8 if root in head else 0) + min(body.count(root), 4)
+        if score:
+            scored.append((score, fiche))
+    scored.sort(key=lambda item: -item[0])
+    top = scored[0][0] if scored else 0
+    return [fiche for score, fiche in scored if score >= top / 3][:limit]
 
 
 def _norm(text: str) -> str:
@@ -200,8 +245,14 @@ def _support_whatsapp(db: Session) -> str | None:
         return None
 
 
-def build_system_prompt(products: list[AssistantProduct], support_whatsapp: str | None) -> str:
-    lines = [SYSTEM_PROMPT, "", "CATALOGUE (resultats reels pour la derniere question) :"]
+def build_system_prompt(products: list[AssistantProduct], support_whatsapp: str | None, question: str = "") -> str:
+    lines = [SYSTEM_PROMPT]
+    faits = savoir().get("faits", [])
+    if faits:
+        lines += ["", "FAITS A JOUR :", *[f"- {fait}" for fait in faits]]
+    for fiche in savoir_matches(question):
+        lines += ["", f"FICHE « {fiche.get('titre', '')} » (pour : {fiche.get('pour', '')}) :", fiche.get("texte", "")]
+    lines += ["", "CATALOGUE (resultats reels pour la derniere question) :"]
     if products:
         lines += [f"- {p.name} — {int(round(p.price)):,} XOF — boutique {p.shop}".replace(",", " ") for p in products]
         lines.append("Les fiches de ces produits s'affichent sous ta reponse : inutile de recopier les liens.")
@@ -224,7 +275,12 @@ def _gemini_reply(history: list[dict], model: str, api_key: str, system_prompt: 
     payload = {
         "system_instruction": {"parts": [{"text": system_prompt}]},
         "contents": contents,
-        "generationConfig": {"maxOutputTokens": 400, "temperature": 0.3},
+        # Sans « réflexion » (gemini 2.5) : sinon elle consomme le budget et la réponse est coupée.
+        "generationConfig": {
+            "maxOutputTokens": 600,
+            "temperature": 0.3,
+            **({"thinkingConfig": {"thinkingBudget": 0}} if "2.5" in model else {}),
+        },
     }
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     req = urllib.request.Request(
@@ -286,14 +342,19 @@ def chat(payload: ChatRequest, request: Request, db: Annotated[Session, Depends(
     products = catalog_matches(db, last_user)
     api_key = (os.getenv("ASSISTANT_API_KEY") or "").strip()
     if api_key:
-        system_prompt = build_system_prompt(products, _support_whatsapp(db))
+        system_prompt = build_system_prompt(products, _support_whatsapp(db), last_user)
         for model in _models_from_env():
             ai = _gemini_reply(history, model, api_key, system_prompt)
             if ai:
                 return ChatResponse(reply=ai, mode="ai", products=products)
 
-    # Repli sans IA : FAQ, ou les produits trouves.
+    # Repli sans IA : FAQ, ou les produits trouves, ou le debut de la fiche la plus utile.
     faq = faq_reply(last_user)
     if products and faq == _DEFAULT_REPLY:
         faq = "Voici ce que j'ai trouvé sur AMAZER :"
+    elif faq == _DEFAULT_REPLY:
+        fiches = savoir_matches(last_user, limit=1)
+        if fiches:
+            lines = [line for line in fiches[0].get("texte", "").split("\n") if line.strip()][:4]
+            faq = " ".join(lines)[:600] or _DEFAULT_REPLY
     return ChatResponse(reply=faq, mode="faq", products=products)

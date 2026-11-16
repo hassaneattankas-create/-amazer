@@ -33,6 +33,80 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - Paiement de l'abonnement : dans « Profil et abonnement », choisir la durée et le moyen (Nita, Amana…), envoyer la référence ; AMAZER valide.
 - Reversements : l'admin voit pour chaque boutique ce qui est à reverser (commandes livrées et payées, commission déduite) et clique « Reversé » ; la boutique est prévenue et voit « L'argent de mes ventes ».
 
+## Espace vendeur : onglets, commandes et produits
+- Où : Menu › « Ma Boutique » (espace vendeur ; « Activer vendeur » tant que l'abonnement d'un restaurant ou Premium n'est pas actif). Onglets : Accueil, Commandes, Produits, Ajouter, Réglages. En haut : « Voir ma boutique » et « Profil et abonnement ».
+- Accueil : chiffres (À préparer, Ventes sur 30 jours, Produits en ligne, Stock faible), « Ma formule », « Mes chiffres », « L'argent de mes ventes », « Mes statistiques », « Avis de mes clients », « Partager ma boutique », « Guide du vendeur », « Formations gratuites ».
+- Commandes : filtres À traiter, En cours, Terminées, Paiement en attente. États : Paiement en vérification (AMAZER vérifie, le vendeur est prévenu ensuite), À préparer, En préparation, En livraison, Livrée, Annulée. Boutons : « Préparer la commande », « Remise au livreur », « Marquer livrée ».
+- Produits : recherche, filtres En ligne / Masqués / Stock faible ; « Modifier » (marque, prix normal, stock, description, photo), « Remettre en ligne », « Supprimer ».
+- Promotion : dans « Modifier », mettre un prix promo plus bas et une durée : le produit apparaît dans « Promotions » avec le prix normal barré, puis revient seul à son prix normal ; « Arrêter la promo » pour la finir avant.
+- Ajouter un produit : nom, marque (facultatif), catégorie, prix (XOF), stock, photo (prendre une photo ou galerie), description, puis « Ajouter au catalogue ». Case « Produit numérique (e-book, formation, code…) » : pas de frais de livraison, le vendeur l'envoie au client (WhatsApp ou e-mail) après le paiement.
+- Outils Premium : « Importer des produits » (fichier CSV : nom, marque, prix, stock, description), « Import rapide par photos » (un produit brouillon, masqué, par photo : compléter ensuite le nom et le prix puis l'activer), « Exporter mes ventes ».
+- Réglages : « Compléter mon profil » ; « Supprimer mon compte » (mot de passe actuel ; irréversible : boutique fermée et données anonymisées).
+
+## Espace vendeur : statistiques, avis et argent des ventes
+- Mes statistiques (7 derniers jours) : visites de la vitrine, contacts (appel, WhatsApp, message), commandes et réservations, et « sur 100 visiteurs, environ X commandent ou réservent ». Conseil : partager le lien de la vitrine (statut WhatsApp, Facebook) pour avoir des visites.
+- Avis de mes clients : les clients notent après une commande livrée, un séjour ou un voyage ; « Répondre » puis « Publier la réponse ».
+- L'argent de mes ventes (boutiques) : à recevoir, pas encore livré, commission AMAZER (5 % en formule gratuite, 0 % avec l'abonnement Boutique). Les clients paient AMAZER ; dès qu'une commande est livrée, AMAZER reverse la part de la boutique sur son numéro de reversement.
+- Numéro de reversement : Profil et abonnement › « Argent de vos ventes » › « Numéro de reversement (Nita, Amana, Wave ou Airtel Money) ». Il n'est pas montré aux clients.
+
+## Profil et abonnement (vendeur)
+- Où : Espace vendeur › « Profil et abonnement ».
+- Payer l'abonnement : prix par mois affiché ; choisir la durée et le moyen de paiement, payer, saisir la « Référence du paiement (reçue par SMS) », puis « J'ai payé, envoyer » : AMAZER vérifie et prévient. « Prolonger mon abonnement » pour payer d'avance. Après avoir changé de formule : enregistrer le profil avant de payer.
+- Profil : logo, photo de couverture, contact client affiché sur la boutique (WhatsApp, téléphone, e-mail), horaires, ville, adresse / quartier, description ; boutiques : numéro de reversement.
+- Type d'activité : Boutique (produits), Restaurant (menu), Premium (hôtel, transport, pharmacie, station, entreprise). Hôtel, transport, pharmacie ou station-essence : AMAZER active la fonction adaptée après vérification de l'établissement (écrire sur WhatsApp depuis la page d'aide).
+- Restaurant et Premium : options du mini-site (boutique, restaurant, réservation de tables), « Numéro qui reçoit les paiements clients (Nita / Amana) » (affiché aux clients pour les réservations et acomptes), acompte de réservation (XOF) et moyen (Nita ou Amana), galerie photos, services (un par ligne : titre | description).
+- Toujours finir par « Enregistrer le profil ».
+
+## Espace restaurant : commandes, menu, réservations, horaires
+- Chiffres : commandes aujourd'hui, ventes du jour, à accepter, plats épuisés. Un son prévient à chaque nouvelle commande.
+- Commandes du restaurant : Nouvelles, En cuisine, En livraison, Terminées. « Accepter et préparer », « Refuser » (le client est prévenu et AMAZER le rembourse), « Prête : envoyer », « Marquer livrée », « Appeler », « Itinéraire exact » (quand le client a donné sa position). « Paiement en vérification » : attendre la confirmation d'AMAZER.
+- Mon menu : « Ajouter un plat » : nom, prix, rubrique du menu, préparation (minutes), description, photo, « Plat du jour (mis en avant) », options et suppléments (ex. « Supplément viande » 500 F, « Sans piment » 0 F), puis « Publier au menu ». « Retirer du menu (temporaire) » / « Remettre au menu » ; Supprimer.
+- Réservations de tables : À confirmer, Confirmée, Refusée ; « Confirmer », « Refuser », « Appeler ».
+- Réglages : « Mettre en pause » (bloque les nouvelles commandes sans toucher au menu) / « Reprendre les commandes » ; horaires d'ouverture par jour (« Appliquer les horaires du lundi à toute la semaine » ; après minuit, ex. 18:00 → 02:00) ; « Fermer automatiquement en dehors de mes horaires ». Sans horaires, le restaurant est ouvert en permanence.
+
+## Espace hôtel et transport : réservations, chambres, trajets
+- Hôtel : chiffres (arrivées aujourd'hui, départs aujourd'hui, occupation cette nuit, à confirmer) ; onglets Arrivées, En séjour, À venir, Historique. Boutons : « Confirmer » (après avoir vérifié le paiement), « Refuser » (client prévenu), « Client arrivé », « Absent » (chambre libérée), « Annuler », « Client parti », « Appeler ».
+- Chambres (dans Profil et abonnement) : nom, capacité, nombre de chambres de ce type, description, options (ex. Climatisée, TV, petit-déjeuner), photos, prix par nuit.
+- Transport : « Départs et passagers » ; « Scanner un billet » (QR code du voyageur) ; « Confirmer », « Refuser », « Embarqué », « Absent », appeler le passager ; départs à venir ou passés.
+- Trajets (dans Profil et abonnement) : nom (ex. Niamey - Maradi), nombre de places, options (ex. Climatisé, Wi-Fi, bagages), jours disponibles, heures de départ, prix par place.
+- Paiement : le client paie directement l'établissement (Nita ou Amana) ; l'établissement vérifie la référence avant de confirmer. Le client retrouve sa réservation et son billet (QR code à montrer au chauffeur) dans « Mes réservations » du tableau de bord.
+
+## Espace pharmacie : garde, position, livraison
+- Mes disponibilités : « Je suis de garde maintenant » / « Terminer ma garde » ; garde rapide « Cette nuit », « Ce week-end », « Toute la semaine » ; « Programmer une garde » (dates de début et de fin : elle s'active et s'arrête toute seule).
+- Liste officielle : si la pharmacie figure sur l'affiche de garde de la semaine, AMAZER l'affiche de garde automatiquement. De garde = en vert sur la carte et en premier dans la liste.
+- Position : « Enregistrer ma position » depuis la pharmacie : le bouton « Itinéraire » mène les clients chez vous dans Google Maps.
+- Livraison : dans les villes où AMAZER livre, les clients peuvent « Se faire livrer » depuis la pharmacie (numéro AMAZER).
+
+## Stations : espace du propriétaire de la marque
+- Où : l'espace vendeur du compte propriétaire de la marque. Sections : Vue d'ensemble, Responsables par ville, Stations par ville, Ventes de carburant, Activité, Retours clients, Livraisons, Abonnement et export, Vitrine, avis et parrainage.
+- Vue d'ensemble : résumé du réseau (stations à jour, à renseigner, sans gérant, retours ouverts), trafic des 30 derniers jours (itinéraires, appels, commandes de gaz, livraisons) et alertes (ruptures depuis plus de 24 h, stations à renseigner).
+- Responsables par ville : 1) désigner un ou plusieurs responsables par ville (e-mail de leur compte AMAZER, gratuit) ; 2) chaque responsable nomme les gérants de ses stations.
+- Stations par ville : « Ajouter une station » (nom, ville, adresse ou repère, téléphone ; le supplément de prix éventuel est affiché) ; « Mise à jour groupée » (ex. gaz disponible ou en rupture dans toutes les stations d'une ville, ou « Rien n'a changé »). Chaque station : Disponibilités, Gérants, Informations et horaires, Garde, Position Google Maps, Nom et ville, Enregistrer une livraison, « Indiquer fermée » / « Rouvrir la station », Supprimer.
+- Ventes de carburant : litres de super et de gasoil vendus (7 jours, par jour, par station), d'après les compteurs relevés par les gérants.
+- Activité : tout ce que font responsables et gérants sur 90 jours (filtres ville, station, rôle). Retours clients et livraisons : 30 derniers jours.
+- Abonnement et export : palier de la marque (Essentiel, Réseau, Entreprise selon le nombre de stations), prix mensuel ou prix négocié, historique et statistiques sur 12 mois.
+
+## Stations : responsable de ville et gérant
+- Accès : Menu › « Espace station » (amazer.store/gerant-station), avec le compte que le propriétaire ou le responsable a ajouté. Message « Aucune station ni ville ne vous est confiée » : demander à être ajouté avec l'e-mail de son compte.
+- Responsable de ville (« Mes villes ») : résumé (à jour, à renseigner, en rupture, sans gérant, retours ouverts), stations de la ville (Disponibilités, Gérants, Infos et position, Ventes, Livraisons, Gestion : renommer, fermer, rouvrir, supprimer), « Ajouter la station » (le propriétaire est prévenu : elle compte dans son abonnement), activité des gérants, retours clients.
+- Gérant (« Mes stations ») : Disponibilités (super, gasoil, gaz : Disponible, Stock faible ou Rupture ; « Rien n'a changé » pour confirmer), Informations et horaires (adresse, téléphone, horaires, services), Garde (jusqu'à nouvel ordre ou jusqu'à une date), Position Google Maps (« Je suis à la station : enregistrer la position », ou coller un lien Google Maps / des coordonnées), Ventes (compteurs), Livraisons (carburant, litres, n° de bon ou de camion, date), Retours clients (« Marquer traité » avec une note), Historique.
+- Compteurs : ajouter d'abord les pompes (nom, carburant) ; chaque soir, recopier le chiffre du compteur de chaque pompe ; le premier relevé sert de point de départ ; AMAZER calcule les litres vendus. Cocher « Compteur remis à zéro ou changé » si c'est le cas.
+- Mises à jour suspendues : la station est fermée ou l'abonnement de la marque a expiré ; prévenir le responsable.
+
+## Compte client : tableau de bord, préférences, reçus
+- Tableau de bord (Menu › Tableau de bord) : Mes commandes (suivi et reçu), Mes commandes restaurant (« Payer ou envoyer la référence », « Mon reçu »), Mes réservations (billet avec QR code), Préférences (pays et région, devise d'affichage, langue, son des notifications), Notifications (e-mail ; WhatsApp bientôt).
+- Supprimer mon compte : tableau de bord › « Supprimer mon compte » avec le mot de passe ; les données personnelles sont effacées, l'historique des commandes est conservé.
+- Notifications (page Notifications) : commandes, paiements, messages et livraisons, aussi envoyés par e-mail ; « Tout marquer comme lu », « Vider ».
+- Reçu : chaque commande a un reçu sécurisé avec un QR code à montrer au livreur (valable une seule fois) ; « Télécharger le reçu (PDF) », « Enregistrer en image », « Partager le reçu ».
+- Sécurité : AMAZER ne demande jamais le code secret Nita ou Amana, ni par SMS ni par appel.
+- Installer l'application : bandeau « Installez l'application AMAZER » › « Installer » (Android) ; sur iPhone : Partager, puis « Sur l'écran d'accueil ». Gratuite, légère, sans passer par le Play Store.
+
+## Messages, avis et aide
+- Écrire à une boutique : sur sa page, « Écrire à la boutique » ; les échanges sont dans « Messages ». « Signaler » une conversation (avec le motif) : l'équipe AMAZER est prévenue.
+- Avis sur un produit : seuls les clients qui l'ont reçu peuvent le noter (note, commentaire, lien de photo). Avis sur un établissement : après une commande livrée, un séjour ou un voyage ; l'établissement peut répondre.
+- Avis sur AMAZER : page « Avis » (note et expérience) ; un problème avec une commande : bouton « Écrivez-nous » (WhatsApp).
+- Aide : la bulle « Assistant AMAZER » en bas de l'écran répond aux questions ; « Besoin d'une personne ? » ouvre WhatsApp AMAZER. Page « Comment ça marche ? ».
+
 ## Admin · Accès et sécurité
 - Ouvrir l'espace admin : se connecter avec le compte administrateur, puis Menu › « Espace Admin » (adresse : amazer.store/admin). Ce lien n'apparaît que pour un compte administrateur.
 - Code PIN : à la première ouverture sur un appareil, saisir le PIN admin et la date secondaire (JJ/MM/AA), puis « Ouvrir l'espace admin ». Une seule saisie suffit : l'espace reste ouvert sur cet appareil.
