@@ -1,7 +1,8 @@
-"""Annuaire permanent des pharmacies (positions et numéros gardés, de garde ou non).
+"""Annuaire permanent des pharmacies du Niger (positions et numéros gardés, de garde ou non).
 
-- Au démarrage : les pharmacies de Niamey connues d'OpenStreetMap (position exacte), puis toutes les lignes
-  des affiches de garde déjà publiées (nom officiel, quartier, numéro).
+- Au démarrage : les pharmacies de Niamey connues d'OpenStreetMap (position exacte), celles de tout le Niger
+  (Zinder, Maradi, Tahoua…), puis toutes les lignes des affiches de garde déjà publiées (nom officiel,
+  quartier, numéro).
 - À chaque affiche publiée : ses pharmacies sont ajoutées ou complétées (le numéro le plus récent est gardé).
 - L'admin peut corriger une position : elle n'est plus jamais remplacée automatiquement.
 """
@@ -14,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.data.niamey_places import PHARMACIES
+from app.data.niger_pharmacies import PHARMACIES as NIGER_PHARMACIES
 from app.models.official_list import OfficialList, OfficialListEntry
 from app.models.pharmacy_directory import PharmacyListing
 from app.services import geo_lookup
@@ -34,8 +36,15 @@ def _display(osm_name: str) -> str:
     return text[:1].upper() + text[1:]
 
 
-def _rows(db: Session, city: str) -> list[PharmacyListing]:
-    return list(db.scalars(select(PharmacyListing).where(PharmacyListing.city_key == svc.normalize_city(city))).all())
+# Deux fiches à moins de ~50 m l'une de l'autre : la même pharmacie.
+SAME_SPOT = 0.0005
+
+
+def _rows(db: Session, city: str | None) -> list[PharmacyListing]:
+    query = select(PharmacyListing)
+    if city:
+        query = query.where(PharmacyListing.city_key == svc.normalize_city(city))
+    return list(db.scalars(query).all())
 
 
 def find(db: Session, city: str, name: str) -> PharmacyListing | None:
@@ -58,6 +67,57 @@ def _seed_osm(db: Session, city: str = "Niamey") -> int:
             continue
         known.add(key)
         db.add(PharmacyListing(city=city, city_key=ck, name=_display(osm_name)[:140], name_key=key[:140], latitude=lat, longitude=lng, position_source="osm"))
+        added += 1
+    db.flush()
+    return added
+
+
+def _seed_niger(db: Session) -> int:
+    """Pharmacies OpenStreetMap de tout le Niger : ajoute celles qui manquent (idempotent).
+
+    Une fiche déjà présente (même identifiant OSM, même endroit, ou même nom dans la ville) n'est jamais
+    dupliquée : elle reçoit seulement son identifiant OSM, pour que la vérification suivante soit immédiate.
+    """
+    rows = _rows(db, None)
+    by_osm = {row.osm_id for row in rows if row.osm_id}
+    by_name = {(row.city_key, row.name_key): row for row in rows}
+    added = 0
+    for osm_id, osm_name, city, lat, lng in NIGER_PHARMACIES:
+        if osm_id in by_osm:
+            continue
+        ck = svc.normalize_city(city)
+        key = name_key(osm_name)
+        same = next(
+            (
+                row
+                for row in rows
+                if row.latitude is not None
+                and row.longitude is not None
+                and abs(row.latitude - lat) < SAME_SPOT
+                and abs(row.longitude - lng) < SAME_SPOT
+            ),
+            None,
+        ) or (by_name.get((ck, key)) if key else None)
+        if same is not None:
+            if not same.osm_id:
+                same.osm_id = osm_id
+            by_osm.add(osm_id)
+            continue
+        # Sans nom dans OpenStreetMap : « Pharmacie », avec une clé propre (jamais confondue avec une affiche).
+        row = PharmacyListing(
+            city=city[:80],
+            city_key=ck[:80],
+            name=(_display(osm_name) if key else "Pharmacie")[:140],
+            name_key=(key or f"osm {osm_id}")[:140],
+            latitude=lat,
+            longitude=lng,
+            position_source="osm",
+            osm_id=osm_id,
+        )
+        db.add(row)
+        rows.append(row)
+        by_name[(row.city_key, row.name_key)] = row
+        by_osm.add(osm_id)
         added += 1
     db.flush()
     return added
@@ -108,8 +168,9 @@ def upsert_entries(db: Session, city: str, entries: list) -> int:
 
 
 def ensure_seeded(db: Session) -> int:
-    """OpenStreetMap puis toutes les affiches de garde déjà publiées (idempotent)."""
+    """OpenStreetMap (Niamey puis tout le Niger) et toutes les affiches de garde déjà publiées (idempotent)."""
     added = _seed_osm(db)
+    added += _seed_niger(db)
     lists = db.scalars(select(OfficialList).where(OfficialList.kind == "pharmacy_duty").order_by(OfficialList.starts_at)).all()
     for row in lists:
         entries = db.scalars(select(OfficialListEntry).where(OfficialListEntry.list_id == row.id).order_by(OfficialListEntry.position)).all()
@@ -118,8 +179,9 @@ def ensure_seeded(db: Session) -> int:
     return added
 
 
-def directory(db: Session, city: str) -> list[PharmacyListing]:
-    return sorted(_rows(db, city), key=lambda r: r.name.lower())
+def directory(db: Session, city: str | None) -> list[PharmacyListing]:
+    """Pharmacies de la ville (ou de tout le Niger sans ville), par ordre alphabétique."""
+    return sorted(_rows(db, city), key=lambda r: (r.name.lower(), r.city_key))
 
 
 def position_of(db: Session, city: str, name: str) -> tuple[float, float, bool, str | None] | None:

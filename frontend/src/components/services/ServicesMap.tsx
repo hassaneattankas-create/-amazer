@@ -27,7 +27,7 @@ export type MapPoint = {
   lines: string[];
   phone: string | null;
   mapsUrl: string;
-  /** Petit point gris : établissement connu d'OpenStreetMap mais pas (encore) inscrit sur AMAZER. */
+  /** Petit point gris : pharmacie de l'annuaire (OpenStreetMap, affiches de garde) qui n'est pas de garde. */
   variant?: "dot";
 };
 
@@ -198,8 +198,8 @@ export type ServicesMapProps = {
   legend?: { level: MapLevel; label: string }[];
   /** « Tout le Niger » : cadrer d'abord autour de Niamey quand des points s'y trouvent. */
   home?: GeoPoint | null;
-  /** Quartiers proposés par la recherche (la carte s'y centre). */
-  places?: { name: string; lat: number; lng: number }[];
+  /** Quartiers et villes proposés par la recherche (la carte s'y centre). */
+  places?: { name: string; lat: number; lng: number; town?: boolean }[];
 };
 
 type Hit = { key: string; name: string; sub: string; lat: number; lng: number; zoom: number };
@@ -343,7 +343,7 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
     const timer = idle === null ? window.setTimeout(addDots, 300) : null;
     // Cadrage : les listes officielles d'abord (gardes de la semaine), sinon les établissements inscrits ;
     // sur « Tout le Niger », autour de Niamey s'il y en a (une station de Maradi ne dézoome pas tout le pays).
-    // Les petits points gris (stations non inscrites) ne décident du cadrage que s'il n'y a rien d'autre.
+    // Les petits points gris (autres pharmacies) ne décident du cadrage que s'il n'y a rien d'autre.
     const main = points.filter((point) => point.variant !== "dot");
     const listed = main.length ? main : placed.length ? [] : points;
     const all: L.LatLngTuple[] = [
@@ -374,7 +374,7 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
     current.setView(at, 13);
   }, [position]);
 
-  // Recherche : établissements de la carte (inscrits, listes officielles, OpenStreetMap) puis quartiers.
+  // Recherche : établissements de la carte (inscrits, listes officielles, OpenStreetMap) puis quartiers et villes.
   const hits = useMemo((): Hit[] => {
     const words = plain(query).split(" ").filter(Boolean);
     if (!words.length) return [];
@@ -397,15 +397,29 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
     }
     for (const point of points) {
       if (match(`${point.name} ${point.lines.join(" ")} ${point.area ?? ""}`)) {
-        found.push({ key: `p:${point.id}`, name: point.name, sub: point.lines[0] ?? "", lat: point.latitude, lng: point.longitude, zoom: 16 });
+        // Petit point : le repère et la ville d'abord (« Pas de garde… » est le même pour tous).
+        const sub = point.variant === "dot" ? point.lines.slice(1).join(" · ") || point.lines[0] : point.lines[0];
+        found.push({ key: `p:${point.id}`, name: point.name, sub: sub ?? "", lat: point.latitude, lng: point.longitude, zoom: 16 });
       }
     }
     // Les noms qui commencent par le mot cherché d'abord, puis les quartiers.
     const ranked = found.sort((a, b) => Number(!plain(a.name).startsWith(words[0])) - Number(!plain(b.name).startsWith(words[0])));
     const zones = places
       .filter((place) => match(place.name))
-      .map((place): Hit => ({ key: `q:${place.name}`, name: place.name, sub: "Quartier : la carte se centre dessus", lat: place.lat, lng: place.lng, zoom: 15 }));
-    return [...ranked.slice(0, 6), ...zones.slice(0, 3)];
+      .map(
+        (place): Hit => ({
+          key: `${place.town ? "v" : "q"}:${place.name}`,
+          name: place.name,
+          sub: place.town ? "Ville : la carte se centre dessus" : "Quartier : la carte se centre dessus",
+          lat: place.lat,
+          lng: place.lng,
+          zoom: place.town ? 13 : 15,
+        })
+      );
+    // Une ville cherchée par son nom (« Zinder ») passe avant tout le reste.
+    const towns = zones.filter((zone) => zone.key.startsWith("v:") && plain(zone.name).startsWith(words[0]));
+    const others = zones.filter((zone) => !towns.includes(zone));
+    return [...towns.slice(0, 2), ...ranked.slice(0, 6), ...others.slice(0, 3)];
   }, [query, items, points, places]);
 
   const goTo = (hit: Hit) => {
@@ -421,10 +435,10 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
   const what = kind === "pharmacy" ? "une pharmacie" : "une station";
   return (
     <div className="space-y-2">
-      {/* Recherche sur la carte : un nom (« Gobi », « Total ») ou un quartier (« Koira Kano »). */}
+      {/* Recherche sur la carte : un nom (« Gobi », « Total »), un quartier (« Koira Kano ») ou une ville (« Zinder »). */}
       <div className="relative">
         <label htmlFor={`${kind}-map-search`} className="sr-only">
-          Chercher {what} ou un quartier sur la carte
+          Chercher {what}, un quartier ou une ville sur la carte
         </label>
         <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-500" aria-hidden="true" />
         <input
@@ -443,7 +457,7 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
               goTo(hits[0]);
             }
           }}
-          placeholder={`Chercher ${what} ou un quartier`}
+          placeholder={`Chercher ${what}, un quartier, une ville`}
           autoComplete="off"
           className="h-12 w-full rounded-pill border border-border bg-card pl-12 pr-12 text-base text-ink-900 placeholder:text-ink-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         />
@@ -478,7 +492,7 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
           </ul>
         ) : (
           <p className="rounded-card border border-border bg-card px-4 py-3 text-sm text-ink-700" role="status">
-            Rien trouvé sur la carte pour « {query.trim()} ». Essayez un autre nom ou le quartier.
+            Rien trouvé sur la carte pour « {query.trim()} ». Essayez un autre nom, le quartier ou la ville.
           </p>
         )
       ) : null}
@@ -517,9 +531,7 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
         {points.some((point) => point.variant === "dot") ? (
           <li className="inline-flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-ink-400" aria-hidden="true" />
-            {kind === "pharmacy"
-              ? "Petit point gris : autre pharmacie (horaires habituels)"
-              : "Petit point gris : station pas encore sur AMAZER (disponibilités inconnues)"}
+            Petit point gris : autre pharmacie (horaires habituels)
           </li>
         ) : null}
         {points.some((point) => point.approximate) ? (

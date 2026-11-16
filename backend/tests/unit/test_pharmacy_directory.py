@@ -70,3 +70,26 @@ def test_admin_position_is_never_overwritten(db: Session) -> None:
     assert (row.latitude, row.longitude, row.position_source) == (13.5, 2.11, "admin")
     assert row.phone == "90 00 00 02"
     assert directory.position_of(db, "Niamey", "Inconnue Test") == (13.5, 2.11, False, None)
+
+
+def test_whole_niger_is_seeded_once_without_duplicates(db: Session) -> None:
+    directory.ensure_seeded(db)
+    total = len(directory.directory(db, None))
+    cities = {row.city for row in directory.directory(db, None)}
+    assert {"Niamey", "Zinder", "Maradi", "Tahoua", "Agadez", "Dosso"} <= cities
+    assert all(row.latitude is not None for row in directory.directory(db, "Zinder"))
+    # Deuxième démarrage : rien de plus.
+    assert directory.ensure_seeded(db) == 0
+    assert len(directory.directory(db, None)) == total
+    # Une pharmacie sans nom dans OpenStreetMap reste visible, sous le nom « Pharmacie ».
+    assert any(row.name == "Pharmacie" and row.name_key.startswith("osm ") for row in directory.directory(db, None))
+
+
+def test_a_corrected_position_never_brings_back_the_osm_spot(db: Session) -> None:
+    directory.ensure_seeded(db)
+    total = len(directory.directory(db, None))
+    row = next(r for r in directory.directory(db, "Zinder") if r.osm_id)
+    directory.set_position(row, 13.80, 8.99)
+    db.commit()
+    directory.ensure_seeded(db)
+    assert len(directory.directory(db, None)) == total

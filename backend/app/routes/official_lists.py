@@ -339,6 +339,7 @@ class PharmacyDirectoryItem(BaseModel):
 
     id: str
     name: str
+    city: str
     district: str | None
     location: str | None
     phone: str | None
@@ -364,6 +365,7 @@ def _directory_item(row) -> PharmacyDirectoryItem:
     return PharmacyDirectoryItem(
         id=row.id,
         name=row.name,
+        city=row.city,
         district=row.district,
         location=row.location,
         phone=row.phone,
@@ -379,10 +381,10 @@ def _directory_item(row) -> PharmacyDirectoryItem:
 @router.get("/services/pharmacy-directory", response_model=list[PharmacyDirectoryItem])
 def pharmacy_directory(
     db: Annotated[Session, Depends(get_db)],
-    city: Annotated[str, Query(min_length=2, max_length=80)] = "Niamey",
+    city: Annotated[str | None, Query(min_length=2, max_length=80)] = None,
 ) -> list[PharmacyDirectoryItem]:
-    """Toutes les pharmacies connues de la ville (position et numéro), de garde ou non."""
-    key = build_cache_key(SERVICES_PREFIX + "pharmacy-directory", city=svc.normalize_city(city))
+    """Toutes les pharmacies connues de la ville, ou de tout le Niger sans ville (position et numéro), de garde ou non."""
+    key = build_cache_key(SERVICES_PREFIX + "pharmacy-directory", city=svc.normalize_city(city) if city else "niger")
     cached = cache_get_json(key)
     if cached is not None:
         return [PharmacyDirectoryItem(**i) for i in cached]

@@ -1,4 +1,4 @@
-"""Annuaire permanent des pharmacies d'une ville : position et numéro gardés, de garde ou non.
+"""Annuaire permanent des pharmacies du Niger : position et numéro gardés, de garde ou non.
 
 Alimenté par OpenStreetMap (positions exactes) et par chaque affiche officielle de garde (nom, quartier,
 numéro) ; l'admin peut corriger une position (Admin › Gardes › Annuaire des pharmacies).
@@ -32,5 +32,7 @@ class PharmacyListing(Base):
     # osm (position exacte OpenStreetMap), quartier (centre du quartier), admin (corrigée par AMAZER).
     position_source: Mapped[str | None] = mapped_column(String(16), nullable=True)
     area: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # Fiche OpenStreetMap d'origine (« n1234 ») : l'annuaire national n'ajoute jamais deux fois la même.
+    osm_id: Mapped[str | None] = mapped_column(String(24), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

@@ -259,6 +259,9 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS duty_end DATE",
         # Visibilité prioritaire (admin) : en tête des listes jusqu'à cette date.
         "ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS priority_until TIMESTAMPTZ",
+        # Annuaire des pharmacies : fiche OpenStreetMap d'origine (annuaire national, sans doublon).
+        "ALTER TABLE pharmacy_directory ADD COLUMN IF NOT EXISTS osm_id VARCHAR(24)",
+        "CREATE INDEX IF NOT EXISTS ix_pharmacy_directory_osm_id ON pharmacy_directory (osm_id)",
         # Position GPS de livraison donnée par le client (commandes et repas).
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_latitude DOUBLE PRECISION",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_longitude DOUBLE PRECISION",

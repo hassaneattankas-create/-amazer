@@ -1,9 +1,9 @@
 import { api } from "@/lib/api";
 import type { PharmacyDuty, FuelChange, FuelDashboard, FuelPlan, FuelManager, FuelKey, FuelNetwork, FuelOutlet, FuelStatus, FuelOutletInput, FuelOutletUpdate, LocalServiceList, ManagedOutlet, OfficialList, RegionManager, ServiceStatus, ServiceStatusUpdate, StationReport, StationReportKind, PharmacyListing, FuelAlert } from "@/types/local-services";
 
-/** Toutes les pharmacies connues de la ville (position et numéro), de garde ou non. */
-export async function getPharmacyDirectory(city = "Niamey"): Promise<PharmacyListing[]> {
-  const response = await api.get<PharmacyListing[]>("/api/v1/services/pharmacy-directory", { params: { city } });
+/** Annuaire des pharmacies : celles de la ville, ou de tout le Niger sans ville. */
+export async function getPharmacyDirectory(city?: string): Promise<PharmacyListing[]> {
+  const response = await api.get<PharmacyListing[]>("/api/v1/services/pharmacy-directory", { params: city ? { city } : {} });
   return response.data;
 }
 

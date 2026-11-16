@@ -51,12 +51,13 @@ const ServicesMap = dynamic(() => import("@/components/services/ServicesMap").th
   loading: () => <div className="aspect-[4/3] w-full animate-pulse rounded-card border border-border bg-surface-1 sm:aspect-video" aria-busy="true" />,
 });
 
-/** Établissement ou quartier de Niamey tiré d'OpenStreetMap (fichiers de public/data). */
+/** Pharmacie de l'annuaire, quartier de Niamey ou ville du Niger (OpenStreetMap, fichiers de public/data). */
 type OsmPlace = {
   n: string;
-  b?: string;
   lat: number;
   lng: number;
+  /** Ville de la pharmacie (annuaire national). */
+  city?: string;
   /** Annuaire des pharmacies : numéro (format tel), repère, position approximative (quartier). */
   phone?: string | null;
   where?: string;
@@ -150,37 +151,33 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
     enabled: kind === "pharmacy",
   });
 
-  // Toutes les stations-service (OpenStreetMap) et toutes les pharmacies (annuaire AMAZER : position et numéro
-  // gardés, de garde ou non) en petits points gris : la carte n'est jamais vide et on peut chercher n'importe laquelle.
+  // Toutes les pharmacies du Niger (annuaire AMAZER : position et numéro gardés, de garde ou non) en petits
+  // points gris : la carte n'est jamais vide et on peut chercher n'importe laquelle. Stations : seulement celles
+  // inscrites sur AMAZER (une station inconnue n'a aucune disponibilité à montrer).
   const inNiamey = !city || city.toLowerCase() === "niamey";
-  // Stations : seulement sur « Toutes », sans filtre de carburant (une station inconnue n'est pas « disponible »).
-  const showOsm = stations ? inNiamey && !onlyActive && !dutyOnly && !fuel : true;
+  const showOsm = !stations;
   const { data: osmPlaces } = useQuery({
-    queryKey: ["osm-niamey", kind, dutyCity],
+    queryKey: ["pharmacy-directory", city || "niger"],
     queryFn: async (): Promise<OsmPlace[]> => {
-      if (!stations) {
-        const listings = await getPharmacyDirectory(dutyCity);
-        return listings
-          .filter((p) => p.latitude != null && p.longitude != null)
-          .map((p) => ({
-            n: p.name,
-            lat: p.latitude as number,
-            lng: p.longitude as number,
-            phone: p.phone_link,
-            where: [p.location, p.district].filter(Boolean).join(" · "),
-            approximate: p.approximate,
-            area: p.area,
-          }));
-      }
-      const response = await fetch("/data/niamey-stations-osm.json");
-      if (!response.ok) return [];
-      const body = (await response.json()) as { stations: OsmPlace[] };
-      return body.stations;
+      const listings = await getPharmacyDirectory(city || undefined);
+      return listings
+        .filter((p) => p.latitude != null && p.longitude != null)
+        .map((p) => ({
+          n: p.name,
+          lat: p.latitude as number,
+          lng: p.longitude as number,
+          city: p.city,
+          phone: p.phone_link,
+          where: [p.location, p.district, p.city && p.city.toLowerCase() !== "niamey" ? p.city : null].filter(Boolean).join(" · "),
+          approximate: p.approximate,
+          area: p.area,
+        }));
     },
-    staleTime: stations ? Infinity : 5 * 60_000,
+    staleTime: 5 * 60_000,
     enabled: showOsm,
   });
-  const { data: quartiers = [] } = useQuery({
+  // Recherche sur la carte : les quartiers de Niamey et les villes du Niger.
+  const { data: quartiers } = useQuery({
     queryKey: ["niamey-quartiers"],
     queryFn: async () => {
       const response = await fetch("/data/niamey-quartiers.json");
@@ -191,6 +188,17 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
     staleTime: Infinity,
     enabled: inNiamey,
   });
+  const { data: villes } = useQuery({
+    queryKey: ["niger-villes"],
+    queryFn: async () => {
+      const response = await fetch("/data/niger-villes.json");
+      if (!response.ok) return [];
+      const body = (await response.json()) as { villes: OsmPlace[] };
+      return body.villes.map((v) => ({ name: v.n, lat: v.lat, lng: v.lng, town: true }));
+    },
+    staleTime: Infinity,
+  });
+  const places = useMemo(() => [...(inNiamey ? (quartiers ?? []) : []), ...(villes ?? [])], [inNiamey, quartiers, villes]);
 
   const dutyWeek = duty?.current?.items;
   const dutyDeclared = duty?.declared;
@@ -252,26 +260,26 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
         ...registered.filter((item) => item.latitude != null && item.longitude != null).map((item) => [item.latitude as number, item.longitude as number]),
         ...points.map((point) => [point.latitude, point.longitude]),
       ];
-      const dutyNames = stations ? [] : (dutyWeek ?? []).map((item) => bareName(item.name)).filter((name) => name.length >= 4);
-      const onDutyList = !stations && Boolean(dutyWeek?.length);
+      const dutyNames = (dutyWeek ?? []).map((item) => bareName(item.name)).filter((name) => name.length >= 4);
+      // L'affiche de garde ne vaut que pour sa ville : une pharmacie de Zinder n'est pas « hors garde » à Niamey.
+      const onDutyList = Boolean(dutyWeek?.length);
+      const inDutyCity = (place: OsmPlace) => !place.city || place.city.localeCompare(dutyCity, "fr", { sensitivity: "base" }) === 0;
       for (const place of osmPlaces) {
         if (taken.some(([lat, lng]) => Math.abs(lat - place.lat) < 0.001 && Math.abs(lng - place.lng) < 0.001)) continue;
         const bare = bareName(place.n);
         if (dutyNames.some((name) => bare.includes(name) || (bare.length >= 4 && name.includes(bare)))) continue;
         points.push({
           id: `osm:${place.lat},${place.lng}`,
-          name: stations ? (place.b ? `${place.n} (${place.b})` : place.n) : /^pharmacie/i.test(place.n) ? place.n : `Pharmacie ${place.n}`,
+          name: /^pharmacie/i.test(place.n) ? place.n : `Pharmacie ${place.n}`,
           latitude: place.lat,
           longitude: place.lng,
           level: "unknown",
           approximate: Boolean(place.approximate),
           area: place.area ?? null,
           lines: [
-            stations
-              ? "Pas encore sur AMAZER : disponibilités inconnues, appelez ou passez voir."
-              : onDutyList
-                ? "Pas de garde cette semaine d'après la liste officielle : horaires habituels."
-                : "Horaires habituels : appelez avant de vous déplacer.",
+            onDutyList && inDutyCity(place)
+              ? "Pas de garde cette semaine d'après la liste officielle : horaires habituels."
+              : "Horaires habituels : appelez avant de vous déplacer.",
             place.where ?? "",
           ].filter(Boolean),
           phone: place.phone ? `tel:${place.phone}` : null,
@@ -281,7 +289,7 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
       }
     }
     return { points, unplaced, registered };
-  }, [kind, stations, dutyWeek, dutyDeclared, official, fuel, items, showOsm, osmPlaces]);
+  }, [kind, dutyWeek, dutyDeclared, dutyCity, official, fuel, items, showOsm, osmPlaces]);
 
   const locate = () => {
     if (!("geolocation" in navigator)) {
@@ -382,7 +390,7 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
           unplaced={map.unplaced}
           legend={kind === "pharmacy" ? PHARMACY_LEGEND : undefined}
           home={city ? null : NIAMEY_CENTER}
-          places={quartiers}
+          places={places}
         />
       </section>
 
