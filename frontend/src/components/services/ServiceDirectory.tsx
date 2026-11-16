@@ -199,6 +199,11 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
     staleTime: Infinity,
   });
   const places = useMemo(() => [...(inNiamey ? (quartiers ?? []) : []), ...(villes ?? [])], [inNiamey, quartiers, villes]);
+  // Ville choisie : la carte s'y centre même sans établissement à montrer.
+  const focus = useMemo(() => {
+    const town = city ? villes?.find((v) => v.name.localeCompare(city, "fr", { sensitivity: "base" }) === 0) : undefined;
+    return town ? { lat: town.lat, lng: town.lng } : null;
+  }, [city, villes]);
 
   const dutyWeek = duty?.current?.items;
   const dutyDeclared = duty?.declared;
@@ -391,6 +396,17 @@ export function ServiceDirectory({ kind }: { kind: ServiceKind }) {
           legend={kind === "pharmacy" ? PHARMACY_LEGEND : undefined}
           home={city ? null : NIAMEY_CENTER}
           places={places}
+          focus={focus}
+          emptyNote={
+            stations && !isPending && !map.points.length && !map.registered.some((item) => item.latitude != null && item.longitude != null) ? (
+              <>
+                Aucune station inscrite à montrer ici pour le moment : chaque station apparaît sur la carte dès qu&apos;elle rejoint AMAZER.{" "}
+                <Link href="/vendre" className="font-semibold text-brand-700 underline underline-offset-2">
+                  Inscrire ma station
+                </Link>
+              </>
+            ) : null
+          }
         />
       </section>
 

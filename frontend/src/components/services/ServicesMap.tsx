@@ -5,7 +5,7 @@
 import "leaflet/dist/leaflet.css";
 
 import L from "leaflet";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Layers, MapPin, Search, X } from "lucide-react";
 
 import type { GeoPoint } from "@/lib/local-services";
@@ -200,6 +200,10 @@ export type ServicesMapProps = {
   home?: GeoPoint | null;
   /** Quartiers et villes proposés par la recherche (la carte s'y centre). */
   places?: { name: string; lat: number; lng: number; town?: boolean }[];
+  /** Message posé sur la carte quand elle n'a rien à montrer (ex. aucune station inscrite ici). */
+  emptyNote?: ReactNode;
+  /** Ville choisie : la carte s'y centre quand elle n'a rien d'autre à cadrer. */
+  focus?: GeoPoint | null;
 };
 
 type Hit = { key: string; name: string; sub: string; lat: number; lng: number; zoom: number };
@@ -216,7 +220,7 @@ function plain(value: string): string {
 }
 
 /** Établissements placés sur la carte (inscrits avec leur position, listes officielles), et le client s'il s'est localisé. */
-export function ServicesMap({ kind, items, fuel, position, points = [], unplaced = 0, legend, home = null, places = [] }: ServicesMapProps) {
+export function ServicesMap({ kind, items, fuel, position, points = [], unplaced = 0, legend, home = null, places = [], emptyNote = null, focus = null }: ServicesMapProps) {
   const holder = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const stations = useRef<L.LayerGroup | null>(null);
@@ -356,13 +360,17 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
     if (key !== framed.current && !position && spots.length) {
       framed.current = key;
       current.fitBounds(L.latLngBounds(spots), { padding: [32, 32], maxZoom: 14 });
+    } else if (!spots.length && focus && !position && framed.current !== `ville:${focus.lat},${focus.lng}`) {
+      // Rien à cadrer dans la ville choisie (ex. aucune station à Tahoua) : la carte va quand même sur la ville.
+      framed.current = `ville:${focus.lat},${focus.lng}`;
+      current.setView([focus.lat, focus.lng], 13);
     }
     return () => {
       cancelled = true;
       if (idle !== null) window.cancelIdleCallback(idle);
       if (timer !== null) window.clearTimeout(timer);
     };
-  }, [kind, items, fuel, position, points, home]);
+  }, [kind, items, fuel, position, points, home, focus]);
 
   // Le client : son point et la carte centrée sur lui.
   useEffect(() => {
@@ -457,7 +465,7 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
               goTo(hits[0]);
             }
           }}
-          placeholder={`Chercher ${what}, un quartier, une ville`}
+          placeholder={`${kind === "pharmacy" ? "Pharmacie" : "Station"}, quartier ou ville`}
           autoComplete="off"
           className="h-12 w-full rounded-pill border border-border bg-card pl-12 pr-12 text-base text-ink-900 placeholder:text-ink-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         />
@@ -503,6 +511,11 @@ export function ServicesMap({ kind, items, fuel, position, points = [], unplaced
           role="region"
           aria-label={kind === "pharmacy" ? "Carte des pharmacies" : "Carte des stations"}
         />
+        {emptyNote ? (
+          <p role="status" className="absolute inset-x-2 bottom-2 z-[1000] rounded-card border border-border bg-card px-3 py-2 text-sm text-ink-800 shadow-raised">
+            {emptyNote}
+          </p>
+        ) : null}
         {MAPBOX_TOKEN ? (
           <button
             type="button"
