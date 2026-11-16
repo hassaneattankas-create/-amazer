@@ -23,6 +23,7 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - Affiliés : part des abonnements des vendeurs amenés et bonus sur la 1re commande livrée des clients amenés. Revendeurs : ils fixent leur prix et gardent la marge.
 - Chaque nouveau compte reçoit un message de bienvenue (réglé par l'admin) avec les liens du groupe et de la chaîne WhatsApp d'AMAZER.
 - Contact public : amazer.niger2@gmail.com.
+- L'administration d'AMAZER est décrite fiche par fiche (outil connaissance_amazer) : accès et PIN, routine « À traiter », commandes et paiements, confirmer une livraison, reversements aux boutiques, remboursements, revendeurs, affiliés et ambassadeurs, vendeurs et tarifs, « À la une », prix négocié, abonnements (offrir un mois, activer 12 mois), tarifs et réglages, stations (paliers), moyens de paiement, utilisateurs et rôles, messages et bienvenue, catégories et sections de l'accueil, gardes des pharmacies et annuaire, communiqués des stations, modération ; plus le cycle d'une commande, le plan du site et la méthode pour démarcher une marque.
 
 ## Formules et prix
 - Essai gratuit de 14 jours pour tout nouveau vendeur, tout inclus.
@@ -31,6 +32,172 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - Restaurant : 5 000 F par mois. Premium : 10 000 F par mois. Sans paiement : plus visible des clients et plus de commandes ni réservations jusqu'au paiement ; menu, chambres, trajets et données gardés.
 - Paiement de l'abonnement : dans « Profil et abonnement », choisir la durée et le moyen (Nita, Amana…), envoyer la référence ; AMAZER valide.
 - Reversements : l'admin voit pour chaque boutique ce qui est à reverser (commandes livrées et payées, commission déduite) et clique « Reversé » ; la boutique est prévenue et voit « L'argent de mes ventes ».
+
+## Admin · Accès et sécurité
+- Ouvrir l'espace admin : se connecter avec le compte administrateur, puis Menu › « Espace Admin » (adresse : amazer.store/admin). Ce lien n'apparaît que pour un compte administrateur.
+- Code PIN : à la première ouverture sur un appareil, saisir le PIN admin et la date secondaire (JJ/MM/AA), puis « Ouvrir l'espace admin ». Une seule saisie suffit : l'espace reste ouvert sur cet appareil.
+- Message « Revalider le PIN » ou « Votre code PIN est peut-être à ressaisir » : ressaisir le PIN. Message « Me reconnecter » : la session a expiré, se reconnecter.
+- Ne jamais donner le PIN ni la date secondaire à personne (ni par WhatsApp ni à l'Assistant). Pour les changer : réglages du serveur sur Render (variables ADMIN_FINANCE_PIN et ADMIN_BIRTH_DATE), puis redémarrage du serveur.
+- Menu admin en 3 groupes : « Au quotidien » (À traiter, Commandes et paiements, Confirmer une livraison, Modération) ; « Argent à verser » (Affiliés, Boutiques, Revendeurs, Remboursements) ; « Gestion » (Vendeurs et tarifs, Moyens de paiement, Utilisateurs, Messages, Catégories, Sections de l'accueil, Gardes et approvisionnements).
+- Traçabilité : chaque action sensible (paiement validé, tarif changé, compte supprimé, connexion admin…) est notée dans Vendeurs et tarifs › « Historique des modifications » (export CSV possible).
+
+## Admin · Routine quotidienne (À traiter)
+- Page « À traiter » (première page de l'admin) : une tuile par chose en attente avec son nombre ; toucher une tuile ouvre la bonne page. « Rien en attente pour le moment » = tout est fait.
+- Tuiles : paiements de commandes à valider, commandes payées à livrer, inscriptions vendeurs à valider, abonnements vendeurs à valider, retraits d'affiliés demandés, abonnements revendeurs à valider, gains de revendeurs à verser, remboursements à faire, signalements des 7 derniers jours.
+- Chaque jour : 1) valider les paiements de commandes ; 2) suivre les livraisons ; 3) valider les abonnements payés ; 4) verser l'argent dû (boutiques, revendeurs, affiliés, remboursements) ; 5) regarder la modération.
+- Chaque samedi : publier l'affiche des pharmacies de garde de la semaine (Gardes et approvisionnements).
+
+## Admin · Commandes et paiements
+- Où : Admin › « Commandes et paiements ». Tout ce qui concerne l'argent qui entre : paiements des commandes, livraisons, abonnements des vendeurs, trésorerie.
+- Valider le paiement d'une commande : filtre « Paiements à valider », comparer la référence envoyée par le client avec votre relevé Nita ou Amana, puis « Valider le paiement ». Le vendeur et les livreurs sont prévenus aussitôt.
+- Amana : le paiement se valide tout seul dès que le client confirme dans AmanaTa ; le bouton « Vérifier maintenant » relance la vérification.
+- « Le client n'a pas encore envoyé de référence » : attendre, ou le contacter. Ne jamais valider sans voir l'argent sur le compte AMAZER.
+- Commandes à livrer : filtre « À livrer », puis « Envoyer en livraison » et « Marquer livrée » si besoin (normalement le livreur s'en charge en scannant le reçu).
+- Annuler une commande : « Annuler ». Si elle était payée, enregistrer ensuite le remboursement dans « Remboursements ».
+- Abonnements des vendeurs : section « Validations paiements vendeurs » : vérifier le paiement sur le compte AMAZER, puis « Valider » (l'abonnement démarre) ou « Refuser (note obligatoire) ».
+- Chiffres : flux Nita, flux Amana, autres moyens, total encaissé, commission AMAZER, frais de service, part vendeurs et livraisons, vendeurs actifs, revenus des 30 derniers jours, historique des transactions (codes stockés chiffrés).
+- Zone sensible : « Remettre les compteurs à zéro » efface les compteurs financiers et les clics publicitaires, sans supprimer l'historique des commandes. À ne faire que volontairement (ex. après des tests).
+
+## Cycle d'une commande boutique
+- Commander : le client remplit le panier, l'adresse avec un repère et son téléphone (« Utiliser ma position » enregistre la position GPS exacte pour le livreur), puis « Commander ».
+- Payer : le client choisit le moyen (Nita, Amana…), paie au numéro indiqué, puis envoie la référence de la transaction.
+- Vérification : AMAZER vérifie le paiement (Amana automatiquement, sinon l'admin dans Commandes et paiements). Ensuite seulement la boutique prépare.
+- Étapes vues par le client : Commande → Préparation → En livraison → Reçue. Le client peut « Annuler la commande » tant que le paiement n'est pas confirmé.
+- Livraison : le livreur « Prend en charge », va à la boutique (itinéraire boutique), puis chez le client (itinéraire client ; adresse exacte visible après la prise en charge). Si la commande est déjà payée : il n'encaisse rien.
+- Remise : le livreur scanne le QR code du reçu du client (« Scanner le reçu du client ») ; sinon « Marquer livrée sans scan ». S'il ne peut pas livrer : « Je ne peux pas la livrer ».
+- Réception : le client appuie sur « J'ai reçu ma commande ». Sans réponse, la commande passe « Reçue » automatiquement après le délai réglé dans Vendeurs et tarifs (« Livraisons : réception confirmée automatiquement après »).
+- Argent : commande livrée et payée → la part de la boutique apparaît dans Admin › Boutiques (reversements), commission de la formule gratuite déduite.
+
+## Admin · Confirmer une livraison
+- Où : Admin › « Confirmer une livraison » (même écran que les vendeurs et les livreurs).
+- Comment : « Scanner le QR code » du reçu du client au moment de la remise, ou coller le lien du reçu, puis « Confirmer la livraison ». Résultat : « Livraison confirmée » ou « Vérification refusée ».
+
+## Admin · Reversements aux boutiques
+- Où : Admin › Argent à verser › « Boutiques ».
+- Principe : les clients des boutiques paient sur le compte AMAZER ; quand une commande est livrée et payée, sa part revient à la boutique, moins 5 % si la boutique est en formule gratuite (0 % avec l'abonnement Boutique).
+- États d'une vente : à reverser, pas encore livrée, reversée, litige ou remboursement.
+- Reverser : envoyer l'argent au numéro de reversement de la boutique (Nita, Amana, Wave, Airtel Money), puis « Reversé » et saisir la référence (facultatif). La boutique est prévenue et le voit dans « L'argent de mes ventes ».
+- Numéro de reversement « non renseigné » : le demander à la boutique (bouton WhatsApp sur la ligne).
+
+## Admin · Remboursements
+- Où : Admin › « Remboursements ». Liste les commandes (boutique ou restaurant) payées puis annulées ou refusées, avec le total à rembourser.
+- Rembourser : envoyer l'argent au client par Nita ou Amana, saisir la « Référence du virement », puis « Remboursé » : le client est prévenu.
+- Pas de remboursement nécessaire (client remboursé autrement, doublon…) : « Pas nécessaire » avec le motif ; la ligne est classée.
+
+## Admin · Revendeurs
+- Où : Admin › « Revendeurs ». Revendeur = vend des produits AMAZER sans stock, à son prix, et garde la marge.
+- Abonnements à valider : vérifier la référence sur le compte Nita / Amana, puis « Valider » ou « Refuser ». Le prix de l'abonnement revendeur se règle dans Vendeurs et tarifs (500 F par défaut).
+- Gains à verser : verser la marge par Nita / Amana, puis « Enregistrer un versement » (montant, référence) : le reste à verser baisse et le revendeur est prévenu. AMAZER garde une commission sur chaque marge (10 % par défaut, réglable).
+- Tous les revendeurs : recherche par nom, e-mail ou téléphone ; état (gratuit, expiré, jamais activé, a déjà payé) ; « Voir sa boutique » ; WhatsApp.
+
+## Admin · Affiliés et ambassadeurs
+- Où : Admin › « Affiliés ». Onglets : Paiements à faire, Affiliés, Candidatures (ambassadeurs).
+- Affilié : touche une part des abonnements des vendeurs qu'il amène (20 % pendant 12 mois par défaut) et un bonus fixe à la 1re commande livrée d'un client amené (réglable, 0 = désactivé).
+- Gains : « En délai » (délai de sécurité pour repérer annulations et fraudes), « À vérifier », « Disponible », « Demandé », « Payé ». L'affilié demande son paiement depuis sa page dès qu'il atteint le minimum.
+- Payer : envoyer l'argent, saisir la référence, « Marquer comme payé ». Refuser : « Refuser (gains rendus) » avec motif, ou « Refuser et annuler (fraude) ».
+- Fraude (faux comptes, auto-parrainage) : sur la fiche de l'affilié, « Fraude : tout annuler » suspend l'affilié et annule tous ses gains non payés.
+- Ambassadeurs : « Nommer ambassadeur » / « Retirer ambassadeur ». Prime sur le 1er mois d'abonnement des boutiques recrutées, paliers Argent et Or selon le nombre de boutiques payantes, prime du n°1 du mois (« Verser une prime »). Conseil : nommer d'abord les meilleurs affiliés.
+- Réglages (délai de sécurité, minimum de paiement, plafonds anti-fraude, parts et primes) : Vendeurs et tarifs › « Tarifs, frais et réglages ».
+
+## Admin · Vendeurs et tarifs (fiche vendeur)
+- Où : Admin › « Vendeurs et tarifs » › section « Vendeurs ». Rechercher par boutique, ville, téléphone ou e-mail ; filtrer (dont « À la une »).
+- Sur chaque vendeur : activité (Boutique, Restaurant, Premium · Entreprise / Hôtel, Premium · Transport, Premium · Pharmacie, Premium · Station-essence), badge « Vérifié » (donner ou retirer), état de l'abonnement (date d'expiration, hors ligne).
+- « Offrir 1 mois » : mois gratuit. « Activer 12 mois » : abonnement d'un an payé à part (espèces, virement), sans paiement en ligne.
+- « À la une » (visibilité prioritaire) : 7, 30 ou 90 jours ; le vendeur passe en tête des listes, dans « À la une » de l'accueil, avec un badge. Une nouvelle durée repart d'aujourd'hui ; « Retirer » l'enlève. C'est AMAZER qui choisit (offre partenaire, service payant…).
+- Tarif personnalisé (prix négocié) : « Prix négocié par mois (XOF) » remplace le tarif calculé (ex. stations : abonnement + stations) ; on peut aussi fixer une commission (%) et des frais propres au vendeur. « Enregistrer tarif boutique » ; « Revenir au tarif global » annule.
+- Retirer, restaurer ou supprimer un compte : bouton « Gérer le compte » (page Utilisateurs).
+- Historique des modifications : tout changement de tarif, d'abonnement, de badge ou de compte, avec export CSV.
+
+## Admin · À la une (visibilité prioritaire d'un vendeur)
+- Où : Admin › Vendeurs et tarifs › Vendeurs › trouver le vendeur › « Visibilité prioritaire (« À la une ») ».
+- Mettre à la une : choisir 7 jours, 30 jours ou 90 jours. Le vendeur (boutique, restaurant, hôtel, pharmacie, station…) passe en tête des listes (après la garde ou la disponibilité pour pharmacies et stations), dans « À la une » de l'accueil, avec un badge « À la une ».
+- Prolonger : une nouvelle durée repart d'aujourd'hui. Enlever : « Retirer ». Voir qui est à la une : filtre « À la une » de la liste des vendeurs.
+- Usage : c'est AMAZER qui décide ; à offrir dans un pack partenaire ou à vendre comme service (prix libre, encaissé à part).
+
+## Admin · Prix négocié d'un vendeur (tarif personnalisé)
+- Où : Admin › Vendeurs et tarifs › Vendeurs › trouver le vendeur › tarif personnalisé.
+- Prix négocié par mois (XOF) : remplace le prix normal de son abonnement (ex. une marque de stations : remplace « abonnement + prix par station »). Vide = tarif normal.
+- On peut aussi fixer une commission (%) et des frais (XOF) propres à ce vendeur, par exemple « abonnement réduit + 3 % des ventes ».
+- « Enregistrer tarif boutique » pour appliquer ; « Revenir au tarif global » pour annuler. Le changement est noté dans l'Historique des modifications.
+
+## Admin · Abonnement d'un vendeur : offrir un mois, activer 12 mois, valider un paiement
+- Offrir un mois gratuit : Vendeurs et tarifs › le vendeur › « Offrir 1 mois » (geste commercial, retard de paiement…).
+- Activer 12 mois : « Activer 12 mois » quand le vendeur a payé l'année à part (espèces, virement), sans passer par le paiement en ligne.
+- Paiement envoyé par le vendeur depuis « Profil et abonnement » (durée, moyen, référence) : à valider dans Commandes et paiements › « Validations paiements vendeurs » (« Valider » ou « Refuser » avec une note).
+- Vendeur hors ligne (abonnement restaurant ou Premium expiré) : il redevient visible dès que le paiement est validé ou qu'un mois est offert. Une boutique sans abonnement reste en ligne en formule gratuite (5 produits, 5 %).
+
+## Admin · Tarifs, frais et réglages généraux
+- Où : Vendeurs et tarifs › « Tarifs, frais et réglages ». Penser à « Enregistrer ».
+- Prix : abonnement Boutique, Restaurant, Premium (prix mensuels globaux) ; essai gratuit à l'inscription (jours) ; réduction de lancement ; abonnement revendeur ; plafond d'articles de la formule sans abonnement.
+- Commission AMAZER et frais plateforme : réglables ; bouton « Activer / Désactiver 0 % Commission » (mode lancement).
+- Livraison : prix par défaut, urbaine, périphérique, et frais par quartier (une ligne « Quartier:Montant », puis « Enregistrer quartiers »).
+- Réception automatique : délai après lequel une commande « En livraison » passe « Reçue » si le client ne confirme pas (prévoir assez pour les livraisons hors de Niamey).
+- Contacts : numéro général AMAZER (utilisé pour tout moyen de paiement sans numéro propre), e-mail, téléphone et WhatsApp du support.
+- Pharmacies et stations : numéro AMAZER pour « Se faire livrer » depuis les pharmacies, numéro pour « Commander du gaz » depuis les stations (vide = bouton masqué), villes où AMAZER livre (ex. Niamey, Maradi, Zinder).
+- Affiliés et revendeurs : part des abonnements, durée, bonus client, délai de sécurité, minimum de paiement, plafonds anti-fraude, primes ambassadeurs, commission sur la marge des revendeurs.
+
+## Admin · Stations-essence : abonnement et paliers
+- Où : Vendeurs et tarifs › carte « Stations-essence : abonnement et paliers ».
+- Calcul : abonnement de base d'une marque (si vide : le prix Premium) avec quelques stations comprises (3 par défaut), puis un prix par station supplémentaire, dégressif : palier 1 jusqu'à la 10e station (2 000 F), palier 2 jusqu'à la 30e (1 500 F), palier 3 au-delà (1 000 F). Toutes ces valeurs sont réglables.
+- Exemple avec une base de 10 000 F : 3 stations = 10 000 F, 5 = 14 000 F, 10 = 24 000 F, 20 = 39 000 F par mois. Un aperçu du prix s'affiche sur la carte.
+- Prix négocié pour une marque : fiche vendeur › « Prix négocié par mois », qui remplace tout ce calcul.
+
+## Admin · Moyens de paiement
+- Où : Admin › « Moyens de paiement ». « Ajouter un moyen » : nom affiché aux clients (ex. Wave, Airtel Money), numéro qui reçoit l'argent, au nom de, ordre d'affichage, instructions « Comment payer » (ex. Composez *555#…).
+- « Proposé aux clients » : le moyen apparaît aussitôt au paiement. « Validation automatique » (Amana) ou « Vérifié par AMAZER » (référence contrôlée par l'admin).
+- Supprimer un moyen : les anciennes commandes restent lisibles.
+
+## Admin · Utilisateurs (comptes et rôles)
+- Où : Admin › « Utilisateurs ». Tous les comptes : clients, vendeurs, livreurs, admins ; chiffres (comptes, actifs, nouveaux sur 7 jours, vendeurs actifs) ; recherche par nom, e-mail ou téléphone.
+- Retirer : le compte est désactivé, la personne ne peut plus se connecter (« Afficher les comptes retirés » pour les revoir). Restaurer : le compte revient ; un vendeur dont l'abonnement a expiré reste hors ligne jusqu'au paiement (ou « Offrir 1 mois »).
+- Supprimer définitivement : irréversible.
+- Rôles : « Nommer livreur » / « Retirer livreur » (un livreur se présente via le bouton « Devenir livreur » de la page Livreur, sur WhatsApp) ; « Nommer admin » donne tous les droits (argent, comptes, tarifs) : à réserver aux personnes de totale confiance. Le compte administrateur principal est protégé.
+- « Fiche vendeur » : ouvre ce vendeur dans Vendeurs et tarifs (activité, abonnement, tarif).
+
+## Admin · Messages et message de bienvenue
+- Où : Admin › « Messages ». « Envoyer un message » à : tout le monde, clients, vendeurs, livreurs, ou une personne (e-mail ou numéro WhatsApp). Titre, message, lien sur le site (facultatif, ex. /promotions).
+- Envoi : notification sur le site et e-mail à chaque destinataire. Formule e-mail gratuite (Brevo) : environ 300 e-mails par jour ; au-delà, le message reste visible sur le site.
+- Message de bienvenue : envoyé à chaque nouveau compte (notification, et copie par e-mail et WhatsApp quand ces envois sont activés) ; on y règle le titre, le texte (avec le prénom de la personne), le lien du groupe WhatsApp et le lien de la chaîne WhatsApp AMAZER, avec un aperçu.
+
+## Admin · Catégories et sections de l'accueil
+- Catégories : Admin › « Catégories ». « Nouvelle catégorie » : nom, identifiant (slug, ex. technologie), catégorie parent éventuelle, active ou non, puis « Créer ». Les catégories existantes se modifient sur la même page.
+- Sections de l'accueil : Admin › « Sections de l'accueil ». Rangées comme « Meilleures ventes » ou « Tendances », affichées sur l'accueil sous « Bonnes affaires ». Créer : titre, identifiant, type (Produits, Restaurants, Mixte).
+- Contenu d'une section : « Modifier le contenu », une ligne par élément (product: suivi de l'identifiant du produit, ou restaurant: suivi de l'identifiant du vendeur), puis « Enregistrer le contenu ».
+
+## Admin · Gardes des pharmacies et annuaire
+- Où : Admin › « Gardes et approvisionnements ». Chaque semaine : photo de l'affiche des pharmacies de garde → vérifier → publier.
+- 1. « Choisir la photo » : celle reçue sur WhatsApp suffit ; AMAZER lit les pharmacies, communes, numéros et dates (jusqu'à une minute).
+- 2. Vérifier : ville, dates (du samedi 8 h au samedi 8 h en général), une ligne par pharmacie (Commune | Nom | | Repère | Numéro), source affichée aux clients (ex. MS/HP).
+- 3. « Publier les … pharmacies de garde » : la liste est en ligne pendant sa période ; les pharmacies inscrites qui y figurent passent de garde automatiquement. « Listes publiées » : en ligne, à venir, terminée ; « Retirer » une liste.
+- Annuaire des pharmacies : toutes les pharmacies connues, avec position et numéro, gardées même hors garde (Niamey, et tout le Niger d'après OpenStreetMap). Position : exacte (OpenStreetMap), approximative (centre du quartier), corrigée par AMAZER, ou sans position.
+- Corriger une position : dans Google Maps, appui long sur la pharmacie, copier les coordonnées ou le lien de partage, le coller sur la ligne de la pharmacie (on peut aussi changer le numéro). Une position corrigée n'est plus jamais remplacée automatiquement.
+
+## Admin · Communiqué des stations approvisionnées
+- Où : Gardes et approvisionnements › « Stations approvisionnées ». Pour publier le communiqué d'une marque (ex. Oriba) valable un jour.
+- Remplir : titre, source (communiqué du …), marque, carburant (Super ou Gasoil), téléphone et adresse de la marque, début et fin (heure de Niamey), stations (une par ligne : nom | précision), puis « Publier la liste ».
+- Effet : les stations apparaissent sur la carte et dans la liste « Où trouver de l'essence », et les clients abonnés à « Me prévenir » dans cette ville reçoivent une alerte.
+
+## Admin · Modération
+- Où : Admin › « Modération ». Signalements de conversations (faits par les clients ou les vendeurs), avis sur les établissements, avis sur AMAZER (page « Avis »).
+- Un compte qui abuse : le retirer dans Utilisateurs.
+
+## Plan du site AMAZER
+- Accueil (amazer.store) : recherche, bonnes affaires, sections, boutiques et restaurants à la une. Boutiques : /boutiques ; Restaurants : /restaurant ; Hôtels et Premium : /hotels ; Promotions : /promotions ; Catégories : /category.
+- Pharmacies : /pharmacies (garde de la semaine, carte, annuaire). Stations : /stations (où trouver de l'essence, carte, alertes).
+- Achat : panier /cart, paiement /order/pay, reçu /order/receipt (avec QR code), suivi dans « Mes commandes » (tableau de bord /dashboard).
+- Compte : /login, /register, mot de passe oublié /forgot-password, profil /profile, messages /messages, notifications /notifications.
+- Vendre : /vendre (présentation et inscription), espace vendeur /seller/dashboard, confirmation de livraison /seller/delivery-scan.
+- Gagner avec AMAZER : revendre sans stock /revendre (boutique du revendeur /revendeur/…), affiliation /affiliation, formations gratuites /formations, livreurs /livreur, gérants de station /gerant-station.
+- Aide : comment ça marche /comment-ca-marche, avis /avis, conditions /legal/terms, confidentialité /legal/privacy, suppression de compte /legal/account-deletion. Admin : /admin.
+
+## Démarcher une marque ou un commerçant
+- Préparer : savoir qui décide, son activité, ses points de vente, comment il vend aujourd'hui ; avoir amazer.store ouvert sur le téléphone (accueil, une boutique, page Stations ou Pharmacies selon le cas).
+- Phrase d'ouverture : AMAZER vous fait connaître et vendre partout au Niger dès cette semaine, sans construire de site, sans gérer l'encaissement ni la livraison ; 14 jours d'essai gratuits, sans engagement.
+- Ce qu'ils gagnent : vitrine en ligne et dans l'application ; commandes, paiement mobile money vérifié par AMAZER, livraison à Niamey ; revendeurs et affiliés qui vendent et font leur promotion ; « À la une » au lancement ; pour les stations : carte en temps réel, gérants, compteurs, alertes clients.
+- Tarifs de base : Boutique 2 000 F/mois (ou formule gratuite : 5 produits, 5 % par vente), Restaurant 5 000 F/mois, Premium 10 000 F/mois, stations : base + prix par station dégressif.
+- Offre partenaire pour une grande marque : prix négocié (fiche vendeur › Prix négocié par mois) incluant « À la une » et la mise en ligne du catalogue ; paiement d'avance sur 6 ou 12 mois (ex. 12 mois au prix de 10) ; ou abonnement réduit + petit pourcentage sur les ventes (commission propre au vendeur).
+- Conclure : créer leur compte vendeur avec eux pendant le rendez-vous (/vendre), logo et premiers produits ; dans les 48 h, tout le catalogue + « À la une » + annonce sur la chaîne WhatsApp ; vers le 10e jour, rappeler avec leurs vrais résultats et encaisser (ils paient dans « Profil et abonnement », l'admin valide) ; accord écrit d'une page (prix, durée, services, paiement).
+- Règle : ne donner que des chiffres vrais (ceux de l'admin) ; ne jamais promettre de ventes.
 
 ## Nouveautés de novembre 2026
 - 13 nov. : nouvelle formule gratuite pour les boutiques (5 produits visibles, 5 % par vente) ; les boutiques ne disparaissent plus à la fin de l'essai.

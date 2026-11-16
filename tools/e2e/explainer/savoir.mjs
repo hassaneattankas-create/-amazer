@@ -79,7 +79,7 @@ const faits = sections.find((s) => s.titre === "Faits")?.lignes ?? [];
 for (const s of sections.filter((x) => x.titre !== "Faits")) {
   fiches.push({
     id: slug(s.titre),
-    pour: "Tout le monde",
+    pour: /^admin/i.test(s.titre) ? "Administrateur AMAZER (propriétaire)" : "Tout le monde",
     titre: s.titre,
     resume: s.lignes[0] ?? "",
     points: [],
