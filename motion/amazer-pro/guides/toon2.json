@@ -1,0 +1,61 @@
+{
+ "title": "Commandez, on vous livre",
+ "voice": "fr-FR-DeniseNeural",
+ "rate": "+6%",
+ "lead": 0.35,
+ "segments": [
+  {
+   "id": "s1",
+   "text": "Vingt-cinq kilos de riz… sous ce soleil ?",
+   "pause": 0.3,
+   "slot": 4
+  },
+  {
+   "id": "s2",
+   "text": "Restez plutôt à l'ombre !",
+   "pause": 0.3,
+   "slot": 2.3
+  },
+  {
+   "id": "s3",
+   "text": "Sur AMAZER, cherchez votre produit, et ajoutez-le au panier.",
+   "pause": 0.3,
+   "slot": 3.75
+  },
+  {
+   "id": "s4",
+   "text": "Commandez, et payez par Nita ou Amana : AMAZER vérifie votre paiement.",
+   "pause": 0.3,
+   "slot": 4.95
+  },
+  {
+   "id": "s5",
+   "text": "La boutique est prévenue, et prépare votre commande…",
+   "pause": 0.3,
+   "slot": 4.4
+  },
+  {
+   "id": "s6",
+   "text": "puis un livreur AMAZER vous l'apporte, partout à Niamey.",
+   "pause": 0.3,
+   "slot": 4.8
+  },
+  {
+   "id": "s7",
+   "text": "Vous montrez votre reçu : c'est livré !",
+   "pause": 0.3,
+   "slot": 4.6
+  },
+  {
+   "id": "s8",
+   "text": "AMAZER. Commandez, on vous livre. amazer point store.",
+   "pause": 0.3,
+   "slot": 5.5,
+   "captions": [
+    "AMAZER.",
+    "Commandez, on vous livre.",
+    "amazer.store"
+   ]
+  }
+ ]
+}

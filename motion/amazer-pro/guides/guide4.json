@@ -1,0 +1,45 @@
+{
+ "title": "Pharmacies de garde et stations",
+ "voice": "fr-FR-HenriNeural",
+ "rate": "+0%",
+ "segments": [
+  {
+   "id": "intro",
+   "text": "Une pharmacie de garde, en pleine nuit ? Une station qui a encore de l'essence ? Avec AMAZER, vous les trouvez tout de suite.",
+   "pause": 0.6
+  },
+  {
+   "id": "pharma",
+   "text": "Ouvrez la rubrique : Pharmacies. Les pharmacies de garde s'affichent en premier, avec la liste officielle de la semaine et sa source."
+  },
+  {
+   "id": "pharma2",
+   "text": "Pour chacune, vous avez le quartier, l'adresse, et deux boutons : Appeler, et Itinéraire, qui vous guide jusqu'à la porte avec Google Maps. Appelez toujours avant de vous déplacer."
+  },
+  {
+   "id": "stations",
+   "text": "Dans la rubrique : Stations, voyez où trouver du super, du gasoil ou du gaz. En vert, c'est disponible. En orange, le stock est faible. En rouge, c'est la rupture."
+  },
+  {
+   "id": "fresh",
+   "text": "L'heure de la dernière mise à jour est toujours affichée. Si l'information est trop ancienne, elle passe en : non confirmé. Appelez alors la station pour vérifier."
+  },
+  {
+   "id": "gas",
+   "text": "À Niamey, vous pouvez même commander du gaz livré par AMAZER. Et si une information est fausse, touchez : Signaler une erreur. La station est aussitôt prévenue.",
+   "pause": 0.6
+  },
+  {
+   "id": "manager",
+   "text": "Vous gérez une station ? Indiquez vos disponibilités en un geste, ou touchez : Rien n'a changé. Le propriétaire peut confier chaque station à un gérant, et reçoit chaque mois le nombre de clients envoyés par AMAZER.",
+   "pause": 0.7
+  },
+  {
+   "id": "outro",
+   "text": "Pharmacies de garde et carburant, en un coup d'œil, sur amazer point store.",
+   "captions": [
+    "Pharmacies de garde et carburant, en un coup d'œil, sur amazer.store."
+   ]
+  }
+ ]
+}

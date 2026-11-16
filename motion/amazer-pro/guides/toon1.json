@@ -1,0 +1,47 @@
+{
+ "title": "Pub personnages 1 — Commandez, on vous livre",
+ "voice": "fr-FR-DeniseNeural",
+ "rate": "+6%",
+ "segments": [
+  {
+   "id": "hook",
+   "text": "Vingt-cinq kilos de riz… sous ce soleil ?",
+   "pause": 1.4
+  },
+  {
+   "id": "ombre",
+   "text": "Restez plutôt à l'ombre !",
+   "pause": 0.5
+  },
+  {
+   "id": "commande",
+   "text": "Sur AMAZER, vous commandez, et vous payez par Nita ou Amana.",
+   "pause": 0.7
+  },
+  {
+   "id": "boutique",
+   "text": "La boutique prépare votre commande…",
+   "pause": 0.3
+  },
+  {
+   "id": "livreur",
+   "text": "et un livreur AMAZER vous l'apporte, partout à Niamey.",
+   "pause": 1.8
+  },
+  {
+   "id": "recu",
+   "text": "Vous montrez votre reçu : c'est livré !",
+   "pause": 1.2
+  },
+  {
+   "id": "fin",
+   "text": "AMAZER. Commandez, on vous livre. amazer point store.",
+   "captions": [
+    "AMAZER.",
+    "Commandez, on vous livre.",
+    "amazer.store"
+   ],
+   "pause": 0.2
+  }
+ ]
+}

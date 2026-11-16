@@ -1,0 +1,54 @@
+{
+ "title": "Vendre sur AMAZER",
+ "voice": "fr-FR-HenriNeural",
+ "rate": "+0%",
+ "segments": [
+  {
+   "id": "intro",
+   "text": "Vous êtes commerçant ? Voici comment ouvrir votre boutique sur AMAZER, et vendre partout au Niger, depuis votre téléphone.",
+   "pause": 0.6
+  },
+  {
+   "id": "signup",
+   "text": "Inscrivez-vous sur amazer point store, dans la rubrique : Vendre. Choisissez votre formule : Boutique pour vendre des produits, Restaurant pour votre menu, ou Premium pour un hôtel, une compagnie de transport ou une entreprise.",
+   "captions": [
+    "Inscrivez-vous sur amazer.store, rubrique « Vendre ».",
+    "Choisissez votre formule : Boutique pour vendre des produits, Restaurant pour votre menu, ou Premium pour un hôtel, une compagnie de transport ou une entreprise."
+   ]
+  },
+  {
+   "id": "add",
+   "text": "Ajoutez vos produits : une photo, un nom clair, le prix et le stock. Touchez : Publier le produit. Il est en ligne tout de suite, visible par les clients de tout le Niger."
+  },
+  {
+   "id": "tip",
+   "text": "Un conseil : prenez vos photos à la lumière du jour, sur un fond simple. De belles photos font vendre.",
+   "pause": 0.6
+  },
+  {
+   "id": "order",
+   "text": "Quand un client commande, vous recevez une notification. La commande est déjà payée, et le paiement a été vérifié par AMAZER. Vous ne préparez que des commandes payées : fini les commandes fantômes."
+  },
+  {
+   "id": "ship",
+   "text": "Préparez la commande, puis indiquez qu'elle est prête. Un livreur AMAZER passe la chercher, et l'apporte au client."
+  },
+  {
+   "id": "money",
+   "text": "Vous recevez le prix entier de vos articles : la commission et les frais AMAZER sont payés par le client. Dans votre espace vendeur, suivez vos ventes et vos statistiques."
+  },
+  {
+   "id": "share",
+   "text": "Votre boutique a sa propre page. Partagez son lien sur WhatsApp, Facebook et TikTok : plus vous la partagez, plus vous vendez.",
+   "pause": 0.7
+  },
+  {
+   "id": "outro",
+   "text": "Votre boutique en ligne, vos ventes partout. Ouvrez-la aujourd'hui sur amazer point store.",
+   "captions": [
+    "Votre boutique en ligne, vos ventes partout.",
+    "Ouvrez-la aujourd'hui sur amazer.store."
+   ]
+  }
+ ]
+}

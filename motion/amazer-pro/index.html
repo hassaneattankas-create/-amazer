@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>AMAZER Pro — films</title>
+<style>
+@font-face{font-family:Geist;src:url(assets/fonts/GeistVF.woff) format('woff');font-weight:100 900}
+*{box-sizing:border-box;transition:none!important;animation:none!important}
+html,body{margin:0;background:#000;overflow:hidden}
+#stage{position:relative;width:1080px;height:1080px;overflow:hidden;background:#0B1220;font-family:Geist,sans-serif;color:#fff;-webkit-font-smoothing:antialiased;font-feature-settings:"ss01","tnum" 0}
+#scenes{position:absolute;inset:0}
+.scene{position:absolute;left:0;top:0;width:1080px;height:1080px;overflow:hidden;display:none}
+.abs{position:absolute;left:0;top:0}
+.p3d{perspective:1800px;perspective-origin:50% 50%}
+.w3d{position:absolute;left:0;top:0;width:1080px;height:1080px;transform-style:preserve-3d}
+</style>
+</head>
+<body>
+<div id="stage"><div id="scenes"></div></div>
+<script src="src/engine.js"></script>
+<script src="src/kit/icons.js"></script>
+<script src="src/kit/type.js"></script>
+<script src="src/kit/phone.js"></script>
+<script src="src/kit/ui.js"></script>
+<script src="src/kit/ui-client.js"></script>
+<script src="src/kit/ui-pro.js"></script>
+<script src="src/kit/fx.js"></script>
+<script src="src/kit/scenes.js"></script>
+<script src="src/kit/flow.js"></script>
+<script src="src/kit/guide.js"></script>
+<script>
+(function () {
+  const id = new URLSearchParams(location.search).get('film') || 'pub1';
+  window.JDE_READY = new Promise(res => {
+    // Guides : la minuterie de la voix off (films/<id>.timing.js) est chargée avant le film.
+    const loadFilm = () => document.body.appendChild(s);
+    const s = document.createElement('script');
+    s.src = `films/${id}.js`;
+    s.onload = async () => {
+      await document.fonts.load('800 40px Geist');
+      await document.fonts.ready;
+      A.mount(window.FILM);
+      // attendre toutes les images (y compris en arrière-plan CSS)
+      const urls = new Set();
+      document.querySelectorAll('img').forEach(i => urls.add(i.src));
+      document.querySelectorAll('#stage *').forEach(e => { const m = (e.style.backgroundImage || e.style.background || '').match(/url\("?([^")]+)"?\)/); if (m) urls.add(m[1]); });
+      await Promise.all([...urls].map(u => new Promise(r => { const im = new Image(); im.onload = im.onerror = r; im.src = u; })));
+      window.seek(0);
+      res(true);
+    };
+    if (id.startsWith('guide')) {
+      const timing = document.createElement('script');
+      timing.src = `films/${id}.timing.js`;
+      timing.onload = loadFilm;
+      document.body.appendChild(timing);
+    } else loadFilm();
+  });
+})();
+</script>
+</body>
+</html>

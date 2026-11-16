@@ -1,0 +1,38 @@
+{
+ "title": "Test outil Assistant",
+ "voice": "fr-FR-DeniseNeural",
+ "rate": "+6%",
+ "lead": 0.35,
+ "segments": [
+  {
+   "id": "s1",
+   "text": "À l'ombre, tranquille.",
+   "pause": 0.3,
+   "slot": 2.3
+  },
+  {
+   "id": "s2",
+   "text": "Cherchez, ajoutez au panier, commandez.",
+   "pause": 0.3,
+   "slot": 4
+  },
+  {
+   "id": "s3",
+   "text": "Le livreur arrive.",
+   "pause": 0.3,
+   "slot": 4.8
+  },
+  {
+   "id": "s4",
+   "text": "Livré !",
+   "pause": 0.3,
+   "slot": 4.6
+  },
+  {
+   "id": "s5",
+   "text": "AMAZER.",
+   "pause": 0.3,
+   "slot": 5.5
+  }
+ ]
+}

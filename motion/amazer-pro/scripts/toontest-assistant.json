@@ -1,0 +1,13 @@
+{
+ "id": "toontestia", "titre": "Test outil Assistant",
+ "scenes": [
+  { "type": "maison_ombre", "voix": "À l'ombre, tranquille." },
+  { "type": "ecrans", "voix": "Cherchez, ajoutez au panier, commandez.", "ecrans": [
+    { "img": "02-recherche-riz.png", "de": 0, "texte": "Cherchez", "taps": [{ "cible": "Riz parfumé 25 kg", "at": 0.8 }] },
+    { "img": "03-fiche-riz-long.png", "de": 1.2, "scroll": [0, 70, 1.3, 1.6], "taps": [{ "cible": "Ajouter au panier", "at": 2.0 }] },
+    { "img": "05-panier-rempli.png", "de": 2.4, "scroll": { "vers": "Commander", "de": 2.5, "a": 3.1, "place": 640 }, "taps": [{ "cible": "Commander", "at": 3.4 }] } ] },
+  { "type": "moto", "voix": "Le livreur arrive.", "ecran": "13-livreur-long.png", "tap": { "cible": "Prendre en charge" }, "scroll": [0, 90, 0.15, 0.55] },
+  { "type": "portail", "voix": "Livré !", "recu": "14-recu-qr-long.png", "recuVers": "QR code du reçu", "confirme": "17-commande-livree.png" },
+  { "type": "fin", "voix": "AMAZER." }
+ ]
+}

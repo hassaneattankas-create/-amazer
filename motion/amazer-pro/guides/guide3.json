@@ -1,0 +1,45 @@
+{
+ "title": "Restaurants, hôtels et transport",
+ "voice": "fr-FR-HenriNeural",
+ "rate": "+0%",
+ "segments": [
+  {
+   "id": "intro",
+   "text": "Sur AMAZER, vous pouvez aussi commander un repas, réserver une chambre d'hôtel, ou acheter votre billet de transport. Voyons comment.",
+   "pause": 0.6
+  },
+  {
+   "id": "resto",
+   "text": "Ouvrez un restaurant : vous voyez son menu, avec les photos, les prix, et le plat du jour. Ajoutez vos plats en un geste."
+  },
+  {
+   "id": "resto2",
+   "text": "Payez par mobile money, puis suivez votre commande : le restaurant la prépare, et un livreur vous l'apporte. Certains restaurants acceptent aussi les réservations de table."
+  },
+  {
+   "id": "hotel",
+   "text": "Pour un hôtel, choisissez vos dates d'arrivée et de départ, puis votre chambre. Le prix total s'affiche selon le nombre de nuits."
+  },
+  {
+   "id": "hotel2",
+   "text": "Touchez : Réserver. Selon l'hôtel, un acompte peut vous être demandé pour confirmer la réservation.",
+   "pause": 0.6
+  },
+  {
+   "id": "ticket",
+   "text": "Pour le transport, choisissez votre trajet, votre date, et votre place dans le car."
+  },
+  {
+   "id": "ticket2",
+   "text": "Après le paiement, vous recevez un billet avec un code QR. Montrez-le au départ : il est scanné, et votre place est confirmée. Bon voyage !",
+   "pause": 0.7
+  },
+  {
+   "id": "outro",
+   "text": "Repas, chambres et billets : tout est sur amazer point store.",
+   "captions": [
+    "Repas, chambres et billets : tout est sur amazer.store."
+   ]
+  }
+ ]
+}

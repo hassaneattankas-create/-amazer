@@ -1,0 +1,8 @@
+{
+  "name": "amazer-pro-motion",
+  "private": true,
+  "description": "Moteur video Canvas AMAZER (isole du site)",
+  "dependencies": {
+    "gsap": "^3.13.0"
+  }
+}

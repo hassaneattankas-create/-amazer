@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>AMAZER — films à personnages (vertical)</title>
+<style>
+@font-face{font-family:Geist;src:url(assets/fonts/GeistVF.woff) format('woff');font-weight:100 900}
+*{box-sizing:border-box;transition:none!important;animation:none!important}
+html,body{margin:0;background:#000;overflow:hidden}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:#FFF7F2;font-family:Geist,sans-serif;color:#0F172A;-webkit-font-smoothing:antialiased}
+#scenes{position:absolute;inset:0}
+.scene{position:absolute;left:0;top:0;width:1080px;height:1920px;overflow:hidden;display:none}
+.abs{position:absolute;left:0;top:0}
+</style>
+</head>
+<body>
+<div id="stage"><div id="scenes"></div></div>
+<script src="src/engine.js"></script>
+<script>A.W = 1080; A.H = 1920;</script>
+<script src="src/kit/icons.js"></script>
+<script src="src/kit/type.js"></script>
+<script src="src/kit/toon.js"></script>
+<script src="src/kit/phone.js"></script>
+<script src="src/kit/toon-scenes.js"></script>
+<script>
+(function () {
+  const id = new URLSearchParams(location.search).get('film') || 'toon1';
+  window.JDE_READY = new Promise(res => {
+    const film = document.createElement('script');
+    film.src = `films/${id}.js`;
+    film.onload = async () => {
+      await document.fonts.load('800 40px Geist');
+      await document.fonts.ready;
+      A.mount(window.FILM);
+      const urls = new Set();
+      document.querySelectorAll('img').forEach(i => urls.add(i.src));
+      document.querySelectorAll('image').forEach(i => urls.add(i.getAttribute('href')));
+      await Promise.all([...urls].map(u => new Promise(r => { const im = new Image(); im.onload = im.onerror = r; im.src = u; })));
+      window.seek(0);
+      res(true);
+    };
+    // minuterie de la voix off (films/<id>.timing.js), puis le script (films/<id>.script.js) monté par
+    // src/kit/toon-film.js ; sans script, le film écrit à la main (films/<id>.js)
+    const load = (src, next) => { const s = document.createElement('script'); s.src = src; s.onload = () => next(true); s.onerror = () => next(false); document.body.appendChild(s); };
+    load(`films/${id}.timing.js`, () => load(`films/${id}.script.js`, ok => {
+      if (ok) film.src = 'src/kit/toon-film.js';
+      document.body.appendChild(film);
+    }));
+  });
+})();
+</script>
+</body>
+</html>

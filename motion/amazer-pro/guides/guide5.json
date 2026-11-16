@@ -1,0 +1,46 @@
+{
+ "title": "Gagner de l'argent avec AMAZER",
+ "voice": "fr-FR-HenriNeural",
+ "rate": "+0%",
+ "segments": [
+  {
+   "id": "intro",
+   "text": "Avec AMAZER, vous pouvez gagner de l'argent, sans boutique et sans stock. Voici deux façons de le faire.",
+   "pause": 0.6
+  },
+  {
+   "id": "aff1",
+   "text": "Première façon : l'affiliation. Créez un compte gratuit, puis ouvrez la rubrique : Affiliation. Vous y trouvez votre code et votre lien personnel. Touchez : Copier mon lien."
+  },
+  {
+   "id": "aff2",
+   "text": "Partagez-le aux commerçants et à vos proches, par exemple sur WhatsApp. La page vous propose même des messages prêts à envoyer, et des réponses aux questions des commerçants."
+  },
+  {
+   "id": "aff3",
+   "text": "Quand un commerçant s'inscrit avec votre lien, vous touchez une part de ses abonnements, pendant plusieurs mois. Et quand un nouveau client fait sa première commande, vous gagnez un bonus, une fois la commande livrée."
+  },
+  {
+   "id": "aff4",
+   "text": "Vos gains vous sont payés à la demande, par Nita, Amana, Airtel Money ou Moov Money.",
+   "pause": 0.6
+  },
+  {
+   "id": "resell1",
+   "text": "Deuxième façon : la revente sans stock. Choisissez des produits du catalogue AMAZER, et fixez votre prix : votre marge s'ajoute au prix de la boutique."
+  },
+  {
+   "id": "resell2",
+   "text": "Partagez votre boutique de revendeur. Quand un client achète, la boutique prépare, AMAZER livre, et vous encaissez votre marge, moins une petite commission.",
+   "pause": 0.7
+  },
+  {
+   "id": "outro",
+   "text": "Partagez, recommandez, gagnez. Rendez-vous sur amazer point store.",
+   "captions": [
+    "Partagez, recommandez, gagnez.",
+    "Rendez-vous sur amazer.store."
+   ]
+  }
+ ]
+}

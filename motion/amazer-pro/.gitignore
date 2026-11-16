@@ -1,0 +1,12 @@
+# Produits du rendu (régénérables) et fichiers lourds
+node_modules/
+frames/
+out/
+qa/
+audio/*.wav
+audio/tmp_voice/
+audio/__pycache__/
+# Bruitages Mixkit : licence d'utilisation, pas de redistribution des fichiers seuls
+audio/sfx-lib/
+# Photos de produits d'origine non tracée
+assets/products/
