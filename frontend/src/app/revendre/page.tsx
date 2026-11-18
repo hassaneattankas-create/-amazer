@@ -152,7 +152,16 @@ export default function RevendrePage() {
             Montants nets, après la commission AMAZER. AMAZER vous verse vos gains (Nita ou Amana) après livraison ; vous êtes
             prévenu à chaque versement.
           </p>
-          {account ? <ResellerSubscriptionPanel account={account} /> : null}
+          {account ? (
+            account.active ? (
+              <p className="rounded-card border border-border bg-card p-4 text-sm text-ink-800">
+                <strong>Sans abonnement.</strong> Vous ne payez rien pour revendre : AMAZER garde seulement {account.commission_percent} % de
+                votre marge sur chaque article vendu et livré.
+              </p>
+            ) : (
+              <ResellerSubscriptionPanel account={account} />
+            )
+          ) : null}
 
           <div className="rounded-card border border-border bg-card p-4">
             <p className="flex items-center gap-2 text-sm font-semibold text-ink-900">

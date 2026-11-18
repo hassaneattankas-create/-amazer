@@ -9,9 +9,10 @@ from app.services.seller_finance_service import get_or_create_global_settings
 
 
 def reseller_terms(db: Session) -> tuple[float, float]:
-    """(abonnement mensuel en XOF, commission AMAZER en % de la marge), regles par l'admin."""
+    """(abonnement, commission AMAZER en % de la marge). Décision du 18/11/2026 : plus d'abonnement revendeur,
+    AMAZER garde seulement sa commission sur chaque article revendu (réglable par l'admin)."""
     settings = get_or_create_global_settings(db)
-    fee = float(getattr(settings, "reseller_subscription_fee", 500) or 0)
+    fee = 0.0
     percent = float(getattr(settings, "reseller_commission_percent", 10) or 0)
     return fee, min(max(percent, 0.0), 90.0)
 

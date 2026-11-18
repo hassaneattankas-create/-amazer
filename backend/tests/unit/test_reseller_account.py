@@ -22,17 +22,16 @@ def test_commission_is_taken_from_the_margin(margin, percent, expected) -> None:
     assert svc.split_margin(margin, percent) == expected
 
 
-def test_subscription_states(monkeypatch) -> None:
+def test_resellers_never_pay_a_subscription_only_a_commission(monkeypatch) -> None:
+    """Décision du 18/11/2026 : revendre est gratuit ; AMAZER garde sa commission sur la marge."""
     db = Mock()
     monkeypatch.setattr(svc, "get_or_create_global_settings", lambda _db: _settings())
-    db.get.return_value = SimpleNamespace(paid_until=NOW + timedelta(days=3))
-    assert svc.subscription_active(db, "u-1", NOW) is True
-    db.get.return_value = SimpleNamespace(paid_until=NOW - timedelta(days=1))
-    assert svc.subscription_active(db, "u-1", NOW) is False
-    db.get.return_value = None
-    assert svc.subscription_active(db, "u-1", NOW) is False
-    monkeypatch.setattr(svc, "get_or_create_global_settings", lambda _db: _settings(fee=0))
-    assert svc.subscription_active(db, "u-1", NOW) is True  # abonnement gratuit decide par l'admin
+    for account in (None, SimpleNamespace(paid_until=NOW - timedelta(days=1))):
+        db.get.return_value = account
+        assert svc.subscription_active(db, "u-1", NOW) is True
+    fee, percent = svc.reseller_terms(db)
+    assert fee == 0 and percent == 10
+    assert svc.split_margin(1500, percent) == (150.0, 1350.0)
 
 
 def test_payment_extends_from_current_end_date() -> None:
