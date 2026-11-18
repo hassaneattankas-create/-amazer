@@ -160,7 +160,7 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 
 ## Admin · Revendeurs
 - Où : Admin › « Revendeurs ». Revendeur = vend des produits AMAZER sans stock, à son prix, et garde la marge.
-- Abonnements à valider : vérifier la référence sur le compte Nita / Amana, puis « Valider » ou « Refuser ». Le prix de l'abonnement revendeur se règle dans Vendeurs et tarifs (500 F par défaut).
+- Abonnements à valider : vérifier la référence sur le compte Nita / Amana, puis « Valider » ou « Refuser ». 
 - Gains à verser : verser la marge par Nita / Amana, puis « Enregistrer un versement » (montant, référence) : le reste à verser baisse et le revendeur est prévenu. AMAZER garde une commission sur chaque marge (10 % par défaut, réglable).
 - Tous les revendeurs : recherche par nom, e-mail ou téléphone ; état (gratuit, expiré, jamais activé, a déjà payé) ; « Voir sa boutique » ; WhatsApp.
 
@@ -296,3 +296,5 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - 15 nov. : stations : « Vous y êtes ? » (il y en a / plus rien / longue file, en un geste, sans compte) affiché « selon des clients » pendant 2 heures ; « Me prévenir quand il y en a » (une station, ou toutes les stations de la ville) : notification dès que la station indique le carburant ou qu'un communiqué d'approvisionnement est publié, au plus une toutes les 2 heures (compte nécessaire).
 - 15 nov. : la carte des pharmacies montre toutes les pharmacies connues du Niger (pas seulement Niamey) ; on peut chercher une ville sur la carte. La carte des stations ne montre plus que les stations inscrites sur AMAZER (plus de points gris pour les stations inconnues) ; s'il n'y en a encore aucune dans la ville, la carte le dit et propose « Inscrire ma station ». Choisir une ville centre la carte sur cette ville.
 - 18 nov. : nouvel écran d'ouverture d'AMAZER quand on l'ouvre comme une application (installée depuis le site ou Android) : fond orange avec lumières, motif d'icônes (panier, pharmacie, essence, restaurant, moto…), logo et « Achetez et vendez en toute confiance », puis l'accueil apparaît ; un toucher passe l'animation. Rien ne change sur le site ouvert dans un navigateur.
+- 18 nov. : revendeurs : plus aucun abonnement ; revendre est gratuit, AMAZER garde seulement sa commission (10 % de la marge par défaut, réglable dans Vendeurs et tarifs) sur chaque article vendu et livré.
+- 18 nov. : « Mon affiche » dans l'espace vendeur : l'affiche AMAZER du vendeur, remplie automatiquement (nom de la boutique, QR code de sa vitrine, logo ou initiales), modèle selon l'abonnement (Boutique violet, Restaurant orange, Premium violet et or) ; boutons Télécharger et Partager. À l'inscription, chaque nouveau vendeur reçoit le message « Votre affiche AMAZER est prête ».
