@@ -202,17 +202,3 @@ def notify_welcome(db: Session, user_id: str, full_name: str | None) -> None:
     title, body = welcome_service.render(welcome_service.current(db), full_name)
     _send(db, user_id, title, body, f"welcome-{user_id}", welcome_service.WELCOME_PAGE)
 
-
-
-def notify_seller_poster(db: Session, user_id: str, business_name: str | None) -> None:
-    """Nouveau vendeur : son affiche (nom de boutique + QR code de sa vitrine) est prête dans « Mon affiche »."""
-    name = (business_name or "votre boutique").strip()
-    _send(
-        db,
-        user_id,
-        "Votre affiche AMAZER est prête",
-        f"L'affiche de {name}, avec votre nom et le QR code de votre vitrine, vous attend dans votre espace vendeur "
-        "(section « Mon affiche ») : téléchargez-la, imprimez-la, partagez-la sur WhatsApp.",
-        f"poster-{user_id}",
-        "/seller/dashboard",
-    )

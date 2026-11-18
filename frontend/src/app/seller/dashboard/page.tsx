@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, ClipboardList, Images as ImageIcon, LayoutGrid, Package, PlusCircle, Settings2, Share2, Star } from "lucide-react";
+import { BarChart3, ClipboardList, LayoutGrid, Package, PlusCircle, Settings2, Share2, Star } from "lucide-react";
 
 import { PasswordInput } from "@/components/PasswordInput";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
@@ -24,7 +24,6 @@ import { AffiliateShareCard } from "@/components/affiliate/AffiliateShareCard";
 import { SellerKpis } from "@/components/seller/SellerKpis";
 import { SellerPlanItem } from "@/components/seller/SellerPlanMessage";
 import { ShopDashboardSections } from "@/components/seller/ShopDashboardSections";
-import { SellerPosterCard } from "@/components/seller/SellerPosterCard";
 import { SellerOrderList } from "@/components/seller/SellerOrderList";
 import { SellerProductList } from "@/components/seller/SellerProductList";
 import { getShopRoute } from "@/lib/mobile-routes";
@@ -406,11 +405,6 @@ export default function SellerDashboardPage() {
         {profile?.vendor_id ? (
           <AccordionItem id="share" variant="row" headingLevel={3} icon={<Share2 className="h-5 w-5" />} title={profile.service_kind === "pharmacy" ? "Partager ma pharmacie" : profile.service_kind === "fuel_station" ? "Partager mes stations" : "Partager ma boutique"}>
             <AffiliateShareCard variant="seller" vendorId={profile.vendor_id} shopName={profile.business_name} serviceKind={profile.service_kind} />
-          </AccordionItem>
-        ) : null}
-        {profile && !isLocalService ? (
-          <AccordionItem id="affiche" variant="row" headingLevel={3} icon={<ImageIcon className="h-5 w-5" />} title="Mon affiche">
-            <SellerPosterCard profile={profile} />
           </AccordionItem>
         ) : null}
         <AccordionItem id="stats" variant="row" headingLevel={3} icon={<BarChart3 className="h-5 w-5" />} title="Mes statistiques">

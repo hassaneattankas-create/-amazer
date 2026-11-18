@@ -157,9 +157,6 @@ def register(
                     include={"country_code", "region", "preferred_currency", "preferred_language"}, exclude_none=True
                 ),
             )
-        if payload.seller_profile and isinstance(result.get("user_id"), str):
-            # son affiche personnalisée (nom + QR code de la vitrine) l'attend dans « Mon affiche »
-            order_events.notify_seller_poster(auth_service.db, result["user_id"], payload.seller_profile.business_name)
         if payload.seller_profile:
             _notify_admin_seller_registration(
                 auth_service,
