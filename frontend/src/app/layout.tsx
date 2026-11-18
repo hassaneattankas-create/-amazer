@@ -5,6 +5,7 @@ import { ChatWidget } from "@/components/ChatWidget";
 import { AndroidBackButtonHandler } from "@/components/providers/AndroidBackButtonHandler";
 import { FaviconBadge } from "@/components/FaviconBadge";
 import { InstallAppBanner } from "@/components/InstallAppBanner";
+import { AppLaunchIntro, LAUNCH_INTRO_SCRIPT } from "@/components/layout/AppLaunchIntro";
 import { FloatingNavbar } from "@/components/layout/FloatingNavbar";
 import { AuthPreferenceBootstrap } from "@/components/providers/AuthPreferenceBootstrap";
 import { AffiliateTracker } from "@/components/providers/AffiliateTracker";
@@ -74,10 +75,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
+    <html lang="fr" suppressHydrationWarning>
+      <head>
+        {/* Ouverture animée : décidée avant le premier affichage (application seulement), sans éclair blanc. */}
+        <script dangerouslySetInnerHTML={{ __html: LAUNCH_INTRO_SCRIPT }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-white text-slate-900 antialiased`}
       >
+        <AppLaunchIntro />
         <QueryProvider>
           <FaviconBadge />
           <BackendKeepAlive />
