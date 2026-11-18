@@ -15,11 +15,11 @@ window.GUIDE_TIMING = {
   },
   "s2": {
    "start": 4.35,
-   "end": 5.63,
+   "end": 5.636,
    "captions": [
     {
      "a": 4.35,
-     "b": 5.63,
+     "b": 5.636,
      "text": "Restez plutôt à l'ombre !"
     }
    ]
@@ -59,22 +59,22 @@ window.GUIDE_TIMING = {
   },
   "s6": {
    "start": 19.783,
-   "end": 22.573,
+   "end": 22.585,
    "captions": [
     {
      "a": 19.783,
-     "b": 22.573,
+     "b": 22.585,
      "text": "puis un livreur AMAZER vous l'apporte, partout à Niamey."
     }
    ]
   },
   "s7": {
    "start": 24.583,
-   "end": 26.648,
+   "end": 26.655,
    "captions": [
     {
      "a": 24.583,
-     "b": 26.648,
+     "b": 26.655,
      "text": "Vous montrez votre reçu : c'est livré !"
     }
    ]

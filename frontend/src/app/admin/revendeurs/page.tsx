@@ -47,7 +47,7 @@ function AllResellers() {
       <h2 className="text-lg font-semibold text-ink-900">Tous les revendeurs ({data.length})</h2>
       {data.length ? (
         <p className="text-sm text-ink-600">
-          {active} abonnement{active > 1 ? "s" : ""} actif{active > 1 ? "s" : ""} · {withListings} avec des annonces en ligne
+          {active} revendeur{active > 1 ? "s" : ""} actif{active > 1 ? "s" : ""} · {withListings} avec des annonces en ligne
         </p>
       ) : null}
       <label className="block">
@@ -156,7 +156,7 @@ export default function AdminResellersPage() {
       <header>
         <h1 className="text-2xl font-semibold text-ink-900">Revendeurs</h1>
         <p className="mt-1 text-sm text-ink-600">
-          Tous les revendeurs de la plateforme, abonnements à valider et gains nets (après commission AMAZER). Total à verser : {formatXOF(totalDue)}.
+          Tous les revendeurs de la plateforme et leurs gains nets (après commission AMAZER). Revendre est sans abonnement. Total à verser : {formatXOF(totalDue)}.
         </p>
       </header>
       {errorText ? (
@@ -171,7 +171,7 @@ export default function AdminResellersPage() {
       ) : null}
       {payments.length ? (
         <section aria-label="Abonnements à valider" className="space-y-2">
-          <h2 className="text-lg font-semibold text-ink-900">Abonnements à valider ({payments.length})</h2>
+          <h2 className="text-lg font-semibold text-ink-900">Anciens paiements d&apos;abonnement ({payments.length})</h2>
           <ul className="divide-y divide-border rounded-card border border-border bg-card">
             {payments.map((payment) => (
               <li key={payment.id} className="flex flex-wrap items-center gap-3 p-3 text-sm">

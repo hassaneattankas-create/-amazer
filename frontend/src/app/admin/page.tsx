@@ -61,7 +61,7 @@ export default function AdminHomePage() {
     { href: "/admin/finance", label: "Inscriptions vendeurs à valider", hint: "Vérifier le paiement, puis créer la boutique.", icon: UserPlus, count: count(preRegs), urgent: true },
     { href: "/admin/finance", label: "Abonnements vendeurs à valider", hint: "Renouvellements et changements de formule.", icon: Store, count: count(sellerPays), urgent: true },
     { href: "/admin/affilies", label: "Retraits d'affiliés demandés", hint: "Payer puis saisir la référence.", icon: Share2, count: count(payouts) },
-    { href: "/admin/revendeurs", label: "Abonnements revendeurs à valider", hint: "Vérifier le paiement.", icon: Wallet, count: count(resellers, (r) => r.status === "pending") },
+    { href: "/admin/revendeurs", label: "Anciens paiements de revendeurs", hint: "Revendre est sans abonnement : traiter les derniers paiements.", icon: Wallet, count: count(resellers, (r) => r.status === "pending") },
     {
       href: "/admin/revendeurs",
       label: "Gains de revendeurs à verser",

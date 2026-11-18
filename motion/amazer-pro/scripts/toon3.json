@@ -1,0 +1,52 @@
+{
+ "id": "toon3",
+ "nom": "pub-personnages-2_vendez-sur-amazer",
+ "titre": "Vendez sur AMAZER",
+ "voix": "fr-FR-HenriNeural",
+ "vitesse": "+6%",
+ "tenue": 1.8,
+ "scenes": [
+  {
+   "type": "boutique_calme",
+   "voix": "Une belle boutique… mais les clients se font rares ?"
+  },
+  {
+   "type": "ecrans",
+   "voix": "Sur AMAZER, ouvrez votre boutique en ligne. C'est gratuit pour commencer.",
+   "transition": "balayage",
+   "ecrans": [
+    { "img": "18-vendre-long.png", "de": 0, "texte": "Ouvrez votre *boutique*", "scroll": [0, 560, 0.35, 1.25], "taps": [{ "cible": "Choisir Boutique", "at": 1.75 }] }
+   ],
+   "fin": 1.9
+  },
+  {
+   "type": "ecrans",
+   "voix": "Ajoutez vos produits avec une photo : votre vitrine est en ligne.",
+   "ecrans": [
+    { "img": "19-boutique-ajout-long.png", "de": 0, "texte": "Ajoutez vos *produits*", "scroll": [0, 380, 0.15, 0.7], "taps": [{ "cible": "Nom du produit", "at": 0.95 }, { "cible": "Ajouter au catalogue", "at": 1.7 }] },
+    { "img": "20-vitrine-long.png", "de": 2.25, "texte": "Votre *vitrine* en ligne", "scroll": [0, 330, 2.6, 3.4] }
+   ],
+   "succes": 1.85,
+   "fin": 1.5
+  },
+  {
+   "type": "commandes_pluie",
+   "voix": "Et les commandes arrivent, directement sur votre téléphone !",
+   "commandes": ["Riz parfumé 25 kg", "Huile végétale 5 L", "Sucre en poudre 5 kg", "Lait en poudre 400 g", "Spaghetti 500 g"]
+  },
+  {
+   "type": "boutique",
+   "voix": "Vous préparez, et le livreur AMAZER s'occupe de la livraison.",
+   "ecran": "11-boutique-commandes.png",
+   "tap": { "cible": "Préparer la commande" },
+   "sous_titres": [{ "texte": "Vous *préparez*\net on livre !", "de": 0.15 }]
+  },
+  {
+   "type": "fin",
+   "voix": "AMAZER. Vendez en ligne, vendez plus. amazer point store.",
+   "slogan": "Vendez en ligne.\n*Vendez plus.*",
+   "mention": "Gratuit pour commencer · Paiement contrôlé par AMAZER",
+   "sous_titres_voix": ["AMAZER.", "Vendez en ligne, vendez plus.", "amazer.store"]
+  }
+ ]
+}

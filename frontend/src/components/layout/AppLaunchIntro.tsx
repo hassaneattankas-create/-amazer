@@ -5,7 +5,7 @@ import { useEffect } from "react";
 /**
  * Ouverture animée d'AMAZER — uniquement quand AMAZER est ouvert comme une application (Android ou installée
  * depuis le site), une fois par session. Le script d'en-tête (LAUNCH_INTRO_SCRIPT) ajoute la classe
- * `amazer-intro` à <html> avant le premier affichage : l'écran orange apparaît sans éclair blanc.
+ * `amazer-intro` à <html> avant le premier affichage : l'écran bleu nuit apparaît sans éclair blanc.
  * Sur le site ouvert dans un navigateur, rien ne s'affiche (aucun effet sur la vitesse de la page).
  * Un toucher passe l'animation ; « mouvement réduit » : simple fondu.
  */

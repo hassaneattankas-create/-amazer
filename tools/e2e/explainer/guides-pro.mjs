@@ -27,8 +27,7 @@ GUIDES.revendeur = {
       scenes: [
         { say: "Ouvrez la page Revendre sans stock. Tout tient en quatre étapes : choisir des produits, fixer votre prix, partager votre lien, et encaisser votre marge.",
           do: (f) => f.point("Revendez sans stock", { selector: "h1" }), guide: g("Ouvrez la page Revendre", "Dans le menu, touchez **Revendre sans stock**. La page résume les **4 étapes**.") },
-        { say: "Pour revendre, votre abonnement doit être actif. Choisissez Nita ou Amana, envoyez le montant indiqué, puis écrivez la référence du paiement.",
-          do: (f) => f.point("Nita Transfert"), guide: g("Activez votre abonnement", "Choisissez **Nita Transfert** ou **Amana Transfert**, envoyez le montant affiché, puis écrivez la **référence du paiement**. AMAZER vérifie et active votre compte.") },
+        { say: "La revente est sans abonnement : vous ne payez rien. AMAZER garde seulement une petite part de votre marge.", do: (f) => f.point("Sans abonnement", { selector: "p" }) },
       ],
     },
     {

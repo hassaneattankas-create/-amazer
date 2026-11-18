@@ -168,7 +168,7 @@ export const revendeur = {
   proxy: true,
   mocks: [
     me("ali@exemple.com", "Ali Garba"),
-    [/\/resellers\/account\/me$/, { active: true, paid_until: iso(-25 * 1440), monthly_fee: 1000, commission_percent: 0, pending_payment: false }],
+    [/\/resellers\/account\/me$/, { active: true, paid_until: iso(-25 * 1440), monthly_fee: 0, commission_percent: 10, pending_payment: false }],
     [/\/resellers\/listings\/me$/, listings],
     [/\/resellers\/earnings\/me$/, { earned: 15000, pending: 3000, orders_delivered: 13, orders_pending: 2, paid: 12000, to_pay: 3000 }],
     [/\/resellers\/u1\/shop$/, { reseller_id: "u1", reseller_name: "Ali Garba", active: true, items: listings.filter((l) => l.is_active).map((l) => ({ id: l.id, price_id: l.price_id, vendor_id: "v1", product_id: l.product_id, product_name: l.product_name, image_url: null, price: l.resale_amount })) }],

@@ -117,7 +117,7 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 
 ## Admin · Routine quotidienne (À traiter)
 - Page « À traiter » (première page de l'admin) : une tuile par chose en attente avec son nombre ; toucher une tuile ouvre la bonne page. « Rien en attente pour le moment » = tout est fait.
-- Tuiles : paiements de commandes à valider, commandes payées à livrer, inscriptions vendeurs à valider, abonnements vendeurs à valider, retraits d'affiliés demandés, abonnements revendeurs à valider, gains de revendeurs à verser, remboursements à faire, signalements des 7 derniers jours.
+- Tuiles : paiements de commandes à valider, commandes payées à livrer, inscriptions vendeurs à valider, abonnements vendeurs à valider, retraits d'affiliés demandés, anciens paiements de revendeurs (il n'y a plus d'abonnement revendeur), gains de revendeurs à verser, remboursements à faire, signalements des 7 derniers jours.
 - Chaque jour : 1) valider les paiements de commandes ; 2) suivre les livraisons ; 3) valider les abonnements payés ; 4) verser l'argent dû (boutiques, revendeurs, affiliés, remboursements) ; 5) regarder la modération.
 - Chaque samedi : publier l'affiche des pharmacies de garde de la semaine (Gardes et approvisionnements).
 
@@ -160,7 +160,7 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 
 ## Admin · Revendeurs
 - Où : Admin › « Revendeurs ». Revendeur = vend des produits AMAZER sans stock, à son prix, et garde la marge.
-- Abonnements à valider : vérifier la référence sur le compte Nita / Amana, puis « Valider » ou « Refuser ». 
+- Revendre est SANS abonnement (depuis le 18 nov. 2026). « Anciens paiements d'abonnement » n'apparaît que s'il reste un paiement envoyé avant : vérifier la référence Nita / Amana, puis « Valider » ou « Refuser ».
 - Gains à verser : verser la marge par Nita / Amana, puis « Enregistrer un versement » (montant, référence) : le reste à verser baisse et le revendeur est prévenu. AMAZER garde une commission sur chaque marge (10 % par défaut, réglable).
 - Tous les revendeurs : recherche par nom, e-mail ou téléphone ; état (gratuit, expiré, jamais activé, a déjà payé) ; « Voir sa boutique » ; WhatsApp.
 
@@ -202,7 +202,7 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 
 ## Admin · Tarifs, frais et réglages généraux
 - Où : Vendeurs et tarifs › « Tarifs, frais et réglages ». Penser à « Enregistrer ».
-- Prix : abonnement Boutique, Restaurant, Premium (prix mensuels globaux) ; essai gratuit à l'inscription (jours) ; réduction de lancement ; abonnement revendeur ; plafond d'articles de la formule sans abonnement.
+- Prix : abonnement Boutique, Restaurant, Premium (prix mensuels globaux) ; essai gratuit à l'inscription (jours) ; réduction de lancement ; plafond d'articles de la formule sans abonnement.
 - Commission AMAZER et frais plateforme : réglables ; bouton « Activer / Désactiver 0 % Commission » (mode lancement).
 - Livraison : prix par défaut, urbaine, périphérique, et frais par quartier (une ligne « Quartier:Montant », puis « Enregistrer quartiers »).
 - Réception automatique : délai après lequel une commande « En livraison » passe « Reçue » si le client ne confirme pas (prévoir assez pour les livraisons hors de Niamey).
@@ -255,6 +255,12 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - Où : Admin › « Modération ». Signalements de conversations (faits par les clients ou les vendeurs), avis sur les établissements, avis sur AMAZER (page « Avis »).
 - Un compte qui abuse : le retirer dans Utilisateurs.
 
+## Admin · Ce que l'Assistant fait pour vous
+- L'Assistant connaît chaque page de l'admin : demandez-lui « où je valide un paiement ? », « comment offrir un mois à une boutique ? », « que dois-je faire aujourd'hui ? » : il donne le chemin exact (Menu admin › page › bouton) et les étapes.
+- Les actions de l'admin (valider un paiement, verser, rembourser, changer un tarif, supprimer un compte, envoyer un message…) sont protégées par votre code PIN. L'Assistant n'a JAMAIS votre PIN ni votre mot de passe : c'est vous qui touchez le dernier bouton. Il prépare tout le reste : textes des messages à tous, réponses aux vendeurs, affiches, vidéos, comptes rendus.
+- Il fabrique seul : l'affiche de chaque nouvelle boutique (QR code, nom, logo, modèle selon la formule) avec le lien WhatsApp pour l'envoyer ; des pubs à personnages pour les clients et pour les vendeurs ; des tutoriels vidéo sur les vraies pages ; des documents PDF et des présentations PowerPoint aux couleurs d'AMAZER.
+- Routine conseillée : chaque matin, ouvrez « À traiter » ; l'Assistant vous rappelle l'ordre (paiements, livraisons, abonnements, versements, modération).
+
 ## Plan du site AMAZER
 - Accueil (amazer.store) : recherche, bonnes affaires, sections, boutiques et restaurants à la une. Boutiques : /boutiques ; Restaurants : /restaurant ; Hôtels et Premium : /hotels ; Promotions : /promotions ; Catégories : /category.
 - Pharmacies : /pharmacies (garde de la semaine, carte, annuaire). Stations : /stations (où trouver de l'essence, carte, alertes).
@@ -295,6 +301,7 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - 15 nov. : livraison : dans le panier et la commande de repas, le bouton « Utiliser ma position » enregistre la position GPS exacte (en plus de l'adresse et du repère) ; le livreur et le restaurant ont l'itinéraire exact.
 - 15 nov. : stations : « Vous y êtes ? » (il y en a / plus rien / longue file, en un geste, sans compte) affiché « selon des clients » pendant 2 heures ; « Me prévenir quand il y en a » (une station, ou toutes les stations de la ville) : notification dès que la station indique le carburant ou qu'un communiqué d'approvisionnement est publié, au plus une toutes les 2 heures (compte nécessaire).
 - 15 nov. : la carte des pharmacies montre toutes les pharmacies connues du Niger (pas seulement Niamey) ; on peut chercher une ville sur la carte. La carte des stations ne montre plus que les stations inscrites sur AMAZER (plus de points gris pour les stations inconnues) ; s'il n'y en a encore aucune dans la ville, la carte le dit et propose « Inscrire ma station ». Choisir une ville centre la carte sur cette ville.
-- 18 nov. : nouvel écran d'ouverture d'AMAZER quand on l'ouvre comme une application (installée depuis le site ou Android) : fond orange avec lumières, motif d'icônes (panier, pharmacie, essence, restaurant, moto…), logo et « Achetez et vendez en toute confiance », puis l'accueil apparaît ; un toucher passe l'animation. Rien ne change sur le site ouvert dans un navigateur.
+- 18 nov. : nouvel écran d'ouverture d'AMAZER quand on l'ouvre comme une application (installée depuis le site ou Android) : fond bleu nuit avec des lumières bleue et orange, motif d'icônes (panier, pharmacie, essence, restaurant, moto…), logo et « Achetez et vendez en toute confiance », puis l'accueil apparaît ; un toucher passe l'animation. Rien ne change sur le site ouvert dans un navigateur.
 - 18 nov. : revendeurs : plus aucun abonnement ; revendre est gratuit, AMAZER garde seulement sa commission (10 % de la marge par défaut, réglable dans Vendeurs et tarifs) sur chaque article vendu et livré.
 - 18 nov. : affiches des vendeurs : c'est l'Assistant AMAZER qui les fabrique (nom de la boutique, QR code de la vitrine, logo ; modèle Boutique, Restaurant ou Premium) et les envoie aux nouveaux vendeurs ; rien de plus sur le site.
+- 19 nov. : l'Assistant fait des pubs à personnages pour les VENDEURS (« Vendez sur AMAZER »), les affiches des nouvelles boutiques et des présentations PowerPoint ; dans l'admin, « Abonnements revendeurs à valider » devient « Anciens paiements de revendeurs ».

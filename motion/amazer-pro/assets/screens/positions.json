@@ -556,10 +556,6 @@
   ]
  },
  "06-paiement": {
-  "J'ai payé": [
-   215,
-   562
-  ],
   "1": [
    352,
    28
@@ -567,6 +563,10 @@
   "16": [
    300,
    28
+  ],
+  "J'ai payé": [
+   215,
+   562
   ],
   "AMAZER": [
    81,
@@ -800,13 +800,13 @@
   ]
  },
  "08-paiement-confirme": {
-  "Mon reçu": [
-   195,
-   592
-  ],
   "1": [
    352,
    28
+  ],
+  "Mon reçu": [
+   195,
+   592
   ],
   "AMAZER": [
    81,
@@ -1664,10 +1664,6 @@
   ]
  },
  "14-recu-qr": {
-  "QR code du reçu": [
-   195,
-   887
-  ],
   "1": [
    352,
    28
@@ -1675,6 +1671,10 @@
   "17": [
    300,
    28
+  ],
+  "QR code du reçu": [
+   195,
+   887
   ],
   "AMAZER": [
    81,
@@ -2171,6 +2171,472 @@
   "Commander": [
    195,
    1424
+  ]
+ },
+ "18-vendre": {
+  "AMAZER": [
+   81,
+   28
+  ],
+  "Menu": [
+   181,
+   28
+  ],
+  "Se connecter": [
+   230,
+   28
+  ],
+  "Pays, devise et langue": [
+   269,
+   28
+  ],
+  "Notifications": [
+   307,
+   28
+  ],
+  "Panier": [
+   352,
+   28
+  ],
+  "Vendez sur AMAZER": [
+   195,
+   121
+  ],
+  "Choisissez votre formule": [
+   195,
+   490
+  ],
+  "Choisir Boutique": [
+   195,
+   849
+  ],
+  "Choisir Restaurant": [
+   195,
+   1163
+  ],
+  "Choisir Premium": [
+   195,
+   1629
+  ],
+  "Revendre sans stock": [
+   120,
+   1809
+  ],
+  "Frais transparents": [
+   195,
+   1905
+  ],
+  "Installer l'application": [
+   86,
+   2437
+  ],
+  "amazer.niger2@gmail.com": [
+   164,
+   2477
+  ],
+  "Boutiques": [
+   48,
+   2569
+  ],
+  "Promotions": [
+   52,
+   2609
+  ],
+  "Restaurants": [
+   55,
+   2649
+  ],
+  "Premium : hôtels, transport, entreprises": [
+   141,
+   2689
+  ],
+  "Pharmacies": [
+   53,
+   2729
+  ],
+  "Stations-essence": [
+   72,
+   2769
+  ],
+  "Comment ça marche ?": [
+   87,
+   2809
+  ],
+  "Devenir vendeur": [
+   67,
+   2909
+  ],
+  "Affiliation": [
+   47,
+   2989
+  ],
+  "Formations gratuites": [
+   81,
+   3029
+  ],
+  "Espace vendeur": [
+   67,
+   3069
+  ],
+  "Espace station": [
+   63,
+   3109
+  ],
+  "Guide du vendeur": [
+   71,
+   3149
+  ],
+  "Devenir livreur": [
+   62,
+   3189
+  ],
+  "Signaler un problème": [
+   83,
+   3289
+  ],
+  "Conditions d'utilisation": [
+   88,
+   3329
+  ],
+  "Politique de confidentialité": [
+   100,
+   3369
+  ],
+  "Suppression de compte": [
+   91,
+   3409
+  ]
+ },
+ "20-vitrine": {
+  "13": [
+   300,
+   28
+  ],
+  "AMAZER": [
+   81,
+   28
+  ],
+  "Menu": [
+   203,
+   28
+  ],
+  "Pays, devise et langue": [
+   254,
+   28
+  ],
+  "Panier": [
+   352,
+   28
+  ],
+  "Boutique Moussa": [
+   229,
+   230
+  ],
+  "Écrire à la boutique": [
+   113,
+   306
+  ],
+  "Rechercher chez Boutique Moussa…": [
+   195,
+   465
+  ],
+  "Catalogue de la boutique": [
+   123,
+   542
+  ],
+  "18 500 XOF": [
+   103,
+   703
+  ],
+  "Ajouter au panier": [
+   103,
+   848
+  ],
+  "Acheter": [
+   103,
+   888
+  ],
+  "450 XOF": [
+   288,
+   703
+  ],
+  "1 000 XOF": [
+   103,
+   1060
+  ],
+  "2 250 XOF": [
+   288,
+   1060
+  ],
+  "3 750 XOF": [
+   103,
+   1417
+  ],
+  "6 500 XOF": [
+   288,
+   1417
+  ],
+  "Avis clients": [
+   195,
+   1686
+  ],
+  "Donner mon avis": [
+   102,
+   1774
+  ],
+  "Installer l'application": [
+   86,
+   2068
+  ],
+  "amazer.niger2@gmail.com": [
+   164,
+   2108
+  ],
+  "Boutiques": [
+   48,
+   2200
+  ],
+  "Promotions": [
+   52,
+   2240
+  ],
+  "Restaurants": [
+   55,
+   2280
+  ],
+  "Premium : hôtels, transport, entreprises": [
+   141,
+   2320
+  ],
+  "Pharmacies": [
+   53,
+   2360
+  ],
+  "Stations-essence": [
+   72,
+   2400
+  ],
+  "Comment ça marche ?": [
+   87,
+   2440
+  ],
+  "Devenir vendeur": [
+   67,
+   2540
+  ],
+  "Revendre sans stock": [
+   82,
+   2580
+  ],
+  "Affiliation": [
+   47,
+   2620
+  ],
+  "Formations gratuites": [
+   81,
+   2660
+  ],
+  "Espace vendeur": [
+   67,
+   2700
+  ],
+  "Espace station": [
+   63,
+   2740
+  ],
+  "Guide du vendeur": [
+   71,
+   2780
+  ],
+  "Devenir livreur": [
+   62,
+   2820
+  ],
+  "Signaler un problème": [
+   83,
+   2920
+  ],
+  "Conditions d'utilisation": [
+   88,
+   2960
+  ],
+  "Politique de confidentialité": [
+   100,
+   3000
+  ],
+  "Suppression de compte": [
+   91,
+   3040
+  ]
+ },
+ "19-boutique-ajout": {
+  "13": [
+   300,
+   28
+  ],
+  "AMAZER": [
+   81,
+   28
+  ],
+  "Menu": [
+   203,
+   28
+  ],
+  "Pays, devise et langue": [
+   254,
+   28
+  ],
+  "Panier": [
+   352,
+   28
+  ],
+  "Boutique Moussa": [
+   116,
+   89
+  ],
+  "Voir ma boutique": [
+   75,
+   153
+  ],
+  "Profil et abonnement": [
+   226,
+   153
+  ],
+  "Accueil": [
+   195,
+   210
+  ],
+  "Commandes": [
+   195,
+   268
+  ],
+  "Mes produits": [
+   195,
+   326
+  ],
+  "Ajouter un produit": [
+   195,
+   384
+  ],
+  "Conseils pour des photos qui font vendre": [
+   186,
+   495
+  ],
+  "Nom du produit": [
+   195,
+   539
+  ],
+  "Marque (facultatif)": [
+   195,
+   587
+  ],
+  "Prix (XOF)": [
+   195,
+   691
+  ],
+  "Stock": [
+   195,
+   739
+  ],
+  "Description (facultatif)": [
+   195,
+   969
+  ],
+  "Ajouter au catalogue": [
+   136,
+   1077
+  ],
+  "Réglages": [
+   195,
+   1170
+  ],
+  "Installer l'application": [
+   86,
+   1454
+  ],
+  "amazer.niger2@gmail.com": [
+   164,
+   1494
+  ],
+  "Boutiques": [
+   48,
+   1586
+  ],
+  "Promotions": [
+   52,
+   1626
+  ],
+  "Restaurants": [
+   55,
+   1666
+  ],
+  "Premium : hôtels, transport, entreprises": [
+   141,
+   1706
+  ],
+  "Pharmacies": [
+   53,
+   1746
+  ],
+  "Stations-essence": [
+   72,
+   1786
+  ],
+  "Comment ça marche ?": [
+   87,
+   1826
+  ],
+  "Devenir vendeur": [
+   67,
+   1926
+  ],
+  "Revendre sans stock": [
+   82,
+   1966
+  ],
+  "Affiliation": [
+   47,
+   2006
+  ],
+  "Formations gratuites": [
+   81,
+   2046
+  ],
+  "Espace vendeur": [
+   67,
+   2086
+  ],
+  "Espace station": [
+   63,
+   2126
+  ],
+  "Guide du vendeur": [
+   71,
+   2166
+  ],
+  "Devenir livreur": [
+   62,
+   2206
+  ],
+  "Signaler un problème": [
+   83,
+   2306
+  ],
+  "Conditions d'utilisation": [
+   88,
+   2346
+  ],
+  "Politique de confidentialité": [
+   100,
+   2386
+  ],
+  "Suppression de compte": [
+   91,
+   2426
+  ],
+  "Ouvrir l'assistant AMAZER": [
+   350,
+   804
   ]
  }
 }

@@ -5,7 +5,8 @@
  * Les temps internes sont relatifs au début de la scène (u = t - a) : une scène plus longue garde son jeu
  * et prolonge la tenue. Les sous-titres (« sous_titres ») sont des autocollants : [{ texte, de, a }] en secondes relatives.
  *
- * Modèles : rue_chaleur, maison_ombre, ecrans (vrais écrans d'AMAZER dans un téléphone 3D), boutique, moto, portail, fin.
+ * Modèles : rue_chaleur, maison_ombre, ecrans (vrais écrans d'AMAZER dans un téléphone 3D), boutique, moto, portail, fin,
+ *   boutique_calme et commandes_pluie (pubs « vendeurs »).
  */
 (function (A) {
   const C = A.C, E = A.E, T = A.Toon, svgEl = T.svg;
@@ -616,6 +617,173 @@
       this.ok.style.transform = `scale(${(u >= k.done ? .4 + .6 * okk : 0).toFixed(3)})`;
       this.ok.style.opacity = (A.lin(u, k.done, k.done + .08) * (1 - A.lin(u, D - .4, D - .2))).toFixed(2);
       playSparks(this.sp, u, k.give + .45, 640, 900, 230);
+      playStickers(this.st, u, D);
+    },
+  });
+
+  /* ======================================================================
+   * boutique_calme — Moussa attend derrière son comptoir : personne, une mouche, l'horloge qui tourne… puis l'idée
+   *   P.enseigne (nom sur l'enseigne), P.sous_titres
+   * ====================================================================== */
+  const shopDecor = TS.shopDecor = (cam, P) => {
+    const shelfGoods = y => {
+      let s = '';
+      for (let i = 0; i < 9; i++) {
+        const x = 80 + i * 105, k = (i * 7 + y) % 4;
+        if (k === 0) s += `<rect x="${x}" y="${y - 120}" width="80" height="120" rx="18" fill="#F1E5C6"/><rect x="${x + 12}" y="${y - 90}" width="56" height="34" rx="6" fill="#fff"/><rect x="${x + 22}" y="${y - 82}" width="36" height="8" fill="#C2410C"/>`;
+        else if (k === 1) s += `<rect x="${x + 10}" y="${y - 130}" width="34" height="130" rx="10" fill="#FACC15"/><rect x="${x + 16}" y="${y - 146}" width="22" height="20" rx="5" fill="#15803D"/><rect x="${x + 46}" y="${y - 130}" width="34" height="130" rx="10" fill="#EAB308"/><rect x="${x + 52}" y="${y - 146}" width="22" height="20" rx="5" fill="#15803D"/>`;
+        else if (k === 2) s += `<rect x="${x}" y="${y - 100}" width="88" height="100" rx="8" fill="#2563EB"/><rect x="${x + 8}" y="${y - 70}" width="72" height="24" fill="#fff" opacity=".85"/>`;
+        else s += `<rect x="${x + 4}" y="${y - 70}" width="38" height="70" rx="8" fill="#DC2626"/><rect x="${x + 46}" y="${y - 70}" width="38" height="70" rx="8" fill="#DC2626"/><rect x="${x + 25}" y="${y - 140}" width="38" height="70" rx="8" fill="#B91C1C"/>`;
+      }
+      return s;
+    };
+    scenery(cam, `
+      <rect width="1080" height="1920" fill="#F3E2C7"/>
+      ${[620, 880, 1140].map(y => `${shelfGoods(y)}<rect x="40" y="${y}" width="1000" height="26" rx="6" fill="#9A6237"/><rect x="40" y="${y + 26}" width="1000" height="10" fill="#7C4A2A"/>`).join('')}
+      <path d="M 0 0 L 1080 0 L 1080 250 ${Array.from({ length: 9 }, (_, i) => `Q ${1080 - i * 120 - 60} 310 ${1080 - (i + 1) * 120} 250`).join(' ')} Z" fill="#FF4D00"/>
+      ${Array.from({ length: 9 }, (_, i) => `<path d="M ${i * 120 + 30} 0 L ${i * 120 + 90} 0 L ${i * 120 + 90} 250 Q ${i * 120 + 60} 300 ${i * 120 + 30} 262 Z" fill="#fff" opacity=".92"/>`).join('')}
+      <rect x="250" y="330" width="580" height="116" rx="20" fill="#0F766E"/>
+      <text x="540" y="408" text-anchor="middle" font-family="Geist" font-weight="800" font-size="58" fill="#FDE68A">${P.enseigne ?? 'Boutique Moussa'}</text>`);
+  };
+  const counter = TS.counter = cam => scenery(cam, `
+      <rect x="0" y="1300" width="1080" height="620" fill="#7C4A2A"/><rect x="0" y="1282" width="1080" height="44" rx="10" fill="#A86B3D"/>
+      ${[0, 1, 2, 3].map(i => `<rect x="${60 + i * 260}" y="1380" width="200" height="300" rx="16" fill="#6B3F22"/>`).join('')}
+      <rect x="120" y="1180" width="150" height="104" rx="14" fill="#94A3B8"/><rect x="140" y="1160" width="110" height="26" rx="10" fill="#CBD5E1"/>`);
+
+  TS.scenes.boutique_calme = (P, a, b, X) => ({
+    id: 'calme', a, b,
+    build(el) {
+      el.style.display = 'block';
+      this.D = b - a;
+      this.cam = A.el('div', { cls: 'abs', style: { width: '1080px', height: '1920px', transformOrigin: '540px 1150px' } }, el);
+      shopDecor(this.cam, P);
+      // horloge murale (les aiguilles tournent vite : le temps passe)
+      this.clock = box(this.cam, 240, 240, 120, 120, `<circle r="92" fill="#fff" stroke="#9A6237" stroke-width="14"/>${Array.from({ length: 12 }, (_, i) => `<rect x="-3" y="-80" width="6" height="${i % 3 ? 10 : 18}" fill="#334155" transform="rotate(${i * 30})"/>`).join('')}<rect class="hh" x="-6" y="-48" width="12" height="54" rx="6" fill="#0F172A"/><rect class="mm" x="-4" y="-72" width="8" height="78" rx="4" fill="#FF4D00"/><circle r="9" fill="#0F172A"/>`);
+      this.hh = this.clock.querySelector('.hh'); this.mm = this.clock.querySelector('.mm');
+      this.mo = T.person(this.cam, T.CAST.moussa);
+      this.mo.near.item.innerHTML = '';
+      this.moPhone = svgEl('g', {}, this.mo.near.item); this.moPhone.innerHTML = PHONE_SMALL;
+      counter(this.cam);
+      // la mouche (corps + ailes qui battent) et sa trajectoire en pointillés
+      this.fly = box(this.cam, 80, 60, 40, 30, `<ellipse class="w1" cx="-6" cy="-12" rx="12" ry="7" fill="#E2E8F0" opacity=".85"/><ellipse class="w2" cx="6" cy="-12" rx="12" ry="7" fill="#E2E8F0" opacity=".85"/><ellipse rx="12" ry="9" fill="#1F2937"/><circle cx="10" cy="-2" r="5" fill="#111827"/>`);
+      this.fly.style.zIndex = 35;
+      this.w = [this.fly.querySelector('.w1'), this.fly.querySelector('.w2')];
+      // l'idée : ampoule au-dessus de la tête
+      this.bulb = box(this.cam, 240, 260, 120, 160, `<g fill="#FDE047">${[0, 1, 2, 3, 4, 5, 6].map(i => `<rect x="-6" y="-150" width="12" height="34" rx="6" transform="rotate(${-90 + i * 30})"/>`).join('')}</g><circle cy="-40" r="58" fill="#FDE047"/><circle cx="-18" cy="-58" r="16" fill="#FFF9C4"/><rect x="-26" y="12" width="52" height="30" rx="8" fill="#94A3B8"/><rect x="-20" y="40" width="40" height="12" rx="6" fill="#64748B"/>`);
+      this.bulb.style.zIndex = 36;
+      this.sp = sparks(el, 8, '#FDE047');
+      this.st = stickers(el, P, { list: [{ texte: 'Les clients\n*se font rares ?*', de: .35, a: this.D - 1.25 }], size: 74 });
+      this.idea = this.D - 1.05;
+      for (let k = 0; k < Math.floor(this.idea / .5); k++) X.cue(a + .1 + k * .5, 'tick', .22, .5);
+      X.cue(a + .4, 'buzz', .22, -.3); X.cue(a + 1.6, 'buzz', .2, .3);
+      X.cue(a + this.idea, 'pop', .6); X.cue(a + this.idea + .05, 'shimmer', .45);
+    },
+    seek(t) {
+      const u = t - a, D = this.D, idea = this.idea;
+      const push = A.P(u, 0, D, E.sine);
+      A.T(this.cam, { s: 1.04 + push * .07, x: A.wob(u, 1, .5) * 4, y: A.wob(u, 2, .4) * 3 });
+      put(this.clock, 900, 520, .9);
+      const spin = u < idea ? u : idea;
+      this.mm.setAttribute('transform', `rotate(${(spin * 360).toFixed(1)})`);
+      this.hh.setAttribute('transform', `rotate(${(spin * 30 + 40).toFixed(1)})`);
+      const got = A.P(u, idea, idea + .35, E.backOut);
+      // Moussa : accoudé, le menton dans la main, bâille ; puis l'idée et le téléphone
+      const yawn = A.env(u, 1.3, 2.2, .25, .3);
+      const phoneUp = A.P(u, idea + .25, idea + .6, E.expoOut);
+      this.mo.pose({
+        x: 470, y: 1690, s: 1.42, t: u, shadow: 0,
+        lean: 10 * (1 - got) + Math.sin(u * 1.6) * 1.5,
+        headTilt: (u < idea ? 10 + Math.sin(u * 1.2) * 3 : A.mix(10, -2, got)) + phoneUp * 5,
+        near: phoneUp > .02 ? { sh: A.mix(40, 60, phoneUp), el: A.mix(120, 105, phoneUp) } : { sh: A.mix(40, 30, got), el: A.mix(138, 60, got) },
+        far: { sh: A.mix(25, 150, got) * (1 - phoneUp) + phoneUp * 10, el: A.mix(60, 30, got) },
+        mouth: u < idea ? (yawn > .3 ? 'open' : 'flat') : got > .5 ? 'grin' : 'o',
+        brow: u < idea ? -.2 : .7, browTilt: u < idea ? -6 : 0,
+        blink: u < idea ? (yawn > .3 ? 1 : .55 + .45 * T.blink(u, 3)) : T.blink(u, 3),
+        look: u < idea ? [Math.sin(u * 2.3) * 3, -1 + Math.cos(u * 2.3) * 2] : phoneUp > .5 ? [4, 6] : [0, -6],
+      });
+      this.moPhone.setAttribute('opacity', phoneUp > .02 ? 1 : 0);
+      this.moPhone.setAttribute('transform', `rotate(-90) scale(${(1.1 * phoneUp).toFixed(3)})`);
+      // la mouche tourne autour de sa tête, puis s'enfuit à l'idée
+      const ang = u * 3.4, flee = A.P(u, idea, idea + .5, E.cubicIn);
+      const fx = 560 + Math.cos(ang) * 190 + flee * 700, fy = 920 + Math.sin(ang * 1.3) * 90 - flee * 500;
+      put(this.fly, fx, fy, 1, Math.cos(ang) * 20, 1 - flee);
+      const flap = Math.sin(u * 90) * 25;
+      this.w[0].setAttribute('transform', `rotate(${(-20 + flap).toFixed(1)} 0 -6)`); this.w[1].setAttribute('transform', `rotate(${(20 - flap).toFixed(1)} 0 -6)`);
+      const hx = 470 + 30 * 1.42, hy = 1690 - 700 * 1.42;
+      put(this.bulb, hx, hy - Math.sin(u * 5) * 8 * got, got, Math.sin(u * 4) * 6 * got, u >= idea ? Math.min(1, got * 1.4) : 0);
+      playSparks(this.sp, u, idea + .05, hx, hy - 40, 150);
+      playStickers(this.st, u, D);
+    },
+  });
+
+  /* ======================================================================
+   * commandes_pluie — les notifications « Nouvelle commande » tombent sur le téléphone de Moussa, il saute de joie
+   *   P.commandes : ['Riz parfumé 25 kg', …] (produits réels de la boutique), P.titre_notif, P.sous_titres
+   * ====================================================================== */
+  TS.scenes.commandes_pluie = (P, a, b, X) => ({
+    id: 'pluie', a, b,
+    build(el) {
+      el.style.display = 'block';
+      this.D = b - a;
+      this.el = el;
+      el.style.background = 'radial-gradient(ellipse at 50% 35%,#FFE3BF 0%,#F8C38A 60%,#EFA765 100%)';
+      this.rays = box(el, 2400, 2400, 1200, 1200, `<g fill="#fff" opacity=".22">${Array.from({ length: 16 }, (_, i) => `<path d="M 0 0 L -90 -1300 L 90 -1300 Z" transform="rotate(${i * 22.5})"/>`).join('')}</g>`);
+      this.mo = T.person(el, T.CAST.moussa);
+      this.mo.near.item.innerHTML = '';
+      this.moPhone = svgEl('g', {}, this.mo.near.item); this.moPhone.innerHTML = PHONE_SMALL;
+      const list = (P.commandes ?? ['Riz parfumé 25 kg', 'Huile végétale 5 L', 'Sucre en poudre 5 kg', 'Lait en poudre 400 g']).slice(0, 5);
+      const n = list.length, t0 = .35, t1 = Math.max(t0 + .5, this.D - 1.6);
+      this.cards = list.map((txt, i) => {
+        const c = A.el('div', { cls: 'abs', style: { left: '110px', top: '0px', width: '860px', height: '150px', borderRadius: '36px', background: '#fff', boxShadow: '0 26px 50px -24px rgba(90,30,0,.55)', display: 'flex', alignItems: 'center', gap: '26px', padding: '0 34px', boxSizing: 'border-box', zIndex: 30 + i, transformOrigin: '50% 0' } }, el,
+          `<div style="width:92px;height:92px;border-radius:26px;background:${C.orange};display:grid;place-items:center;flex:none"><svg width="62" height="62" viewBox="-20 -20 40 40"><path d="M -11 12 L 0 -13 L 11 12 M -6.5 4 L 6.5 4" stroke="#fff" stroke-width="5.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+           <div style="flex:1;min-width:0"><div style="font:800 40px Geist;color:${NAVY}">${P.titre_notif ?? 'Nouvelle commande'}</div><div style="font:600 34px Geist;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${txt}</div></div>
+           <div style="font:600 28px Geist;color:#94A3B8;flex:none">maintenant</div>`);
+        return { c, at: n > 1 ? t0 + (t1 - t0) * (i / (n - 1)) ** .85 : t0 };
+      });
+      this.badge = A.el('div', { cls: 'abs', style: { width: '120px', height: '120px', borderRadius: '50%', background: '#DC2626', color: '#fff', font: '800 64px Geist', display: 'grid', placeItems: 'center', zIndex: 60, boxShadow: '0 14px 30px -10px rgba(120,20,0,.6)' } }, el, '0');
+      this.sp = sparks(el, 12, '#FDE047');
+      this.conf = Array.from({ length: 26 }, (_, i) => A.el('div', { cls: 'abs', style: { width: `${14 + (i % 3) * 6}px`, height: `${26 + (i % 4) * 6}px`, borderRadius: '5px', background: ['#FF4D00', '#FDE047', '#22C55E', '#2563EB', '#fff'][i % 5], zIndex: 25 } }, el));
+      this.st = stickers(el, P, { list: [{ texte: 'Les *commandes*\narrivent !', de: .15, a: this.D - .3 }], y: 230, size: 76 });
+      this.cards.forEach((k, i) => { X.cue(a + k.at, 'ding', .55, (i % 2 ? .3 : -.3)); X.cue(a + k.at, 'buzz', .25); });
+      this.joy = this.cards[Math.min(2, this.cards.length - 1)].at + .1;
+      X.cue(a + this.joy, 'shimmer', .45); X.cue(a + this.D - 1.0, 'kaching', .6);
+    },
+    seek(t) {
+      const u = t - a, D = this.D;
+      this.el.style.opacity = A.P(u, 0, .25, E.cubicOut).toFixed(3);
+      put(this.rays, 540, 1250, 1, u * 8);
+      // pile de notifications : la plus récente en haut, les autres glissent dessous
+      let count = 0;
+      this.cards.forEach((k, i) => {
+        if (u >= k.at) count = i + 1;
+        const kin = A.P(u, k.at, k.at + .45, E.spring);
+        let y = 400;
+        this.cards.forEach((q, j) => { if (j > i) y += A.P(u, q.at, q.at + .4, E.expoOut) * 168; });
+        const fall = (1 - A.P(u, k.at, k.at + .35, E.expoOut)) * -260;
+        k.c.style.transform = `translateY(${(y + fall).toFixed(1)}px) scale(${(.85 + .15 * kin).toFixed(3)})`;
+        k.c.style.opacity = (u >= k.at ? Math.min(1, A.lin(u, k.at, k.at + .12)) * (y > 1150 ? .0 : 1) : 0).toFixed(3);
+        k.c.style.filter = y > 400 + 168 * 2.5 ? 'brightness(.94)' : 'none';
+      });
+      this.badge.textContent = String(count);
+      const last = this.cards[Math.max(0, count - 1)];
+      const bk = count ? A.P(u, last.at, last.at + .35, E.spring) : 0;
+      A.T(this.badge, { x: 900, y: 340, s: count ? .7 + .3 * bk : 0 });
+      // Moussa : surpris puis saute de joie, bras en l'air
+      const joy = this.joy, up = A.P(u, joy, joy + .3, E.backOut);
+      const hop = u > joy ? Math.abs(Math.sin((u - joy) * 7.5)) * 70 * (1 - A.lin(u, D - .6, D)) : 0;
+      this.mo.pose({
+        x: 540, y: 1880 - hop, s: 1.32, t: u, shadow: 0,
+        near: u < joy ? { sh: 60, el: 105 } : { sh: A.mix(60, 165, up), el: A.mix(105, 20, up) },
+        far: u < joy ? { sh: 10, el: 30 } : { sh: A.mix(10, 175, up), el: A.mix(30, 15, up) },
+        mouth: u < .9 ? 'o' : 'grin', brow: .7, blink: T.blink(u, 6), look: u < joy ? [4, -8] : [0, -4],
+        headTilt: u < joy ? 4 : Math.sin(u * 7) * 5, legN: hop > 10 ? { hip: 20, knee: 40 } : undefined, legF: hop > 10 ? { hip: -10, knee: 30 } : undefined,
+      });
+      this.moPhone.setAttribute('transform', 'rotate(-90) scale(1.1)');
+      playSparks(this.sp, u, joy, 540, 1180, 220);
+      this.conf.forEach((c, i) => {
+        const r = (i * 97 % 100) / 100, st = joy + (i % 7) * .05, k = Math.max(0, u - st);
+        A.T(c, { x: 60 + r * 960 + Math.sin(k * 4 + i) * 40, y: 1350 - k * (900 - r * 300) + k * k * 520, r: k * (200 + i * 13), o: u >= st ? 1 - A.lin(u, D - .4, D) : 0 });
+      });
       playStickers(this.st, u, D);
     },
   });

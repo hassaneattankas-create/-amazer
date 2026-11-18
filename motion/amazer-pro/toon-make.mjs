@@ -29,7 +29,7 @@ const id = String(script.id || path.basename(file, '.json')).replace(/[^a-z0-9_-
 if (!/^toon/.test(id)) throw new Error("L'identifiant du film doit commencer par « toon » (ex. toon2).");
 
 /* durée minimale de chaque type de scène (s) : la voix peut être plus longue, la scène suit */
-const MIN = { rue_chaleur: 4.0, maison_ombre: 2.3, boutique: 4.4, moto: 4.8, portail: 4.6, fin: 5.5 };
+const MIN = { rue_chaleur: 4.0, maison_ombre: 2.3, boutique: 4.4, moto: 4.8, portail: 4.6, fin: 5.5, boutique_calme: 4.2, commandes_pluie: 4.6 };
 const minFor = sc => {
   if (sc.type === 'ecrans') { const e = sc.ecrans ?? []; return Math.max(2.5, (e.length ? e[e.length - 1].de ?? 0 : 0) + (sc.fin ?? 1.6)); }
   if (sc.type === 'moto' && !sc.ecran) return 3.4;

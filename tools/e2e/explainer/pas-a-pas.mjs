@@ -536,20 +536,20 @@ GUIDES.station = {
 GUIDES.revendeur = {
   who: "Revendeurs", title: "Revendre, pas à pas", subtitle: "Du compte à la première marge, chaque clic",
   video: "AMAZER_pas-a-pas-revendeur.mp4", pdf: "AMAZER-Pas-a-pas-revendeur.pdf",
-  lead: "Toutes les étapes : **créer votre compte**, **activer** la revente, **choisir** des produits, fixer **votre prix**, **partager**, **encaisser**.",
-  points: [["Activer", "Abonnement Nita ou Amana."], ["Choisir", "Votre prix, votre marge."], ["Partager", "Votre lien sur WhatsApp."]],
+  lead: "Toutes les étapes : **créer votre compte**, ouvrir la revente (**sans abonnement**), **choisir** des produits, fixer **votre prix**, **partager**, **encaisser**.",
+  points: [["Gratuit", "Sans abonnement : une petite part de la marge."], ["Choisir", "Votre prix, votre marge."], ["Partager", "Votre lien sur WhatsApp."]],
   intro: intro("Aujourd'hui : revendre sans stock."),
   outro: "Choisissez, partagez, encaissez. Commencez aujourd'hui sur amazer.store.",
   end: ["À vous de vendre !", "amazer.store · Revendre"],
   chapters: [
     compteClient({ name: "Ali Garba", email: "ali@exemple.com", phone: "90000008" }),
     {
-      title: "Activer la revente", persona: () => ({ ...P.revendeur }), route: "/",
+      title: "Ouvrir la revente", persona: () => ({ ...P.revendeur }), route: "/",
       scenes: [
         { say: "Touchez Menu, puis Gagner avec AMAZER, puis Revendre sans stock.",
           do: async (f) => { await f.click("Menu", MENU); await f.click("Gagner avec AMAZER", MENU); await f.click("Revendre sans stock", LINK); }, guide: g("Revendre sans stock", "**Menu** → **Gagner avec AMAZER** → **Revendre sans stock**.") },
-        { say: "Pour activer la revente, choisissez Nita ou Amana, envoyez le montant affiché, et écrivez la référence du paiement. AMAZER vérifie et active.",
-          do: (f) => f.point("Nita Transfert"), guide: g("Activez", "Choisissez **Nita** ou **Amana**, envoyez le montant, écrivez la **référence**.") },
+        { say: "Bonne nouvelle : la revente est sans abonnement. Vous ne payez rien. AMAZER garde seulement une petite part de votre marge, sur chaque article vendu et livré.",
+          do: (f) => f.point("Sans abonnement", TXT), guide: g("Sans abonnement", "Vous ne payez **rien** : AMAZER garde seulement une **petite part de votre marge**.") },
       ],
     },
     {
