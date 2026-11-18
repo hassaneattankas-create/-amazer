@@ -28,10 +28,11 @@ FFMPEG = os.path.join(ROOT, '..', '..', 'jde-motion', 'node_modules', 'ffmpeg-st
 LEAD, GAP, TAIL = 0.6, 0.45, 0.4
 DEFAULT_VOICE = 'fr-FR-HenriNeural'  # voix uniquement française : pas de bascule vers l'accent anglais
 
-# Prononciation : forme écrite -> forme dite (« AMAZER » se dit « Amazaire »). Les sous-titres gardent l'écrit.
+# Prononciation : forme écrite -> forme dite (« AMAZER » se dit « Amazère » : avec « è », la voix ne peut pas dire « Amazé »). Les sous-titres gardent l'écrit.
 SAY = [
-    (r'\bamazer point store\b', 'Amazaire point store', 'amazer.store'),
-    (r'\bAMAZER\b', 'Amazaire', 'AMAZER'),
+    (r'\bamazer point store\b', 'Amazère point store', 'amazer.store'),
+    (r'\bamazer\.store\b', 'Amazère point store', 'amazer.store'),
+    (r'\bAMAZER\b', 'Amazère', 'AMAZER'),
     (r'\bAmanaTa\b', 'Amana Ta', 'AmanaTa'),
 ]
 

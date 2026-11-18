@@ -88,7 +88,8 @@ const VIRTUAL_CLOCK = () => {
   };
 };
 const VOICE = "fr-FR-HenriNeural";
-const SAY = [[/AMAZER/g, "Amazaire"], [/amazer\.store/gi, "amazaire point store"]];
+// « Amazère » : avec « è », la voix française ne peut pas dire « Amazé ».
+const SAY = [[/amazer\.store/gi, "Amazère point store"], [/AMAZER/gi, "Amazère"]];
 const spoken = (text) => SAY.reduce((t, [a, b]) => t.replace(a, b), text);
 const seconds = (file) => Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file]).toString().trim());
 

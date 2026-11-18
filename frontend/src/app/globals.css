@@ -258,26 +258,26 @@
 html.amazer-intro { overflow: hidden; }
 html.amazer-intro .amz-intro {
   position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; overflow: hidden;
-  background: linear-gradient(165deg, hsl(32 100% 58%) 0%, hsl(var(--brand-500)) 46%, hsl(14 96% 44%) 100%);
+  background: linear-gradient(165deg, hsl(217 33% 17%) 0%, hsl(222 47% 11%) 50%, hsl(222 48% 5%) 100%);
   animation: amz-intro-out 560ms cubic-bezier(0.7, 0, 0.84, 0) paused forwards;
 }
 html.amazer-intro-out .amz-intro { animation-play-state: running; }
 /* lumières douces qui dérivent */
 .amz-intro-lumiere { position: absolute; width: 120vmax; height: 120vmax; border-radius: 9999px; filter: blur(10px); }
-.amz-intro-lumiere-haut { left: -45vmax; top: -55vmax; background: radial-gradient(circle, hsl(44 100% 70% / .55), hsl(44 100% 70% / 0) 62%); animation: amz-intro-flotte 7s ease-in-out both; }
-.amz-intro-lumiere-bas { right: -50vmax; bottom: -60vmax; background: radial-gradient(circle, hsl(4 95% 45% / .5), hsl(4 95% 45% / 0) 62%); animation: amz-intro-flotte 7s ease-in-out reverse both; }
+.amz-intro-lumiere-haut { left: -45vmax; top: -55vmax; background: radial-gradient(circle, hsl(221 83% 53% / .28), hsl(221 83% 53% / 0) 62%); animation: amz-intro-flotte 7s ease-in-out both; }
+.amz-intro-lumiere-bas { right: -50vmax; bottom: -60vmax; background: radial-gradient(circle, hsl(var(--brand-500) / .32), hsl(var(--brand-500) / 0) 62%); animation: amz-intro-flotte 7s ease-in-out reverse both; }
 /* motif d'icônes sur deux plans (profondeur), effacé autour du logo */
 .amz-intro-motif {
-  position: absolute; inset: -20%; opacity: .2;
+  position: absolute; inset: -20%; opacity: .09;
   background-image: url("/splash/motif.svg"); background-size: 360px auto;
   -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 22%, black 46%);
   mask-image: radial-gradient(circle at 50% 50%, transparent 0 22%, black 46%);
   animation: amz-intro-derive 6s linear both;
 }
-.amz-intro-motif-loin { opacity: .09; background-size: 230px auto; background-position: 70px 40px; animation-duration: 10s; }
+.amz-intro-motif-loin { opacity: .045; background-size: 230px auto; background-position: 70px 40px; animation-duration: 10s; }
 .amz-intro-halo {
   position: absolute; left: 50%; top: 50%; width: 120vmin; height: 120vmin; transform: translate(-50%, -50%);
-  border-radius: 9999px; background: radial-gradient(circle, hsl(30 100% 78% / .5), hsl(30 100% 62% / 0) 60%);
+  border-radius: 9999px; background: radial-gradient(circle, hsl(var(--brand-500) / .42), hsl(var(--brand-500) / 0) 60%);
 }
 .amz-intro-centre { position: relative; display: flex; flex-direction: column; align-items: center; color: white; }
 .amz-intro-icone {
@@ -290,7 +290,7 @@ html.amazer-intro-out .amz-intro { animation-play-state: running; }
   position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 40%, hsl(0 0% 100% / .85) 50%, transparent 60%);
   animation: amz-intro-reflet 900ms cubic-bezier(0.4, 0, 0.2, 1) 800ms both;
 }
-.amz-intro-nom { margin-top: 28px; display: flex; overflow: hidden; font-size: 56px; font-weight: 800; letter-spacing: -.04em; line-height: 1.05; text-shadow: 0 10px 30px hsl(14 90% 25% / .35); }
+.amz-intro-nom { margin-top: 28px; display: flex; overflow: hidden; font-size: 56px; font-weight: 800; letter-spacing: -.04em; line-height: 1.05; text-shadow: 0 10px 30px hsl(222 48% 3% / .6); }
 .amz-intro-nom span { display: inline-block; animation: amz-intro-lettre 560ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .amz-intro-slogan { margin-top: 12px; font-size: 16px; font-weight: 600; opacity: .95; letter-spacing: .01em; animation: amz-intro-slogan 640ms cubic-bezier(0.22, 1, 0.36, 1) 880ms both; }
 @keyframes amz-intro-pop { from { transform: scale(.5) rotate(-12deg); opacity: 0; } to { transform: none; opacity: 1; } }

@@ -49,15 +49,15 @@ const MARK = `<svg viewBox="96 100 320 310" xmlns="http://www.w3.org/2000/svg"><
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>
     @font-face{font-family:Geist;src:url(${pathToFileURL(font).href}) format('woff');font-weight:100 900}
     html,body{margin:0}
-    #s{position:relative;overflow:hidden;background:linear-gradient(165deg,#FF9A2B 0%,#FF4D00 46%,#DF3A05 100%);font-family:Geist}
+    #s{position:relative;overflow:hidden;background:linear-gradient(165deg,#1E293B 0%,#0F172A 50%,#070B14 100%);font-family:Geist}
     .l{position:absolute;border-radius:50%;filter:blur(10px)}
-    #l1{background:radial-gradient(circle,rgba(255,214,102,.55),rgba(255,214,102,0) 62%)}
-    #l2{background:radial-gradient(circle,rgba(220,38,10,.5),rgba(220,38,10,0) 62%)}
-    #m{position:absolute;inset:0;opacity:.2;-webkit-mask-image:radial-gradient(circle at 50% 50%,transparent 0 22%,black 46%);background-image:url("data:image/svg+xml;utf8,${encodeURIComponent(pattern)}")}
+    #l1{background:radial-gradient(circle,rgba(37,99,235,.28),rgba(37,99,235,0) 62%)}
+    #l2{background:radial-gradient(circle,rgba(255,77,0,.32),rgba(255,77,0,0) 62%)}
+    #m{position:absolute;inset:0;opacity:.09;-webkit-mask-image:radial-gradient(circle at 50% 50%,transparent 0 22%,black 46%);background-image:url("data:image/svg+xml;utf8,${encodeURIComponent(pattern)}")}
     #c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
     .ic{border-radius:25%;background:linear-gradient(160deg,#fff,#FFF6EF);display:grid;place-items:center;box-shadow:0 3vmin 7vmin -2vmin rgba(120,30,0,.5)}
     .w{color:#fff;font-weight:800;letter-spacing:-.04em;line-height:1}
-    .halo{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,200,140,.45),rgba(255,140,40,0) 65%)}
+    .halo{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,77,0,.42),rgba(255,77,0,0) 60%)}
   </style></head><body><div id="s"><div class="l" id="l1"></div><div class="l" id="l2"></div><div id="m"></div><div class="halo" id="h"></div><div id="c"><div class="ic">${MARK}</div><div class="w">AMAZER</div></div></div></body></html>`;
   const tmp = path.join(ROOT, ".splash-tmp.html");
   fs.writeFileSync(tmp, html);
