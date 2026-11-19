@@ -54,7 +54,7 @@ GUIDES.client = {
         { say: "Dans le panier, vérifiez vos articles et la quantité. Choisissez la livraison standard, ou express à Niamey.",
           before: withCart, do: (f) => f.point("Standard"), guide: g("Vérifiez le panier", "Vérifiez les **articles** et la **quantité**. Choisissez **Standard** ou **Express Niamey**.") },
         { say: "Écrivez l'adresse de livraison, avec un repère, et le téléphone pour le livreur.",
-          do: async (f) => { await f.type("Quartier, rue, repère", "Plateau, près de la pharmacie"); await f.type("+227 90 00 00 00", "90000000"); }, guide: g("Donnez l'adresse", "Écrivez le **quartier**, la **rue** et un **repère**, puis le **téléphone pour le livreur**.") },
+          do: async (f) => { await f.type("Quartier et repère", "Plateau, porte bleue face à la pharmacie"); await f.type("+227 90 00 00 00", "90000000"); }, guide: g("Donnez l'adresse", "Écrivez le **quartier**, la **rue** et un **repère**, puis le **téléphone pour le livreur**.") },
         { say: "Choisissez votre moyen de paiement. Le récapitulatif montre le total exact, livraison comprise. Puis touchez Commander.",
           do: async (f) => { await f.point("Nita Transfert"); await f.click("Commander", { selector: "button" }); }, guide: g("Commandez", "Choisissez **Nita Transfert** ou **Amana Transfert**, vérifiez le **Total**, puis touchez **Commander**.") },
       ],

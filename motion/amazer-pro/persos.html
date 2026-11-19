@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>AMAZER — personnages en images (fond transparent)</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;background:transparent}
+#stage{position:relative;overflow:hidden}
+.abs{position:absolute;left:0;top:0}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script src="src/engine.js"></script>
+<script src="src/kit/toon.js"></script>
+<script>
+// ?pose=aicha_salut : un personnage dans une pose, pieds en bas, sur fond transparent (render/persos.mjs)
+(function () {
+  const T = A.Toon, C = T.CAST;
+  const P = {
+    aicha_salut: { w: 700, h: 1000, cast: [['aicha', 350, 985, 1.6, { near: { sh: 120, el: 40 }, far: { sh: -8, el: 12 }, mouth: 'grin', look: [3, -2], headTilt: -4, brow: .5 }]] },
+    aicha_telephone: { w: 700, h: 1000, cast: [['aicha', 350, 985, 1.6, { near: { sh: 60, el: 108 }, far: { sh: -8, el: 12 }, mouth: 'smile', look: [4, 6], headTilt: 6, brow: .3 }, 'phone']] },
+    moussa_joie: { w: 760, h: 1000, cast: [['moussa', 380, 985, 1.6, { near: { sh: 120, el: 40 }, far: { sh: 45, el: 25 }, mouth: 'grin', look: [0, -4], headTilt: 3, brow: .7 }]] },
+    moussa_salut: { w: 700, h: 1000, cast: [['moussa', 350, 985, 1.6, { near: { sh: 120, el: 40 }, far: { sh: -6, el: 10 }, mouth: 'grin', look: [3, -2], headTilt: -3, brow: .4 }]] },
+    moussa_telephone: { w: 700, h: 1000, cast: [['moussa', 350, 985, 1.6, { near: { sh: 60, el: 105 }, far: { sh: -6, el: 10 }, mouth: 'smile', look: [4, 6], headTilt: 5, brow: .3 }, 'phone']] },
+    ibrahim_salut: { w: 700, h: 1000, cast: [['ibrahim', 350, 985, 1.6, { near: { sh: 120, el: 40 }, far: { sh: -6, el: 10 }, mouth: 'grin', look: [3, -2], headTilt: -3, brow: .4 }]] },
+    trio: { w: 1560, h: 1000, cast: [
+      ['moussa', 290, 985, 1.42, { near: { sh: 120, el: 40 }, far: { sh: -6, el: 10 }, mouth: 'grin', look: [3, -2], headTilt: -3 }],
+      ['ibrahim', 1250, 985, 1.42, { flip: true, near: { sh: 120, el: 40 }, far: { sh: -6, el: 10 }, mouth: 'grin', look: [-3, -2], headTilt: 3 }],
+      ['aicha', 790, 985, 1.5, { near: { sh: 120, el: 40 }, far: { sh: -8, el: 12 }, mouth: 'grin', look: [0, -3], headTilt: -2, brow: .5 }],
+    ] },
+  };
+  const q = new URLSearchParams(location.search);
+  const key = q.get('pose') || 'trio';
+  // essai : ?pose=essai&who=aicha&near=sh,el
+  if (key === 'essai') { const [sh, el] = q.get('near').split(',').map(Number); P.essai = { w: 700, h: 1000, cast: [[q.get('who') || 'aicha', 350, 985, 1.6, { near: { sh, el }, far: { sh: -8, el: 12 }, mouth: 'grin', look: [3, -2] }]] }; }
+  const spec = P[key];
+  const stage = document.getElementById('stage');
+  stage.style.width = spec.w + 'px'; stage.style.height = spec.h + 'px';
+  for (const [who, x, y, s, pose, extra] of spec.cast) {
+    const p = T.person(stage, C[who]);
+    if (extra === 'phone') {
+      p.near.item.innerHTML = '';
+      const g = T.svg('g', { transform: 'rotate(-90) scale(1.1)' }, p.near.item);
+      g.innerHTML = '<rect x="-16" y="-66" width="44" height="80" rx="9" fill="#111827"/><rect x="-12" y="-60" width="36" height="66" rx="5" fill="#FF4D00"/><circle cx="6" cy="-28" r="9" fill="#fff"/>';
+    }
+    p.pose(Object.assign({ x, y, s, t: 0, blink: 0, shadow: 0 }, pose));
+  }
+  window.POSES = Object.keys(P);
+  window.READY = true;
+})();
+</script>
+</body>
+</html>

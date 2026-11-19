@@ -174,6 +174,14 @@ export const revendeur = {
     [/\/resellers\/u1\/shop$/, { reseller_id: "u1", reseller_name: "Ali Garba", active: true, items: listings.filter((l) => l.is_active).map((l) => ({ id: l.id, price_id: l.price_id, vendor_id: "v1", product_id: l.product_id, product_name: l.product_name, image_url: null, price: l.resale_amount })) }],
     [/\/seller\/profile$/, null],
   ],
+  // « Revendre » : la réponse porte le produit choisi (sinon le message affiche « undefined »)
+  onWrite(url, body) {
+    if (/\/resellers\/listings$/.test(url)) {
+      const resale = Number(body.resale_amount) || 86250;
+      return { id: "l9", price_id: body.price_id || "p9", product_id: "prod9", product_name: "Galaxy A07", image_url: null, supplier_amount: 75000, resale_amount: resale, margin: resale - 75000, in_stock: true, is_active: true, sales_count: 0 };
+    }
+    return {};
+  },
 };
 
 // ---------- Affilié ----------

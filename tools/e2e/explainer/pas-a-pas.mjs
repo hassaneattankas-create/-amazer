@@ -191,7 +191,7 @@ GUIDES.client = {
         { say: "Choisissez la livraison : Standard, ou Express à Niamey.",
           do: (f) => f.click("Standard"), guide: g("Choisissez la livraison", "Touchez **Standard** ou **Express Niamey**.") },
         { say: "Écrivez l'adresse, avec un repère que le livreur trouvera facilement.",
-          do: (f) => fill(f, "Quartier, rue, repère", "Plateau, près de la pharmacie, porte bleue"), guide: g("L'adresse", "Écrivez le **quartier**, la **rue** et un **repère** (mosquée, pharmacie, école…).") },
+          do: (f) => fill(f, "Quartier et repère", "Plateau, porte bleue face à la pharmacie"), guide: g("L'adresse", "Écrivez le **quartier** et un **repère** (portail, mosquée, pharmacie…).") },
         { say: "Écrivez le téléphone pour le livreur.",
           do: (f) => fill(f, "+227 90 00 00 00", "90000001"), guide: g("Le téléphone", "Écrivez le **téléphone pour le livreur** : il vous appelle en arrivant.") },
         { say: "Choisissez le paiement : Nita Transfert ou Amana Transfert. Vérifiez le total, livraison comprise, puis touchez Commander.",

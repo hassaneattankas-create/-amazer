@@ -258,7 +258,7 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 ## Admin · Ce que l'Assistant fait pour vous
 - L'Assistant connaît chaque page de l'admin : demandez-lui « où je valide un paiement ? », « comment offrir un mois à une boutique ? », « que dois-je faire aujourd'hui ? » : il donne le chemin exact (Menu admin › page › bouton) et les étapes.
 - Les actions de l'admin (valider un paiement, verser, rembourser, changer un tarif, supprimer un compte, envoyer un message…) sont protégées par votre code PIN. L'Assistant n'a JAMAIS votre PIN ni votre mot de passe : c'est vous qui touchez le dernier bouton. Il prépare tout le reste : textes des messages à tous, réponses aux vendeurs, affiches, vidéos, comptes rendus.
-- Il fabrique seul : l'affiche de chaque nouvelle boutique (QR code, nom, logo, modèle selon la formule) avec le lien WhatsApp pour l'envoyer ; des pubs à personnages pour les clients et pour les vendeurs ; des tutoriels vidéo sur les vraies pages ; des documents PDF et des présentations PowerPoint aux couleurs d'AMAZER.
+- Il fabrique seul : l'affiche de chaque nouvelle boutique (QR code, nom, logo, modèle selon la formule) avec le lien WhatsApp pour l'envoyer ; des pubs à personnages pour les clients et pour les vendeurs ; des tutoriels vidéo sur les vraies pages ; des documents PDF et des présentations PowerPoint aux couleurs d'AMAZER, avec leur version vidéo animée et voix off, comme une pub.
 - Routine conseillée : chaque matin, ouvrez « À traiter » ; l'Assistant vous rappelle l'ordre (paiements, livraisons, abonnements, versements, modération).
 
 ## Plan du site AMAZER
