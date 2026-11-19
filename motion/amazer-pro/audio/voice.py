@@ -26,7 +26,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 FFMPEG = os.path.join(ROOT, '..', '..', 'jde-motion', 'node_modules', 'ffmpeg-static', 'ffmpeg.exe')
 LEAD, GAP, TAIL = 0.6, 0.45, 0.4
-DEFAULT_VOICE = 'fr-FR-HenriNeural'  # voix uniquement française : pas de bascule vers l'accent anglais
+DEFAULT_VOICE = 'fr-FR-DeniseNeural'  # voix uniquement française : pas de bascule vers l'accent anglais
 
 # Prononciation : forme écrite -> forme dite (« AMAZER » se dit « Amazère » : avec « è », la voix ne peut pas dire « Amazé »). Les sous-titres gardent l'écrit.
 SAY = [

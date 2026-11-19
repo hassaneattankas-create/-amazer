@@ -105,7 +105,7 @@ function keySteps(chapters, slots = 6) {
 function voice(text, file) {
   for (let attempt = 1; ; attempt += 1) {
     try {
-      execFileSync("python", ["-m", "edge_tts", "--voice", "fr-FR-HenriNeural", "--rate=+8%", "--text", text.replace(/amazer\.store/gi, "Amazère point store").replace(/AMAZER/gi, "Amazère"), "--write-media", file], { stdio: "pipe" });
+      execFileSync("python", ["-m", "edge_tts", "--voice", "fr-FR-DeniseNeural", "--rate=+8%", "--text", text.replace(/amazer\.store/gi, "Amazère point store").replace(/AMAZER/gi, "Amazère"), "--write-media", file], { stdio: "pipe" });
       return seconds(file);
     } catch (err) {
       if (attempt >= 5) throw new Error(`Voix impossible : ${String(err.stderr).slice(-200)}`);
