@@ -92,7 +92,9 @@
     const layers = items.map((it, i) => {
       const s = A.Phone.screen(ph, 'e' + i, '', { bg: '#fff' });
       const img = A.el('img', { src: it.img, style: { position: 'absolute', left: 0, top: BAR + 'px', width: '390px', display: 'block' } }, s);
-      return { s, img, it };
+      // « marque » : [x, y, largeur, hauteur, instant] — encadré orange lumineux sur une zone de l'écran (px de la page)
+      const mk = it.marque ? A.el('div', { cls: 'abs', style: { left: (it.marque[0] - 6) + 'px', top: (it.marque[1] + BAR - 6) + 'px', width: (it.marque[2] + 12) + 'px', height: (it.marque[3] + 12) + 'px', border: '4px solid #FF4D00', borderRadius: '12px', background: 'rgba(255,77,0,.12)', boxShadow: '0 0 0 6px rgba(255,77,0,.18), 0 0 26px rgba(255,77,0,.55)', zIndex: 5, opacity: 0 } }, s) : null;
+      return { s, img, it, mk };
     });
     A.Phone.statusTone(ph, false);
     const ripple = A.el('div', { cls: 'abs', style: { width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,77,0,.22)', border: '5px solid rgba(255,77,0,.85)', zIndex: 50 } }, ph.screen);
@@ -114,6 +116,11 @@
           const y = sc ? A.mix(sc[0], sc[1], A.P(u, sc[2], sc[3], E.cubicInOut)) : 0;
           L.img.style.transform = `translateY(${(-y).toFixed(1)}px)`;
           L.scrollY = y;
+          if (L.mk) {
+            const m0 = L.it.marque[4] ?? 0, k = A.P(u, m0, m0 + .35, E.spring);
+            L.mk.style.opacity = (u >= m0 ? Math.min(1, (u - m0) * 6) * (.85 + .15 * Math.sin((u - m0) * 9)) : 0).toFixed(3);
+            L.mk.style.transform = `translateY(${(-y).toFixed(1)}px) scale(${(.85 + .15 * k).toFixed(3)})`;
+          }
         });
         // toucher : onde à l'endroit exact du bouton
         let rp = null;
@@ -131,26 +138,64 @@
       },
     };
   };
-  /** main qui tient le téléphone (paume + doigts derrière, pouce devant) */
+  /** main qui tient le téléphone : paume en coupe sous le téléphone, doigts qui entourent le bord gauche,
+   *  pouce articulé (deux phalanges, ongle, pli) qui s'étire vers l'endroit touché ; ombre douce sur l'écran. */
   TS.hand = (parent, skin = '#8B5A3C', shade = '#6E4229', light = '#A06A48') => {
+    const nail = '#E9C4A6', nailLine = '#D8A889';
     const palm = box(parent, 1080, 1920, 0, 0, '');
-    const thumb = box(parent, 400, 600, 100, 60, `
-      <g transform="rotate(-24)">
-        <rect x="-50" y="-48" width="100" height="520" rx="50" fill="${shade}"/>
-        <rect x="-46" y="-46" width="92" height="510" rx="46" fill="${skin}"/>
-        <rect x="-34" y="-36" width="24" height="200" rx="12" fill="${light}" opacity=".6"/>
-        <ellipse cx="0" cy="-8" rx="28" ry="34" fill="#E9C4A6"/>
-        <path d="M -50 150 Q 0 170 50 150" stroke="${shade}" stroke-width="5" fill="none" opacity=".6"/>
-      </g>`);
-    thumb.style.zIndex = 30; palm.style.zIndex = 10;
+    const fingers = box(parent, 1080, 1920, 0, 0, '');
+    const thumb = box(parent, 1080, 1920, 0, 0, '');
+    palm.style.zIndex = 10; fingers.style.zIndex = 26; thumb.style.zIndex = 30;
+    fingers.style.filter = 'drop-shadow(0 4px 5px rgba(40,20,10,.28))';
+    thumb.style.filter = 'drop-shadow(0 14px 16px rgba(40,20,10,.32))';
+    const f = (v) => v.toFixed(1);
+    let frame = null, rest = null;
     return {
-      palm, thumb,
+      palm, fingers, thumb,
       /** cadre du téléphone (gauche, haut, largeur, hauteur) en px de la scène */
       seekPalm(L, Tp, W, H) {
+        frame = [L, Tp, W, H];
+        rest = [L + W * .92, Tp + H * 1.02];
+        const cx = L + W * .52, by = Tp + H;
+        // paume et poignet derrière le téléphone (coupe sous la moitié basse), dégradé léger
         palm.innerHTML = `
-          <rect x="${L + W * .2}" y="${Tp + H * .92}" width="${W * .55}" height="400" rx="80" fill="${shade}"/>
-          <ellipse cx="${L + W * .45}" cy="${Tp + H * .95}" rx="${W * .55}" ry="${H * .17}" fill="${skin}"/>
-          ${[0, 1, 2, 3].map(i => `<rect x="${L - 70}" y="${Tp + H * (.42 + i * .12)}" width="120" height="${H * .085}" rx="${H * .042}" fill="${skin}"/><rect x="${L - 70}" y="${Tp + H * (.42 + i * .12)}" width="54" height="${H * .085}" rx="27" fill="${light}"/>`).join('')}`;
+          <defs><linearGradient id="hpal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${light}"/><stop offset=".55" stop-color="${skin}"/><stop offset="1" stop-color="${shade}"/></linearGradient></defs>
+          <path d="M ${f(L - W * .08)} ${f(Tp + H * .48)} Q ${f(L - W * .16)} ${f(by + H * .05)} ${f(cx - W * .1)} ${f(by + H * .2)} L ${f(cx - W * .02)} ${f(by + H * .6)} L ${f(cx + W * .62)} ${f(by + H * .6)} L ${f(cx + W * .5)} ${f(by + H * .12)} Q ${f(L + W * 1.06)} ${f(by - H * .02)} ${f(L + W * .9)} ${f(Tp + H * .7)} Z" fill="url(#hpal)"/>
+          <path d="M ${f(cx - W * .08)} ${f(by + H * .16)} Q ${f(cx + W * .2)} ${f(by + H * .22)} ${f(cx + W * .45)} ${f(by + H * .1)}" stroke="${shade}" stroke-width="5" fill="none" opacity=".45"/>`;
+        // quatre doigts qui entourent le bord gauche (bouts posés devant le cadre du téléphone)
+        const fw = W * .17, fh = H * .068;
+        fingers.innerHTML = [0, 1, 2, 3].map((k) => {
+          const y = Tp + H * (.46 + k * .105), w = fw * (1 - k * .07), h = fh * (1 - k * .06), x = L - w * .62;
+          return `<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" rx="${f(h / 2)}" fill="${skin}"/>
+            <rect x="${f(x)}" y="${f(y)}" width="${f(w * .55)}" height="${f(h)}" rx="${f(h / 2)}" fill="${shade}" opacity=".55"/>
+            <path d="M ${f(x + w - h * .55)} ${f(y + h * .22)} q ${f(h * .3)} ${f(h * .28)} 0 ${f(h * .56)}" stroke="${nail}" stroke-width="${f(h * .16)}" stroke-linecap="round" fill="none" opacity=".9"/>
+            <path d="M ${f(x + w * .42)} ${f(y + h * .25)} l 0 ${f(h * .5)}" stroke="${shade}" stroke-width="3" stroke-linecap="round" opacity=".5"/>`;
+        }).join('');
+      },
+      /** pouce : la base suit le mouvement (la main se déplace un peu), la phalange s'étire vers le point (px, py) */
+      seekThumb(px, py, press = 0, o = 1) {
+        if (!frame) return;
+        const [L, Tp, W, H] = frame;
+        const b0 = [L + W * 1.18, Tp + H * 1.2];
+        const bx = b0[0] + (px - rest[0]) * .7, by = b0[1] + (py - rest[1]) * .7;
+        const tx = px + 6, ty = py + 10 + press * 4;
+        const dx = tx - bx, dy = ty - by, len = Math.hypot(dx, dy), ang = Math.atan2(dy, dx) * 180 / Math.PI;
+        const s = W / 580; // échelle du téléphone
+        const wB = 128 * s, wJ = 92 * s, wT = 76 * s * (1 + press * .08);
+        const j = len * .52; // articulation
+        thumb.style.opacity = o.toFixed(3);
+        thumb.innerHTML = `<g transform="translate(${f(bx)},${f(by)}) rotate(${f(ang)})">
+          <rect x="${f(-900 * s)}" y="${f(-wB * .72)}" width="${f(900 * s)}" height="${f(wB * 1.5)}" rx="${f(wB * .7)}" fill="${skin}"/>
+          <rect x="${f(-900 * s)}" y="${f(wB * .12)}" width="${f(900 * s)}" height="${f(wB * .66)}" fill="${shade}" opacity=".45"/>
+          <ellipse cx="${f(-wB * .1)}" cy="${f(wB * .05)}" rx="${f(wB * .85)}" ry="${f(wB * .74)}" fill="${skin}"/>
+          <path d="M ${f(-wB * .7)} ${f(-wB * .2)} Q ${f(-wB * .1)} ${f(-wB * .55)} ${f(wB * .45)} ${f(-wB * .38)}" stroke="${light}" stroke-width="${f(9 * s)}" stroke-linecap="round" fill="none" opacity=".5"/>
+          <path d="M 0 ${f(-wB / 2)} C ${f(j * .5)} ${f(-wB / 2)} ${f(j * .8)} ${f(-wJ / 2 - 4 * s)} ${f(j)} ${f(-wJ / 2)} L ${f(len - wT / 2)} ${f(-wT / 2)} A ${f(wT / 2)} ${f(wT / 2)} 0 0 1 ${f(len - wT / 2)} ${f(wT / 2)} L ${f(j)} ${f(wJ / 2)} C ${f(j * .8)} ${f(wJ / 2 + 4 * s)} ${f(j * .5)} ${f(wB / 2)} 0 ${f(wB / 2)} Z" fill="${skin}"/>
+          <path d="M 0 ${f(wB * .12)} C ${f(j * .5)} ${f(wB * .2)} ${f(j)} ${f(wJ * .3)} ${f(len - wT / 2)} ${f(wT * .32)} L ${f(len - wT / 2)} ${f(wT / 2)} L ${f(j)} ${f(wJ / 2)} C ${f(j * .8)} ${f(wJ / 2 + 4 * s)} ${f(j * .5)} ${f(wB / 2)} 0 ${f(wB / 2)} Z" fill="${shade}" opacity=".55"/>
+          <path d="M ${f(j * .2)} ${f(-wB * .3)} C ${f(j * .6)} ${f(-wB * .32)} ${f(j * 1.2)} ${f(-wJ * .32)} ${f(len - wT)} ${f(-wT * .3)}" stroke="${light}" stroke-width="${f(10 * s)}" stroke-linecap="round" fill="none" opacity=".55"/>
+          <path d="M ${f(j - 6 * s)} ${f(-wJ * .32)} q ${f(8 * s)} ${f(wJ * .32)} 0 ${f(wJ * .64)}" stroke="${shade}" stroke-width="${f(4 * s)}" stroke-linecap="round" fill="none" opacity=".6"/>
+          <ellipse cx="${f(len - wT * .52)}" cy="${f(-wT * .05)}" rx="${f(wT * .34)}" ry="${f(wT * .3)}" fill="${nail}"/>
+          <path d="M ${f(len - wT * .8)} ${f(-wT * .3)} q ${f(-wT * .08)} ${f(wT * .25)} 0 ${f(wT * .5)}" stroke="${nailLine}" stroke-width="${f(3 * s)}" fill="none" opacity=".8"/>
+        </g>`;
       },
     };
   };
@@ -333,8 +378,8 @@
         if (u > tp.at - .45 && u < tp.at + .5) { px = A.mix(A.mix(rest[0], tx, kIn), rest[0], kOut); py = A.mix(A.mix(rest[1], ty, kIn), rest[1], kOut); }
         press = Math.max(press, A.env(u, tp.at - .04, tp.at + .14, .05, .1));
       }
-      put(this.hand.thumb, px + 18, py + 22, 1 - press * .08, -16, 1 - exit);
-      this.hand.palm.style.opacity = (1 - exit).toFixed(3);
+      this.hand.seekThumb(px, py, press, 1 - exit);
+      this.hand.palm.style.opacity = this.hand.fingers.style.opacity = (1 - exit).toFixed(3);
       this.hand.palm.style.transform = `translateX(${(-exit * 0).toFixed(1)}px)`;
       if (P.succes != null) playSparks(this.sp, t, a + P.succes + .05, cx, cy - 120, 260);
       playStickers(this.st, u, D);
@@ -524,7 +569,7 @@
           px = A.mix(A.mix(rest[0], tx, kIn), rest[0], kOut); py = A.mix(A.mix(rest[1], ty, kIn), rest[1], kOut);
           press = A.env(u, .71, .89, .05, .1);
         }
-        put(this.hand.thumb, px + 18, py + 22, 1 - press * .08, -16);
+        this.hand.seekThumb(px, py, press);
       }
       playStickers(this.st, u, D);
     },
