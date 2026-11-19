@@ -1,6 +1,6 @@
 /* make-splash.cjs — écran d'ouverture AMAZER (Android + page web d'ouverture).
  * Fond orange en dégradé, motif discret d'icônes au trait (Lucide, licence ISC) qui racontent AMAZER,
- * logo dans son carré blanc et nom AMAZER au centre.
+ * icône de l'application dans son carré blanc, au centre d'un fond bleu nuit uni (comme le début de AppLaunchIntro).
  *   node scripts/make-splash.cjs          -> android/app/src/main/res/drawable*\/splash.png + public/splash/motif.svg
  * Puppeteer : celui de tools/e2e (aucune dépendance ajoutée au site).
  */
@@ -49,7 +49,9 @@ const MARK = `<svg viewBox="96 100 320 310" xmlns="http://www.w3.org/2000/svg"><
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>
     @font-face{font-family:Geist;src:url(${pathToFileURL(font).href}) format('woff');font-weight:100 900}
     html,body{margin:0}
-    #s{position:relative;overflow:hidden;background:linear-gradient(165deg,#1E293B 0%,#0F172A 50%,#070B14 100%);font-family:Geist}
+    #s{position:relative;overflow:hidden;background:#0F172A;font-family:Geist}
+    /* démarrage sobre (fond uni + icône) : l'animation du site (AppLaunchIntro) le prolonge sans « deuxième écran » */
+    .l,#m,.halo,.w{display:none}
     .l{position:absolute;border-radius:50%;filter:blur(10px)}
     #l1{background:radial-gradient(circle,rgba(37,99,235,.28),rgba(37,99,235,0) 62%)}
     #l2{background:radial-gradient(circle,rgba(255,77,0,.32),rgba(255,77,0,0) 62%)}
@@ -58,7 +60,7 @@ const MARK = `<svg viewBox="96 100 320 310" xmlns="http://www.w3.org/2000/svg"><
     .ic{border-radius:25%;background:linear-gradient(160deg,#fff,#FFF6EF);display:grid;place-items:center;box-shadow:0 3vmin 7vmin -2vmin rgba(120,30,0,.5)}
     .w{color:#fff;font-weight:800;letter-spacing:-.04em;line-height:1}
     .halo{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,77,0,.42),rgba(255,77,0,0) 60%)}
-  </style></head><body><div id="s"><div class="l" id="l1"></div><div class="l" id="l2"></div><div id="m"></div><div class="halo" id="h"></div><div id="c"><div class="ic">${MARK}</div><div class="w">AMAZER</div></div></div></body></html>`;
+  </style></head><body><div id="s"><div class="l" id="l1"></div><div class="l" id="l2"></div><div id="m"></div><div class="halo" id="h"></div><div id="c"><div class="ic"><img src="${pathToFileURL(path.join(ROOT, "public/icons/icon-512.png")).href}"></div><div class="w">AMAZER</div></div></div></body></html>`;
   const tmp = path.join(ROOT, ".splash-tmp.html");
   fs.writeFileSync(tmp, html);
   const browser = await puppeteer.launch({ headless: true, args: ["--allow-file-access-from-files"] });
@@ -80,8 +82,8 @@ const MARK = `<svg viewBox="96 100 320 310" xmlns="http://www.w3.org/2000/svg"><
       const L = Math.max(w, h) * 1.2; const l1 = document.getElementById("l1"), l2 = document.getElementById("l2");
       Object.assign(l1.style, { width: L + "px", height: L + "px", left: -L * .38 + "px", top: -L * .46 + "px" });
       Object.assign(l2.style, { width: L + "px", height: L + "px", left: w - L * .58 + "px", top: h - L * .5 + "px" });
-      const ic = s.querySelector(".ic"); ic.style.width = ic.style.height = m * 0.3 + "px";
-      ic.querySelector("svg").style.width = m * 0.2 + "px";
+      const ic = s.querySelector(".ic"); ic.style.width = ic.style.height = m * 0.35 + "px";
+      ic.querySelector("img").style.width = m * 0.29 + "px";
       const wd = s.querySelector(".w"); wd.style.fontSize = m * 0.115 + "px"; wd.style.marginTop = m * 0.06 + "px";
       const ha = document.getElementById("h"); ha.style.width = ha.style.height = m * 1.3 + "px"; ha.style.left = (w - m * 1.3) / 2 + "px"; ha.style.top = (h - m * 1.3) / 2 + "px";
     }, w, h, m);

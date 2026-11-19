@@ -1,11 +1,14 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect } from "react";
 
 /**
  * Ouverture animée d'AMAZER — uniquement quand AMAZER est ouvert comme une application (Android ou installée
  * depuis le site), une fois par session. Le script d'en-tête (LAUNCH_INTRO_SCRIPT) ajoute la classe
  * `amazer-intro` à <html> avant le premier affichage : l'écran bleu nuit apparaît sans éclair blanc.
+ * Il commence exactement comme l'écran de démarrage du téléphone (fond bleu nuit uni, icône au centre), puis
+ * s'anime : un seul écran d'ouverture, pas deux à la suite.
  * Sur le site ouvert dans un navigateur, rien ne s'affiche (aucun effet sur la vitesse de la page).
  * Un toucher passe l'animation ; « mouvement réduit » : simple fondu.
  */
@@ -55,10 +58,8 @@ export function AppLaunchIntro() {
       <div className="amz-intro-halo" />
       <div className="amz-intro-centre">
         <div className="amz-intro-icone">
-          <svg viewBox="96 100 320 310" width="96" height="96" aria-hidden="true">
-            <path d="M128 390L245 122H275L389 390H332L308 331H206L183 390H128Z" fill="currentColor" />
-            <path d="M252 208L286 286H218L252 208Z" fill="white" />
-          </svg>
+          {/* même icône que l'écran de démarrage du téléphone : l'animation le prolonge sans « deuxième écran » */}
+          <Image src="/logo-amazer-mark.png" alt="" width={112} height={112} priority unoptimized />
           <span className="amz-intro-reflet" />
         </div>
         <p className="amz-intro-nom">
