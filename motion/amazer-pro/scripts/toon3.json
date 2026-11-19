@@ -12,22 +12,21 @@
   },
   {
    "type": "ecrans",
-   "voix": "Sur AMAZER, ouvrez votre boutique en ligne. C'est gratuit pour commencer.",
+   "voix": "Sur AMAZER, ouvrez votre boutique en ligne : vous pouvez commencer à vendre gratuitement.",
    "transition": "balayage",
    "ecrans": [
-    { "img": "18-vendre-long.png", "de": 0, "texte": "Ouvrez votre *boutique*", "scroll": [0, 560, 0.35, 1.25], "taps": [{ "cible": "Choisir Boutique", "at": 1.75 }] }
+    { "img": "20-vitrine-long.png", "de": 0, "texte": "Vendez *gratuitement*", "scroll": [0, 330, 0.7, 1.7] }
    ],
-   "fin": 1.9
+   "fin": 2.2
   },
   {
    "type": "ecrans",
-   "voix": "Ajoutez vos produits avec une photo : votre vitrine est en ligne.",
+   "voix": "Ajoutez vos produits avec une photo, en quelques secondes.",
    "ecrans": [
-    { "img": "19-boutique-ajout-long.png", "de": 0, "texte": "Ajoutez vos *produits*", "scroll": [0, 380, 0.15, 0.7], "taps": [{ "cible": "Nom du produit", "at": 0.95 }, { "cible": "Ajouter au catalogue", "at": 1.7 }] },
-    { "img": "20-vitrine-long.png", "de": 2.25, "texte": "Votre *vitrine* en ligne", "scroll": [0, 330, 2.6, 3.4] }
+    { "img": "19-boutique-ajout-long.png", "de": 0, "texte": "Ajoutez vos *produits*", "scroll": [0, 380, 0.15, 0.7], "taps": [{ "cible": "Nom du produit", "at": 0.95 }, { "cible": "Ajouter au catalogue", "at": 1.7 }] }
    ],
    "succes": 1.85,
-   "fin": 1.5
+   "fin": 1.6
   },
   {
    "type": "commandes_pluie",
@@ -43,10 +42,10 @@
   },
   {
    "type": "fin",
-   "voix": "AMAZER. Vendez en ligne, vendez plus. amazer point store.",
-   "slogan": "Vendez en ligne.\n*Vendez plus.*",
-   "mention": "Gratuit pour commencer · Paiement contrôlé par AMAZER",
-   "sous_titres_voix": ["AMAZER.", "Vendez en ligne, vendez plus.", "amazer.store"]
+   "voix": "AMAZER. Commencez à vendre gratuitement, sur amazer.store.",
+   "slogan": "Commencez à vendre\n*gratuitement.*",
+   "mention": "Paiement contrôlé par AMAZER · Livraison à Niamey",
+   "sous_titres_voix": ["AMAZER.", "Commencez à vendre gratuitement,", "sur amazer.store."]
   }
  ]
 }
