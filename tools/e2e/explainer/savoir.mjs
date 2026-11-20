@@ -68,8 +68,10 @@ const fiches = ids.map((key) => {
   const fresh = guideFiche(id, PRESENTATION[key], PAS[key]);
   const old = previous.find((f) => f.id === id);
   if (PRESENTATION[key] || !old) return fresh;
-  const seen = new Set(old.etapes.map((e) => e.titre));
-  return { ...old, etapes: [...old.etapes, ...fresh.etapes.filter((e) => !seen.has(e.titre))], video: join(old.video, fresh.video), pdf: join(old.pdf, fresh.pdf) };
+  // étapes retirées du site : plus de code à l'inscription (20/11/2026)
+  const kept = old.etapes.filter((e) => !/^Activez avec le code/i.test(e.titre));
+  const seen = new Set(kept.map((e) => e.titre));
+  return { ...old, etapes: [...kept, ...fresh.etapes.filter((e) => !seen.has(e.titre))], video: join(old.video, fresh.video), pdf: join(old.pdf, fresh.pdf) };
 });
 const sections = docSections();
 const docIds = new Set(sections.filter((x) => x.titre !== "Faits").map((x) => slug(x.titre)));
