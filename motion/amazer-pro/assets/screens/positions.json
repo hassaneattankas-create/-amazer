@@ -2638,5 +2638,1447 @@
    350,
    804
   ]
+ },
+ "21-assistant-proposition": {
+  "AMAZER": [
+   81,
+   28
+  ],
+  "Menu": [
+   181,
+   28
+  ],
+  "Se connecter": [
+   230,
+   28
+  ],
+  "Pays, devise et langue": [
+   269,
+   28
+  ],
+  "Notifications": [
+   307,
+   28
+  ],
+  "Panier": [
+   352,
+   28
+  ],
+  "Achetez et vendez en toute confiance": [
+   195,
+   128
+  ],
+  "Rechercher un produit, une marque…": [
+   195,
+   203
+  ],
+  "Scan": [
+   306,
+   203
+  ],
+  "Tout": [
+   56,
+   370
+  ],
+  "Essence": [
+   140,
+   370
+  ],
+  "Pharmacies": [
+   224,
+   370
+  ],
+  "Accessoires": [
+   308,
+   370
+  ],
+  "Alimentation": [
+   392,
+   370
+  ],
+  "Électronique": [
+   476,
+   370
+  ],
+  "Hygiène": [
+   560,
+   370
+  ],
+  "Maison": [
+   644,
+   370
+  ],
+  "Technologie": [
+   728,
+   370
+  ],
+  "Restaurants": [
+   812,
+   370
+  ],
+  "Premium": [
+   896,
+   370
+  ],
+  "Bonnes affaires": [
+   84,
+   467
+  ],
+  "Voir tout": [
+   337,
+   459
+  ],
+  "-22%": [
+   88,
+   595
+  ],
+  "Nouveautés": [
+   195,
+   751
+  ],
+  "Filtres": [
+   325,
+   811
+  ],
+  "180 000 XOF": [
+   103,
+   994
+  ],
+  "75 000 XOF": [
+   288,
+   994
+  ],
+  "326 000 XOF": [
+   103,
+   1295
+  ],
+  "110 000 XOF": [
+   288,
+   1295
+  ],
+  "230 000 XOF": [
+   103,
+   1596
+  ],
+  "174 000 XOF": [
+   288,
+   1596
+  ],
+  "940 000 XOF": [
+   103,
+   1897
+  ],
+  "130 000 XOF": [
+   288,
+   1897
+  ],
+  "1 500 XOF": [
+   103,
+   2208
+  ],
+  "500 XOF": [
+   288,
+   2208
+  ],
+  "100 XOF": [
+   103,
+   2519
+  ],
+  "5 000 XOF": [
+   288,
+   2519
+  ],
+  "3 000 XOF": [
+   288,
+   2820
+  ],
+  "8 000 XOF": [
+   103,
+   3121
+  ],
+  "3 500 XOF": [
+   288,
+   3121
+  ],
+  "6 000 XOF": [
+   288,
+   3422
+  ],
+  "600 XOF": [
+   288,
+   3723
+  ],
+  "499 XOF": [
+   103,
+   4024
+  ],
+  "8 500 XOF": [
+   288,
+   4024
+  ],
+  "15 000 XOF": [
+   103,
+   4335
+  ],
+  "90 000 XOF": [
+   288,
+   4335
+  ],
+  "Voir plus de produits": [
+   195,
+   4531
+  ],
+  "Devenir vendeur": [
+   107,
+   4715
+  ],
+  "Revendre sans stock": [
+   265,
+   4715
+  ],
+  "Écrire à AMAZER": [
+   103,
+   5032
+  ],
+  "Installer l'application": [
+   86,
+   5084
+  ],
+  "amazer.niger2@gmail.com": [
+   164,
+   5124
+  ],
+  "Boutiques": [
+   48,
+   5216
+  ],
+  "Promotions": [
+   52,
+   5256
+  ],
+  "Premium : hôtels, transport, entreprises": [
+   141,
+   5336
+  ],
+  "Stations-essence": [
+   72,
+   5416
+  ],
+  "Comment ça marche ?": [
+   87,
+   5456
+  ],
+  "Affiliation": [
+   47,
+   5636
+  ],
+  "Formations gratuites": [
+   81,
+   5676
+  ],
+  "Espace vendeur": [
+   67,
+   5716
+  ],
+  "Espace station": [
+   63,
+   5756
+  ],
+  "Guide du vendeur": [
+   71,
+   5796
+  ],
+  "Devenir livreur": [
+   62,
+   5836
+  ],
+  "Signaler un problème": [
+   83,
+   5936
+  ],
+  "Conditions d'utilisation": [
+   88,
+   5976
+  ],
+  "Politique de confidentialité": [
+   100,
+   6016
+  ],
+  "Suppression de compte": [
+   91,
+   6056
+  ],
+  "Fermer la proposition d'aide": [
+   347,
+   613
+  ],
+  "Oui, aidez-moi": [
+   230,
+   729
+  ],
+  "Ouvrir l'assistant AMAZER": [
+   346,
+   800
+  ]
+ },
+ "22-assistant-ouvert": {
+  "AMAZER": [
+   81,
+   28
+  ],
+  "Menu": [
+   181,
+   28
+  ],
+  "Se connecter": [
+   230,
+   28
+  ],
+  "Pays, devise et langue": [
+   269,
+   28
+  ],
+  "Notifications": [
+   307,
+   28
+  ],
+  "Panier": [
+   352,
+   28
+  ],
+  "Achetez et vendez en toute confiance": [
+   195,
+   128
+  ],
+  "Rechercher un produit, une marque…": [
+   195,
+   203
+  ],
+  "Scan": [
+   306,
+   203
+  ],
+  "Tout": [
+   56,
+   370
+  ],
+  "Essence": [
+   140,
+   370
+  ],
+  "Pharmacies": [
+   224,
+   370
+  ],
+  "Accessoires": [
+   308,
+   370
+  ],
+  "Alimentation": [
+   392,
+   370
+  ],
+  "Électronique": [
+   476,
+   370
+  ],
+  "Hygiène": [
+   560,
+   370
+  ],
+  "Maison": [
+   644,
+   370
+  ],
+  "Technologie": [
+   728,
+   370
+  ],
+  "Restaurants": [
+   812,
+   370
+  ],
+  "Premium": [
+   896,
+   370
+  ],
+  "Bonnes affaires": [
+   84,
+   467
+  ],
+  "Voir tout": [
+   337,
+   459
+  ],
+  "-22%": [
+   88,
+   595
+  ],
+  "Nouveautés": [
+   195,
+   751
+  ],
+  "Filtres": [
+   325,
+   811
+  ],
+  "180 000 XOF": [
+   103,
+   994
+  ],
+  "75 000 XOF": [
+   288,
+   994
+  ],
+  "326 000 XOF": [
+   103,
+   1295
+  ],
+  "110 000 XOF": [
+   288,
+   1295
+  ],
+  "230 000 XOF": [
+   103,
+   1596
+  ],
+  "174 000 XOF": [
+   288,
+   1596
+  ],
+  "940 000 XOF": [
+   103,
+   1897
+  ],
+  "130 000 XOF": [
+   288,
+   1897
+  ],
+  "1 500 XOF": [
+   103,
+   2208
+  ],
+  "500 XOF": [
+   288,
+   2208
+  ],
+  "100 XOF": [
+   103,
+   2519
+  ],
+  "5 000 XOF": [
+   288,
+   2519
+  ],
+  "3 000 XOF": [
+   288,
+   2820
+  ],
+  "8 000 XOF": [
+   103,
+   3121
+  ],
+  "3 500 XOF": [
+   288,
+   3121
+  ],
+  "6 000 XOF": [
+   288,
+   3422
+  ],
+  "600 XOF": [
+   288,
+   3723
+  ],
+  "499 XOF": [
+   103,
+   4024
+  ],
+  "8 500 XOF": [
+   288,
+   4024
+  ],
+  "15 000 XOF": [
+   103,
+   4335
+  ],
+  "90 000 XOF": [
+   288,
+   4335
+  ],
+  "Voir plus de produits": [
+   195,
+   4531
+  ],
+  "Devenir vendeur": [
+   107,
+   4715
+  ],
+  "Revendre sans stock": [
+   265,
+   4715
+  ],
+  "Écrire à AMAZER": [
+   103,
+   5032
+  ],
+  "Installer l'application": [
+   86,
+   5084
+  ],
+  "amazer.niger2@gmail.com": [
+   164,
+   5124
+  ],
+  "Boutiques": [
+   48,
+   5216
+  ],
+  "Promotions": [
+   52,
+   5256
+  ],
+  "Premium : hôtels, transport, entreprises": [
+   141,
+   5336
+  ],
+  "Stations-essence": [
+   72,
+   5416
+  ],
+  "Comment ça marche ?": [
+   87,
+   5456
+  ],
+  "Affiliation": [
+   47,
+   5636
+  ],
+  "Formations gratuites": [
+   81,
+   5676
+  ],
+  "Espace vendeur": [
+   67,
+   5716
+  ],
+  "Espace station": [
+   63,
+   5756
+  ],
+  "Guide du vendeur": [
+   71,
+   5796
+  ],
+  "Devenir livreur": [
+   62,
+   5836
+  ],
+  "Signaler un problème": [
+   83,
+   5936
+  ],
+  "Conditions d'utilisation": [
+   88,
+   5976
+  ],
+  "Politique de confidentialité": [
+   100,
+   6016
+  ],
+  "Suppression de compte": [
+   91,
+   6056
+  ],
+  "Fermer l'assistant": [
+   335,
+   335
+  ],
+  "WhatsApp": [
+   308,
+   391
+  ],
+  "Comment commander ?": [
+   103,
+   540
+  ],
+  "Comment payer ?": [
+   252,
+   540
+  ],
+  "Ouvrir ma boutique": [
+   90,
+   592
+  ],
+  "Pharmacie de garde": [
+   232,
+   592
+  ],
+  "Écrivez votre question…": [
+   165,
+   793
+  ],
+  "➤": [
+   339,
+   793
+  ]
+ },
+ "23-assistant-payer": {
+  "AMAZER": [
+   81,
+   28
+  ],
+  "Menu": [
+   181,
+   28
+  ],
+  "Se connecter": [
+   230,
+   28
+  ],
+  "Pays, devise et langue": [
+   269,
+   28
+  ],
+  "Notifications": [
+   307,
+   28
+  ],
+  "Panier": [
+   352,
+   28
+  ],
+  "Achetez et vendez en toute confiance": [
+   195,
+   128
+  ],
+  "Rechercher un produit, une marque…": [
+   195,
+   203
+  ],
+  "Scan": [
+   306,
+   203
+  ],
+  "Tout": [
+   56,
+   370
+  ],
+  "Essence": [
+   140,
+   370
+  ],
+  "Pharmacies": [
+   224,
+   370
+  ],
+  "Accessoires": [
+   308,
+   370
+  ],
+  "Alimentation": [
+   392,
+   370
+  ],
+  "Électronique": [
+   476,
+   370
+  ],
+  "Hygiène": [
+   560,
+   370
+  ],
+  "Maison": [
+   644,
+   370
+  ],
+  "Technologie": [
+   728,
+   370
+  ],
+  "Restaurants": [
+   812,
+   370
+  ],
+  "Premium": [
+   896,
+   370
+  ],
+  "Bonnes affaires": [
+   84,
+   467
+  ],
+  "Voir tout": [
+   337,
+   459
+  ],
+  "-22%": [
+   88,
+   595
+  ],
+  "Nouveautés": [
+   195,
+   751
+  ],
+  "Filtres": [
+   325,
+   811
+  ],
+  "180 000 XOF": [
+   103,
+   994
+  ],
+  "75 000 XOF": [
+   288,
+   994
+  ],
+  "326 000 XOF": [
+   103,
+   1295
+  ],
+  "110 000 XOF": [
+   288,
+   1295
+  ],
+  "230 000 XOF": [
+   103,
+   1596
+  ],
+  "174 000 XOF": [
+   288,
+   1596
+  ],
+  "940 000 XOF": [
+   103,
+   1897
+  ],
+  "130 000 XOF": [
+   288,
+   1897
+  ],
+  "1 500 XOF": [
+   103,
+   2208
+  ],
+  "500 XOF": [
+   288,
+   2208
+  ],
+  "100 XOF": [
+   103,
+   2519
+  ],
+  "5 000 XOF": [
+   288,
+   2519
+  ],
+  "3 000 XOF": [
+   288,
+   2820
+  ],
+  "8 000 XOF": [
+   103,
+   3121
+  ],
+  "3 500 XOF": [
+   288,
+   3121
+  ],
+  "6 000 XOF": [
+   288,
+   3422
+  ],
+  "600 XOF": [
+   288,
+   3723
+  ],
+  "499 XOF": [
+   103,
+   4024
+  ],
+  "8 500 XOF": [
+   288,
+   4024
+  ],
+  "15 000 XOF": [
+   103,
+   4335
+  ],
+  "90 000 XOF": [
+   288,
+   4335
+  ],
+  "Voir plus de produits": [
+   195,
+   4531
+  ],
+  "Devenir vendeur": [
+   107,
+   4715
+  ],
+  "Revendre sans stock": [
+   265,
+   4715
+  ],
+  "Écrire à AMAZER": [
+   103,
+   5032
+  ],
+  "Installer l'application": [
+   86,
+   5084
+  ],
+  "amazer.niger2@gmail.com": [
+   164,
+   5124
+  ],
+  "Boutiques": [
+   48,
+   5216
+  ],
+  "Promotions": [
+   52,
+   5256
+  ],
+  "Premium : hôtels, transport, entreprises": [
+   141,
+   5336
+  ],
+  "Stations-essence": [
+   72,
+   5416
+  ],
+  "Comment ça marche ?": [
+   87,
+   5456
+  ],
+  "Affiliation": [
+   47,
+   5636
+  ],
+  "Formations gratuites": [
+   81,
+   5676
+  ],
+  "Espace vendeur": [
+   67,
+   5716
+  ],
+  "Espace station": [
+   63,
+   5756
+  ],
+  "Guide du vendeur": [
+   71,
+   5796
+  ],
+  "Devenir livreur": [
+   62,
+   5836
+  ],
+  "Signaler un problème": [
+   83,
+   5936
+  ],
+  "Conditions d'utilisation": [
+   88,
+   5976
+  ],
+  "Politique de confidentialité": [
+   100,
+   6016
+  ],
+  "Suppression de compte": [
+   91,
+   6056
+  ],
+  "Fermer l'assistant": [
+   335,
+   335
+  ],
+  "WhatsApp": [
+   308,
+   391
+  ],
+  "Écrivez votre question…": [
+   165,
+   793
+  ],
+  "➤": [
+   339,
+   793
+  ]
+ },
+ "23b-assistant-saisie": {
+  "AMAZER": [
+   81,
+   28
+  ],
+  "Menu": [
+   181,
+   28
+  ],
+  "Se connecter": [
+   230,
+   28
+  ],
+  "Pays, devise et langue": [
+   269,
+   28
+  ],
+  "Notifications": [
+   307,
+   28
+  ],
+  "Panier": [
+   352,
+   28
+  ],
+  "Achetez et vendez en toute confiance": [
+   195,
+   128
+  ],
+  "Rechercher un produit, une marque…": [
+   195,
+   203
+  ],
+  "Scan": [
+   306,
+   203
+  ],
+  "Tout": [
+   56,
+   370
+  ],
+  "Essence": [
+   140,
+   370
+  ],
+  "Pharmacies": [
+   224,
+   370
+  ],
+  "Accessoires": [
+   308,
+   370
+  ],
+  "Alimentation": [
+   392,
+   370
+  ],
+  "Électronique": [
+   476,
+   370
+  ],
+  "Hygiène": [
+   560,
+   370
+  ],
+  "Maison": [
+   644,
+   370
+  ],
+  "Technologie": [
+   728,
+   370
+  ],
+  "Restaurants": [
+   812,
+   370
+  ],
+  "Premium": [
+   896,
+   370
+  ],
+  "Bonnes affaires": [
+   84,
+   467
+  ],
+  "Voir tout": [
+   337,
+   459
+  ],
+  "-22%": [
+   88,
+   595
+  ],
+  "Nouveautés": [
+   195,
+   751
+  ],
+  "Filtres": [
+   325,
+   811
+  ],
+  "180 000 XOF": [
+   103,
+   994
+  ],
+  "75 000 XOF": [
+   288,
+   994
+  ],
+  "326 000 XOF": [
+   103,
+   1295
+  ],
+  "110 000 XOF": [
+   288,
+   1295
+  ],
+  "230 000 XOF": [
+   103,
+   1596
+  ],
+  "174 000 XOF": [
+   288,
+   1596
+  ],
+  "940 000 XOF": [
+   103,
+   1897
+  ],
+  "130 000 XOF": [
+   288,
+   1897
+  ],
+  "1 500 XOF": [
+   103,
+   2208
+  ],
+  "500 XOF": [
+   288,
+   2208
+  ],
+  "100 XOF": [
+   103,
+   2519
+  ],
+  "5 000 XOF": [
+   288,
+   2519
+  ],
+  "3 000 XOF": [
+   288,
+   2820
+  ],
+  "8 000 XOF": [
+   103,
+   3121
+  ],
+  "3 500 XOF": [
+   288,
+   3121
+  ],
+  "6 000 XOF": [
+   288,
+   3422
+  ],
+  "600 XOF": [
+   288,
+   3723
+  ],
+  "499 XOF": [
+   103,
+   4024
+  ],
+  "8 500 XOF": [
+   288,
+   4024
+  ],
+  "15 000 XOF": [
+   103,
+   4335
+  ],
+  "90 000 XOF": [
+   288,
+   4335
+  ],
+  "Voir plus de produits": [
+   195,
+   4531
+  ],
+  "Devenir vendeur": [
+   107,
+   4715
+  ],
+  "Revendre sans stock": [
+   265,
+   4715
+  ],
+  "Écrire à AMAZER": [
+   103,
+   5032
+  ],
+  "Installer l'application": [
+   86,
+   5084
+  ],
+  "amazer.niger2@gmail.com": [
+   164,
+   5124
+  ],
+  "Boutiques": [
+   48,
+   5216
+  ],
+  "Promotions": [
+   52,
+   5256
+  ],
+  "Premium : hôtels, transport, entreprises": [
+   141,
+   5336
+  ],
+  "Stations-essence": [
+   72,
+   5416
+  ],
+  "Comment ça marche ?": [
+   87,
+   5456
+  ],
+  "Affiliation": [
+   47,
+   5636
+  ],
+  "Formations gratuites": [
+   81,
+   5676
+  ],
+  "Espace vendeur": [
+   67,
+   5716
+  ],
+  "Espace station": [
+   63,
+   5756
+  ],
+  "Guide du vendeur": [
+   71,
+   5796
+  ],
+  "Devenir livreur": [
+   62,
+   5836
+  ],
+  "Signaler un problème": [
+   83,
+   5936
+  ],
+  "Conditions d'utilisation": [
+   88,
+   5976
+  ],
+  "Politique de confidentialité": [
+   100,
+   6016
+  ],
+  "Suppression de compte": [
+   91,
+   6056
+  ],
+  "Fermer l'assistant": [
+   335,
+   335
+  ],
+  "WhatsApp": [
+   308,
+   391
+  ],
+  "Écrivez votre question…": [
+   165,
+   793
+  ],
+  "➤": [
+   339,
+   793
+  ]
+ },
+ "24-assistant-boutique": {
+  "AMAZER": [
+   81,
+   28
+  ],
+  "Menu": [
+   181,
+   28
+  ],
+  "Se connecter": [
+   230,
+   28
+  ],
+  "Pays, devise et langue": [
+   269,
+   28
+  ],
+  "Notifications": [
+   307,
+   28
+  ],
+  "Panier": [
+   352,
+   28
+  ],
+  "Achetez et vendez en toute confiance": [
+   195,
+   128
+  ],
+  "Rechercher un produit, une marque…": [
+   195,
+   203
+  ],
+  "Scan": [
+   306,
+   203
+  ],
+  "Tout": [
+   56,
+   370
+  ],
+  "Essence": [
+   140,
+   370
+  ],
+  "Pharmacies": [
+   224,
+   370
+  ],
+  "Accessoires": [
+   308,
+   370
+  ],
+  "Alimentation": [
+   392,
+   370
+  ],
+  "Électronique": [
+   476,
+   370
+  ],
+  "Hygiène": [
+   560,
+   370
+  ],
+  "Maison": [
+   644,
+   370
+  ],
+  "Technologie": [
+   728,
+   370
+  ],
+  "Restaurants": [
+   812,
+   370
+  ],
+  "Premium": [
+   896,
+   370
+  ],
+  "Bonnes affaires": [
+   84,
+   467
+  ],
+  "Voir tout": [
+   337,
+   459
+  ],
+  "-22%": [
+   88,
+   595
+  ],
+  "Nouveautés": [
+   195,
+   751
+  ],
+  "Filtres": [
+   325,
+   811
+  ],
+  "180 000 XOF": [
+   103,
+   994
+  ],
+  "75 000 XOF": [
+   288,
+   994
+  ],
+  "326 000 XOF": [
+   103,
+   1295
+  ],
+  "110 000 XOF": [
+   288,
+   1295
+  ],
+  "230 000 XOF": [
+   103,
+   1596
+  ],
+  "174 000 XOF": [
+   288,
+   1596
+  ],
+  "940 000 XOF": [
+   103,
+   1897
+  ],
+  "130 000 XOF": [
+   288,
+   1897
+  ],
+  "1 500 XOF": [
+   103,
+   2208
+  ],
+  "500 XOF": [
+   288,
+   2208
+  ],
+  "100 XOF": [
+   103,
+   2519
+  ],
+  "5 000 XOF": [
+   288,
+   2519
+  ],
+  "3 000 XOF": [
+   288,
+   2820
+  ],
+  "8 000 XOF": [
+   103,
+   3121
+  ],
+  "3 500 XOF": [
+   288,
+   3121
+  ],
+  "6 000 XOF": [
+   288,
+   3422
+  ],
+  "600 XOF": [
+   288,
+   3723
+  ],
+  "499 XOF": [
+   103,
+   4024
+  ],
+  "8 500 XOF": [
+   288,
+   4024
+  ],
+  "15 000 XOF": [
+   103,
+   4335
+  ],
+  "90 000 XOF": [
+   288,
+   4335
+  ],
+  "Voir plus de produits": [
+   195,
+   4531
+  ],
+  "Devenir vendeur": [
+   107,
+   4715
+  ],
+  "Revendre sans stock": [
+   265,
+   4715
+  ],
+  "Écrire à AMAZER": [
+   103,
+   5032
+  ],
+  "Installer l'application": [
+   86,
+   5084
+  ],
+  "amazer.niger2@gmail.com": [
+   164,
+   5124
+  ],
+  "Boutiques": [
+   48,
+   5216
+  ],
+  "Promotions": [
+   52,
+   5256
+  ],
+  "Premium : hôtels, transport, entreprises": [
+   141,
+   5336
+  ],
+  "Stations-essence": [
+   72,
+   5416
+  ],
+  "Comment ça marche ?": [
+   87,
+   5456
+  ],
+  "Affiliation": [
+   47,
+   5636
+  ],
+  "Formations gratuites": [
+   81,
+   5676
+  ],
+  "Espace vendeur": [
+   67,
+   5716
+  ],
+  "Espace station": [
+   63,
+   5756
+  ],
+  "Guide du vendeur": [
+   71,
+   5796
+  ],
+  "Devenir livreur": [
+   62,
+   5836
+  ],
+  "Signaler un problème": [
+   83,
+   5936
+  ],
+  "Conditions d'utilisation": [
+   88,
+   5976
+  ],
+  "Politique de confidentialité": [
+   100,
+   6016
+  ],
+  "Suppression de compte": [
+   91,
+   6056
+  ],
+  "Fermer l'assistant": [
+   335,
+   335
+  ],
+  "WhatsApp": [
+   308,
+   391
+  ],
+  "Écrivez votre question…": [
+   165,
+   793
+  ],
+  "➤": [
+   339,
+   793
+  ]
  }
 }

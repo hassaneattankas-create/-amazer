@@ -352,6 +352,12 @@
       this.hand = TS.hand(this.rig, P.peau, P.peauOmbre, P.peauClair);
       this.ps = TS.phoneScreens(this.rig, P.ecrans);
       this.sp = sparks(el, 10, '#22C55E');
+      // « mascotte » : { img, de, x, y, h } — la mascotte AMAZER surgit au bord de l'écran et présente le téléphone
+      if (P.mascotte) {
+        const m = P.mascotte;
+        this.masc = A.el('img', { src: m.img ?? 'assets/persos/mascotte-assistant.png', style: { position: 'absolute', left: '0px', top: '0px', height: (m.h ?? 640) + 'px', zIndex: 34, transformOrigin: '50% 100%', filter: 'drop-shadow(0 18px 24px rgba(60,25,5,.35))' } }, el);
+        X.cue(a + (m.de ?? .5), 'pop', .55, -.4);
+      }
       this.st = stickers(el, P, { list: (P.ecrans ?? []).filter(e => e.texte).map((e, i, arr) => ({ texte: e.texte, de: (e.de ?? 0) + .12, a: (arr[i + 1]?.de ?? this.D) - .15 })), y: 250, size: 66 });
       X.cue(a + .02, 'whoosh', .5);
       (P.ecrans ?? []).forEach((e, i) => { if (i) X.cue(a + e.de, 'swipe', .35); (e.taps ?? []).forEach(tp => X.cue(a + tp.at, 'tap', .8)); });
@@ -382,6 +388,12 @@
       this.hand.palm.style.opacity = this.hand.fingers.style.opacity = (1 - exit).toFixed(3);
       this.hand.palm.style.transform = `translateX(${(-exit * 0).toFixed(1)}px)`;
       if (P.succes != null) playSparks(this.sp, t, a + P.succes + .05, cx, cy - 120, 260);
+      if (this.masc) {
+        const m = P.mascotte, d0 = m.de ?? .5, e0 = m.a ?? D, k = A.P(u, d0, d0 + .55, E.spring), out = A.P(u, e0 - .35, e0, E.expoIn);
+        const sway = Math.sin((u - d0) * 2.4) * 2.5, bob = Math.abs(Math.sin((u - d0) * 2.4)) * 10;
+        this.masc.style.transform = `translate(${((m.x ?? -60) - out * 500).toFixed(1)}px,${((m.y ?? 1250) + (1 - k) * 700 - bob).toFixed(1)}px) rotate(${sway.toFixed(2)}deg)`;
+        this.masc.style.opacity = (u >= d0 ? 1 - out : 0).toFixed(3);
+      }
       playStickers(this.st, u, D);
     },
   });

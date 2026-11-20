@@ -1,0 +1,98 @@
+{
+ "id": "toon4",
+ "nom": "pub-personnages-3_assistant-amazer",
+ "titre": "L'assistant AMAZER",
+ "voix": "fr-FR-DeniseNeural",
+ "vitesse": "+6%",
+ "tenue": 1.8,
+ "scenes": [
+  {
+   "type": "maison_ombre",
+   "voix": "Une question sur AMAZER ? Commander, payer, ouvrir une boutique ?",
+   "sous_titres": [
+    {
+     "texte": "Une *question* ?",
+     "de": 0.2
+    }
+   ]
+  },
+  {
+   "type": "ecrans",
+   "voix": "L'assistant AMAZER vous propose son aide : posez votre question, il vous répond tout de suite.",
+   "transition": "balayage",
+   "ecrans": [
+    {
+     "img": "21-assistant-proposition.png",
+     "de": 0,
+     "texte": "L'assistant *AMAZER*",
+     "taps": [
+      {
+       "cible": "Oui, aidez-moi",
+       "at": 1.3
+      }
+     ]
+    },
+    {
+     "img": "22-assistant-ouvert.png",
+     "de": 1.8,
+     "texte": "Posez votre *question*",
+     "taps": [
+      {
+       "cible": "Comment payer ?",
+       "at": 2.7
+      }
+     ]
+    },
+    {
+     "img": "23-assistant-payer.png",
+     "de": 3.3,
+     "texte": "Réponse *immédiate*"
+    }
+   ],
+   "fin": 1.6,
+   "mascotte": {
+    "de": 0.25,
+    "a": 1.75,
+    "x": -150,
+    "y": 1300,
+    "h": 620
+   }
+  },
+  {
+   "type": "ecrans",
+   "voix": "Ouvrir votre boutique, suivre une commande : il vous guide étape par étape, à toute heure.",
+   "ecrans": [
+    {
+     "img": "23b-assistant-saisie.png",
+     "de": 0,
+     "texte": "Écrivez *simplement*",
+     "taps": [
+      {
+       "x": 338,
+       "y": 791,
+       "at": 0.9
+      }
+     ]
+    },
+    {
+     "img": "24-assistant-boutique.png",
+     "de": 1.5,
+     "texte": "Il vous *guide*"
+    }
+   ],
+   "succes": 2.1,
+   "fin": 1.8
+  },
+  {
+   "type": "fin",
+   "voix": "AMAZER. Une question ? On vous répond, sur amazer.store.",
+   "slogan": "Une question ?\n*On vous répond.*",
+   "mention": "Assistant AMAZER · 24 h/24 sur amazer.store",
+   "sous_titres_voix": [
+    "AMAZER.",
+    "Une question ? On vous répond,",
+    "sur amazer.store."
+   ]
+  }
+ ]
+}
