@@ -12,6 +12,8 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - AMAZER (amazer.store, application Android) est une plateforme de commerce en ligne au Niger, qui vise l'Afrique puis l'international.
 - Acteurs : clients, boutiques, restaurants, formule Premium (hôtels, transport, entreprises), pharmacies de garde, stations-essence (propriétaire, responsables de ville, gérants), revendeurs sans stock, affiliés, livreurs.
 - Paiement par mobile money (Nita et Amana ; Wave et Airtel Money s'ajoutent quand l'admin les active) ; AMAZER vérifie chaque paiement avant que la boutique prépare la commande.
+- Payer une commande avec Amana Transfert : sur la page de paiement, toucher « Démarrer le paiement Amana », valider le montant exact dans l'application AmanaTa, puis toucher « Vérifier le paiement » ; la commande est confirmée dès qu'Amana valide (pas de référence à recopier).
+- Payer une commande avec Nita Transfert : envoyer le montant au numéro AMAZER indiqué sur la page de paiement en mentionnant la référence de paiement, puis saisir la référence de la transaction et toucher « J'ai payé, envoyer la référence » ; la commande reste « Paiement en attente » jusqu'à la vérification par l'équipe AMAZER.
 - Livraison par les livreurs AMAZER (standard et express à Niamey) ; le client confirme la réception, le livreur scanne son reçu.
 - Les clients des boutiques paient sur le compte AMAZER ; AMAZER reverse ensuite à la boutique sa part de chaque commande livrée.
 - Boutique : 14 jours d'essai avec tout ; ensuite formule gratuite (la boutique reste en ligne, 5 produits visibles, AMAZER garde 5 % de chaque vente) ou abonnement Boutique 2 000 F/mois (produits illimités, 0 % de commission).
