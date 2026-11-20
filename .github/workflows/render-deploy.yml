@@ -32,7 +32,7 @@ jobs:
           echo "HTTP $http_code"
           cat response.json
           echo
-          if [ "$http_code" != "201" ] && [ "$http_code" != "200" ]; then
+          if [ "$http_code" != "201" ] && [ "$http_code" != "200" ] && [ "$http_code" != "202" ]; then
             echo "::error::Echec du declenchement (HTTP $http_code)."
             exit 1
           fi
