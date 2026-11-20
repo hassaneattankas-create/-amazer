@@ -127,3 +127,17 @@ def test_without_ai_a_fiche_answers_instead_of_a_generic_hello(monkeypatch) -> N
         route.ChatRequest(messages=[{"role": "user", "content": "Comment relever les compteurs des pompes ?"}]), _request(), Mock()
     )
     assert response.mode == "faq" and response.reply != route._DEFAULT_REPLY
+
+
+def test_public_knowledge_never_mentions_the_admin_space() -> None:
+    """La bulle du site ne doit rien savoir de l'administration (fiches et faits publics)."""
+    import json
+    import os
+    import re
+
+    path = os.path.join(os.path.dirname(__file__), "..", "..", "app", "data", "savoir_public.json")
+    with open(path, encoding="utf-8") as handle:
+        data = json.load(handle)
+    texts = [*data["faits"], *[f"{f['titre']} {f['texte']}" for f in data["fiches"]]]
+    leaks = [t[:120] for t in texts if re.search(r"admin|\bPIN\b", t, re.IGNORECASE)]
+    assert leaks == []

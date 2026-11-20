@@ -107,6 +107,14 @@ console.log(`Savoir de l'Assistant : ${fiches.length} fiches, ${faits.length} fa
 
 // Bulle « Assistant AMAZER » du site (clients et vendeurs) : même savoir, SANS l'administration ni la méthode commerciale interne.
 const interne = (titre) => /^admin\b|^démarcher/i.test(titre);
+// Rien de l'administration ne doit atteindre la bulle publique : « l'admin » qui agit pour le client devient
+// « l'équipe AMAZER » ; toute ligne qui décrit encore l'espace admin (chemins, écrans, PIN, /admin) est retirée.
+const sansAdmin = (brut) => {
+  const ligne = String(brut).replace(/\s*Admin\s*:\s*\/admin\.?/i, "");
+  if (/admin\s*[›→>:]|\/admin|\bPIN\b|écran admin|espace admin|caisse de l.admin|réglable par l.admin|réglé par l.admin/i.test(ligne)) return null;
+  const l = ligne.replace(/\bl['’]admin(istrateur)?\b(\s+dans\s+«?\s*Commandes et paiements\s*»?)?/gi, "l'équipe AMAZER");
+  return /admin/i.test(l) ? null : l;
+};
 const publicFiches = fiches
   .filter((f) => !interne(f.titre))
   .map((f) => ({
@@ -119,10 +127,13 @@ const publicFiches = fiches
       ...(f.faq ?? []).map((q) => `Q : ${q.q} R : ${q.r}`),
     ]
       .filter(Boolean)
+      .flatMap((bloc) => String(bloc).split("\n"))
+      .map(sansAdmin)
+      .filter(Boolean)
       .join("\n")
       .slice(0, 4000),
   }));
-const publicFaits = faits.filter((l) => !/administration d'AMAZER|outil connaissance_amazer/i.test(l));
+const publicFaits = faits.filter((l) => !/administration d'AMAZER|outil connaissance_amazer/i.test(l)).map(sansAdmin).filter(Boolean);
 const SITE_FILE = path.resolve(HERE, "../../../backend/app/data/savoir_public.json");
 fs.writeFileSync(`${SITE_FILE}.tmp`, JSON.stringify({ maj: new Date().toISOString(), faits: publicFaits, fiches: publicFiches }, null, 1), "utf-8");
 fs.renameSync(`${SITE_FILE}.tmp`, SITE_FILE);
