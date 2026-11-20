@@ -118,7 +118,7 @@ export function ChatWidget() {
               }`}
             >
               <div className="flex items-start gap-2">
-                <Image src="/mascotte/mascotte-buste.webp" alt="" width={65} height={100} className="-mt-12 h-24 w-auto shrink-0" />
+                <Image src="/mascotte/mascotte-assistant.webp" alt="" width={92} height={100} className="-ml-2 -mt-14 h-24 w-auto shrink-0" />
                 <p className="flex-1 text-sm text-ink-800">
                   <span className="font-semibold text-ink-900">Bonjour !</span> Besoin d&apos;aide pour commander, payer ou
                   vendre ? Je vous guide.

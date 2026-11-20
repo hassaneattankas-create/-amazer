@@ -46,12 +46,13 @@ async function save(f, text = "Enregistrer le profil") {
   await f.click(text);
 }
 
-/** Visiteur qui s'inscrit : l'inscription est simulée, le code de vérification « envoyé » par WhatsApp. */
-const inscription = () => ({
+/** Visiteur qui s'inscrit : l'inscription est simulée ; le compte est actif tout de suite (pas de code, décision du 20/11/2026). */
+const inscription = (name = "Aïcha Issoufou", email = "aicha@exemple.com") => ({
   proxy: true,
-  mocks: [],
+  mocks: [[/\/auth\/me$/, { id: "u9", email, full_name: name, whatsapp_phone: "+22790000001", is_active: true, role: "user", created_at: new Date().toISOString() }]],
   onWrite(url) {
-    if (/\/auth\/register$/.test(url)) return { verification_channel: "whatsapp", verification_destination_masked: "+227 90 •• •• 01", verification_code_preview: null };
+    if (/\/auth\/register$/.test(url)) return { success: true, user_id: "u9", email, verification_channel: "none", verification_destination_masked: "", verification_code_preview: null };
+    if (/\/auth\/login$/.test(url)) return { access_token: "demo", refresh_token: "demo", token_type: "bearer" };
     return {};
   },
 });
@@ -61,7 +62,7 @@ function compteClient({ name, email, phone, password = "Amazer#2026", intro } = 
   return {
     title: "Créer votre compte",
     intro: intro || "Ouvrez **amazer.store** dans le navigateur de votre téléphone. Le compte est **gratuit**.",
-    persona: inscription,
+    persona: () => inscription(name, email),
     route: "/",
     scenes: [
       { say: "Ouvrez amazer.store sur votre téléphone. En haut de l'écran, touchez le bouton Menu.",
@@ -76,10 +77,8 @@ function compteClient({ name, email, phone, password = "Amazer#2026", intro } = 
         do: async (f) => { await fill(f, "nom@exemple.com", email); await fill(f, "90 00 00 00", phone); }, guide: g("E-mail et WhatsApp", "Écrivez votre **e-mail** et/ou votre **numéro WhatsApp** : l'un des deux suffit pour vous connecter.") },
       { say: "Choisissez un mot de passe : au moins huit caractères, avec une majuscule, une minuscule, un chiffre et un signe. Chaque règle passe au vert.",
         do: (f) => fill(f, "Mot de passe", password), guide: g("Mot de passe", "Au moins **8 caractères**, une **majuscule**, une **minuscule**, un **chiffre** et un **signe** (! ? @ #). Les règles passent au **vert**.", "Notez votre mot de passe dans un endroit sûr.") },
-      { say: "Cochez la case pour accepter les conditions d'utilisation. Puis touchez Créer mon compte.",
-        do: async (f) => { await f.click("J'accepte la", { selector: "label" }); await f.click("Créer mon compte", FORM); }, guide: g("Créez le compte", "Cochez **J'accepte la politique de confidentialité et les conditions**, puis touchez **Créer mon compte**.") },
-      { say: "Vous recevez un code à six chiffres, par WhatsApp ou par e-mail. Écrivez-le ici, puis touchez Activer mon compte. Votre compte est prêt, vous êtes connecté.",
-        do: async (f) => { await fill(f, "000000", "482913"); await f.point("Activer mon compte"); }, guide: g("Activez avec le code", "Écrivez le **code à 6 chiffres** reçu par WhatsApp ou e-mail, puis touchez **Activer mon compte**. Vous êtes connecté.") },
+      { say: "Cochez la case pour accepter les conditions d'utilisation. Puis touchez Créer mon compte. Votre compte est prêt tout de suite, et vous êtes connecté.",
+        do: async (f) => { await f.click("J'accepte la", { selector: "label" }); await f.click("Créer mon compte", FORM); }, guide: g("Créez le compte", "Cochez **J'accepte la politique de confidentialité et les conditions**, puis touchez **Créer mon compte** : le compte est prêt tout de suite, vous êtes connecté.") },
     ],
   };
 }
@@ -130,7 +129,7 @@ export function compteVendeur({ plan, planSay, shop, name, email, phone }) {
   return {
     title: "Créer votre compte vendeur",
     intro: "Ouvrez **amazer.store** dans le navigateur de votre téléphone. Tout se fait en quelques minutes.",
-    persona: inscription,
+    persona: () => inscription(name, email),
     route: "/",
     scenes: [
       { say: "Ouvrez amazer.store sur votre téléphone. En haut de l'écran, touchez le bouton Menu.",
@@ -149,8 +148,6 @@ export function compteVendeur({ plan, planSay, shop, name, email, phone }) {
         do: (f) => fill(f, "Mot de passe", "Amazer#2026"), guide: g("Mot de passe", "Au moins **8 caractères**, une **majuscule**, une **minuscule**, un **chiffre** et un **signe**.") },
       { say: "Cochez la case des conditions, puis touchez Créer ma boutique. Votre espace est en ligne tout de suite, avec 14 jours d'essai gratuit.",
         do: async (f) => { await f.click("J'accepte la", { selector: "label" }); await f.click("Créer ma boutique", FORM); }, guide: g("Créez votre espace", "Cochez les **conditions**, puis touchez **Créer ma boutique**. Votre espace est en ligne **tout de suite**.") },
-      { say: "Écrivez le code à six chiffres reçu par WhatsApp ou par e-mail, puis touchez Activer mon compte.",
-        do: async (f) => { await fill(f, "000000", "482913"); await f.point("Activer mon compte"); }, guide: g("Activez avec le code", "Écrivez le **code à 6 chiffres** reçu, puis touchez **Activer mon compte**.") },
     ],
   };
 }
@@ -222,7 +219,7 @@ GUIDES.client = {
     },
   ],
   tips: ["Payez **toujours sur AMAZER** : vous êtes protégé.", "Une adresse **avec un repère** fait gagner du temps.", "Gardez votre téléphone allumé pendant la livraison."],
-  faq: [["J'ai oublié mon mot de passe ?", "Sur la page **Connexion**, touchez **Mot de passe oublié**."], ["Je n'ai pas reçu le code ?", "Vérifiez le numéro WhatsApp ou l'e-mail, puis recommencez avec **Retour à l'inscription**."]],
+  faq: [["J'ai oublié mon mot de passe ?", "Sur la page **Connexion**, touchez **Mot de passe oublié**."], ["Faut-il un code pour créer le compte ?", "Non : le compte est actif tout de suite. Un code est envoyé seulement si vous avez oublié votre mot de passe."]],
 };
 
 // ================================================================ Boutique

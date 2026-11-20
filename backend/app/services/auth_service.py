@@ -88,7 +88,9 @@ class AuthService:
         if existing or email == settings.admin_email.strip().lower():
             raise ConflictError("Email ou WhatsApp deja enregistre")
 
-        is_active = not settings.registration_requires_verification and settings.auto_activate_new_accounts
+        # Décision du propriétaire (20/11/2026) : pas de code à l'inscription, le compte est actif tout de suite.
+        # Le code à 6 chiffres sert seulement au « Mot de passe oublié ».
+        is_active = True
         try:
             user = self.users.create(
                 email=email,
