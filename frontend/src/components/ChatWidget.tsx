@@ -15,7 +15,7 @@ import { AssistantMessage, AssistantProduct, sendAssistantMessage } from "@/serv
 
 const WELCOME = "Bonjour ! Je suis l'assistant AMAZER. Je vous aide à trouver un produit, commander, payer, suivre une livraison ou ouvrir votre boutique.";
 const SUGGESTIONS = ["Comment commander ?", "Comment payer ?", "Ouvrir ma boutique", "Pharmacie de garde"];
-// L'assistant se présente une fois par visite, quelques secondes après l'arrivée (après l'écran d'ouverture).
+// L'assistant se présente une fois par visite, quelques secondes après l'arrivée.
 const TEASER_KEY = "amazer_aide_proposee";
 const TEASER_DELAY_MS = 4000;
 const TEASER_DURATION_MS = 15000;
@@ -56,10 +56,7 @@ export function ChatWidget() {
       // stockage indisponible : on propose l'aide quand même, une seule fois sur cette page
     }
     let hideTimer = 0;
-    const showTimer = window.setInterval(() => {
-      // attendre la fin de l'écran d'ouverture de l'application
-      if (document.documentElement.classList.contains("amazer-intro")) return;
-      window.clearInterval(showTimer);
+    const showTimer = window.setTimeout(() => {
       setTeaser(true);
       try {
         sessionStorage.setItem(TEASER_KEY, "1");
@@ -69,7 +66,7 @@ export function ChatWidget() {
       hideTimer = window.setTimeout(() => setTeaser(false), TEASER_DURATION_MS);
     }, TEASER_DELAY_MS);
     return () => {
-      window.clearInterval(showTimer);
+      window.clearTimeout(showTimer);
       window.clearTimeout(hideTimer);
     };
   }, [hidden]);
