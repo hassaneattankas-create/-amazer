@@ -127,7 +127,9 @@ GUIDES.station = {
           do: async (f) => {
             await open(f, "Garde");
             await f.click("Jusqu'à nouvel ordre", BTN);
-            await f.click("Mettre de garde", BTN);
+            // déjà de garde (base de démonstration) : le bouton s'appelle « Enregistrer la garde »
+            const dejaDeGarde = await f.page.evaluate(() => ![...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Mettre de garde" && b.offsetParent));
+            await f.click(dejaDeGarde ? "Enregistrer la garde" : "Mettre de garde", BTN);
             await wait(1500);
           },
           guide: g("La garde", "Section **Garde** : **Jusqu'à nouvel ordre** ou **Jusqu'à une date**, puis **Mettre de garde**.") },
@@ -143,8 +145,10 @@ GUIDES.station = {
         { say: "Le soir, dans Ventes, elle recopie le chiffre du compteur de chaque pompe, puis touche Enregistrer. AMAZER calcule tout seul les litres vendus.",
           do: async (f) => {
             await open(f, "Ventes (compteurs)");
-            await fill(f, "Dernier", "101250", { nth: 0 });
-            await fill(f, "Dernier", "52300", { nth: 1 });
+            // premier relevé : le champ s'appelle « Chiffre du compteur » ; ensuite « Dernier : … »
+            const champ = await f.page.evaluate(() => ([...document.querySelectorAll("input")].some((i) => (i.placeholder || "").startsWith("Dernier") && i.offsetParent) ? "Dernier" : "Chiffre du compteur"));
+            await fill(f, champ, "101250", { nth: 0 });
+            await fill(f, champ, "52300", { nth: 1 });
             await f.click("Enregistrer les 2 compteurs", BTN);
             await wait(2500);
             await f.point("Vendu ces 7 derniers jours", TEXT);
