@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { MessageCircle, X } from "lucide-react";
+import { X } from "lucide-react";
 
 import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 
@@ -118,7 +118,7 @@ export function ChatWidget() {
               }`}
             >
               <div className="flex items-start gap-2">
-                <Image src="/logo-amazer-mark-128.png" alt="" width={32} height={32} className="h-8 w-8 shrink-0" />
+                <Image src="/mascotte/mascotte-buste.webp" alt="" width={65} height={100} className="-mt-12 h-24 w-auto shrink-0" />
                 <p className="flex-1 text-sm text-ink-800">
                   <span className="font-semibold text-ink-900">Bonjour !</span> Besoin d&apos;aide pour commander, payer ou
                   vendre ? Je vous guide.
@@ -145,18 +145,20 @@ export function ChatWidget() {
             type="button"
             aria-label="Ouvrir l'assistant AMAZER"
             onClick={openChat}
-            className={`fixed right-4 z-dropdown inline-flex h-12 w-12 items-center justify-center rounded-pill bg-ink-900 text-white shadow-floating transition-transform duration-fast hover:scale-105 md:bottom-5 md:right-5 ${
+            className={`fixed right-4 z-dropdown inline-flex h-14 w-14 items-center justify-center overflow-hidden rounded-pill border-2 border-brand-500 bg-white shadow-floating transition-transform duration-fast hover:scale-105 md:bottom-5 md:right-5 ${
               liftedOnMobile ? "bottom-24" : "bottom-4"
             }`}
           >
-            <MessageCircle className="h-5 w-5" aria-hidden="true" />
+            <Image src="/mascotte/mascotte-tete.webp" alt="" width={44} height={44} className="h-11 w-11" />
           </button>
         </>
       ) : (
         <div className="fixed bottom-5 right-5 z-toast flex h-[min(70vh,520px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-card border border-slate-200 bg-white shadow-overlay">
           <div className="flex items-center justify-between bg-ink-900 px-4 py-3 text-white">
             <div className="flex items-center gap-2">
-              <Image src="/logo-amazer-mark-128.png" alt="" width={28} height={28} className="h-7 w-7" />
+              <span className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-pill bg-white">
+                <Image src="/mascotte/mascotte-tete.webp" alt="" width={32} height={32} className="h-8 w-8" />
+              </span>
               <span className="text-sm font-semibold">Assistant AMAZER</span>
             </div>
             <button

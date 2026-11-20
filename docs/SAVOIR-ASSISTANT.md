@@ -12,8 +12,7 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - AMAZER (amazer.store, application Android) est une plateforme de commerce en ligne au Niger, qui vise l'Afrique puis l'international.
 - Acteurs : clients, boutiques, restaurants, formule Premium (hôtels, transport, entreprises), pharmacies de garde, stations-essence (propriétaire, responsables de ville, gérants), revendeurs sans stock, affiliés, livreurs.
 - Paiement par mobile money (Nita et Amana ; Wave et Airtel Money s'ajoutent quand l'admin les active) ; AMAZER vérifie chaque paiement avant que la boutique prépare la commande.
-- Payer une commande avec Amana Transfert : sur la page de paiement, toucher « Démarrer le paiement Amana », valider le montant exact dans l'application AmanaTa, puis toucher « Vérifier le paiement » ; la commande est confirmée dès qu'Amana valide (pas de référence à recopier).
-- Payer une commande avec Nita Transfert : envoyer le montant au numéro AMAZER indiqué sur la page de paiement en mentionnant la référence de paiement, puis saisir la référence de la transaction et toucher « J'ai payé, envoyer la référence » ; la commande reste « Paiement en attente » jusqu'à la vérification par l'équipe AMAZER.
+- Payer une commande (Nita Transfert ou Amana Transfert, même démarche) : sur la page « Payer ma commande », 1) « Envoyez l'argent » : envoyer le montant exact au numéro AMAZER affiché ; 2) « Indiquez ce motif » : mettre le motif du paiement affiché dans le transfert ; 3) « Confirmez ici » : écrire si possible la « Référence reçue par SMS », puis toucher « J'ai payé ». La commande reste « Paiement en attente » jusqu'à la vérification par l'équipe AMAZER, puis la boutique prépare.
 - Livraison par les livreurs AMAZER (standard et express à Niamey) ; le client confirme la réception, le livreur scanne son reçu.
 - Les clients des boutiques paient sur le compte AMAZER ; AMAZER reverse ensuite à la boutique sa part de chaque commande livrée.
 - Boutique : 14 jours d'essai avec tout ; ensuite formule gratuite (la boutique reste en ligne, 5 produits visibles, AMAZER garde 5 % de chaque vente) ou abonnement Boutique 2 000 F/mois (produits illimités, 0 % de commission).
@@ -126,7 +125,7 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 ## Admin · Commandes et paiements
 - Où : Admin › « Commandes et paiements ». Tout ce qui concerne l'argent qui entre : paiements des commandes, livraisons, abonnements des vendeurs, trésorerie.
 - Valider le paiement d'une commande : filtre « Paiements à valider », comparer la référence envoyée par le client avec votre relevé Nita ou Amana, puis « Valider le paiement ». Le vendeur et les livreurs sont prévenus aussitôt.
-- Amana : le paiement se valide tout seul dès que le client confirme dans AmanaTa ; le bouton « Vérifier maintenant » relance la vérification.
+- Amana : aujourd'hui réglé comme Nita (le client envoie l'argent et la référence, on vérifie). Seulement si le moyen Amana est réglé en paiement automatique dans « Moyens de paiement », il se valide tout seul quand le client confirme dans AmanaTa (« Vérifier maintenant » relance la vérification).
 - « Le client n'a pas encore envoyé de référence » : attendre, ou le contacter. Ne jamais valider sans voir l'argent sur le compte AMAZER.
 - Commandes à livrer : filtre « À livrer », puis « Envoyer en livraison » et « Marquer livrée » si besoin (normalement le livreur s'en charge en scannant le reçu).
 - Annuler une commande : « Annuler ». Si elle était payée, enregistrer ensuite le remboursement dans « Remboursements ».

@@ -89,9 +89,9 @@ const SECTIONS: Section[] = [
         id: "payer",
         question: "Comment payer ma commande ?",
         steps: [
-          "Amana Transfert : sur la page de paiement, cliquez « Démarrer le paiement Amana », validez le montant exact dans l'application AmanaTa, puis cliquez « Vérifier le paiement ». La commande est confirmée dès qu'Amana valide la transaction.",
-          "Nita Transfert : envoyez le montant au numéro AMAZER indiqué sur la page de paiement, en mentionnant la référence de paiement. Saisissez ensuite la référence de votre transaction et cliquez « J'ai payé, envoyer la référence ».",
-          "Pour Nita, la commande reste « Paiement en attente » jusqu'à ce que l'équipe AMAZER ait vérifié la transaction : la saisie de la référence ne suffit pas à confirmer le paiement.",
+          "Nita Transfert ou Amana Transfert (même démarche) : sur la page « Payer ma commande », envoyez le montant exact au numéro AMAZER affiché, en indiquant le motif du paiement affiché.",
+          "Revenez sur la page, écrivez si possible la référence reçue par SMS, puis cliquez « J'ai payé ».",
+          "La commande reste « Paiement en attente » jusqu'à ce que l'équipe AMAZER ait vérifié la transaction : la saisie de la référence ne suffit pas à confirmer le paiement.",
         ],
         note: "Ne communiquez jamais un code reçu par SMS, e-mail ou WhatsApp à une personne qui vous le demande, même au nom d'AMAZER.",
       },

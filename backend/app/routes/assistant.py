@@ -38,8 +38,9 @@ SYSTEM_PROMPT = (
     "CE QUE PERMET AMAZER AUJOURD'HUI :\n"
     "- Acheter : rechercher (filtres prix, categorie, tri), ajouter au panier, indiquer adresse et "
     "telephone de livraison, commander.\n"
-    "- Payer : Nita (transfert au numero AMAZER puis saisie de la reference ; l'equipe verifie avant "
-    "confirmation) ou Amana (validation dans l'application AmanaTa).\n"
+    "- Payer : Nita ou Amana, meme demarche : envoyer le montant exact au numero AMAZER affiche avec le motif "
+    "indique, puis saisir la reference recue par SMS et toucher « J'ai paye » ; l'equipe verifie avant "
+    "confirmation.\n"
     "- Livraison a Niamey (standard ou express) par un livreur AMAZER ; frais par boutique, affiches "
     "avant la commande. Suivi dans le tableau de bord ; le client peut annuler une commande non payee.\n"
     "- Ecrire a une boutique (bouton « Ecrire a la boutique », page Messages).\n"
@@ -91,7 +92,7 @@ _FAQ = [
      "Un livreur AMAZER livre à Niamey (standard ou express). Les frais s'affichent avant la commande. "
      "Suivez votre commande dans le tableau de bord."),
     (("paiement", "payer", "nita", "amana", "argent", "mobile money"),
-     "Deux moyens : Nita (transfert au numéro AMAZER, puis la référence) ou Amana (validation dans AmanaTa). "
+     "Nita ou Amana, même démarche : envoyez le montant exact au numéro AMAZER affiché avec le motif indiqué, puis touchez « J'ai payé ». "
      "La commande est confirmée après vérification du paiement."),
     (("commander", "acheter", "commande", "panier"),
      "Ajoutez les produits au panier, indiquez adresse et téléphone, choisissez le paiement puis « Commander »."),
