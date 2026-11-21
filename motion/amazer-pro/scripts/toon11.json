@@ -1,14 +1,14 @@
 {
  "id": "toon11",
  "nom": "pub-personnages-10_premium",
- "titre": "Premium : hôtels, transport, pharmacies",
+ "titre": "Premium : hôtels, pharmacies, entreprises",
  "voix": "fr-FR-DeniseNeural",
  "vitesse": "+8%",
  "tenue": 1.8,
  "scenes": [
   {
    "type": "choc",
-   "voix": "Votre hôtel, votre compagnie de bus, votre pharmacie : visibles partout ?",
+   "voix": "Votre hôtel, votre pharmacie, votre entreprise : visibles partout ?",
    "fond": "creme",
    "lignes": [
     "Votre établissement",
@@ -43,7 +43,7 @@
     },
     {
      "titre": "Réservation en ligne",
-     "texte": "Chambres, trajets, tables",
+     "texte": "Chambres, tables, services",
      "icone": "temps"
     },
     {
@@ -57,11 +57,15 @@
    "type": "fin",
    "voix": "AMAZER Premium. Soyez vu de tous, sur amazer.store.",
    "slogan": "Premium.\n*Vu de tous.*",
-   "mention": "Hôtels · Transport · Pharmacies · Stations",
+   "mention": "Hôtels · Pharmacies · Stations · Entreprises",
    "sous_titres_voix": [
     "AMAZER Premium.",
     "Soyez vu de tous,",
     "sur amazer.store."
+   ],
+   "contact": [
+    "Tél. 96 95 31 63",
+    "amazer.niger2@gmail.com"
    ]
   }
  ]

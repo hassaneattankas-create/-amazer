@@ -12,21 +12,22 @@
   },
   {
    "type": "ecrans",
-   "voix": "Sur AMAZER, ouvrez votre boutique en ligne : vous pouvez commencer à vendre gratuitement.",
+   "voix": "Sur AMAZER, choisissez votre formule : vous pouvez commencer à vendre gratuitement.",
    "transition": "balayage",
    "ecrans": [
-    { "img": "20-vitrine-long.png", "de": 0, "texte": "Vendez *gratuitement*", "scroll": [0, 330, 0.7, 1.7] }
+    { "img": "18-vendre-long.png", "de": 0, "texte": "Commencez *gratuitement*", "scroll": [0, 500, 0.3, 1.1], "marque": [52, 770, 300, 40, 1.4], "taps": [{ "x": 150, "y": 782, "at": 1.5 }, { "cible": "Choisir Boutique", "at": 2.4 }] }
    ],
-   "fin": 2.2
+   "succes": 2.55,
+   "fin": 2.9
   },
   {
    "type": "ecrans",
-   "voix": "Ajoutez vos produits avec une photo, en quelques secondes.",
+   "voix": "Ajoutez vos produits avec une photo : votre vitrine est en ligne.",
    "ecrans": [
-    { "img": "19-boutique-ajout-long.png", "de": 0, "texte": "Ajoutez vos *produits*", "scroll": [0, 380, 0.15, 0.7], "taps": [{ "cible": "Nom du produit", "at": 0.95 }, { "cible": "Ajouter au catalogue", "at": 1.7 }] }
+    { "img": "19-boutique-ajout-long.png", "de": 0, "texte": "Ajoutez vos *produits*", "scroll": [0, 380, 0.15, 0.7], "taps": [{ "cible": "Nom du produit", "at": 0.95 }, { "cible": "Ajouter au catalogue", "at": 1.7 }] },
+    { "img": "20-vitrine-long.png", "de": 2.25, "texte": "Votre *vitrine* en ligne", "scroll": [0, 330, 2.6, 3.4] }
    ],
-   "succes": 1.85,
-   "fin": 1.6
+   "fin": 1.5
   },
   {
    "type": "commandes_pluie",

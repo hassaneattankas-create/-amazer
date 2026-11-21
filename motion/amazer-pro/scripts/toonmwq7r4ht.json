@@ -1,0 +1,80 @@
+{
+ "id": "toonmwq7r4ht",
+ "titre": "AMAZER - Assistant Chat",
+ "nom": "pub-amazer-assistant-chat-mwq7r4ht",
+ "voix": "fr-FR-DeniseNeural",
+ "tenue": 1.8,
+ "scenes": [
+  {
+   "type": "maison_ombre",
+   "voix": "Fatigué de chercher partout sans trouver le bon prix ?"
+  },
+  {
+   "type": "ecrans",
+   "mascotte": {
+    "y": 1300,
+    "x": -150,
+    "de": 0.25,
+    "a": 1.75,
+    "h": 620
+   },
+   "voix": "L'Assistant AMAZER est là pour vous. Posez-lui n'importe quelle question.",
+   "ecrans": [
+    {
+     "de": 0,
+     "texte": "Demandez à l'*Assistant*",
+     "img": "21-assistant-proposition.png"
+    }
+   ]
+  },
+  {
+   "voix": "Il compare les boutiques et trouve la meilleure offre pour vous.",
+   "ecrans": [
+    {
+     "texte": "Il cherche pour *vous*",
+     "img": "23b-assistant-saisie.png",
+     "de": 0
+    },
+    {
+     "img": "24-assistant-boutique.png",
+     "taps": [
+      {
+       "cible": "Boutique Moussa",
+       "at": 2.5
+      }
+     ],
+     "de": 1.5
+    }
+   ],
+   "type": "ecrans"
+  },
+  {
+   "voix": "Même pour une pharmacie de garde la nuit, il vous guide en un clic.",
+   "ecrans": [
+    {
+     "texte": "Trouvez la *garde*",
+     "de": 0,
+     "scroll": {
+      "de": 0.2,
+      "vers": "Filtres",
+      "a": 1
+     },
+     "taps": [
+      {
+       "at": 1.2,
+       "cible": "Filtres"
+      }
+     ],
+     "img": "01-accueil-long.png-long.png"
+    }
+   ],
+   "type": "ecrans"
+  },
+  {
+   "type": "fin",
+   "slogan": "Une question ?\n*On vous répond.*",
+   "mention": "Pharmacies et stations mises à jour 24h/7",
+   "voix": "AMAZER. L'intelligence au service de vos achats."
+  }
+ ]
+}

@@ -860,11 +860,13 @@
       this.icon = A.el('div', { cls: 'abs', style: { left: '430px', top: '230px', width: '220px', height: '220px', borderRadius: '56px', background: '#fff', display: 'grid', placeItems: 'center', boxShadow: '0 30px 60px -24px rgba(120,30,0,.6)' } }, this.wrap, '<svg width="140" height="140" viewBox="-20 -20 40 40"><path d="M -11 12 L 0 -13 L 11 12 M -6.5 4 L 6.5 4" stroke="#FF4D00" stroke-width="5.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>');
       this.word = A.Type.make(this.wrap, 'AMAZER', { size: 128, weight: 800, align: 'center', color: '#fff', track: -.04 });
       A.Type.place(this.word, 540, 580);
-      this.tag = A.Type.make(this.wrap, P.slogan ?? 'Commandez.\n*On vous livre.*', { size: 96, weight: 800, align: 'center', color: '#fff', accent: '#FFE08A', lh: 1.02 });
+      this.tag = A.Type.make(this.wrap, P.slogan ?? 'Commandez.\n*On vous livre.*', { size: P.slogan_taille ?? 96, weight: 800, align: 'center', color: '#fff', accent: '#FFE08A', lh: 1.02 });
       A.Type.place(this.tag, 540, 800);
       this.pill = A.el('div', { cls: 'abs', style: { padding: '22px 56px', borderRadius: '99px', background: '#fff', color: C.orange, font: '800 62px Geist', letterSpacing: '-.02em', boxShadow: '0 24px 50px -20px rgba(120,30,0,.55)' } }, this.wrap, 'amazer.store');
       this.pill.style.left = (540 - this.pill.offsetWidth / 2) + 'px'; this.pill.style.top = '975px';
       this.small = A.el('div', { cls: 'abs', style: { left: '0', top: '1120px', width: '1080px', textAlign: 'center', font: '600 38px Geist', color: '#FFF1E8' } }, this.wrap, P.mention ?? 'Paiement Nita ou Amana · Livraison à Niamey');
+      // coordonnées de contact (facultatives) : téléphone, e-mail…, en grand sous la mention
+      this.contact = P.contact ? A.el('div', { cls: 'abs', style: { left: '90px', top: '1190px', width: '900px', padding: '22px 0', borderRadius: '36px', background: '#1E1B4B', textAlign: 'center', font: '800 50px Geist', lineHeight: '1.3', color: '#fff', boxShadow: '0 24px 50px -20px rgba(60,20,0,.55)' } }, this.wrap, P.contact.map(l => `<div>${l}</div>`).join('')) : null;
       this.cast = [T.person(this.wrap, T.CAST.moussa), T.person(this.wrap, T.CAST.ibrahim), T.person(this.wrap, T.CAST.aicha)];
       X.cue(a, 'impact', .55); X.cue(a + .25, 'whoosh', .5); X.cue(a + this.caps[1] - .1, 'pop', .55); X.cue(a + this.caps[2] - .1, 'pop', .55);
       X.cue(a + .7, 'plink', .4, -.5); X.cue(a + .8, 'plink', .4, 0); X.cue(a + .9, 'plink', .4, .5);
@@ -880,6 +882,7 @@
       const pk = A.P(u, c2 - .2, c2 + .35, E.spring);
       this.pill.style.transform = `scale(${(u > c2 - .2 ? .5 + .5 * pk : 0).toFixed(3)})`;
       this.small.style.opacity = A.lin(u, c2 + .3, c2 + .6).toFixed(2);
+      if (this.contact) { const ck = A.P(u, c2 + .4, c2 + .9, E.spring); this.contact.style.opacity = A.lin(u, c2 + .4, c2 + .6).toFixed(2); this.contact.style.transform = `scale(${(.7 + .3 * ck).toFixed(3)})`; }
       [[230, 0], [850, 1], [540, 2]].forEach(([x, i], k) => {
         const up = A.P(u, .5 + k * .12, 1.1 + k * .12, E.spring), wave = Math.sin(u * 7 + k) * 22;
         this.cast[i].pose({

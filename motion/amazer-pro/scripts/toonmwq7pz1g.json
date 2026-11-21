@@ -1,0 +1,69 @@
+{
+ "id": "toonmwq7pz1g",
+ "titre": "AMAZER - Programme Affilié",
+ "nom": "pub-amazer-programme-affilie-mwq7pz1g",
+ "voix": "fr-FR-DeniseNeural",
+ "tenue": 1.8,
+ "scenes": [
+  {
+   "voix": "Envie d'arrondir vos fins de mois sans bouger de chez vous ?",
+   "type": "boutique_calme"
+  },
+  {
+   "voix": "Sur AMAZER, tout le monde peut gagner de l'argent.",
+   "ecrans": [
+    {
+     "de": 0,
+     "marque": [
+      52,
+      770,
+      300,
+      40,
+      1.4
+     ],
+     "scroll": {
+      "de": 0.2,
+      "a": 1,
+      "vers": "Choisir Boutique"
+     },
+     "taps": [
+      {
+       "cible": "Choisir Boutique",
+       "at": 1.1
+      }
+     ],
+     "texte": "Commencez *gratuitement*",
+     "img": "18-vendre-long.png-long.png"
+    }
+   ],
+   "type": "ecrans"
+  },
+  {
+   "voix": "Choisissez un produit, partagez le lien à vos contacts WhatsApp...",
+   "type": "ecrans",
+   "ecrans": [
+    {
+     "texte": "Partagez vos *coups de cœur*",
+     "taps": [
+      {
+       "at": 1.2,
+       "cible": "Ajouter au panier"
+      }
+     ],
+     "img": "20-vitrine-long.png-long.png",
+     "de": 0
+    }
+   ]
+  },
+  {
+   "type": "commandes_pluie",
+   "voix": "...et touchez votre commission sur chaque vente livrée !"
+  },
+  {
+   "type": "fin",
+   "slogan": "Partagez.\n*Gagnez.*",
+   "voix": "AMAZER. Votre téléphone est une mine d'or.",
+   "mention": "Paiement contrôlé par AMAZER · Livraison à Niamey"
+  }
+ ]
+}

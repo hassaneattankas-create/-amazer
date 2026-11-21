@@ -121,9 +121,9 @@
       const f = P.fond ?? 'orange';
       this.wrap = A.el('div', { cls: 'abs', style: { width: '1080px', height: '1920px', background: FONDS[f] } }, el);
       this.rays = box(this.wrap, 2600, 2600, 1300, 1300, `<g fill="#fff" opacity=".16">${Array.from({ length: 16 }, (_, i) => `<path d="M 0 0 L -90 -1400 L 90 -1400 Z" transform="rotate(${i * 22.5})"/>`).join('')}</g>`);
-      this.avant = A.Type.make(this.wrap, P.avant ?? 'Vos *gains*', { size: 84, weight: 800, align: 'center', color: ENCRE[f], accent: ACCENT[f], lh: 1.05 });
+      this.avant = A.Type.make(this.wrap, P.avant ?? 'Vos *gains*', { size: Math.min(84, Math.floor(1650 / Math.max(1, (P.avant ?? 'Vos gains').replace(/\*/g, '').length))), weight: 800, align: 'center', color: ENCRE[f], accent: ACCENT[f], lh: 1.05 });
       A.Type.place(this.avant, 540, 330);
-      this.num = A.el('div', { cls: 'abs', style: { left: '0px', top: '430px', width: '1080px', textAlign: 'center', font: `800 ${P.taille ?? 230}px Geist`, letterSpacing: '-.05em', color: '#fff', textShadow: '0 18px 40px rgba(120,30,0,.45)', fontVariantNumeric: 'tabular-nums' } }, this.wrap, '0');
+      this.num = A.el('div', { cls: 'abs', style: { left: '0px', top: '430px', width: '1080px', textAlign: 'center', font: `800 ${Math.min(P.taille ?? 230, Math.floor(1750 / `${P.signe ?? '+'} ${fmt(P.montant ?? 25000)} ${P.devise ?? 'F'}`.length))}px Geist`, letterSpacing: '-.05em', color: '#fff', textShadow: '0 18px 40px rgba(120,30,0,.45)', fontVariantNumeric: 'tabular-nums' } }, this.wrap, '0');
       this.apres = A.el('div', { cls: 'abs', style: { left: '50%', top: '760px', padding: '18px 44px', borderRadius: '99px', background: NAVY, color: '#fff', font: '800 52px Geist', whiteSpace: 'nowrap', transform: 'translateX(-50%)' } }, this.wrap, P.apres ?? 'sans stock, sans boutique');
       this.p = T.person(this.wrap, castOf(P.perso ?? 'fati'));
       this.ph = holdPhone(this.p);
@@ -250,6 +250,9 @@
     argent: '<rect x="-14" y="-9" width="28" height="18" rx="4" stroke="#fff" stroke-width="3.2" fill="none"/><circle r="4.5" fill="#fff"/>',
     sac: '<path d="M -10 -4 L 10 -4 L 12 13 L -12 13 Z M -5 -4 Q -5 -12 0 -12 Q 5 -12 5 -4" stroke="#fff" stroke-width="3.2" fill="none" stroke-linejoin="round"/>',
     moto: '<circle cx="-9" cy="6" r="6" stroke="#fff" stroke-width="3" fill="none"/><circle cx="10" cy="6" r="6" stroke="#fff" stroke-width="3" fill="none"/><path d="M -9 6 L -2 -4 L 6 -4 L 10 6 M 2 -4 L 0 -10" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>',
+    alerte: '<path d="M 0 -13 L 14 12 L -14 12 Z" stroke="#fff" stroke-width="3.2" fill="none" stroke-linejoin="round"/><path d="M 0 -4 L 0 3" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/><circle cy="8" r="2" fill="#fff"/>',
+    stop: '<circle r="13" stroke="#fff" stroke-width="3.4" fill="none"/><path d="M -9 9 L 9 -9" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>',
+    gens: '<circle cx="-7" cy="-6" r="5" fill="#fff"/><circle cx="7" cy="-6" r="5" fill="#fff"/><path d="M -16 12 Q -16 1 -7 1 Q 2 1 2 12 Z M -2 12 Q -2 1 7 1 Q 16 1 16 12 Z" fill="#fff"/>',
     ok: '<path d="M -11 1 L -3 9 L 12 -9" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
     bulle: '<path d="M -13 -10 L 13 -10 Q 15 -10 15 -8 L 15 6 Q 15 8 13 8 L -2 8 L -9 14 L -8 8 L -13 8 Q -15 8 -15 6 L -15 -8 Q -15 -10 -13 -10 Z" stroke="#fff" stroke-width="3" fill="none" stroke-linejoin="round"/>',
   };
@@ -260,7 +263,7 @@
       el.style.display = 'block';
       this.D = b - a;
       this.wrap = A.el('div', { cls: 'abs', style: { width: '1080px', height: '1920px', background: FONDS[P.fond ?? 'creme'], perspective: '1400px' } }, el);
-      if (P.titre) { this.titre = A.Type.make(this.wrap, P.titre, { size: 92, weight: 800, align: 'center', color: ENCRE[P.fond ?? 'creme'], accent: ACCENT[P.fond ?? 'creme'], lh: 1.02, track: -.04 }); A.Type.place(this.titre, 540, 250); }
+      if (P.titre) { this.titre = A.Type.make(this.wrap, P.titre, { size: Math.min(92, Math.floor(1750 / Math.max(1, P.titre.replace(/\*/g, '').length))), weight: 800, align: 'center', color: ENCRE[P.fond ?? 'creme'], accent: ACCENT[P.fond ?? 'creme'], lh: 1.02, track: -.04 }); A.Type.place(this.titre, 540, 250); }
       const list = (P.cartes ?? []).slice(0, 4);
       const n = list.length;
       this.cards = list.map((c, i) => {

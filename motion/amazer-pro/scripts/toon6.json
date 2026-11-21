@@ -1,7 +1,7 @@
 {
  "id": "toon6",
- "nom": "pub-personnages-5_4-facons-de-gagner",
- "titre": "4 façons de gagner de l'argent",
+ "nom": "pub-personnages-5_3-facons-de-gagner",
+ "titre": "3 façons de gagner de l'argent",
  "voix": "fr-FR-DeniseNeural",
  "vitesse": "+8%",
  "tenue": 1.8,
@@ -22,10 +22,10 @@
   },
   {
    "type": "cartes",
-   "voix": "Avec AMAZER, il y a quatre façons de gagner : vendre, revendre sans stock, livrer, ou partager votre lien.",
+   "voix": "Avec AMAZER, il y a trois façons de gagner : vendre, revendre sans stock, ou partager votre lien.",
    "transition": "balayage",
    "perso": "hamza",
-   "titre": "4 façons de *gagner*",
+   "titre": "3 façons de *gagner*",
    "cartes": [
     {
      "titre": "Vendez",
@@ -36,11 +36,6 @@
      "titre": "Revendez",
      "texte": "Sans stock, vous gardez la marge",
      "icone": "argent"
-    },
-    {
-     "titre": "Livrez",
-     "texte": "Des courses près de chez vous",
-     "icone": "moto"
     },
     {
      "titre": "Partagez",
@@ -82,42 +77,18 @@
    ]
   },
   {
-   "type": "moto",
-   "voix": "Vous avez une moto ? Devenez livreur AMAZER, et soyez payé à chaque course.",
-   "ecran": "13-livreur-long.png",
-   "tap": {
-    "x": 189,
-    "y": 808
-   },
-   "scroll": [
-    0,
-    90,
-    0.15,
-    0.55
-   ],
-   "sous_titres": [
-    {
-     "texte": "Devenez\n*livreur AMAZER*",
-     "de": 1.6
-    },
-    {
-     "texte": "Payé à chaque course",
-     "de": 3.2,
-     "y": 470,
-     "taille": 56,
-     "couleur": "orange"
-    }
-   ]
-  },
-  {
    "type": "fin",
    "voix": "AMAZER. Votre téléphone, votre revenu. Commencez gratuitement sur amazer.store.",
    "slogan": "Votre téléphone.\n*Votre revenu.*",
-   "mention": "Vendre · Revendre · Livrer · Partager",
+   "mention": "Vendre · Revendre · Partager",
    "sous_titres_voix": [
     "AMAZER.",
     "Votre téléphone, votre revenu.",
     "Commencez gratuitement sur amazer.store."
+   ],
+   "contact": [
+    "Tél. 96 95 31 63",
+    "amazer.niger2@gmail.com"
    ]
   }
  ]

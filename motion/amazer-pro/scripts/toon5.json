@@ -1,27 +1,28 @@
 {
  "id": "toon5",
- "nom": "pub-personnages-4_partagez-gagnez",
- "titre": "Partagez. Gagnez. (affiliation)",
+ "nom": "pub-personnages-4_affiliation-100-vendeurs",
+ "titre": "Programme d'affiliation : 100 vendeurs parrainés",
  "voix": "fr-FR-DeniseNeural",
  "vitesse": "+8%",
  "tenue": 1.8,
  "scenes": [
   {
    "type": "choc",
-   "voix": "Et si votre téléphone vous rapportait de l'argent ?",
+   "voix": "Et si votre téléphone vous rapportait jusqu'à un million deux cent mille francs ?",
    "fond": "nuit",
    "lignes": [
-    "Votre *téléphone*",
-    "vous rapporte",
-    "*de l'argent* ?"
+    "Jusqu'à",
+    "*1 200 000 F* ?"
    ],
+   "tampon": "STOP !",
+   "tampon_de": 2.6,
    "perso": "fati",
    "humeur": "surpris",
    "telephone": true
   },
   {
    "type": "partage",
-   "voix": "Avec l'affiliation AMAZER, partagez votre lien à vos proches et aux commerçants.",
+   "voix": "Avec le programme d'affiliation AMAZER, partagez votre lien à des vendeurs et à des clients.",
    "transition": "balayage",
    "perso": "fati",
    "amis": [
@@ -33,57 +34,105 @@
    "lien": "amazer.store/?ref=fati",
    "gains": [
     "+ 250 F",
-    "+ 500 F",
-    "+ 750 F",
-    "+ 1 000 F"
+    "+ 400 F",
+    "+ 1 000 F",
+    "+ 2 000 F"
    ],
    "sous_titres": [
     {
-     "texte": "Partagez *votre lien*",
+     "texte": "Partagez. Recommandez.\n*Gagnez.*",
      "de": 0.1,
-     "y": 230
+     "y": 230,
+     "taille": 62
     }
    ]
   },
   {
-   "type": "ecrans",
-   "voix": "Tout est dans votre espace Affiliation : copiez votre lien, partagez-le, c'est tout.",
-   "ecrans": [
-    {
-     "img": "25-affiliation-long.png",
-     "de": 0,
-     "texte": "Votre espace *affiliation*",
-     "scroll": [
-      0,
-      170,
-      0.6,
-      1.6
-     ]
-    }
-   ],
-   "fin": 1.6
-  },
-  {
    "type": "compteur",
-   "voix": "Un commerçant s'inscrit grâce à vous ? Vous touchez vingt pour cent de ses abonnements, pendant douze mois.",
+   "voix": "Un vendeur s'abonne grâce à vous ? Vous recevez vingt pour cent de son abonnement, chaque mois, pendant six mois.",
    "perso": "fati",
    "montant": 20,
    "signe": "",
    "devise": "%",
-   "avant": "Pour chaque *commerçant*",
-   "apres": "de ses abonnements · 12 mois",
+   "avant": "Pour chaque *vendeur* abonné",
+   "apres": "chaque mois · pendant 6 mois",
    "duree_compte": 1.6
   },
   {
    "type": "cartes",
-   "voix": "Et pour chaque nouveau client, un bonus. C'est gratuit, sans stock, et sans abonnement.",
+   "voix": "Boutique : quatre cents francs par mois. Restaurant : mille francs. Premium : deux mille francs.",
    "perso": "fati",
+   "titre": "Votre *commission*",
+   "cartes": [
+    {
+     "titre": "400 F / mois",
+     "texte": "Boutique · 2 400 F en 6 mois",
+     "icone": "sac"
+    },
+    {
+     "titre": "1 000 F / mois",
+     "texte": "Restaurant · 6 000 F en 6 mois",
+     "icone": "argent"
+    },
+    {
+     "titre": "2 000 F / mois",
+     "texte": "Premium · 12 000 F en 6 mois",
+     "icone": "ok"
+    }
+   ]
+  },
+  {
+   "type": "compteur",
+   "voix": "Et pour chaque nouveau client, deux cent cinquante francs CFA, après la livraison de sa première commande.",
+   "perso": "hamza",
+   "montant": 250,
+   "signe": "+",
+   "devise": "F CFA",
+   "avant": "Chaque *nouveau client*",
+   "apres": "après sa 1re commande livrée",
+   "duree_compte": 1.4
+  },
+  {
+   "type": "cartes",
+   "voix": "Imaginez avec cent vendeurs parrainés : jusqu'à deux cent mille francs par mois. Soit un million deux cent mille francs en six mois !",
+   "perso": "fati",
+   "titre": "*100 vendeurs* parrainés",
+   "cartes": [
+    {
+     "titre": "40 000 F / mois",
+     "texte": "Boutique · 240 000 F en 6 mois",
+     "icone": "sac"
+    },
+    {
+     "titre": "100 000 F / mois",
+     "texte": "Restaurant · 600 000 F en 6 mois",
+     "icone": "argent"
+    },
+    {
+     "titre": "200 000 F / mois",
+     "texte": "Premium · 1 200 000 F en 6 mois",
+     "icone": "ok"
+    }
+   ],
+   "sous_titres": [
+    {
+     "texte": "Gains potentiels estimés, si les 100 vendeurs\nrestent abonnés 6 mois.",
+     "de": 0.3,
+     "y": 1150,
+     "taille": 34
+    }
+   ]
+  },
+  {
+   "type": "cartes",
+   "voix": "C'est gratuit, sans stock, sans abonnement, et ouvert à tous.",
+   "perso": "hamza",
    "titre": "100 % *gratuit*",
    "cartes": [
     {
-     "titre": "Bonus client",
-     "texte": "Sur sa 1re commande livrée",
-     "icone": "argent"
+     "titre": "Gratuit",
+     "texte": "Rien à payer pour participer",
+     "icone": "zero"
     },
     {
      "titre": "Sans stock",
@@ -92,25 +141,48 @@
     },
     {
      "titre": "Sans abonnement",
-     "texte": "Inscription gratuite",
-     "icone": "zero"
+     "texte": "Pour l'affilié",
+     "icone": "ok"
     },
     {
-     "titre": "Payé sur votre numéro",
-     "texte": "Nita ou Amana",
-     "icone": "lien"
+     "titre": "Ouvert à tous",
+     "texte": "Il suffit d'un téléphone",
+     "icone": "gens"
     }
    ]
   },
   {
+   "type": "ecrans",
+   "voix": "Rendez-vous sur amazer.store, cliquez sur Affiliation, créez votre compte et récupérez votre lien.",
+   "ecrans": [
+    {
+     "img": "25-affiliation-long.png",
+     "de": 0,
+     "texte": "amazer.store → *Affiliation*",
+     "scroll": [
+      0,
+      170,
+      0.8,
+      2.2
+     ]
+    }
+   ],
+   "fin": 1.6
+  },
+  {
    "type": "fin",
-   "voix": "AMAZER. Partagez, gagnez. Rendez-vous sur amazer.store, rubrique Affiliation.",
-   "slogan": "Partagez.\n*Gagnez.*",
-   "mention": "Programme d'affiliation · amazer.store",
+   "voix": "AMAZER. Plus vous partagez, plus vous gagnez !",
+   "slogan": "Plus vous partagez,\n*plus vous gagnez !*",
+   "slogan_taille": 78,
+   "mention": "Programme d'affiliation AMAZER",
+   "contact": [
+    "Tél. 96 95 31 63",
+    "amazer.niger2@gmail.com"
+   ],
    "sous_titres_voix": [
     "AMAZER.",
-    "Partagez, gagnez.",
-    "Rendez-vous sur amazer.store, rubrique Affiliation."
+    "Plus vous partagez,",
+    "plus vous gagnez !"
    ]
   }
  ]

@@ -64,17 +64,17 @@
     {
      "titre": "Disponible",
      "texte": "Pastille verte sur la carte",
-     "icone": "temps"
+     "icone": "ok"
     },
     {
      "titre": "Stock faible",
      "texte": "Pastille orange",
-     "icone": "argent"
+     "icone": "alerte"
     },
     {
      "titre": "Rupture",
      "texte": "Pastille rouge : on évite",
-     "icone": "zero"
+     "icone": "stop"
     },
     {
      "titre": "À jour",
@@ -92,6 +92,10 @@
     "AMAZER.",
     "De l'essence ? Vérifiez avant de partir,",
     "sur amazer.store."
+   ],
+   "contact": [
+    "Tél. 96 95 31 63",
+    "amazer.niger2@gmail.com"
    ]
   }
  ]
