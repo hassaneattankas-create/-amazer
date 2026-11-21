@@ -114,6 +114,9 @@ if (has('apercu')) {
 // 3. images (120 i/s : flou de mouvement à l'encodage), sons, mixage, encodage
 const fps = +opt('fps', 120);
 log(`images (${Math.round(duration * fps)} à ${fps} i/s)…`);
+// images d'un rendu précédent : on repart de zéro (sinon un script modifié garderait les anciennes images),
+// sauf --reprendre pour finir un rendu interrompu du même script
+if (!has('reprendre')) fs.rmSync(path.join(ROOT, 'frames', id), { recursive: true, force: true });
 run('node', ['render/render.js', '--film', id, '--fps', String(fps), '--workers', opt('workers', '6')]);
 run('node', ['render/render.js', '--film', id, '--cues']);
 run(PY, ['audio/sfx.py', id]);
