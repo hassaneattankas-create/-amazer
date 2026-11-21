@@ -32,6 +32,18 @@
       outfit: '#FF4D00', outfitShade: '#C93D00', trim: '#F1F5F9', kind: 'jacket', head: 'helmet',
       pants: '#1E293B', pantsShade: '#111827', sleeve: 'long',
     },
+    // Fati : étudiante, ambassadrice (pubs affiliation)
+    fati: {
+      id: 'fati', skin: '#7B4B32', skinShade: '#5F3824', lip: '#4E2318',
+      outfit: '#7C3AED', outfitShade: '#5B21B6', trim: '#FDE047', kind: 'dress', head: 'wrap',
+      wrap: ['#16A34A', '#BBF7D0', '#14532D'], sleeve: 'three-quarter', earring: true,
+    },
+    // Hamza : jeune revendeur (pubs « gagner de l'argent »)
+    hamza: {
+      id: 'hamza', skin: '#5E3B27', skinShade: '#47291A', lip: '#3A1B12',
+      outfit: '#2563EB', outfitShade: '#1D4ED8', trim: '#F1F5F9', kind: 'jacket', head: 'cap',
+      pants: '#334155', pantsShade: '#1E293B', sleeve: 'long',
+    },
   };
 
   const svgEl = (tag, attrs = {}, parent) => {

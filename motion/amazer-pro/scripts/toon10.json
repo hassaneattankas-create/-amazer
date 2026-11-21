@@ -1,0 +1,112 @@
+{
+ "id": "toon10",
+ "nom": "pub-personnages-9_vendez-gratuitement-v2",
+ "titre": "Commencez à vendre gratuitement (v2)",
+ "voix": "fr-FR-DeniseNeural",
+ "vitesse": "+8%",
+ "tenue": 1.8,
+ "scenes": [
+  {
+   "type": "choc",
+   "voix": "Votre boutique ferme à dix-huit heures… mais vos clients, eux, cherchent toute la nuit.",
+   "fond": "nuit",
+   "lignes": [
+    "Votre boutique",
+    "*ferme* à 18 h…"
+   ],
+   "perso": "moussa",
+   "humeur": "malin",
+   "fin_lignes": 1.4
+  },
+  {
+   "type": "ecrans",
+   "voix": "Sur AMAZER, vous pouvez commencer à vendre gratuitement : ajoutez vos produits, votre vitrine est en ligne.",
+   "transition": "balayage",
+   "ecrans": [
+    {
+     "img": "19-boutique-ajout-long.png",
+     "de": 0,
+     "texte": "Commencez *gratuitement*",
+     "scroll": [
+      0,
+      380,
+      0.15,
+      0.7
+     ],
+     "taps": [
+      {
+       "cible": "Nom du produit",
+       "at": 0.95
+      },
+      {
+       "cible": "Ajouter au catalogue",
+       "at": 1.7
+      }
+     ]
+    },
+    {
+     "img": "20-vitrine-long.png",
+     "de": 2.25,
+     "texte": "Votre *vitrine* en ligne",
+     "scroll": [
+      0,
+      330,
+      2.6,
+      3.4
+     ]
+    }
+   ],
+   "fin": 1.5
+  },
+  {
+   "type": "commandes_pluie",
+   "voix": "Votre vitrine reste ouverte jour et nuit, et les commandes arrivent sur votre téléphone !",
+   "perso": "moussa",
+   "commandes": [
+    "Riz parfumé 25 kg",
+    "Huile végétale 5 L",
+    "Sucre en poudre 5 kg",
+    "Lait en poudre 400 g"
+   ]
+  },
+  {
+   "type": "cartes",
+   "voix": "Paiement contrôlé, livraison par AMAZER, et des formations gratuites pour bien démarrer.",
+   "perso": "moussa",
+   "titre": "On s'occupe du *reste*",
+   "cartes": [
+    {
+     "titre": "Vitrine 24 h/24",
+     "texte": "Visible partout au Niger",
+     "icone": "temps"
+    },
+    {
+     "titre": "Paiement contrôlé",
+     "texte": "Nita ou Amana, vérifié par AMAZER",
+     "icone": "argent"
+    },
+    {
+     "titre": "Livraison AMAZER",
+     "texte": "Nos livreurs s'en chargent",
+     "icone": "moto"
+    },
+    {
+     "titre": "Formations gratuites",
+     "texte": "Pour bien démarrer",
+     "icone": "bulle"
+    }
+   ]
+  },
+  {
+   "type": "fin",
+   "voix": "AMAZER. Commencez à vendre gratuitement, sur amazer.store.",
+   "slogan": "Commencez à vendre\n*gratuitement.*",
+   "mention": "Paiement contrôlé par AMAZER · Livraison à Niamey",
+   "sous_titres_voix": [
+    "AMAZER.",
+    "Commencez à vendre gratuitement,",
+    "sur amazer.store."
+   ]
+  }
+ ]
+}

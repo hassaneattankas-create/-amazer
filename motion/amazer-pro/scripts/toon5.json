@@ -1,0 +1,117 @@
+{
+ "id": "toon5",
+ "nom": "pub-personnages-4_partagez-gagnez",
+ "titre": "Partagez. Gagnez. (affiliation)",
+ "voix": "fr-FR-DeniseNeural",
+ "vitesse": "+8%",
+ "tenue": 1.8,
+ "scenes": [
+  {
+   "type": "choc",
+   "voix": "Et si votre téléphone vous rapportait de l'argent ?",
+   "fond": "nuit",
+   "lignes": [
+    "Votre *téléphone*",
+    "vous rapporte",
+    "*de l'argent* ?"
+   ],
+   "perso": "fati",
+   "humeur": "surpris",
+   "telephone": true
+  },
+  {
+   "type": "partage",
+   "voix": "Avec l'affiliation AMAZER, partagez votre lien à vos proches et aux commerçants.",
+   "transition": "balayage",
+   "perso": "fati",
+   "amis": [
+    "Awa",
+    "Issa",
+    "Mariama",
+    "Seyni"
+   ],
+   "lien": "amazer.store/?ref=fati",
+   "gains": [
+    "+ 250 F",
+    "+ 500 F",
+    "+ 750 F",
+    "+ 1 000 F"
+   ],
+   "sous_titres": [
+    {
+     "texte": "Partagez *votre lien*",
+     "de": 0.1,
+     "y": 230
+    }
+   ]
+  },
+  {
+   "type": "ecrans",
+   "voix": "Tout est dans votre espace Affiliation : copiez votre lien, partagez-le, c'est tout.",
+   "ecrans": [
+    {
+     "img": "25-affiliation-long.png",
+     "de": 0,
+     "texte": "Votre espace *affiliation*",
+     "scroll": [
+      0,
+      170,
+      0.6,
+      1.6
+     ]
+    }
+   ],
+   "fin": 1.6
+  },
+  {
+   "type": "compteur",
+   "voix": "Un commerçant s'inscrit grâce à vous ? Vous touchez vingt pour cent de ses abonnements, pendant douze mois.",
+   "perso": "fati",
+   "montant": 20,
+   "signe": "",
+   "devise": "%",
+   "avant": "Pour chaque *commerçant*",
+   "apres": "de ses abonnements · 12 mois",
+   "duree_compte": 1.6
+  },
+  {
+   "type": "cartes",
+   "voix": "Et pour chaque nouveau client, un bonus. C'est gratuit, sans stock, et sans abonnement.",
+   "perso": "fati",
+   "titre": "100 % *gratuit*",
+   "cartes": [
+    {
+     "titre": "Bonus client",
+     "texte": "Sur sa 1re commande livrée",
+     "icone": "argent"
+    },
+    {
+     "titre": "Sans stock",
+     "texte": "Rien à acheter, rien à livrer",
+     "icone": "sac"
+    },
+    {
+     "titre": "Sans abonnement",
+     "texte": "Inscription gratuite",
+     "icone": "zero"
+    },
+    {
+     "titre": "Payé sur votre numéro",
+     "texte": "Nita ou Amana",
+     "icone": "lien"
+    }
+   ]
+  },
+  {
+   "type": "fin",
+   "voix": "AMAZER. Partagez, gagnez. Rendez-vous sur amazer.store, rubrique Affiliation.",
+   "slogan": "Partagez.\n*Gagnez.*",
+   "mention": "Programme d'affiliation · amazer.store",
+   "sous_titres_voix": [
+    "AMAZER.",
+    "Partagez, gagnez.",
+    "Rendez-vous sur amazer.store, rubrique Affiliation."
+   ]
+  }
+ ]
+}

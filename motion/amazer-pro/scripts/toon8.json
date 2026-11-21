@@ -1,0 +1,88 @@
+{
+ "id": "toon8",
+ "nom": "pub-personnages-7_pharmacie-de-garde",
+ "titre": "Pharmacie de garde",
+ "voix": "fr-FR-DeniseNeural",
+ "vitesse": "+8%",
+ "tenue": 1.8,
+ "scenes": [
+  {
+   "type": "choc",
+   "voix": "Deux heures du matin. Votre enfant a de la fièvre. Quelle pharmacie est ouverte ?",
+   "fond": "nuit",
+   "lignes": [
+    "2 h du matin.",
+    "Quelle pharmacie",
+    "est *ouverte* ?"
+   ],
+   "perso": "aicha",
+   "humeur": "surpris",
+   "telephone": true,
+   "fin_lignes": 2.4
+  },
+  {
+   "type": "ecrans",
+   "voix": "Sur AMAZER, ouvrez Pharmacies de garde et touchez Près de moi : la carte vous montre celles qui sont ouvertes.",
+   "transition": "balayage",
+   "ecrans": [
+    {
+     "img": "30-pharmacies-long.png",
+     "de": 0,
+     "texte": "Pharmacies *de garde*",
+     "taps": [
+      {
+       "cible": "Près de moi",
+       "at": 1.4
+      }
+     ]
+    },
+    {
+     "img": "30-pharmacies-long.png",
+     "de": 2.2,
+     "texte": "En *vert* : ouvertes",
+     "scroll": [
+      0,
+      330,
+      2.3,
+      3.0
+     ]
+    }
+   ],
+   "fin": 1.6
+  },
+  {
+   "type": "cartes",
+   "voix": "Partout au Niger, la liste officielle de la semaine, et un geste pour appeler ou y aller.",
+   "perso": "aicha",
+   "titre": "Même la *nuit*",
+   "cartes": [
+    {
+     "titre": "De garde en vert",
+     "texte": "Sur la carte, près de vous",
+     "icone": "temps"
+    },
+    {
+     "titre": "Partout au Niger",
+     "texte": "La liste officielle de la semaine",
+     "icone": "lien"
+    },
+    {
+     "titre": "Appel ou itinéraire",
+     "texte": "En un seul geste",
+     "icone": "bulle"
+    }
+   ]
+  },
+  {
+   "type": "fin",
+   "voix": "AMAZER. Votre pharmacie de garde, en un geste, sur amazer.store.",
+   "slogan": "Pharmacie de garde ?\n*Trouvée.*",
+   "mention": "Pharmacies de garde · partout au Niger",
+   "sous_titres_voix": [
+    "AMAZER.",
+    "Votre pharmacie de garde, en un geste,",
+    "sur amazer.store."
+   ]
+  }
+ ]
+}

@@ -1,0 +1,68 @@
+{
+ "id": "toon11",
+ "nom": "pub-personnages-10_premium",
+ "titre": "Premium : hôtels, transport, pharmacies",
+ "voix": "fr-FR-DeniseNeural",
+ "vitesse": "+8%",
+ "tenue": 1.8,
+ "scenes": [
+  {
+   "type": "choc",
+   "voix": "Votre hôtel, votre compagnie de bus, votre pharmacie : visibles partout ?",
+   "fond": "creme",
+   "lignes": [
+    "Votre établissement",
+    "est-il *visible* ?"
+   ],
+   "perso": "moussa",
+   "humeur": "malin"
+  },
+  {
+   "type": "ecrans",
+   "voix": "Avec AMAZER Premium, vos clients vous trouvent, vous réservent et vous contactent en ligne.",
+   "transition": "balayage",
+   "ecrans": [
+    {
+     "img": "34-hotels.png",
+     "de": 0,
+     "texte": "AMAZER *Premium*"
+    }
+   ],
+   "fin": 1.6
+  },
+  {
+   "type": "cartes",
+   "voix": "Établissement vérifié, réservation en ligne, et une vitrine complète avec photos et services.",
+   "perso": "moussa",
+   "titre": "Le *sérieux* qui se voit",
+   "cartes": [
+    {
+     "titre": "Vérifié par AMAZER",
+     "texte": "La confiance dès le premier regard",
+     "icone": "ok"
+    },
+    {
+     "titre": "Réservation en ligne",
+     "texte": "Chambres, trajets, tables",
+     "icone": "temps"
+    },
+    {
+     "titre": "Vitrine complète",
+     "texte": "Photos, services, contact",
+     "icone": "sac"
+    }
+   ]
+  },
+  {
+   "type": "fin",
+   "voix": "AMAZER Premium. Soyez vu de tous, sur amazer.store.",
+   "slogan": "Premium.\n*Vu de tous.*",
+   "mention": "Hôtels · Transport · Pharmacies · Stations",
+   "sous_titres_voix": [
+    "AMAZER Premium.",
+    "Soyez vu de tous,",
+    "sur amazer.store."
+   ]
+  }
+ ]
+}

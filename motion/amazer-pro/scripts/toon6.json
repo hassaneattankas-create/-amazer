@@ -1,0 +1,124 @@
+{
+ "id": "toon6",
+ "nom": "pub-personnages-5_4-facons-de-gagner",
+ "titre": "4 façons de gagner de l'argent",
+ "voix": "fr-FR-DeniseNeural",
+ "vitesse": "+8%",
+ "tenue": 1.8,
+ "scenes": [
+  {
+   "type": "choc",
+   "voix": "Vous cherchez un revenu en plus ? Stop ! Regardez ça.",
+   "fond": "orange",
+   "lignes": [
+    "Vous cherchez",
+    "un *revenu*",
+    "en plus ?"
+   ],
+   "tampon": "STOP !",
+   "tampon_de": 2.1,
+   "perso": "hamza",
+   "humeur": "surpris"
+  },
+  {
+   "type": "cartes",
+   "voix": "Avec AMAZER, il y a quatre façons de gagner : vendre, revendre sans stock, livrer, ou partager votre lien.",
+   "transition": "balayage",
+   "perso": "hamza",
+   "titre": "4 façons de *gagner*",
+   "cartes": [
+    {
+     "titre": "Vendez",
+     "texte": "Votre boutique en ligne",
+     "icone": "sac"
+    },
+    {
+     "titre": "Revendez",
+     "texte": "Sans stock, vous gardez la marge",
+     "icone": "argent"
+    },
+    {
+     "titre": "Livrez",
+     "texte": "Des courses près de chez vous",
+     "icone": "moto"
+    },
+    {
+     "titre": "Partagez",
+     "texte": "Votre lien d'affiliation",
+     "icone": "lien"
+    }
+   ]
+  },
+  {
+   "type": "ecrans",
+   "voix": "Pour revendre : choisissez des produits, fixez votre prix, partagez. AMAZER livre, vous gardez la marge.",
+   "ecrans": [
+    {
+     "img": "27-revendre.png",
+     "de": 0,
+     "texte": "Revendez *sans stock*"
+    }
+   ],
+   "fin": 1.4
+  },
+  {
+   "type": "commandes_pluie",
+   "voix": "Et les ventes tombent, directement sur votre téléphone !",
+   "perso": "hamza",
+   "titre_notif": "Nouvelle vente",
+   "commandes": [
+    "Pagne wax 6 yards",
+    "Téléphone Android",
+    "Sac à main en cuir",
+    "Montre connectée",
+    "Parfum 100 ml"
+   ],
+   "sous_titres": [
+    {
+     "texte": "Les *ventes*\narrivent !",
+     "de": 0.15,
+     "y": 230
+    }
+   ]
+  },
+  {
+   "type": "moto",
+   "voix": "Vous avez une moto ? Devenez livreur AMAZER, et soyez payé à chaque course.",
+   "ecran": "13-livreur-long.png",
+   "tap": {
+    "x": 189,
+    "y": 808
+   },
+   "scroll": [
+    0,
+    90,
+    0.15,
+    0.55
+   ],
+   "sous_titres": [
+    {
+     "texte": "Devenez\n*livreur AMAZER*",
+     "de": 1.6
+    },
+    {
+     "texte": "Payé à chaque course",
+     "de": 3.2,
+     "y": 470,
+     "taille": 56,
+     "couleur": "orange"
+    }
+   ]
+  },
+  {
+   "type": "fin",
+   "voix": "AMAZER. Votre téléphone, votre revenu. Commencez gratuitement sur amazer.store.",
+   "slogan": "Votre téléphone.\n*Votre revenu.*",
+   "mention": "Vendre · Revendre · Livrer · Partager",
+   "sous_titres_voix": [
+    "AMAZER.",
+    "Votre téléphone, votre revenu.",
+    "Commencez gratuitement sur amazer.store."
+   ]
+  }
+ ]
+}

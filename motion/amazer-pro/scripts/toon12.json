@@ -1,0 +1,85 @@
+{
+ "id": "toon12",
+ "nom": "pub-personnages-11_formations-gratuites",
+ "titre": "Formations gratuites",
+ "voix": "fr-FR-DeniseNeural",
+ "vitesse": "+8%",
+ "tenue": 1.8,
+ "scenes": [
+  {
+   "type": "choc",
+   "voix": "Vendre en ligne, vous ne savez pas faire ? On vous apprend, gratuitement.",
+   "fond": "nuit",
+   "lignes": [
+    "Vendre en ligne ?",
+    "On vous *apprend.*"
+   ],
+   "perso": "fati",
+   "humeur": "joie"
+  },
+  {
+   "type": "ecrans",
+   "voix": "Sur AMAZER, cinq parcours courts : vendre, revendre sans stock, l'affiliation, WhatsApp et les réseaux, la sécurité.",
+   "transition": "balayage",
+   "ecrans": [
+    {
+     "img": "35-formations-long.png",
+     "de": 0,
+     "texte": "Formations *gratuites*",
+     "taps": [
+      {
+       "cible": "Vendre sur AMAZER",
+       "at": 1.6
+      }
+     ]
+    },
+    {
+     "img": "35-formations-long.png",
+     "de": 2.4,
+     "texte": "Pas à *pas*",
+     "scroll": [
+      0,
+      380,
+      2.5,
+      3.3
+     ]
+    }
+   ],
+   "fin": 1.5
+  },
+  {
+   "type": "cartes",
+   "voix": "Chaque module : un objectif, l'essentiel, et un exercice à faire tout de suite.",
+   "perso": "fati",
+   "titre": "Simple et *concret*",
+   "cartes": [
+    {
+     "titre": "5 parcours",
+     "texte": "15 modules courts",
+     "icone": "bulle"
+    },
+    {
+     "titre": "Un exercice",
+     "texte": "À faire tout de suite",
+     "icone": "temps"
+    },
+    {
+     "titre": "100 % gratuit",
+     "texte": "Pour tout le monde",
+     "icone": "zero"
+    }
+   ]
+  },
+  {
+   "type": "fin",
+   "voix": "AMAZER. Apprenez à vendre, gratuitement, sur amazer.store.",
+   "slogan": "Apprenez à vendre.\n*Gratuitement.*",
+   "mention": "Formations gratuites · amazer.store",
+   "sous_titres_voix": [
+    "AMAZER.",
+    "Apprenez à vendre, gratuitement,",
+    "sur amazer.store."
+   ]
+  }
+ ]
+}

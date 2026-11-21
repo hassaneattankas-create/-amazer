@@ -1,0 +1,98 @@
+{
+ "id": "toon9",
+ "nom": "pub-personnages-8_essence-disponible",
+ "titre": "Où trouver de l'essence",
+ "voix": "fr-FR-DeniseNeural",
+ "vitesse": "+8%",
+ "tenue": 1.8,
+ "scenes": [
+  {
+   "type": "choc",
+   "voix": "Encore une station à sec ? Stop ! Ne tournez plus en rond.",
+   "fond": "orange",
+   "lignes": [
+    "Encore une",
+    "station *à sec* ?"
+   ],
+   "tampon": "STOP !",
+   "tampon_de": 1.9,
+   "perso": "moussa",
+   "humeur": "surpris"
+  },
+  {
+   "type": "ecrans",
+   "voix": "Sur AMAZER, ouvrez Où trouver de l'essence : super, gasoil et gaz, mis à jour par les stations elles-mêmes.",
+   "transition": "balayage",
+   "ecrans": [
+    {
+     "img": "31-stations-long.png",
+     "de": 0,
+     "texte": "Où trouver de *l'essence*",
+     "taps": [
+      {
+       "cible": "Près de moi",
+       "at": 1.3
+      }
+     ]
+    },
+    {
+     "img": "31-stations-long.png",
+     "de": 2.0,
+     "texte": "En *vert* : disponible",
+     "scroll": [
+      0,
+      330,
+      2.1,
+      2.8
+     ],
+     "taps": [
+      {
+       "cible": "Disponibles",
+       "at": 3.3
+      }
+     ]
+    }
+   ],
+   "fin": 1.5
+  },
+  {
+   "type": "cartes",
+   "voix": "Disponible, stock faible ou rupture : vous savez avant de partir.",
+   "perso": "moussa",
+   "titre": "Vérifiez *avant*",
+   "cartes": [
+    {
+     "titre": "Disponible",
+     "texte": "Pastille verte sur la carte",
+     "icone": "temps"
+    },
+    {
+     "titre": "Stock faible",
+     "texte": "Pastille orange",
+     "icone": "argent"
+    },
+    {
+     "titre": "Rupture",
+     "texte": "Pastille rouge : on évite",
+     "icone": "zero"
+    },
+    {
+     "titre": "À jour",
+     "texte": "Par les stations elles-mêmes",
+     "icone": "bulle"
+    }
+   ]
+  },
+  {
+   "type": "fin",
+   "voix": "AMAZER. De l'essence ? Vérifiez avant de partir, sur amazer.store.",
+   "slogan": "De l'essence ?\n*Vérifiez avant.*",
+   "mention": "Super · Gasoil · Gaz · partout au Niger",
+   "sous_titres_voix": [
+    "AMAZER.",
+    "De l'essence ? Vérifiez avant de partir,",
+    "sur amazer.store."
+   ]
+  }
+ ]
+}

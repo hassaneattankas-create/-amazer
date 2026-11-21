@@ -1,0 +1,84 @@
+{
+ "id": "toon14",
+ "nom": "pub-personnages-13_devenez-livreur",
+ "titre": "Devenez livreur AMAZER",
+ "voix": "fr-FR-DeniseNeural",
+ "vitesse": "+8%",
+ "tenue": 1.8,
+ "scenes": [
+  {
+   "type": "choc",
+   "voix": "Vous avez une moto ? Elle peut travailler pour vous.",
+   "fond": "orange",
+   "lignes": [
+    "Vous avez",
+    "une *moto* ?"
+   ],
+   "perso": "ibrahim",
+   "humeur": "joie"
+  },
+  {
+   "type": "moto",
+   "voix": "Devenez livreur AMAZER : prenez les courses près de chez vous, livrez, et soyez payé à chaque course.",
+   "transition": "balayage",
+   "ecran": "13-livreur-long.png",
+   "tap": {
+    "x": 189,
+    "y": 808
+   },
+   "scroll": [
+    0,
+    90,
+    0.15,
+    0.55
+   ],
+   "sous_titres": [
+    {
+     "texte": "Devenez\n*livreur AMAZER*",
+     "de": 1.6
+    },
+    {
+     "texte": "Payé à chaque course",
+     "de": 3.2,
+     "y": 470,
+     "taille": 56,
+     "couleur": "orange"
+    }
+   ]
+  },
+  {
+   "type": "cartes",
+   "voix": "Vous choisissez vos courses, le client vous attend, et un code confirme chaque livraison.",
+   "perso": "ibrahim",
+   "titre": "Vous êtes *libre*",
+   "cartes": [
+    {
+     "titre": "Vos courses",
+     "texte": "Près de chez vous",
+     "icone": "moto"
+    },
+    {
+     "titre": "Payé à la course",
+     "texte": "Frais de livraison affichés",
+     "icone": "argent"
+    },
+    {
+     "titre": "Code de livraison",
+     "texte": "Chaque remise est confirmée",
+     "icone": "bulle"
+    }
+   ]
+  },
+  {
+   "type": "fin",
+   "voix": "AMAZER. Votre moto, votre revenu. Inscrivez-vous sur amazer.store.",
+   "slogan": "Votre moto.\n*Votre revenu.*",
+   "mention": "Livreurs AMAZER · Niamey",
+   "sous_titres_voix": [
+    "AMAZER.",
+    "Votre moto, votre revenu.",
+    "Inscrivez-vous sur amazer.store."
+   ]
+  }
+ ]
+}

@@ -785,7 +785,7 @@
       this.el = el;
       el.style.background = 'radial-gradient(ellipse at 50% 35%,#FFE3BF 0%,#F8C38A 60%,#EFA765 100%)';
       this.rays = box(el, 2400, 2400, 1200, 1200, `<g fill="#fff" opacity=".22">${Array.from({ length: 16 }, (_, i) => `<path d="M 0 0 L -90 -1300 L 90 -1300 Z" transform="rotate(${i * 22.5})"/>`).join('')}</g>`);
-      this.mo = T.person(el, T.CAST.moussa);
+      this.mo = T.person(el, T.CAST[P.perso ?? 'moussa']);
       this.mo.near.item.innerHTML = '';
       this.moPhone = svgEl('g', {}, this.mo.near.item); this.moPhone.innerHTML = PHONE_SMALL;
       const list = (P.commandes ?? ['Riz parfumé 25 kg', 'Huile végétale 5 L', 'Sucre en poudre 5 kg', 'Lait en poudre 400 g']).slice(0, 5);

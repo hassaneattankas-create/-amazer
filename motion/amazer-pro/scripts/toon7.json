@@ -1,0 +1,115 @@
+{
+ "id": "toon7",
+ "nom": "pub-personnages-6_assistant-amazer-v2",
+ "titre": "L'assistant AMAZER répond (v2)",
+ "voix": "fr-FR-DeniseNeural",
+ "vitesse": "+8%",
+ "tenue": 1.8,
+ "scenes": [
+  {
+   "type": "choc",
+   "voix": "Une question… à deux heures du matin ?",
+   "fond": "nuit",
+   "lignes": [
+    "Une *question*",
+    "à 2 h du matin ?"
+   ],
+   "perso": "aicha",
+   "humeur": "surpris",
+   "telephone": true
+  },
+  {
+   "type": "ecrans",
+   "voix": "L'assistant AMAZER est déjà là. Oui, aidez-moi… Comment payer ? Et la réponse arrive, tout de suite.",
+   "transition": "balayage",
+   "ecrans": [
+    {
+     "img": "21-assistant-proposition.png",
+     "de": 0,
+     "texte": "Il vous *propose*",
+     "taps": [
+      {
+       "cible": "Oui, aidez-moi",
+       "at": 1.5
+      }
+     ]
+    },
+    {
+     "img": "22-assistant-ouvert.png",
+     "de": 2.0,
+     "texte": "Posez votre *question*",
+     "taps": [
+      {
+       "cible": "Comment payer ?",
+       "at": 3.0
+      }
+     ]
+    },
+    {
+     "img": "23-assistant-payer.png",
+     "de": 3.6,
+     "texte": "Réponse *immédiate*"
+    }
+   ],
+   "fin": 1.6,
+   "mascotte": {
+    "de": 0.25,
+    "a": 1.9,
+    "x": -150,
+    "y": 1300,
+    "h": 620
+   }
+  },
+  {
+   "type": "ecrans",
+   "voix": "Commander, payer, ouvrir votre boutique : il vous guide pas à pas, jour et nuit.",
+   "ecrans": [
+    {
+     "img": "24-assistant-boutique.png",
+     "de": 0,
+     "texte": "Il vous *guide*"
+    }
+   ],
+   "fin": 1.2
+  },
+  {
+   "type": "cartes",
+   "voix": "C'est gratuit, en français, et si besoin, un conseiller vous répond sur WhatsApp.",
+   "perso": "aicha",
+   "titre": "Toujours *disponible*",
+   "cartes": [
+    {
+     "titre": "24 h sur 24",
+     "texte": "Jour et nuit, même le dimanche",
+     "icone": "temps"
+    },
+    {
+     "titre": "Pas à pas",
+     "texte": "Commander, payer, vendre",
+     "icone": "bulle"
+    },
+    {
+     "titre": "Gratuit",
+     "texte": "Pour tout le monde",
+     "icone": "zero"
+    },
+    {
+     "titre": "Un humain si besoin",
+     "texte": "Un conseiller sur WhatsApp",
+     "icone": "bulle"
+    }
+   ]
+  },
+  {
+   "type": "fin",
+   "voix": "AMAZER. Une question ? L'assistant vous répond, sur amazer.store.",
+   "slogan": "Une question ?\n*Il vous répond.*",
+   "mention": "Assistant AMAZER · gratuit, 24 h/24",
+   "sous_titres_voix": [
+    "AMAZER.",
+    "Une question ? L'assistant vous répond,",
+    "sur amazer.store."
+   ]
+  }
+ ]
+}

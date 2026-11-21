@@ -1,0 +1,93 @@
+{
+ "id": "toon13",
+ "nom": "pub-personnages-12_paiement-verifie",
+ "titre": "Payer en confiance",
+ "voix": "fr-FR-DeniseNeural",
+ "vitesse": "+8%",
+ "tenue": 1.8,
+ "scenes": [
+  {
+   "type": "choc",
+   "voix": "Payer en ligne, ça vous fait peur ? Avec AMAZER, on vérifie pour vous.",
+   "fond": "nuit",
+   "lignes": [
+    "Payer en ligne",
+    "vous fait *peur* ?"
+   ],
+   "perso": "aicha",
+   "humeur": "surpris",
+   "telephone": true
+  },
+  {
+   "type": "ecrans",
+   "voix": "Vous payez par Nita ou Amana, et AMAZER vérifie votre paiement avant que la boutique prépare.",
+   "transition": "balayage",
+   "ecrans": [
+    {
+     "img": "06-paiement-long.png",
+     "de": 0,
+     "texte": "Payez par *Nita ou Amana*",
+     "scroll": [
+      300,
+      300,
+      0,
+      0.1
+     ],
+     "taps": [
+      {
+       "x": 215,
+       "y": 562,
+       "at": 1.2
+      }
+     ]
+    },
+    {
+     "img": "07-en-verification.png",
+     "de": 1.7,
+     "texte": "AMAZER *vérifie*"
+    },
+    {
+     "img": "08-paiement-confirme.png",
+     "de": 3.0,
+     "texte": "Paiement *confirmé*"
+    }
+   ],
+   "succes": 3.2,
+   "fin": 1.5
+  },
+  {
+   "type": "cartes",
+   "voix": "Des boutiques vérifiées, un paiement contrôlé, et un reçu avec code pour la livraison.",
+   "perso": "aicha",
+   "titre": "En toute *confiance*",
+   "cartes": [
+    {
+     "titre": "Boutiques vérifiées",
+     "texte": "Par l'équipe AMAZER",
+     "icone": "ok"
+    },
+    {
+     "titre": "Paiement contrôlé",
+     "texte": "Avant toute préparation",
+     "icone": "argent"
+    },
+    {
+     "titre": "Reçu avec code",
+     "texte": "Remis au livreur à la porte",
+     "icone": "bulle"
+    }
+   ]
+  },
+  {
+   "type": "fin",
+   "voix": "AMAZER. Payez en confiance, on vérifie pour vous. amazer.store.",
+   "slogan": "Payez.\n*On vérifie.*",
+   "mention": "Paiement Nita ou Amana · contrôlé par AMAZER",
+   "sous_titres_voix": [
+    "AMAZER.",
+    "Payez en confiance, on vérifie pour vous.",
+    "amazer.store."
+   ]
+  }
+ ]
+}
