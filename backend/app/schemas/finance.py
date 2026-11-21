@@ -45,7 +45,7 @@ class FinanceSettingsResponse(BaseModel):
     reseller_subscription_fee: float = 500
     reseller_commission_percent: float = 10
     affiliate_seller_share_percent: float = 20
-    affiliate_seller_share_months: int = 12
+    affiliate_seller_share_months: int = 6
     affiliate_customer_bonus: float = 250
     affiliate_hold_days: int = 30
     auto_receipt_hours: int = 72
@@ -104,7 +104,7 @@ class FinanceSettingsUpdateRequest(BaseModel):
     reseller_commission_percent: float = Field(default=10, ge=0, le=90)
     # Affiliation : part des abonnements des vendeurs amenes, duree (mois) et bonus par nouveau client.
     affiliate_seller_share_percent: float = Field(default=20, ge=0, le=90)
-    affiliate_seller_share_months: int = Field(default=12, ge=1, le=120)
+    affiliate_seller_share_months: int = Field(default=6, ge=1, le=120)
     affiliate_customer_bonus: float = Field(default=250, ge=0)
     # Securite des gains et ambassadeurs (voir affiliate_service).
     affiliate_hold_days: int = Field(default=30, ge=0, le=180)

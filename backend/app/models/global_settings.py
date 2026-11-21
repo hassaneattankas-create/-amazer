@@ -49,7 +49,7 @@ class GlobalSettings(Base):
     affiliate_commission_percent: Mapped[float] = mapped_column(Float, nullable=False, default=3, server_default="3")  # obsolete
     # Affiliation : part des abonnements des vendeurs amenes (pendant N mois) et bonus par nouveau client.
     affiliate_seller_share_percent: Mapped[float] = mapped_column(Float, nullable=False, default=20, server_default="20")
-    affiliate_seller_share_months: Mapped[int] = mapped_column(Integer, nullable=False, default=12, server_default="12")
+    affiliate_seller_share_months: Mapped[int] = mapped_column(Integer, nullable=False, default=6, server_default="6")
     affiliate_customer_bonus: Mapped[float] = mapped_column(Float, nullable=False, default=250, server_default="250")
     # Securite des gains : delai avant paiement, minimum de retrait, plafond des nouveaux comptes (3 premiers mois),
     # nombre d'inscriptions par jour au-dela duquel les parrainages sont a verifier.

@@ -167,7 +167,7 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 
 ## Admin · Affiliés et ambassadeurs
 - Où : Admin › « Affiliés ». Onglets : Paiements à faire, Affiliés, Candidatures (ambassadeurs).
-- Affilié : touche une part des abonnements des vendeurs qu'il amène (20 % pendant 12 mois par défaut) et un bonus fixe à la 1re commande livrée d'un client amené (réglable, 0 = désactivé).
+- Affilié : touche une part des abonnements des vendeurs qu'il amène (20 % pendant 6 mois) et un bonus fixe (250 F CFA) à la 1re commande livrée d'un client amené (réglable, 0 = désactivé).
 - Gains : « En délai » (délai de sécurité pour repérer annulations et fraudes), « À vérifier », « Disponible », « Demandé », « Payé ». L'affilié demande son paiement depuis sa page dès qu'il atteint le minimum.
 - Payer : envoyer l'argent, saisir la référence, « Marquer comme payé ». Refuser : « Refuser (gains rendus) » avec motif, ou « Refuser et annuler (fraude) ».
 - Fraude (faux comptes, auto-parrainage) : sur la fiche de l'affilié, « Fraude : tout annuler » suspend l'affilié et annule tous ses gains non payés.

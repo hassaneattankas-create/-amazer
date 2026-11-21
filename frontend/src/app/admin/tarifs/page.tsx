@@ -673,14 +673,14 @@ export default function AdminTarifsPage() {
             />
             <AdminNumberField
               label="Affiliés : durée de la part d'abonnement"
-              value={effective.affiliate_seller_share_months ?? 12}
+              value={effective.affiliate_seller_share_months ?? 6}
               suffix="mois"
               min={1}
               step="1"
               onChange={(value) =>
                 setDraft({
                   ...effective,
-                  affiliate_seller_share_months: Math.max(1, Math.min(120, Math.round(parseNonNegativeNumber(value, effective.affiliate_seller_share_months ?? 12)))),
+                  affiliate_seller_share_months: Math.max(1, Math.min(120, Math.round(parseNonNegativeNumber(value, effective.affiliate_seller_share_months ?? 6)))),
                 })
               }
               helper="Après cette durée depuis l'inscription du vendeur, l'affilié ne touche plus rien sur ses abonnements."

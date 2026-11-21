@@ -68,7 +68,7 @@ def load_terms(db: Session) -> AffiliateTerms:
     s = get_or_create_global_settings(db)
     return AffiliateTerms(
         seller_share_percent=_num(s, "affiliate_seller_share_percent", 20, 0, 90),
-        seller_share_months=int(_num(s, "affiliate_seller_share_months", 12, 1, 120)),
+        seller_share_months=int(_num(s, "affiliate_seller_share_months", 6, 1, 120)),
         customer_bonus=_num(s, "affiliate_customer_bonus", 250),
         hold_days=int(_num(s, "affiliate_hold_days", 30, 0, 180)),
         min_payout=_num(s, "affiliate_min_payout", 2000),

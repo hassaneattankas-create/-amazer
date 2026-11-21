@@ -221,7 +221,12 @@ def _bootstrap_database_if_needed() -> None:
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS reseller_commission_percent DOUBLE PRECISION NOT NULL DEFAULT 10",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_commission_percent DOUBLE PRECISION NOT NULL DEFAULT 3",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_seller_share_percent DOUBLE PRECISION NOT NULL DEFAULT 20",
-        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_seller_share_months INTEGER NOT NULL DEFAULT 12",
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_seller_share_months INTEGER NOT NULL DEFAULT 6",
+        # Règle officielle du programme (nov. 2026) : 20 % pendant 6 mois. Passage unique de 12 à 6 mois ;
+        # ensuite l'admin reste libre de changer la durée (le drapeau empêche de réécraser son choix).
+        "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_months_rule_2026_11 BOOLEAN NOT NULL DEFAULT FALSE",
+        "UPDATE global_settings SET affiliate_seller_share_months = 6, affiliate_months_rule_2026_11 = TRUE WHERE affiliate_months_rule_2026_11 = FALSE",
+        "ALTER TABLE global_settings ALTER COLUMN affiliate_seller_share_months SET DEFAULT 6",
         "ALTER TABLE global_settings ADD COLUMN IF NOT EXISTS affiliate_customer_bonus DOUBLE PRECISION NOT NULL DEFAULT 250",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_user_id VARCHAR(36)",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_commission DOUBLE PRECISION NOT NULL DEFAULT 0",

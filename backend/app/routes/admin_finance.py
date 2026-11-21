@@ -193,7 +193,7 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
         reseller_subscription_fee=float(getattr(settings, "reseller_subscription_fee", 500) or 0),
         reseller_commission_percent=float(getattr(settings, "reseller_commission_percent", 10) or 0),
         affiliate_seller_share_percent=float(getattr(settings, "affiliate_seller_share_percent", 20) or 0),
-        affiliate_seller_share_months=int(getattr(settings, "affiliate_seller_share_months", 12) or 12),
+        affiliate_seller_share_months=int(getattr(settings, "affiliate_seller_share_months", 6) or 6),
         affiliate_customer_bonus=float(getattr(settings, "affiliate_customer_bonus", 250) or 0),
         affiliate_hold_days=int(getattr(settings, "affiliate_hold_days", 30) if getattr(settings, "affiliate_hold_days", None) is not None else 30),
         auto_receipt_hours=int(getattr(settings, "auto_receipt_hours", 72) if getattr(settings, "auto_receipt_hours", None) is not None else 72),
