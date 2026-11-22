@@ -95,12 +95,21 @@ def normalize_city(text: str) -> str:
     return " ".join(plain.lower().replace("'", " ").split())
 
 
+def _display_city(text: str) -> str:
+    """« diffa » -> « Diffa » ; les noms deja ecrits avec des majuscules sont gardes tels quels."""
+    text = " ".join(text.split())
+    return text if text != text.lower() else " ".join(word[:1].upper() + word[1:] for word in text.split())
+
+
 def route_cities(trip: dict) -> list[str]:
     """Villes du trajet dans l'ordre : depart, arrets publies, arrivee (lus dans le nom « Niamey - Zinder »)."""
-    parts = [part.strip() for part in _ROUTE_SPLIT.split(str(trip.get("name") or "")) if part.strip()]
+    parts = [_display_city(part) for part in _ROUTE_SPLIT.split(str(trip.get("name") or "")) if part.strip()]
     if not parts:
         return []
-    stops = [str(stop).strip() for stop in (trip.get("stops") or []) if str(stop).strip()]
+    if len(parts) == 1 and len(parts[0].split()) == 2:
+        # « Niamey Agadez » ecrit sans tiret : deux villes.
+        parts = [_display_city(word) for word in parts[0].split()]
+    stops = [_display_city(str(stop)) for stop in (trip.get("stops") or []) if str(stop).strip()]
     if len(parts) == 1:
         return [parts[0], *stops]
     middle = parts[1:-1] + [stop for stop in stops if normalize_city(stop) not in {normalize_city(p) for p in parts}]

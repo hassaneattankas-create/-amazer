@@ -35,3 +35,9 @@ def test_customer_can_change_until_two_hours_before_departure() -> None:
     assert can_change(ticket, datetime(2026, 12, 1, 11, 0, tzinfo=UTC)) is False
     used = SimpleNamespace(status="checked_in", check_in_date=date(2026, 12, 5), departure_time="14:00")
     assert can_change(used, datetime(2026, 12, 1, tzinfo=UTC)) is False
+
+
+def test_names_without_dash_and_lowercase_cities() -> None:
+    assert route_cities({"name": "Niamey agadez"}) == ["Niamey", "Agadez"]
+    assert route_cities({"name": "diffa"}) == ["Diffa"]
+    assert route_cities({"name": "Birni N'Konni - Niamey"}) == ["Birni N'Konni", "Niamey"]
