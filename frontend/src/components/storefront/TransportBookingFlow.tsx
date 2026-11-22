@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Bus, CheckCircle2, Clock } from "lucide-react";
 
@@ -37,9 +37,23 @@ export function TransportBookingFlow({
   acceptsBookings: boolean;
   payoutPhone: string | null | undefined;
 }) {
-  const [tripId, setTripId] = useState<string | null>(trips.length === 1 ? String(trips[0].id ?? trips[0].name) : null);
-  const [day, setDay] = useState("");
-  const [time, setTime] = useState<string | null>(null);
+  // Lien depuis la recherche de trajets (/transport) : ?trajet=…&date=AAAA-MM-JJ&heure=HH:MM pré-remplit le choix.
+  const [linked] = useState(() => {
+    const params = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
+    const wanted = params?.get("trajet") ?? null;
+    const match = wanted ? trips.find((item) => String(item.id ?? item.name) === wanted) : undefined;
+    const date = params?.get("date") ?? "";
+    return {
+      tripId: match ? String(match.id ?? match.name) : null,
+      day: match && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : "",
+      time: match ? params?.get("heure") || null : null,
+    };
+  });
+  const [tripId, setTripId] = useState<string | null>(
+    linked.tripId ?? (trips.length === 1 ? String(trips[0].id ?? trips[0].name) : null)
+  );
+  const [day, setDay] = useState(linked.day);
+  const [time, setTime] = useState<string | null>(linked.time);
   const [seats, setSeats] = useState(1);
   const [form, setForm] = useState({ name: "", phone: "", method: "nita" as "nita" | "amana", reference: "" });
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
@@ -49,8 +63,11 @@ export function TransportBookingFlow({
   const days = useMemo(() => {
     if (!trip) return [];
     const published = (trip.available_days ?? []).filter((d) => d >= today).sort();
-    return published.length ? published.slice(0, 14) : Array.from({ length: 7 }, (_, i) => isoDay(i));
-  }, [trip, today]);
+    const list = published.length ? published.slice(0, 14) : Array.from({ length: 7 }, (_, i) => isoDay(i));
+    // Jour choisi dans la recherche, plus loin que la semaine affichée : on le garde dans la liste.
+    if (linked.day && linked.day >= today && !list.includes(linked.day)) list.push(linked.day);
+    return list;
+  }, [trip, today, linked.day]);
 
   const { data: seatData, isFetching } = useQuery({
     queryKey: ["trip-seats", vendorId, tripId, day],
@@ -97,12 +114,18 @@ export function TransportBookingFlow({
     booking.mutate();
   };
 
+  // Arrivée depuis la recherche : on amène le client directement sur le départ choisi.
+  const sectionRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (linked.tripId) sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [linked.tripId]);
+
   if (!trips.length) {
     return <p className="rounded-card border border-border bg-card p-6 text-sm text-ink-600">Cette compagnie n&apos;a pas encore publié ses trajets.</p>;
   }
 
   return (
-    <section aria-labelledby="trips-title" className="space-y-4">
+    <section ref={sectionRef} id="reserver" aria-labelledby="trips-title" className="scroll-mt-24 space-y-4">
       <h2 id="trips-title" className="flex items-center gap-2 text-xl font-semibold text-ink-900">
         <Bus className="h-5 w-5 text-brand-600" aria-hidden="true" />
         Trajets

@@ -71,6 +71,11 @@ class SellerProfile(Base):
     offers_restaurant: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # Entreprise de transport: affiche la reservation en mode trajets/billets au lieu de chambres.
     offers_transport: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Facturation choisie par l'admin : "subscription" (abonnement), "commission" (part de chaque billet
+    # vendu, sans abonnement) ou "both" (les deux). Utilise pour les compagnies de transport.
+    billing_mode: Mapped[str] = mapped_column(String(20), nullable=False, default="subscription", server_default="subscription")
+    # Commission par billet propre a la compagnie (en %) ; None = taux general (Admin > Tarifs).
+    ticket_commission_percent: Mapped[float | None] = mapped_column(Float, nullable=True)
     # Services de proximite (vitrine Premium, type choisi par l'admin) : "pharmacy" ou "fuel_station".
     service_kind: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # Pharmacie : de garde maintenant (interrupteur) et/ou sur une periode programmee (dates incluses).

@@ -72,6 +72,11 @@ def _base_subscription_fee_for_profile(
     else:
         configured = getattr(settings, "seller_subscription_fee_shop", None)
     base = float(configured if configured is not None else legacy_default)
+    from app.services import transport_pricing
+
+    if transport_pricing.is_transport(profile):
+        # Compagnie de transport : base (lignes comprises) + lignes en plus ; 0 en mode « commission seule ».
+        return transport_pricing.subscription_fee(settings, profile)
     if getattr(profile, "service_kind", None) == "fuel_station":
         # Marque de carburant : abonnement + stations supplementaires (degressif, plafonne au forfait national).
         from app.services.fuel_network_pricing import active_outlet_count, fuel_base_fee, price_for

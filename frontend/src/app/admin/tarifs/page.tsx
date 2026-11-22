@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { StationPricingCard } from "@/components/admin/StationPricingCard";
+import { TransportBillingControl, TransportPricingCard } from "@/components/admin/TransportBilling";
 import { Button } from "@/components/ui/button";
 import { requestAdminPin } from "@/lib/admin-pin";
 import { getAdminFinanceDataError } from "@/lib/admin-finance-verification";
@@ -263,7 +264,7 @@ export default function AdminTarifsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-audit-history"] });
       setStatus("Tarifs enregistres.");
     },
-    onError: () => setStatus("Erreur enregistrement tarifs."),
+    onError: (error) => setStatus(getApiErrorMessage(error, "Erreur enregistrement tarifs.")),
   });
 
   const launchModeMutation = useMutation({
@@ -613,6 +614,35 @@ export default function AdminTarifsPage() {
               helper="Boutiques et restaurants en formule basic : plafond. Premium : illimite cote API."
             />
             <AdminNumberField
+              label="Formule gratuite : produits visibles"
+              value={effective.free_plan_max_products ?? 5}
+              suffix="produits"
+              min={1}
+              step="1"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  free_plan_max_products: parsePositiveInteger(value, effective.free_plan_max_products ?? 5),
+                })
+              }
+              helper="Boutiques sans abonnement : nombre de produits visibles par les clients."
+            />
+            <AdminNumberField
+              label="Formule gratuite : part retenue par AMAZER"
+              value={Math.round((effective.free_plan_commission_rate ?? 0.05) * 1000) / 10}
+              suffix="%"
+              min={0}
+              step="0.5"
+              onChange={(value) =>
+                setDraft({
+                  ...effective,
+                  free_plan_commission_rate:
+                    Math.min(90, parseNonNegativeNumber(value, (effective.free_plan_commission_rate ?? 0.05) * 100)) / 100,
+                })
+              }
+              helper="Prise sur chaque vente d'une boutique sans abonnement, avant le reversement. Exemple : 5 %."
+            />
+            <AdminNumberField
               label="Essai gratuit a l'inscription vendeur"
               value={effective.seller_trial_days ?? 0}
               suffix="jours"
@@ -826,6 +856,10 @@ export default function AdminTarifsPage() {
           />
         </div>
 
+        <div className="mt-6">
+          <TransportPricingCard settings={effective} onChange={(patch) => setDraft({ ...effective, ...patch })} />
+        </div>
+
         <div className="mt-4 flex flex-wrap gap-2">
           <Button onClick={() => saveMutation.mutate(effective)} className="bg-brand-600 text-white hover:bg-brand-700">
             Enregistrer
@@ -1021,6 +1055,13 @@ export default function AdminTarifsPage() {
                   ) : null}
                 </div>
               </div>
+              {sellerActivity(seller) === "transport" ? (
+                <TransportBillingControl
+                  key={`${seller.profile_id}-${seller.billing_mode ?? "subscription"}-${seller.ticket_commission_percent ?? ""}`}
+                  seller={seller}
+                  defaultPercent={settings?.transport_ticket_commission_percent ?? 8}
+                />
+              ) : null}
               <details className="mt-3">
                 <summary className="cursor-pointer text-xs font-medium text-ink-600">
                   Tarif personnalisé · commission {(seller.effective_commission_rate * 100).toLocaleString("fr-FR", { maximumFractionDigits: 2 })}&nbsp;%,

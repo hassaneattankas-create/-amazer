@@ -20,6 +20,7 @@ const COLUMNS = [
       { href: "/hotels", label: "Premium : hôtels, transport, entreprises" },
       { href: "/pharmacies", label: "Pharmacies" },
       { href: "/stations", label: "Stations-essence" },
+      { href: "/transport", label: "Billets de bus" },
       { href: "/comment-ca-marche", label: "Comment ça marche ?" },
     ],
   },

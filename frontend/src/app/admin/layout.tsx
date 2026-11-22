@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BarChart3, CalendarClock, ChevronDown, CreditCard, Flag, FolderTree, Layers, Lock, QrCode, RotateCcw, Send, Share2, SlidersHorizontal, Users, Wallet, type LucideIcon } from "lucide-react";
+import { BarChart3, Bus, CalendarClock, ChevronDown, CreditCard, Flag, FolderTree, Layers, Lock, QrCode, RotateCcw, Send, Share2, SlidersHorizontal, Users, Wallet, type LucideIcon } from "lucide-react";
 
 import { AdminPinGate } from "@/components/admin/AdminPinGate";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
@@ -32,6 +32,7 @@ const NAV_GROUPS: Array<{ title: string; items: NavItem[] }> = [
     items: [
       { href: "/admin/affilies", label: "Affiliés", icon: Share2 },
       { href: "/admin/reversements", label: "Boutiques", icon: Wallet },
+      { href: "/admin/transport", label: "Commissions transport", icon: Bus },
       { href: "/admin/revendeurs", label: "Revendeurs", icon: Wallet },
       { href: "/admin/remboursements", label: "Remboursements", icon: RotateCcw },
     ],

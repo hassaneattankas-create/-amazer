@@ -70,6 +70,12 @@ class GlobalSettings(Base):
     # Fin des paliers (numero de la derniere station du palier 1, puis du palier 2).
     fuel_tier1_until: Mapped[int] = mapped_column(Integer, nullable=False, default=10, server_default="10")
     fuel_tier2_until: Mapped[int] = mapped_column(Integer, nullable=False, default=30, server_default="30")
+    # Compagnies de transport : abonnement de base (lignes comprises), prix par ligne en plus,
+    # commission par billet appliquee aux compagnies en mode « commission » ou « les deux ».
+    transport_base_subscription: Mapped[float] = mapped_column(Float, nullable=False, default=15000, server_default="15000")
+    transport_included_lines: Mapped[int] = mapped_column(Integer, nullable=False, default=5, server_default="5")
+    transport_extra_line_price: Mapped[float] = mapped_column(Float, nullable=False, default=1000, server_default="1000")
+    transport_ticket_commission_percent: Mapped[float] = mapped_column(Float, nullable=False, default=8, server_default="8")
     # Delai (heures) apres lequel une disponibilite de carburant passe « non confirmee ».
     fuel_fresh_hours: Mapped[int] = mapped_column(Integer, nullable=False, default=4, server_default="4")
     # Dernier passage des taches automatiques des stations (relances, rapports) : au plus une fois par heure.

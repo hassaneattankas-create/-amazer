@@ -1320,3 +1320,62 @@ def remove_fuel_alert(
         raise NotFoundError("Alerte introuvable.")
     db.delete(alert)
     db.commit()
+
+
+# ------------------------------------------------------------------ transport : recherche toutes compagnies
+
+from datetime import date as _date  # noqa: E402
+
+from app.services import transport_service  # noqa: E402
+
+
+class TransportDeparture(BaseModel):
+    time: str | None
+    seats_left: int
+
+
+class TransportSearchItem(BaseModel):
+    vendor_id: str
+    company: str
+    logo_url: str | None = None
+    is_verified: bool = False
+    trip_id: str
+    trip_name: str
+    board_city: str
+    alight_city: str
+    cities: list[str]
+    duration: str | None = None
+    price: float
+    capacity: int
+    departures: list[TransportDeparture]
+
+
+class TransportSearchResponse(BaseModel):
+    date: str
+    results: list[TransportSearchItem]
+
+
+@router.get("/services/transport/search", response_model=TransportSearchResponse)
+def search_transport(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    day: Annotated[_date, Query(alias="date")],
+    origin: Annotated[str, Query(alias="depart", max_length=60)] = "",
+    destination: Annotated[str, Query(alias="arrivee", max_length=60)] = "",
+) -> TransportSearchResponse:
+    """Tous les departs du jour, toutes compagnies confondues : comparer prix, heures et places restantes."""
+    enforce_rate_limit(request, key="transport_search", limit=60, window_seconds=60)
+    rows = transport_service.search_trips(db, origin, destination, day)
+    return TransportSearchResponse(date=day.isoformat(), results=[TransportSearchItem(**row) for row in rows])
+
+
+@router.get("/services/transport/cities", response_model=list[str])
+def transport_cities(db: Annotated[Session, Depends(get_db)]) -> list[str]:
+    """Villes desservies par les compagnies (suggestions du formulaire)."""
+    key = build_cache_key(CACHE_PREFIX + "transport-cities")
+    cached = cache_get_json(key)
+    if cached is not None:
+        return list(cached)
+    cities = transport_service.known_cities(db)
+    cache_set_json(key, cities, 600)
+    return cities

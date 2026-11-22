@@ -54,6 +54,7 @@ from app.schemas.seller import (
     HotelBookingCreateRequest,
     HotelBookingResponse,
     RoomAvailabilityResponse,
+    BookingRescheduleRequest,
     MyBookingResponse,
     SellerStatsResponse,
     StatsDay,
@@ -1721,9 +1722,104 @@ def my_bookings(
                 payment_status=getattr(row, "payment_status", "pending") or "pending",
                 ticket_token=transport_service.ticket_token(row.id) if is_trip and row.status in ("confirmed", "checked_in") else None,
                 created_at=row.created_at,
+                can_change=is_trip and transport_service.can_change(row),
+                trip_id=row.room_type_id if is_trip else None,
             )
         )
     return result
+
+
+def _own_trip_booking(db: Session, booking_id: str, user: User) -> tuple[HotelBooking, SellerProfile]:
+    booking = db.get(HotelBooking, booking_id)
+    if booking is None or booking.user_id != user.id:
+        raise NotFoundError("Réservation introuvable")
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == booking.vendor_id))
+    if profile is None or not (getattr(profile, "offers_transport", False) or profile.activity_type == "transport"):
+        raise NotFoundError("Réservation introuvable")
+    if not transport_service.can_change(booking):
+        raise ConflictError("Ce billet ne peut plus être modifié : le départ est dans moins de 2 heures, ou le billet est déjà utilisé ou annulé.")
+    return booking, profile
+
+
+@router.post("/my-bookings/{booking_id}/cancel", status_code=204)
+def cancel_my_booking(
+    booking_id: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> None:
+    """Le client annule son billet (jusqu'a 2 h avant le depart) ; la place est liberee et la compagnie prevenue."""
+    enforce_csrf(request)
+    booking, profile = _own_trip_booking(db, booking_id, current_user)
+    booking.status = "cancelled"
+    _notify_booking(
+        db,
+        profile.user_id,
+        "Billet annulé par le client",
+        f"{booking.guest_name} · {(booking.room_snapshot or {}).get('name') or 'Trajet'} · {booking.check_in_date:%d/%m}"
+        + (f" à {booking.departure_time}" if booking.departure_time else "")
+        + ". La place est de nouveau libre. Remboursement selon vos conditions.",
+        f"booking-cancel-{booking.id}",
+        "/seller/dashboard#commandes",
+    )
+    db.commit()
+
+
+@router.post("/my-bookings/{booking_id}/reschedule", response_model=MyBookingResponse)
+def reschedule_my_booking(
+    booking_id: str,
+    payload: BookingRescheduleRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> MyBookingResponse:
+    """Le client reporte son billet a un autre depart publie (places verifiees), sans repayer."""
+    enforce_csrf(request)
+    booking, profile = _own_trip_booking(db, booking_id, current_user)
+    trips = {str(t.get("id")): t for t in (profile.room_types or []) if isinstance(t, dict) and t.get("id")}
+    trip = trips.get(booking.room_type_id)
+    if trip is None:
+        raise ConflictError("Ce trajet n'est plus proposé par la compagnie. Contactez-la pour changer de billet.")
+    time = transport_service.validate_departure(trip, payload.travel_date, payload.departure_time)
+    same_slot = payload.travel_date == booking.check_in_date and time == booking.departure_time
+    if same_slot:
+        raise ConflictError("C'est déjà la date et l'heure de votre billet.")
+    left = transport_service.seats_left(db, booking.vendor_id, trip, payload.travel_date, time)
+    if booking.guest_count > left:
+        raise ConflictError("Plus assez de places sur ce départ. Choisissez-en un autre.")
+    old = f"{booking.check_in_date:%d/%m}" + (f" à {booking.departure_time}" if booking.departure_time else "")
+    booking.check_in_date = payload.travel_date
+    booking.check_out_date = payload.travel_date + timedelta(days=1)
+    booking.departure_time = time
+    new = f"{payload.travel_date:%d/%m}" + (f" à {time}" if time else "")
+    _notify_booking(
+        db,
+        profile.user_id,
+        "Billet reporté par le client",
+        f"{booking.guest_name} · {trip.get('name') or 'Trajet'} · {booking.guest_count} place(s) : du {old} au {new}.",
+        f"booking-move-{booking.id}",
+        "/seller/dashboard#commandes",
+    )
+    db.commit()
+    db.refresh(booking)
+    return MyBookingResponse(
+        id=booking.id,
+        kind="transport",
+        vendor_id=booking.vendor_id,
+        place_name=profile.business_name,
+        item_name=str((booking.room_snapshot or {}).get("name") or "Trajet"),
+        check_in_date=booking.check_in_date,
+        check_out_date=booking.check_out_date,
+        departure_time=booking.departure_time,
+        guest_count=booking.guest_count,
+        amount=float(booking.deposit_amount or 0),
+        status=booking.status,
+        payment_status=getattr(booking, "payment_status", "pending") or "pending",
+        ticket_token=transport_service.ticket_token(booking.id) if booking.status in ("confirmed", "checked_in") else None,
+        created_at=booking.created_at,
+        can_change=transport_service.can_change(booking),
+        trip_id=booking.room_type_id,
+    )
 
 
 @router.post("/tickets/scan", response_model=TicketScanResponse)

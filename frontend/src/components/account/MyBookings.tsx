@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
 import { BedDouble, Bus, CalendarClock } from "lucide-react";
 
+import { getApiErrorMessage } from "@/lib/api-error";
 import { formatXOF } from "@/lib/currency";
-import { listMyBookings } from "@/services/seller-service";
+import { cancelMyBooking, getTripSeats, listMyBookings, rescheduleMyBooking } from "@/services/seller-service";
 import type { HotelBookingStatus, MyBooking } from "@/types/seller";
 
 const STATUS: Record<HotelBookingStatus, { label: string; className: string }> = {
@@ -20,6 +21,151 @@ const STATUS: Record<HotelBookingStatus, { label: string; className: string }> =
 
 function dayLabel(iso: string): string {
   return new Date(`${iso}T12:00:00`).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+}
+
+function isoDay(offset = 0): string {
+  const date = new Date();
+  date.setDate(date.getDate() + offset);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+/** Billet de bus : changer de départ (même trajet, places vérifiées) ou annuler, jusqu'à 2 h avant le départ. */
+function TripChanger({ booking }: { booking: MyBooking }) {
+  const queryClient = useQueryClient();
+  const [mode, setMode] = useState<"idle" | "move" | "cancel">("idle");
+  const [day, setDay] = useState(isoDay(1));
+  const [time, setTime] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const seats = useQuery({
+    queryKey: ["trip-seats", booking.vendor_id, booking.trip_id, day],
+    queryFn: () => getTripSeats(booking.vendor_id, booking.trip_id ?? "", day),
+    enabled: mode === "move" && Boolean(booking.trip_id && day),
+  });
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
+  const move = useMutation({
+    mutationFn: () => rescheduleMyBooking(booking.id, day, time),
+    onSuccess: () => {
+      setMode("idle");
+      setMessage({ ok: true, text: "Billet reporté. La compagnie est prévenue ; votre QR code reste le même." });
+      refresh();
+    },
+    onError: (error) => setMessage({ ok: false, text: getApiErrorMessage(error, "Report impossible. Choisissez un autre départ.") }),
+  });
+  const cancel = useMutation({
+    mutationFn: () => cancelMyBooking(booking.id),
+    onSuccess: () => {
+      setMode("idle");
+      setMessage({ ok: true, text: "Billet annulé. Pour un remboursement, contactez la compagnie." });
+      refresh();
+    },
+    onError: (error) => setMessage({ ok: false, text: getApiErrorMessage(error, "Annulation impossible.") }),
+  });
+  const times = Object.entries(seats.data?.seats_left ?? {});
+  const needsTime = times.some(([value]) => Boolean(value));
+
+  return (
+    <div className="space-y-2">
+      {mode === "idle" ? (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setMessage(null);
+              setMode("move");
+            }}
+            className="inline-flex min-h-11 items-center rounded-field border border-border px-4 text-sm font-semibold text-ink-900 hover:border-ink-400"
+          >
+            Changer la date
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMessage(null);
+              setMode("cancel");
+            }}
+            className="inline-flex min-h-11 items-center rounded-field px-3 text-sm font-semibold text-danger hover:underline"
+          >
+            Annuler le billet
+          </button>
+        </div>
+      ) : null}
+      {mode === "move" ? (
+        <div className="space-y-2 rounded-field border border-border p-3">
+          <label className="block text-sm font-medium text-ink-800">
+            Nouveau jour
+            <input
+              type="date"
+              min={isoDay(0)}
+              value={day}
+              onChange={(event) => {
+                setDay(event.target.value);
+                setTime(null);
+              }}
+              className="mt-1 h-11 w-full rounded-field border border-border bg-card px-3 text-sm text-ink-900"
+            />
+          </label>
+          {seats.isFetching ? <p className="text-sm text-ink-600">Places restantes…</p> : null}
+          {!seats.isFetching && times.length === 0 ? <p className="text-sm text-ink-600">Pas de départ ce jour-là. Essayez un autre jour.</p> : null}
+          <div className="flex flex-wrap gap-2">
+            {times.map(([value, left]) => {
+              const enough = left >= booking.guest_count;
+              const selected = time === (value || null);
+              return (
+                <button
+                  key={value || "jour"}
+                  type="button"
+                  disabled={!enough}
+                  aria-pressed={selected}
+                  onClick={() => setTime(value || null)}
+                  className={`min-h-11 rounded-pill border px-3 text-sm font-semibold disabled:opacity-50 ${
+                    selected ? "border-brand-600 bg-brand-600 text-white" : "border-border text-ink-900"
+                  }`}
+                >
+                  {value || "Départ"} · {enough ? `${left} place${left > 1 ? "s" : ""}` : "complet"}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={move.isPending || times.length === 0 || (needsTime && !time)}
+              onClick={() => move.mutate()}
+              className="inline-flex min-h-11 items-center rounded-field bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+            >
+              {move.isPending ? "Report…" : "Confirmer le report"}
+            </button>
+            <button type="button" onClick={() => setMode("idle")} className="min-h-11 px-3 text-sm font-semibold text-ink-700 hover:underline">
+              Retour
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {mode === "cancel" ? (
+        <div className="space-y-2 rounded-field border border-danger/30 bg-danger/5 p-3">
+          <p className="text-sm text-ink-900">Annuler ce billet ? La place sera libérée. Le remboursement dépend des conditions de la compagnie.</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={cancel.isPending}
+              onClick={() => cancel.mutate()}
+              className="inline-flex min-h-11 items-center rounded-field bg-danger px-4 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {cancel.isPending ? "Annulation…" : "Oui, annuler"}
+            </button>
+            <button type="button" onClick={() => setMode("idle")} className="min-h-11 px-3 text-sm font-semibold text-ink-700 hover:underline">
+              Garder mon billet
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {message ? (
+        <p role={message.ok ? "status" : "alert"} className={`text-sm ${message.ok ? "text-success" : "text-danger"}`}>
+          {message.text}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 /** Reservations du client (hotels et trajets) ; billet a QR code a montrer a l'embarquement. */
@@ -72,6 +218,7 @@ export function MyBookings() {
                 </button>
               )
             ) : null}
+            {booking.kind === "transport" && booking.can_change ? <TripChanger booking={booking} /> : null}
           </li>
         ))}
       </ul>

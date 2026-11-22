@@ -40,6 +40,10 @@ class FinanceSettingsResponse(BaseModel):
     fuel_tier1_until: int = 10
     fuel_tier2_until: int = 30
     fuel_fresh_hours: int = 4
+    transport_base_subscription: float = 15000
+    transport_included_lines: int = 5
+    transport_extra_line_price: float = 1000
+    transport_ticket_commission_percent: float = 8
     seller_trial_days: int = 0
     seller_launch_discount_percent: float = 0
     reseller_subscription_fee: float = 500
@@ -77,6 +81,9 @@ class FinanceSettingsUpdateRequest(BaseModel):
     ad_boost_price_7d: float = Field(ge=0)
     launch_mode_zero_commission: bool = False
     max_products_basic_tier: int = Field(default=10, ge=1, le=5000)
+    # Formule gratuite des boutiques : nombre de produits visibles et part retenue par AMAZER (0.05 = 5 %).
+    free_plan_max_products: int = Field(default=5, ge=1, le=5000)
+    free_plan_commission_rate: float = Field(default=0.05, ge=0, le=0.9)
     platform_wallet_phone: str | None = Field(default=None, max_length=40)
     support_email: str | None = Field(default=None, max_length=255)
     support_phone: str | None = Field(default=None, max_length=40)
@@ -96,6 +103,11 @@ class FinanceSettingsUpdateRequest(BaseModel):
     fuel_tier1_until: int = Field(default=10, ge=1, le=10000)
     fuel_tier2_until: int = Field(default=30, ge=1, le=10000)
     fuel_fresh_hours: int = Field(default=4, ge=1, le=48)
+    # Compagnies de transport : abonnement (lignes comprises, prix par ligne en plus) et commission par billet.
+    transport_base_subscription: float = Field(default=15000, ge=0)
+    transport_included_lines: int = Field(default=5, ge=0, le=1000)
+    transport_extra_line_price: float = Field(default=1000, ge=0)
+    transport_ticket_commission_percent: float = Field(default=8, ge=0, le=90)
     # Essai gratuit a l'inscription vendeur (0 = desactive) et reduction de lancement en %.
     seller_trial_days: int = Field(default=0, ge=0, le=365)
     seller_launch_discount_percent: float = Field(default=0, ge=0, le=100)
@@ -261,6 +273,11 @@ class AdminSellerResponse(BaseModel):
     storefront_tier: str = "basic"
     is_enterprise: bool = False
     offers_transport: bool = False
+    # Transport : facturation choisie par l'admin, commission propre, lignes publiees.
+    billing_mode: str = "subscription"
+    ticket_commission_percent: float | None = None
+    effective_ticket_commission_percent: float = 0
+    transport_lines: int = 0
     service_kind: str | None = None
     # E-mail du compte : lien direct vers « Utilisateurs » pour les actions sur le compte.
     email: str | None = None
@@ -431,3 +448,41 @@ class AdminBroadcastRequest(BaseModel):
 
 class AdminBroadcastResponse(BaseModel):
     recipients: int
+
+
+class AdminSellerBillingRequest(BaseModel):
+    """Facturation d'une compagnie de transport : abonnement, commission par billet, ou les deux."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    billing_mode: str = Field(pattern=r"^(subscription|commission|both)$")
+    # None = taux general (Tarifs) ; sinon pourcentage propre a cette compagnie.
+    ticket_commission_percent: float | None = Field(default=None, ge=0, le=90)
+
+
+class TransportCommissionRow(BaseModel):
+    vendor_id: str
+    profile_id: str
+    business_name: str
+    billing_mode: str
+    commission_percent: float
+    tickets: int
+    sales: float
+    commission: float
+    collected: float
+    to_collect: float
+
+
+class TransportCommissionReport(BaseModel):
+    month: str
+    rows: list[TransportCommissionRow]
+    total_commission: float
+    total_to_collect: float
+
+
+class TransportCommissionPaymentRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    month: str = Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")
+    amount: float = Field(gt=0)
+    reference: str | None = Field(default=None, max_length=180)

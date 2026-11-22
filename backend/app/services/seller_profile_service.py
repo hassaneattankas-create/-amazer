@@ -160,6 +160,9 @@ def _normalize_room_types(values: Any) -> list[dict[str, Any]]:
                 deposit_amount = None
         departure_times = _normalize_string_list(value.get("departure_times", []))
         available_days = _normalize_string_list(value.get("available_days", []))
+        # Transport : villes desservies entre le depart et l'arrivee (dans l'ordre) et duree du voyage.
+        stops = [stop[:60] for stop in _normalize_string_list(value.get("stops", []))][:15]
+        duration = str(value.get("duration", "") or "").strip()[:40]
         items.append(
             {
                 "id": room_id[:64],
@@ -172,6 +175,8 @@ def _normalize_room_types(values: Any) -> list[dict[str, Any]]:
                 "deposit_amount": deposit_amount,
                 "departure_times": departure_times,
                 "available_days": available_days,
+                "stops": stops,
+                "duration": duration,
             }
         )
     return items[:24]

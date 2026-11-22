@@ -8,6 +8,7 @@ import {
   SeatAvailability,
   SellerStats,
   TicketScanResult,
+  TransportSearchResult,
   VendorReviewItem,
   VendorReviews,
   SellerInventoryItem,
@@ -152,6 +153,34 @@ export async function getTripSeats(vendorId: string, tripId: string, day: string
 /** Reservations du client connecte (hotels et trajets, billet a QR code). */
 export async function listMyBookings(): Promise<MyBooking[]> {
   return (await api.get<MyBooking[]>("/api/v1/seller/my-bookings")).data;
+}
+
+/** Le client annule son billet (jusqu'a 2 h avant le depart). */
+export async function cancelMyBooking(bookingId: string): Promise<void> {
+  await api.post(`/api/v1/seller/my-bookings/${bookingId}/cancel`);
+}
+
+/** Le client reporte son billet a un autre depart publie. */
+export async function rescheduleMyBooking(bookingId: string, travelDate: string, departureTime: string | null): Promise<MyBooking> {
+  return (
+    await api.post<MyBooking>(`/api/v1/seller/my-bookings/${bookingId}/reschedule`, {
+      travel_date: travelDate,
+      departure_time: departureTime,
+    })
+  ).data;
+}
+
+/** Recherche de trajets toutes compagnies (depart, arrivee, date AAAA-MM-JJ). */
+export async function searchTransport(origin: string, destination: string, day: string): Promise<TransportSearchResult[]> {
+  const response = await api.get<{ date: string; results: TransportSearchResult[] }>("/api/v1/services/transport/search", {
+    params: { depart: origin, arrivee: destination, date: day },
+  });
+  return response.data.results;
+}
+
+/** Villes desservies par les compagnies (suggestions). */
+export async function listTransportCities(): Promise<string[]> {
+  return (await api.get<string[]>("/api/v1/services/transport/cities")).data;
 }
 
 /** Embarquement : scan du QR code d'un billet par le transporteur. */

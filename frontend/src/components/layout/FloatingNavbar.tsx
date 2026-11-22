@@ -55,6 +55,7 @@ const clientNavSections: Array<{ title: string | null; items: Array<{ href: stri
       { href: "/hotels", label: "Hôtels, transport et entreprises" },
       { href: "/pharmacies", label: "Pharmacies" },
       { href: "/stations", label: "Stations-essence" },
+      { href: "/transport", label: "Billets de bus" },
     ],
   },
   {

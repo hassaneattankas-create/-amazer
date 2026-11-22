@@ -17,6 +17,10 @@ export type RoomRow = {
   amenities: string;
   departure_times: string[];
   available_days: string[];
+  /** Transport : villes desservies en route, séparées par des virgules. */
+  stops: string;
+  /** Transport : durée indicative (ex. « 9 h »). */
+  duration: string;
 };
 
 export function emptyRoomRow(): RoomRow {
@@ -30,6 +34,8 @@ export function emptyRoomRow(): RoomRow {
     amenities: "",
     departure_times: [],
     available_days: [],
+    stops: "",
+    duration: "",
   };
 }
 
@@ -100,6 +106,25 @@ export function RoomTypesEditor({
                 placeholder={isTransport ? "Niamey - Maradi" : "Chambre Deluxe"}
               />
             </label>
+            {isTransport ? (
+              <>
+                <label className="text-xs text-slate-600 sm:col-span-2">
+                  Villes desservies en route, dans l&apos;ordre (facultatif)
+                  <Input
+                    value={row.stops}
+                    onChange={(event) => update(index, { stops: event.target.value })}
+                    placeholder="Dosso, Konni, Maradi"
+                  />
+                  <span className="mt-1 block text-[11px] text-slate-500">
+                    Les clients qui cherchent « Niamey → Konni » trouveront aussi ce bus.
+                  </span>
+                </label>
+                <label className="text-xs text-slate-600">
+                  Durée du voyage (facultatif)
+                  <Input value={row.duration} onChange={(event) => update(index, { duration: event.target.value })} placeholder="9 h" />
+                </label>
+              </>
+            ) : null}
             <label className="text-xs text-slate-600">
               Prix par {unitLabel} (FCFA)
               <Input
@@ -261,6 +286,12 @@ export function roomRowsToPayload(rows: RoomRow[]) {
       deposit_amount: null,
       departure_times: row.departure_times.map((time) => time.trim()).filter(Boolean),
       available_days: row.available_days.map((day) => day.trim()).filter(Boolean),
+      stops: row.stops
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .slice(0, 15),
+      duration: row.duration.trim() || null,
     }));
 }
 
@@ -277,6 +308,8 @@ export function payloadToRoomRows(
     amenities?: string[];
     departure_times?: string[];
     available_days?: string[];
+    stops?: string[];
+    duration?: string | null;
   }>,
 ): RoomRow[] {
   return (rooms || []).map((room) => ({
@@ -290,5 +323,7 @@ export function payloadToRoomRows(
     amenities: (room.amenities || []).join(", "),
     departure_times: room.departure_times || [],
     available_days: room.available_days || [],
+    stops: (room.stops || []).join(", "),
+    duration: room.duration || "",
   }));
 }

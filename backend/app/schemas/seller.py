@@ -36,6 +36,10 @@ class HotelRoomTypeSchema(BaseModel):
     # un jour et une heure parmi ceux publies (il ne les fixe pas lui-meme).
     departure_times: list[str] = Field(default_factory=list, max_length=40)
     available_days: list[str] = Field(default_factory=list, max_length=120)
+    # Transport : villes desservies entre le depart et l'arrivee, dans l'ordre (recherche de trajets).
+    stops: list[str] = Field(default_factory=list, max_length=15)
+    # Transport : duree indicative du voyage (ex. « 9 h »).
+    duration: str | None = Field(default=None, max_length=40)
 
 
 class SellerProfileRequest(BaseModel):
@@ -449,6 +453,19 @@ class MyBookingResponse(BaseModel):
     payment_status: str
     ticket_token: str | None
     created_at: datetime
+    # Trajet : le client peut encore reporter ou annuler (jusqu'a 2 h avant le depart).
+    can_change: bool = False
+    # Trajet reserve (pour proposer les autres departs au moment d'un report).
+    trip_id: str | None = None
+
+
+class BookingRescheduleRequest(BaseModel):
+    """Report d'un billet : nouveau jour et heure parmi les departs publies par la compagnie."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    travel_date: date
+    departure_time: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
 
 
 class TicketScanRequest(BaseModel):

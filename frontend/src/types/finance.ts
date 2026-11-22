@@ -31,6 +31,11 @@ export type FinanceSettings = {
   fuel_tier2_until?: number;
   /** Heures après lesquelles une disponibilité de carburant passe « non confirmée » (4 par défaut). */
   fuel_fresh_hours?: number;
+  /** Compagnies de transport : abonnement de base, lignes comprises, prix par ligne en plus, commission par billet (%). */
+  transport_base_subscription?: number;
+  transport_included_lines?: number;
+  transport_extra_line_price?: number;
+  transport_ticket_commission_percent?: number;
   fuel_network_flat?: number;
   /** Essai gratuit a l'inscription vendeur, en jours (0 = desactive). */
   seller_trial_days?: number;
@@ -165,6 +170,12 @@ export type AdminSeller = {
   storefront_tier: string;
   is_enterprise: boolean;
   offers_transport: boolean;
+  /** Transport : abonnement, commission par billet, ou les deux (choix de l'admin). */
+  billing_mode?: TransportBillingMode;
+  /** Commission propre à la compagnie (%) ; null = taux général. */
+  ticket_commission_percent?: number | null;
+  effective_ticket_commission_percent?: number;
+  transport_lines?: number;
   service_kind?: "pharmacy" | "fuel_station" | null;
   /** E-mail du compte (actions sur le compte dans « Utilisateurs »). */
   email?: string | null;
@@ -239,4 +250,26 @@ export type AdminSellerSubscriptionPaymentRequest = {
   reviewed_by_user_id: string | null;
   reviewed_at: string | null;
   created_at: string;
+};
+
+export type TransportBillingMode = "subscription" | "commission" | "both";
+
+export type TransportCommissionRow = {
+  vendor_id: string;
+  profile_id: string;
+  business_name: string;
+  billing_mode: TransportBillingMode;
+  commission_percent: number;
+  tickets: number;
+  sales: number;
+  commission: number;
+  collected: number;
+  to_collect: number;
+};
+
+export type TransportCommissionReport = {
+  month: string;
+  rows: TransportCommissionRow[];
+  total_commission: number;
+  total_to_collect: number;
 };

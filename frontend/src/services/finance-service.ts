@@ -28,6 +28,8 @@ import {
   TreasuryTransaction,
   VerifyPinPayload,
   WalletSummary,
+  TransportBillingMode,
+  TransportCommissionReport,
 } from "@/types/finance";
 
 function getAdminFinancePinVerifyUrl(): string {
@@ -283,6 +285,42 @@ export async function setAdminSellerTransport(profileId: string, enabled: boolea
     url: `/admin/finance/sellers/${profileId}/transport`,
     method: "POST",
     params: { enabled },
+  });
+}
+
+/** Transport : la compagnie paie par abonnement, par commission sur les billets, ou les deux. */
+export async function setAdminSellerBilling(
+  profileId: string,
+  billingMode: TransportBillingMode,
+  ticketCommissionPercent: number | null,
+): Promise<AdminSeller> {
+  return adminProxyRequest<AdminSeller>({
+    url: `/admin/finance/sellers/${profileId}/billing`,
+    method: "PUT",
+    data: { billing_mode: billingMode, ticket_commission_percent: ticketCommissionPercent },
+  });
+}
+
+/** Commissions dues par les compagnies de transport pour un mois (AAAA-MM). */
+export async function getTransportCommissions(month?: string): Promise<TransportCommissionReport> {
+  return adminProxyRequest<TransportCommissionReport>({
+    url: "/admin/finance/transport-commissions",
+    method: "GET",
+    params: month ? { month } : {},
+  });
+}
+
+/** Enregistre une commission encaissée auprès d'une compagnie. */
+export async function recordTransportCommission(
+  vendorId: string,
+  month: string,
+  amount: number,
+  reference: string,
+): Promise<TransportCommissionReport> {
+  return adminProxyRequest<TransportCommissionReport>({
+    url: `/admin/finance/transport-commissions/${vendorId}`,
+    method: "POST",
+    data: { month, amount, reference: reference || null },
   });
 }
 

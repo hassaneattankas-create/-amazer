@@ -84,3 +84,24 @@ class HotelBooking(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+
+class TransportCommissionPayment(Base):
+    """Commission d'un mois encaissee aupres d'une compagnie de transport (le client paie la compagnie).
+
+    Un enregistrement par compagnie et par mois de voyage (« 2026-11 ») : montant encaisse et reference.
+    """
+
+    __tablename__ = "transport_commission_payments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    vendor_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("vendors.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    month: Mapped[str] = mapped_column(String(7), nullable=False, index=True)
+    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    reference: Mapped[str | None] = mapped_column(String(180), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

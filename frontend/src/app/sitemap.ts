@@ -12,6 +12,7 @@ const STATIC_PAGES: Array<[string, number]> = [
   ["/boutiques", 0.9],
   ["/promotions", 0.8],
   ["/stations", 0.8],
+  ["/transport", 0.8],
   ["/pharmacies", 0.8],
   ["/hotels", 0.7],
   ["/vendre", 0.7],

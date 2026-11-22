@@ -32,7 +32,7 @@ from app.models.receipt_scan import ReceiptScan
 from app.models.dynamic_section import DynamicSection, DynamicSectionItem
 from app.models.ad_click import AdClick
 from app.models.customer_feedback import CustomerFeedback
-from app.models.hospitality import HotelBooking, RestaurantReservation
+from app.models.hospitality import HotelBooking, RestaurantReservation, TransportCommissionPayment
 from app.models.refresh_token import RefreshToken
 from app.models.login_verification_code import LoginVerificationCode
 from app.models.user import User
@@ -95,6 +95,7 @@ __all__ = [
     "CustomerFeedback",
     "RestaurantReservation",
     "HotelBooking",
+    "TransportCommissionPayment",
     "Cart",
     "CartItem",
     "AppNotification",

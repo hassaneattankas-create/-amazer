@@ -25,6 +25,10 @@ export type HotelRoomType = {
   departure_times?: string[];
   /** Transport: jours disponibles publies par le vendeur (dates ISO). */
   available_days?: string[];
+  /** Transport : villes desservies entre le depart et l'arrivee, dans l'ordre. */
+  stops?: string[];
+  /** Transport : duree indicative (ex. « 9 h »). */
+  duration?: string | null;
 };
 
 export type SellerProfile = {
@@ -322,6 +326,26 @@ export type MyBooking = {
   /** Billet a QR code (trajet confirme) */
   ticket_token: string | null;
   created_at: string;
+  /** Trajet : report ou annulation encore possible (jusqu'a 2 h avant le depart). */
+  can_change?: boolean;
+  /** Trajet réservé (autres départs proposés lors d'un report). */
+  trip_id?: string | null;
+};
+
+export type TransportSearchResult = {
+  vendor_id: string;
+  company: string;
+  logo_url: string | null;
+  is_verified: boolean;
+  trip_id: string;
+  trip_name: string;
+  board_city: string;
+  alight_city: string;
+  cities: string[];
+  duration: string | null;
+  price: number;
+  capacity: number;
+  departures: Array<{ time: string | null; seats_left: number }>;
 };
 
 export type TicketScanResult = { ok: boolean; message: string; booking: HotelBooking | null };

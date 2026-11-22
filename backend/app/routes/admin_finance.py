@@ -221,6 +221,10 @@ def _to_response(settings: GlobalSettings) -> FinanceSettingsResponse:
                 ("fuel_tier1_until", 10),
                 ("fuel_tier2_until", 30),
                 ("fuel_fresh_hours", 4),
+                ("transport_base_subscription", 15000),
+                ("transport_included_lines", 5),
+                ("transport_extra_line_price", 1000),
+                ("transport_ticket_commission_percent", 8),
             )
         },
         support_email=settings.support_email,
@@ -284,6 +288,10 @@ def _build_admin_seller_response(
         storefront_tier=profile.storefront_tier or "basic",
         is_enterprise=bool(getattr(profile, "is_enterprise", False)),
         offers_transport=bool(getattr(profile, "offers_transport", False)),
+        billing_mode=transport_pricing.billing_mode(profile),
+        ticket_commission_percent=getattr(profile, "ticket_commission_percent", None),
+        effective_ticket_commission_percent=transport_pricing.commission_percent(settings, profile) if transport_pricing.is_transport(profile) else 0,
+        transport_lines=transport_pricing.line_count(profile) if transport_pricing.is_transport(profile) else 0,
         service_kind=getattr(profile, "service_kind", None),
         email=getattr(getattr(profile, "user", None), "email", None),
         subscription_paid_until=profile.subscription_paid_until.isoformat() if profile.subscription_paid_until else None,
@@ -557,6 +565,8 @@ def update_finance_settings(
     settings_row.ad_boost_price_7d = payload.ad_boost_price_7d
     settings_row.launch_mode_zero_commission = payload.launch_mode_zero_commission
     settings_row.max_products_basic_tier = payload.max_products_basic_tier
+    settings_row.free_plan_max_products = payload.free_plan_max_products
+    settings_row.free_plan_commission_rate = payload.free_plan_commission_rate
     settings_row.platform_wallet_phone = payload.platform_wallet_phone
     settings_row.seller_trial_days = payload.seller_trial_days
     settings_row.seller_launch_discount_percent = payload.seller_launch_discount_percent
@@ -589,6 +599,10 @@ def update_finance_settings(
         "fuel_network_flat",
         "fuel_base_subscription",
         "fuel_fresh_hours",
+        "transport_base_subscription",
+        "transport_included_lines",
+        "transport_extra_line_price",
+        "transport_ticket_commission_percent",
     ):
         setattr(settings_row, key, getattr(payload, key))
     # Paliers toujours dans l'ordre : inclus <= fin du palier 1 < fin du palier 2.
@@ -3322,3 +3336,164 @@ def decide_refund(
         )
     db.commit()
     return _refund_row(row)
+
+
+# ------------------------------------------------------------------ transport : facturation par compagnie
+
+from app.models.hospitality import HotelBooking, TransportCommissionPayment  # noqa: E402
+from app.schemas.finance import (  # noqa: E402
+    AdminSellerBillingRequest,
+    TransportCommissionPaymentRequest,
+    TransportCommissionReport,
+    TransportCommissionRow,
+)
+from app.services import transport_pricing  # noqa: E402
+
+# Mode « commission seule » : la compagnie n'a pas d'abonnement a payer, son espace reste ouvert.
+_COMMISSION_ACCESS_DAYS = 3650
+# Retour a un mode avec abonnement : delai pour payer le premier mois.
+_BACK_TO_SUBSCRIPTION_GRACE_DAYS = 7
+
+
+@router.put("/sellers/{profile_id}/billing", response_model=AdminSellerResponse)
+def set_seller_billing(
+    profile_id: str,
+    payload: AdminSellerBillingRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> AdminSellerResponse:
+    """Choisit comment une compagnie de transport paie AMAZER : abonnement, commission par billet, ou les deux."""
+    enforce_csrf(request)
+    _require_finance_pin(request, admin_user)
+    profile = db.get(SellerProfile, profile_id)
+    if profile is None:
+        raise ValidationDomainError("Profil vendeur introuvable")
+    if not transport_pricing.is_transport(profile):
+        raise ValidationDomainError("Ce choix concerne les compagnies de transport.")
+    previous = transport_pricing.billing_mode(profile)
+    now = datetime.now(UTC)
+    profile.billing_mode = payload.billing_mode
+    profile.ticket_commission_percent = payload.ticket_commission_percent
+    if payload.billing_mode == "commission":
+        if profile.onboarding_fee_paid_at is None:
+            profile.onboarding_fee_paid_at = now
+        profile.subscription_paid_until = now + timedelta(days=_COMMISSION_ACCESS_DAYS)
+    elif previous == "commission":
+        profile.subscription_paid_until = now + timedelta(days=_BACK_TO_SUBSCRIPTION_GRACE_DAYS)
+    append_audit_log(
+        db,
+        event_type="admin_seller_billing_set",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="seller_profile",
+        entity_id=profile.id,
+        details={"previous": previous, **payload.model_dump()},
+    )
+    db.commit()
+    db.refresh(profile)
+    _invalidate_public_marketplace_cache()
+    vendor = db.get(Vendor, profile.vendor_id)
+    return _build_admin_seller_response(profile, vendor, _get_or_create_settings(db))
+
+
+def _month_bounds(month: str) -> tuple[date, date]:
+    year, mon = (int(part) for part in month.split("-"))
+    start = date(year, mon, 1)
+    end = date(year + (mon == 12), 1 if mon == 12 else mon + 1, 1)
+    return start, end
+
+
+@router.get("/transport-commissions", response_model=TransportCommissionReport)
+def transport_commissions(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+    month: Annotated[str | None, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")] = None,
+) -> TransportCommissionReport:
+    """Commissions dues par les compagnies (billets confirmes dont le voyage tombe dans le mois)."""
+    _require_finance_pin(request, admin_user)
+    month = month or datetime.now(UTC).strftime("%Y-%m")
+    start, end = _month_bounds(month)
+    settings = _get_or_create_settings(db)
+    profiles = db.scalars(
+        select(SellerProfile).where(
+            or_(SellerProfile.offers_transport.is_(True), SellerProfile.activity_type == "transport"),
+            SellerProfile.billing_mode.in_(("commission", "both")),
+        )
+    ).all()
+    rows: list[TransportCommissionRow] = []
+    for profile in profiles:
+        percent = transport_pricing.commission_percent(settings, profile)
+        tickets, sales = db.execute(
+            select(func.coalesce(func.sum(HotelBooking.guest_count), 0), func.coalesce(func.sum(HotelBooking.deposit_amount), 0)).where(
+                HotelBooking.vendor_id == profile.vendor_id,
+                HotelBooking.status.in_(transport_pricing.COMMISSIONABLE_STATUSES),
+                HotelBooking.check_in_date >= start,
+                HotelBooking.check_in_date < end,
+            )
+        ).one()
+        collected = float(
+            db.scalar(
+                select(func.coalesce(func.sum(TransportCommissionPayment.amount), 0)).where(
+                    TransportCommissionPayment.vendor_id == profile.vendor_id, TransportCommissionPayment.month == month
+                )
+            )
+            or 0
+        )
+        commission = round(float(sales or 0) * percent / 100, 0)
+        rows.append(
+            TransportCommissionRow(
+                vendor_id=profile.vendor_id,
+                profile_id=profile.id,
+                business_name=profile.business_name,
+                billing_mode=transport_pricing.billing_mode(profile),
+                commission_percent=percent,
+                tickets=int(tickets or 0),
+                sales=round(float(sales or 0), 0),
+                commission=commission,
+                collected=round(collected, 0),
+                to_collect=max(0.0, commission - collected),
+            )
+        )
+    rows.sort(key=lambda row: row.to_collect, reverse=True)
+    return TransportCommissionReport(
+        month=month,
+        rows=rows,
+        total_commission=sum(row.commission for row in rows),
+        total_to_collect=sum(row.to_collect for row in rows),
+    )
+
+
+@router.post("/transport-commissions/{vendor_id}", response_model=TransportCommissionReport)
+def record_transport_commission(
+    vendor_id: str,
+    payload: TransportCommissionPaymentRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> TransportCommissionReport:
+    """Enregistre la commission encaissee aupres d'une compagnie pour un mois."""
+    enforce_csrf(request)
+    _require_finance_pin(request, admin_user)
+    profile = db.scalar(select(SellerProfile).where(SellerProfile.vendor_id == vendor_id))
+    if profile is None or not transport_pricing.is_transport(profile):
+        raise ValidationDomainError("Compagnie de transport introuvable")
+    db.add(
+        TransportCommissionPayment(
+            vendor_id=vendor_id, month=payload.month, amount=payload.amount, reference=(payload.reference or "").strip() or None
+        )
+    )
+    append_audit_log(
+        db,
+        event_type="admin_transport_commission_collected",
+        actor=admin_user,
+        ip_address=request.client.host if request.client else None,
+        path=str(request.url.path),
+        entity_type="seller_profile",
+        entity_id=profile.id,
+        details=payload.model_dump(),
+    )
+    db.commit()
+    return transport_commissions(request, db, admin_user, payload.month)
