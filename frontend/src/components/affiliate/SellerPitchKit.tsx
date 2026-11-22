@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Copy, MessageCircle } from "lucide-react";
+import { Copy, MessageCircle, Star, Users } from "lucide-react";
 
 import { WhatsAppIcon } from "@/components/contact/WhatsAppButton";
 import { formatXOF } from "@/lib/currency";
 import { getPublicFinanceSettings } from "@/services/finance-service";
 
 type Script = { title: string; text: string };
+
+/** La phrase d'offre AMAZER : à qui, quoi, sans condition ni prix (règle des messages aux vendeurs). */
+export const OFFER_SENTENCE = "Vendez en ligne avec AMAZER : commencez gratuitement, le client paie avant, AMAZER livre.";
 
 /**
  * « Quoi dire aux vendeurs » : arguments vrais (tirés des réglages réels), messages prêts à envoyer
@@ -37,10 +40,27 @@ export function SellerPitchKit({ sellerLink }: { sellerLink: string | null }) {
     `${trial > 0 ? `${trial} jours gratuits pour tout essayer` : "Mise en ligne immédiate"}, puis vous choisissez. Sans engagement.`,
   ];
 
+  // Méthode des 100 contacts : on demande « tu connais quelqu'un ? » plutôt que « tu veux ? ».
+  // La personne intéressée répond pour elle-même ; sinon elle donne un nom. On gagne dans les deux cas.
+  const recruitScripts: Script[] = [
+    {
+      title: "1. La question indirecte (à vos contacts)",
+      text: `Salut ! Une petite question : tu connais un commerçant, un restaurant ou quelqu'un qui vend sur WhatsApp ? ${OFFER_SENTENCE} Si ça t'intéresse toi aussi, dis-le moi. Le lien : ${link}`,
+    },
+    {
+      title: "2. La relance (2 ou 3 jours après)",
+      text: `Re-bonjour ! Je reviens vers toi pour AMAZER : tu as pensé à quelqu'un ? Je peux l'aider à mettre ses premiers produits en ligne, ça prend 10 minutes. ${link}`,
+    },
+    {
+      title: "3. Statut WhatsApp ou groupe",
+      text: `Vous vendez quelque chose ? ${OFFER_SENTENCE} Écrivez-moi, je vous aide à démarrer. ${link}`,
+    },
+  ];
+
   const scripts: Script[] = [
     {
       title: "Message court (WhatsApp)",
-      text: `Bonjour ! Vous vendez déjà sur WhatsApp ? Mettez votre boutique sur AMAZER : le client paie avant et AMAZER livre. ${trialText}, puis ${freeText} ou abonnement sans commission. Inscription en 10 minutes : ${link}`,
+      text: `Bonjour ! Vous vendez déjà sur WhatsApp ? ${OFFER_SENTENCE} Inscription en 10 minutes : ${link}`,
     },
     {
       title: "Message complet",
@@ -89,6 +109,60 @@ export function SellerPitchKit({ sellerLink }: { sellerLink: string | null }) {
         <p className="mt-1 text-sm text-ink-600">
           Des arguments vrais et des messages prêts à envoyer{sellerLink ? ", avec votre lien d'affilié déjà dedans" : ""}.
         </p>
+      </div>
+
+      <figure className="rounded-field border-l-4 border-brand-600 bg-brand-50 p-3">
+        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-label text-brand-700">
+          <Star className="h-4 w-4" aria-hidden="true" />
+          La phrase à retenir
+        </p>
+        <blockquote className="mt-1 text-base font-semibold text-ink-900">{OFFER_SENTENCE}</blockquote>
+        <figcaption className="mt-1 text-xs text-ink-600">Dites-la telle quelle : elle se comprend du premier coup.</figcaption>
+      </figure>
+
+      <div className="space-y-3 rounded-field border border-border p-3">
+        <p className="flex items-center gap-2 text-sm font-semibold text-ink-900">
+          <Users className="h-4 w-4 text-brand-600" aria-hidden="true" />
+          La méthode des 100 contacts
+        </p>
+        <ol className="list-decimal space-y-1 pl-5 text-sm text-ink-800">
+          <li>
+            Écrivez une liste de <strong>100 personnes</strong> : contacts du téléphone, groupes WhatsApp, famille, voisins, commerçants du
+            quartier. Vous en connaissez plus que vous ne le pensez.
+          </li>
+          <li>
+            Ne demandez pas « tu veux vendre ? » mais <strong>« tu connais quelqu&apos;un qui… ? »</strong> : la personne intéressée vous le
+            dira, les autres vous donneront un nom. Vous gagnez dans les deux cas.
+          </li>
+          <li>
+            Envoyez <strong>20 messages par jour</strong> pendant 5 jours, et relancez au bout de 2 ou 3 jours ceux qui n&apos;ont pas répondu.
+          </li>
+          <li>
+            Quand un commerçant dit oui, <strong>aidez-le à publier ses 5 premiers produits</strong> : un vendeur actif reste, et vous
+            touchez votre part.
+          </li>
+        </ol>
+        {recruitScripts.map((script) => (
+          <div key={script.title} className="rounded-field bg-surface-1 p-3">
+            <p className="text-sm font-semibold text-ink-900">{script.title}</p>
+            <p className="mt-1 whitespace-pre-line text-sm text-ink-800">{script.text}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button type="button" onClick={() => void copy(script.text, script.title)} className={`${buttonClass} border-border bg-card text-ink-900 hover:bg-surface-2`}>
+                <Copy className="h-4 w-4" aria-hidden="true" />
+                {copied === script.title ? "Copié !" : "Copier"}
+              </button>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(script.text)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${buttonClass} border-success text-success hover:bg-surface-2`}
+              >
+                <WhatsAppIcon className="h-4 w-4" />
+                Envoyer sur WhatsApp
+              </a>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div>
