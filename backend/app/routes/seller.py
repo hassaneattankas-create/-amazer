@@ -931,6 +931,9 @@ def import_products_csv(
     created = 0
     errors: list[str] = []
     vendor = db.get(Vendor, profile.vendor_id)
+    # Formule gratuite : l'import ne contourne pas la limite de produits visibles (le reste est importé masqué).
+    free_room = shop_plan.free_slots_left(db, profile)
+    hidden_by_plan = 0
     for index, row in enumerate(parsed_rows, start=2):
         if created >= 2000:
             errors.append("Limite de 2000 produits par import atteinte.")
@@ -952,6 +955,10 @@ def import_products_csv(
         if amount <= 0:
             errors.append(f"Ligne {index}: prix doit etre positif, ignoree.")
             continue
+        visible = free_room is None or free_room > 0
+        if free_room is not None:
+            free_room -= 1 if visible else 0
+            hidden_by_plan += 0 if visible else 1
         product = Product(name=name[:200], brand=brand[:120], description=description, specs={})
         db.add(product)
         db.flush()
@@ -962,7 +969,7 @@ def import_products_csv(
                 currency="XOF",
                 amount=amount,
                 stock_quantity=max(0, stock),
-                is_active=True,
+                is_active=visible,
             )
         )
         created += 1
@@ -979,6 +986,12 @@ def import_products_csv(
         entity_id=profile.vendor_id,
         details={"created": created, "errors": len(errors)},
     )
+    if hidden_by_plan:
+        errors.insert(
+            0,
+            f"Formule gratuite : {hidden_by_plan} produit(s) importé(s) mais masqué(s) (limite de produits visibles atteinte). "
+            "Prenez l'abonnement Boutique pour tout afficher.",
+        )
     db.commit()
     _invalidate_public_marketplace_cache()
     return {"created": created, "errors": errors[:50]}

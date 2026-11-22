@@ -107,6 +107,13 @@ def visible_count(db: Session, vendor_id: str) -> int:
     )
 
 
+def free_slots_left(db: Session, profile: SellerProfile, now: datetime | None = None) -> int | None:
+    """Produits qu'on peut encore rendre visibles en formule gratuite ; None = pas de limite (abonnement, essai, Premium)."""
+    if not is_free_plan(profile, now):
+        return None
+    return max(0, max_free_products(db) - visible_count(db, profile.vendor_id))
+
+
 def ensure_free_slot(db: Session, profile: SellerProfile, now: datetime | None = None) -> None:
     """Avant de mettre un produit en ligne : en formule gratuite, pas plus de N produits visibles."""
     if not is_free_plan(profile, now):

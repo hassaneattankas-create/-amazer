@@ -247,3 +247,65 @@ def test_paying_shop_has_no_catalogue_cap_but_free_plan_does(db: Session) -> Non
     assert not plan.catalog_capped(seller(db, "abonne", paid_days=10))
     assert plan.catalog_capped(seller(db, "gratuit", paid_days=-1))
     assert not plan.catalog_capped(seller(db, "premium", tier="premium", paid_days=-1))
+
+
+# ---------------------------------------------------------------- formule gratuite : par les vraies routes du vendeur
+
+
+def _seller_routes(monkeypatch, db: Session):
+    from types import SimpleNamespace
+
+    from app.models.price_history import PriceHistory
+    from app.routes import seller as route
+
+    PriceHistory.__table__.create(db.get_bind(), checkfirst=True)
+
+    for name in ("enforce_csrf", "_invalidate_public_marketplace_cache", "append_audit_log"):
+        if hasattr(route, name):
+            monkeypatch.setattr(route, name, lambda *_a, **_k: None)
+    monkeypatch.setattr(route, "guess_category_id", lambda *_a, **_k: None, raising=False)
+    request = SimpleNamespace(client=None, url=SimpleNamespace(path="/test"), cookies={}, headers={})
+    return route, request
+
+
+def test_free_shop_cannot_publish_a_sixth_product_through_the_route(db: Session, monkeypatch) -> None:
+    from app.schemas.seller import SellerProductCreateRequest
+
+    route, request = _seller_routes(monkeypatch, db)
+    shop = seller(db, "gratuit", paid_days=-1)
+    user = db.get(User, "gratuit")
+    for index in range(5):
+        route.create_product_listing(SellerProductCreateRequest(name=f"Produit {index}", amount=1000), request, db, user)
+    assert plan.visible_count(db, shop.vendor_id) == 5
+    with pytest.raises(ValidationDomainError, match="5 produits visibles"):
+        route.create_product_listing(SellerProductCreateRequest(name="Produit 6", amount=1000), request, db, user)
+    assert plan.visible_count(db, shop.vendor_id) == 5
+
+
+def test_free_shop_cannot_reshow_a_hidden_product_beyond_five(db: Session, monkeypatch) -> None:
+    from app.schemas.seller import SellerInventoryUpdateRequest
+
+    route, request = _seller_routes(monkeypatch, db)
+    shop = seller(db, "cache", paid_days=-1)
+    products(db, shop, 5)
+    hidden = products(db, shop, 1, active=False)[0]
+    with pytest.raises(ValidationDomainError, match="5 produits visibles"):
+        route.update_inventory_item(hidden.id, SellerInventoryUpdateRequest(is_active=True), request, db, db.get(User, "cache"))
+
+
+def test_subscribed_shop_publishes_more_than_five(db: Session, monkeypatch) -> None:
+    from app.schemas.seller import SellerProductCreateRequest
+
+    route, request = _seller_routes(monkeypatch, db)
+    shop = seller(db, "abonne", paid_days=20)
+    user = db.get(User, "abonne")
+    for index in range(7):
+        route.create_product_listing(SellerProductCreateRequest(name=f"Article {index}", amount=500), request, db, user)
+    assert plan.visible_count(db, shop.vendor_id) == 7
+
+
+def test_free_slots_left_counts_down_and_ignores_subscribers(db: Session) -> None:
+    free = seller(db, "petit", paid_days=-1)
+    products(db, free, 3)
+    assert plan.free_slots_left(db, free) == 2
+    assert plan.free_slots_left(db, seller(db, "grand", paid_days=10)) is None
