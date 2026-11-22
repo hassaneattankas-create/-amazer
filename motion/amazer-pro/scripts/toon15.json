@@ -1,0 +1,107 @@
+{
+ "id": "toon15",
+ "nom": "pub-personnages-13_tu-connais-un-commercant",
+ "titre": "Affiliation : tu connais un commerçant ?",
+ "voix": "fr-FR-DeniseNeural",
+ "vitesse": "+8%",
+ "tenue": 1.8,
+ "scenes": [
+  {
+   "type": "choc",
+   "voix": "Tu connais un commerçant ? Alors tu peux gagner de l'argent.",
+   "fond": "nuit",
+   "lignes": [
+    "Tu connais un",
+    "*commerçant* ?"
+   ],
+   "tampon": "STOP !",
+   "tampon_de": 2.2,
+   "perso": "fati",
+   "humeur": "surpris",
+   "telephone": true
+  },
+  {
+   "type": "partage",
+   "voix": "Pose juste cette question à tes contacts, sur WhatsApp.",
+   "transition": "balayage",
+   "perso": "fati",
+   "amis": [
+    "Awa",
+    "Issa",
+    "Mariama",
+    "Seyni"
+   ],
+   "lien": "amazer.store/vendre",
+   "gains": [
+    "+ 250 F",
+    "+ 400 F",
+    "+ 1 000 F",
+    "+ 2 000 F"
+   ],
+   "sous_titres": [
+    {
+     "texte": "« Tu connais un\n*commerçant* ? »",
+     "de": 0.1,
+     "y": 230,
+     "taille": 62
+    }
+   ]
+  },
+  {
+   "type": "compteur",
+   "voix": "Il s'inscrit sur AMAZER grâce à toi ? Tu touches vingt pour cent de son abonnement, chaque mois, pendant six mois.",
+   "perso": "fati",
+   "montant": 20,
+   "signe": "",
+   "devise": "%",
+   "avant": "Pour chaque *vendeur* abonné",
+   "apres": "chaque mois · pendant 6 mois",
+   "duree_compte": 1.6
+  },
+  {
+   "type": "compteur",
+   "voix": "Et deux cent cinquante francs pour chaque nouveau client, après sa première commande livrée.",
+   "perso": "hamza",
+   "montant": 250,
+   "signe": "+",
+   "devise": "F CFA",
+   "avant": "Chaque *nouveau client*",
+   "apres": "après sa 1re commande livrée",
+   "duree_compte": 1.4
+  },
+  {
+   "type": "ecrans",
+   "voix": "Les messages sont déjà prêts dans ton espace Affiliation.",
+   "ecrans": [
+    {
+     "img": "37-affiliation-kit-long.png",
+     "de": 0,
+     "texte": "Messages *prêts* à envoyer",
+     "scroll": [
+      0,
+      620,
+      0.5,
+      2.6
+     ]
+    }
+   ],
+   "fin": 1.8
+  },
+  {
+   "type": "fin",
+   "voix": "AMAZER. Une question, un contact, des gains.",
+   "slogan": "Une question, un contact,\n*des gains.*",
+   "slogan_taille": 76,
+   "mention": "Programme d'affiliation AMAZER",
+   "contact": [
+    "Tél. 96 95 31 63",
+    "amazer.niger2@gmail.com"
+   ],
+   "sous_titres_voix": [
+    "AMAZER.",
+    "Une question, un contact,",
+    "des gains."
+   ]
+  }
+ ]
+}
