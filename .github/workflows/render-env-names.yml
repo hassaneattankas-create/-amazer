@@ -1,0 +1,20 @@
+name: Réglages Render (noms seulement)
+
+# Lancement manuel. Indique quels réglages (variables d'environnement) existent sur le serveur amazer-api,
+# sans jamais afficher leurs valeurs.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  noms:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+    steps:
+      - name: Lister les noms des réglages
+        run: |
+          id=$(curl -sS -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services?name=amazer-api&limit=5" | jq -r '.[0].service.id')
+          echo "service: amazer-api"
+          curl -sS -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/$id/env-vars?limit=100" \
+            | jq -r '.[].envVar | "\(.key) (\(if (.value // "") == "" then "vide" else "défini" end))"' | sort | tee -a "$GITHUB_STEP_SUMMARY"
