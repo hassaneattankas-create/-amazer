@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
+import { useClientMounted } from "@/hooks/use-client-mounted";
+
 const STACK_KEY = "amazer-nav-stack";
 
 function readStack(): string[] {
@@ -33,6 +35,9 @@ function writeStack(stack: string[]): void {
 export function BackButton({ variant = "icon" }: { variant?: "icon" | "bar" }) {
   const pathname = usePathname();
   const router = useRouter();
+  // La page d'accueil est préparée à l'avance par le serveur, qui ne connaît pas toujours l'adresse réelle :
+  // on ne décide d'afficher « Retour » qu'une fois dans le navigateur (sinon erreur React #418).
+  const mounted = useClientMounted();
 
   // Pile des pages visitées pendant la visite : sert à savoir s'il y a une page AMAZER où revenir.
   useEffect(() => {
@@ -47,7 +52,7 @@ export function BackButton({ variant = "icon" }: { variant?: "icon" | "bar" }) {
     writeStack(stack);
   }, [pathname]);
 
-  const isHome = !pathname || pathname === "/";
+  const isHome = !mounted || !pathname || pathname === "/";
 
   const goBack = () => {
     if (readStack().length > 1) {
