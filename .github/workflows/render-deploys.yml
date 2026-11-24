@@ -1,0 +1,19 @@
+name: État des déploiements Render (lecture seule)
+
+# Lancement manuel. Affiche les derniers déploiements du serveur amazer-api (état, date, commit), sans rien modifier.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  etat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+    steps:
+      - name: Derniers déploiements
+        run: |
+          id=$(curl -sS -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services?name=amazer-api&limit=5" | jq -r '.[0].service.id')
+          curl -sS -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/$id/deploys?limit=4" \
+            | jq -r '.[].deploy | "\(.status) | \(.createdAt) | \(.commit.id // "-" | .[0:8]) | \(.commit.message // "" | split("\n")[0] | .[0:70])"' \
+            | tee -a "$GITHUB_STEP_SUMMARY"
