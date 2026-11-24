@@ -19,16 +19,13 @@ from app.models.fuel_history import FuelStatusChange
 from app.models.fuel_outlet import FuelOutlet, FuelOutletManager, FuelRegionManager
 from app.models.fuel_outlet_stat import FuelOutletDailyStat
 from app.models.seller_profile import SellerProfile
-from app.models.user import User
 from app.models.vendor import Vendor
 from app.repositories.catalog_repository import active_subscription_clause
 from app.services import local_services as svc
-from app.services.email_delivery_service import email_delivery_configured, send_email
 from app.services.notification_service import NotificationPayload, NotificationService
 from app.services.seller_finance_service import get_or_create_global_settings
 
 logger = logging.getLogger(__name__)
-SITE = "https://amazer.store"
 MONTHS = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre")
 REPORT_DAYS = 3
 
@@ -59,9 +56,7 @@ def _notify(db: Session, user_id: str, title: str, body: str, tag: str, href: st
             NotificationService(db).send_to_user(user_id=user_id, payload=NotificationPayload(title=title, body=body, data={"tag": tag, "href": href}))
     except Exception:  # noqa: BLE001 - une notification ratee ne bloque pas les autres
         logger.exception("Notification station impossible (%s).", tag)
-    user = db.get(User, user_id)
-    if user is not None and user.email and email_delivery_configured():
-        send_email(user.email, f"AMAZER · {title}", f"{body}\n\n{SITE}{href}\n\nL'équipe AMAZER")
+    # La copie par e-mail est faite par send_to_user (une seule, selon la préférence de l'utilisateur).
 
 
 def send_station_reminders(db: Session, now: datetime) -> int:

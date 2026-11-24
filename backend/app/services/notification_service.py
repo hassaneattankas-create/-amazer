@@ -6,12 +6,16 @@ from typing import Any
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
+from app.core.permissions import is_admin
 from app.models.app_notification import AppNotification
 from app.models.notification import NotificationToken
 from app.models.user import User
 from app.models.user_preferences import UserPreferences
 from app.services.notification_relay_service import relay_notification
 from app.services.push_delivery_service import send_fcm_push
+
+# Seules les notifications admin dont le tag commence ainsi partent aussi par e-mail / WhatsApp.
+ADMIN_BRIEF_TAG_PREFIX = "admin-brief-"
 
 
 def _fit(value: str, limit: int) -> str:
@@ -128,7 +132,10 @@ class NotificationService:
     self.create_notification(user_id=user_id, payload=payload, tag=tag, href=href)
     # Copie par e-mail / WhatsApp pour que l'utilisateur la recoive directement.
     user = self.db.get(User, user_id)
-    if user is not None and getattr(user, "is_active", True):
+    # Admin : un seul e-mail par jour, le resume du matin ; tout le reste reste sur le site
+    # (cloche et page « A traiter »), sinon sa boite recoit chaque paiement et chaque commande.
+    admin_quiet = user is not None and is_admin(user) and not tag.startswith(ADMIN_BRIEF_TAG_PREFIX)
+    if user is not None and getattr(user, "is_active", True) and not admin_quiet:
       prefs = self.db.get(UserPreferences, user_id)
       relay_notification(
         user_id=user_id,
