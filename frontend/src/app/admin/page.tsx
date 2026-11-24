@@ -37,7 +37,7 @@ import {
   listResellerPayments,
   listVendorPayouts,
 } from "@/services/finance-service";
-import { listConversationReports, listVendorReviewsAdmin } from "@/services/moderation-service";
+import { listConversationReports, listDigitalProducts, listVendorReviewsAdmin } from "@/services/moderation-service";
 
 type Tile = { href: string; label: string; hint: string; icon: LucideIcon; count: number | null; urgent?: boolean };
 
@@ -97,6 +97,7 @@ export default function AdminHomePage() {
   const sellers = useQuery({ queryKey: ["admin-sellers"], queryFn: listAdminSellers });
   const reviews = useQuery({ queryKey: ["admin-vendor-reviews"], queryFn: listVendorReviewsAdmin });
   const transport = useQuery({ queryKey: ["admin-transport-commissions", "current"], queryFn: () => getTransportCommissions(), retry: false });
+  const digital = useQuery({ queryKey: ["admin-digital-products"], queryFn: () => listDigitalProducts(true), retry: false });
   const officialLists = useQuery({ queryKey: ["admin-official-lists"], queryFn: listAdminOfficialLists });
 
   const count = <T,>(q: { data?: T[]; isSuccess: boolean }, keep: (row: T) => boolean = () => true) =>
@@ -164,6 +165,14 @@ export default function AdminHomePage() {
       hint: "Part d'AMAZER sur les billets du mois, à réclamer aux compagnies.",
       icon: Bus,
       count: transport.isSuccess ? transport.data.rows.filter((row) => row.to_collect > 0).length : null,
+    },
+    {
+      href: "/admin/moderation",
+      label: "Produits numériques à valider",
+      hint: "Un vendeur a coché « numérique » : valider un e-book, refuser un objet à livrer.",
+      icon: AlertTriangle,
+      count: count(digital),
+      urgent: true,
     },
     { href: "/admin/remboursements", label: "Remboursements à faire", hint: "Commandes payées puis annulées.", icon: RotateCcw, count: count(refunds) },
     {

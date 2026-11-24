@@ -158,6 +158,8 @@ class SellerInventoryItemResponse(BaseModel):
     # Prix normal (hors promo) : c'est lui qu'on modifie dans « Prix ».
     regular_amount: float | None = None
     is_digital: bool = False
+    # Numérique validé par AMAZER (sinon le produit est livré comme un objet physique).
+    digital_verified: bool = False
 
 
 class SellerInventoryUpdateRequest(BaseModel):
@@ -264,6 +266,8 @@ class SellerStorefrontProductResponse(BaseModel):
     currency: str
     main_image_url: str | None
     is_digital: bool = False
+    # Numérique validé par AMAZER (sinon le produit est livré comme un objet physique).
+    digital_verified: bool = False
 
 
 class SellerStorefrontResponse(BaseModel):

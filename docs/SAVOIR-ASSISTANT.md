@@ -43,7 +43,7 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - Commandes : filtres À traiter, En cours, Terminées, Paiement en attente. États : Paiement en vérification (AMAZER vérifie, le vendeur est prévenu ensuite), À préparer, En préparation, En livraison, Livrée, Annulée. Boutons : « Préparer la commande », « Remise au livreur », « Marquer livrée ».
 - Produits : recherche, filtres En ligne / Masqués / Stock faible ; « Modifier » (marque, prix normal, stock, description, photo), « Remettre en ligne », « Supprimer ».
 - Promotion : dans « Modifier », mettre un prix promo plus bas et une durée : le produit apparaît dans « Promotions » avec le prix normal barré, puis revient seul à son prix normal ; « Arrêter la promo » pour la finir avant.
-- Ajouter un produit : nom, marque (facultatif), catégorie, prix (XOF), stock, photo (prendre une photo ou galerie), description, puis « Ajouter au catalogue ». Case « Produit numérique (e-book, formation, code…) » : pas de frais de livraison, le vendeur l'envoie au client (WhatsApp ou e-mail) après le paiement.
+- Ajouter un produit : nom, marque (facultatif), catégorie, prix (XOF), stock, photo (prendre une photo ou galerie), description, puis « Ajouter au catalogue ». Case « Produit numérique (e-book, formation, code…) » : c'est une demande ; AMAZER la vérifie (Admin › Modération › « Produits numériques à valider »). Jusqu'à la validation, le produit est livré normalement avec les frais de livraison ; une fois validé, pas de frais de livraison et le vendeur l'envoie au client (WhatsApp ou e-mail) après le paiement. Un objet (téléphone, vêtement…) n'est jamais numérique. Changer le nom d'un produit numérique validé demande une nouvelle validation.
 - Outils Premium : « Importer des produits » (fichier CSV : nom, marque, prix, stock, description), « Import rapide par photos » (un produit brouillon, masqué, par photo : compléter ensuite le nom et le prix puis l'activer), « Exporter mes ventes ».
 - Réglages : « Compléter mon profil » ; « Supprimer mon compte » (mot de passe actuel ; irréversible : boutique fermée et données anonymisées).
 
@@ -260,6 +260,7 @@ Format : `## Titre` = une fiche ; les lignes `- …` = son contenu. La section
 - Effet : les stations apparaissent sur la carte et dans la liste « Où trouver de l'essence », et les clients abonnés à « Me prévenir » dans cette ville reçoivent une alerte.
 
 ## Admin · Modération
+- Produits numériques à valider (en tête de la page) : « Valider (numérique) » pour un e-book, une formation, un code ; « Refuser (à livrer) » pour un objet, qui sera livré par AMAZER avec les frais de livraison. Le vendeur est prévenu.
 - Où : Admin › « Modération ». Signalements de conversations (faits par les clients ou les vendeurs), avis sur les établissements, avis sur AMAZER (page « Avis »).
 - Un compte qui abuse : le retirer dans Utilisateurs.
 

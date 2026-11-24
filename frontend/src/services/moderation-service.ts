@@ -80,3 +80,30 @@ export async function setProductVisibility(priceId: string, visible: boolean, re
     data: { visible, reason },
   });
 }
+
+/** Produits déclarés « numériques » par les vendeurs (à valider : sans livraison, ou à refuser). */
+export type AdminDigitalProduct = {
+  price_id: string;
+  product_name: string;
+  description: string | null;
+  vendor_name: string;
+  amount: number;
+  image_url: string | null;
+  verified: boolean;
+};
+
+export async function listDigitalProducts(pendingOnly = true): Promise<AdminDigitalProduct[]> {
+  return adminProxyRequest<AdminDigitalProduct[]>({
+    url: "/admin/moderation/digital-products",
+    method: "GET",
+    params: { pending_only: pendingOnly },
+  });
+}
+
+export async function decideDigitalProduct(priceId: string, approve: boolean, reason = ""): Promise<AdminDigitalProduct> {
+  return adminProxyRequest<AdminDigitalProduct>({
+    url: `/admin/moderation/digital-products/${priceId}`,
+    method: "POST",
+    data: { approve, reason },
+  });
+}

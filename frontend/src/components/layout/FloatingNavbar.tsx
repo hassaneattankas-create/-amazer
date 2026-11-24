@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, ShoppingCart, User } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -86,8 +85,6 @@ const SESSION_DRAFT_KEYS = [
 
 export function FloatingNavbar() {
   const t = useT();
-  const pathname = usePathname();
-  const showBack = Boolean(pathname && pathname !== "/");
   const isClient = useClientMounted();
   const queryClient = useQueryClient();
   const items = useCartStore((state) => state.items);
@@ -402,8 +399,7 @@ export function FloatingNavbar() {
         <BackButton />
         <Link href="/" className="mr-auto inline-flex shrink-0 items-center gap-2 md:mr-2" aria-label="AMAZER, accueil">
           <Image src="/logo-amazer-mark-128.png" alt="" width={36} height={36} priority className="h-9 w-9" />
-          {/* Avec la flèche Retour (toutes les pages sauf l'accueil), le nom se cache sur petit écran pour tenir en 360 px. */}
-          <span className={`text-xl font-extrabold tracking-display text-ink-900 ${showBack ? "hidden sm:inline" : ""}`}>AMAZER</span>
+          <span className="text-xl font-extrabold tracking-display text-ink-900">AMAZER</span>
         </Link>
 
         <div className="relative">
@@ -569,6 +565,8 @@ export function FloatingNavbar() {
           ) : null}
         </Link>
       </div>
+      {/* Téléphone : « ← Retour » sur une fine ligne, l'en-tête restant identique sur toutes les pages. */}
+      <BackButton variant="bar" />
     </header>
   );
 }

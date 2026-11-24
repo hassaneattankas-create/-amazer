@@ -23,6 +23,7 @@ from app.models.hospitality import HotelBooking, RestaurantReservation
 from app.models.order import Order, OrderItem
 from app.models.price_history import PriceHistory
 from app.models.product import Price, Product
+from app.services import digital_products
 from app.services import shop_plan_service as shop_plan
 from app.services import vendor_payout_service as vendor_payouts
 from app.services.payment_methods import require_active_method
@@ -708,6 +709,7 @@ def _build_public_storefront(vendor_id: str, db: Session) -> SellerStorefrontRes
                 currency=row.currency,
                 main_image_url=_resolve_product_main_image(row.product),
                 is_digital=bool((row.product.specs or {}).get("is_digital")),
+                digital_verified=bool((row.product.specs or {}).get("digital_verified")),
             )
             for row in products
         ],
@@ -1152,6 +1154,7 @@ def list_inventory(
                 promo_until=promo_until,
                 regular_amount=promo_service.normal_price(row),
                 is_digital=bool((row.product.specs or {}).get("is_digital")),
+                digital_verified=bool((row.product.specs or {}).get("digital_verified")),
             )
         )
     if dirty:
@@ -1311,7 +1314,11 @@ def update_inventory_item(
     now = datetime.now(UTC)
     specs = dict(price.product.specs or {})
     if payload.product_name is not None:
-        price.product.name = payload.product_name.strip()
+        new_name = payload.product_name.strip()
+        # Un produit numérique validé qui change de nom doit être revalidé (sinon on pourrait renommer un e-book en téléphone).
+        if new_name != price.product.name:
+            specs.pop(digital_products.VERIFIED, None)
+        price.product.name = new_name
     if payload.brand is not None:
         price.product.brand = payload.brand.strip() or price.product.brand
     if payload.category_id is not None:
@@ -1324,10 +1331,7 @@ def update_inventory_item(
     if payload.description is not None:
         price.product.description = payload.description.strip() or None
     if payload.is_digital is not None:
-        if payload.is_digital:
-            specs["is_digital"] = True
-        else:
-            specs.pop("is_digital", None)
+        digital_products.apply_seller_choice(specs, payload.is_digital)
     if payload.main_image_url is not None:
         price.product.main_image_url = _normalize_product_image_url(payload.main_image_url)
     if payload.stock_quantity is not None:
@@ -1408,6 +1412,7 @@ def update_inventory_item(
         promo_until=promo_until,
         regular_amount=promo_service.normal_price(price),
         is_digital=bool((price.product.specs or {}).get("is_digital")),
+        digital_verified=bool((price.product.specs or {}).get("digital_verified")),
     )
 
 

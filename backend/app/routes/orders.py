@@ -26,6 +26,7 @@ from app.models.order import Order, OrderFulfillment, OrderItem
 from app.models.product import Price, Product
 from app.models.receipt_scan import ReceiptScan
 from app.models.reseller import ResellerListing
+from app.services import digital_products
 from app.services import delivery_position
 from app.services.payment_methods import intent_details, require_active_method
 from app.services.order_delivery_service import mark_order_delivered
@@ -490,7 +491,7 @@ def _price_cart(db: Session, items: list, *, lock: bool) -> _PricedCart:
         cart.validated_items.append((price, item.quantity, listing))
         cart.vendor_ids.add(price.vendor_id)
         # Produit numerique : pas de livraison. Un vendeur n'est facture que s'il a un article physique.
-        if not (getattr(price.product, "specs", None) or {}).get("is_digital"):
+        if not digital_products.is_digital(getattr(price.product, "specs", None)):
             cart.shipped_vendor_ids.add(price.vendor_id)
     return cart
 

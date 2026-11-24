@@ -203,7 +203,7 @@ export function ShopView({ vendorId }: { vendorId: string }) {
           name: data.product.name,
           offersSnapshot: chosen ? [chosen] : [],
           quantity: 1,
-          isDigital: Boolean(data.product.specs?.is_digital),
+          isDigital: Boolean(data.product.specs?.is_digital && data.product.specs?.digital_verified),
         });
         if (redirectToCart) {
           router.push("/cart");

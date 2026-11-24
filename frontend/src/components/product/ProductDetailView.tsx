@@ -84,7 +84,8 @@ export function ProductDetailView({ productId }: { productId: string }) {
   const isOnPromo = originalPrice !== null && originalPrice > best.amount;
   const currentImage = gallery[activeImage] ?? null;
 
-  const isDigital = Boolean(product.specs?.is_digital);
+  // Numérique seulement si AMAZER l'a validé ; sinon, livraison normale.
+  const isDigital = Boolean(product.specs?.is_digital && product.specs?.digital_verified);
   const addToCart = () => {
     addItem({ productId: product.id, name: product.name, offersSnapshot: [best], quantity: 1, isDigital });
     setCartMessage("Ajouté au panier.");

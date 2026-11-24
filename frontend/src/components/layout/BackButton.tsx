@@ -25,11 +25,12 @@ function writeStack(stack: string[]): void {
 }
 
 /**
- * Flèche « Retour » de l'en-tête, sur toutes les pages sauf l'accueil.
+ * « Retour » sur toutes les pages sauf l'accueil : flèche devant le logo sur ordinateur (variant « icon »),
+ * fine ligne « ← Retour » sous l'en-tête sur téléphone (variant « bar »), sans changer l'en-tête.
  * Revient à la page précédente du site ; si la personne est arrivée directement
  * (lien partagé, notification), elle mène à l'accueil au lieu de quitter AMAZER.
  */
-export function BackButton() {
+export function BackButton({ variant = "icon" }: { variant?: "icon" | "bar" }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -46,7 +47,7 @@ export function BackButton() {
     writeStack(stack);
   }, [pathname]);
 
-  if (!pathname || pathname === "/") return null;
+  const isHome = !pathname || pathname === "/";
 
   const goBack = () => {
     if (readStack().length > 1) {
@@ -56,12 +57,33 @@ export function BackButton() {
     }
   };
 
+  if (variant === "bar") {
+    // Téléphone : fine ligne sous l'en-tête, pour que l'en-tête reste identique sur toutes les pages.
+    if (isHome) return null;
+    return (
+      <div className="border-t border-border md:hidden">
+        <div className="mx-auto flex h-11 w-full max-w-7xl items-center px-gutter">
+          <button
+            type="button"
+            onClick={goBack}
+            className="-ml-2 inline-flex min-h-11 items-center gap-1 rounded-field px-2 text-sm font-semibold text-ink-800 hover:bg-surface-1"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Retour
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Ordinateur : flèche devant le logo ; sur l'accueil, la place reste réservée pour que le logo ne bouge pas.
+  if (isHome) return <span className="hidden h-11 w-11 shrink-0 md:inline-block" aria-hidden="true" />;
   return (
     <button
       type="button"
       onClick={goBack}
       aria-label="Retour à la page précédente"
-      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-field text-ink-800 transition-colors duration-fast hover:bg-surface-1"
+      className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-field text-ink-800 transition-colors duration-fast hover:bg-surface-1 md:inline-flex"
     >
       <ArrowLeft className="h-6 w-6" aria-hidden="true" />
     </button>

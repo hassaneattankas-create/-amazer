@@ -4,8 +4,11 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
+import { formatXOF } from "@/lib/currency";
 import {
+  decideDigitalProduct,
   listConversationReports,
+  listDigitalProducts,
   listPlatformFeedbackAdmin,
   listVendorReviewsAdmin,
   togglePlatformFeedback,
@@ -126,6 +129,67 @@ function PlatformFeedbackSection() {
   );
 }
 
+/** Produits déclarés « numériques » : AMAZER valide avant d'enlever la livraison (un téléphone n'est jamais numérique). */
+function DigitalProductsSection() {
+  const queryClient = useQueryClient();
+  const { data = [], isPending, isError } = useQuery({ queryKey: ["admin-digital-products"], queryFn: () => listDigitalProducts(true) });
+  const decide = useMutation({
+    mutationFn: ({ priceId, approve }: { priceId: string; approve: boolean }) =>
+      decideDigitalProduct(priceId, approve, approve ? "" : "Objet physique : il doit être livré par AMAZER."),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-digital-products"] }),
+  });
+  return (
+    <section aria-labelledby="digital-title" className="space-y-3">
+      <div>
+        <h2 id="digital-title" className="text-lg font-semibold text-ink-900">
+          Produits numériques à valider
+        </h2>
+        <p className="text-sm text-ink-600">
+          Le vendeur a coché « Produit numérique ». Tant que vous n&apos;avez pas validé, le produit est livré normalement. Validez seulement un
+          e-book, une formation, un code… ; refusez tout objet (téléphone, vêtement…).
+        </p>
+      </div>
+      {isPending ? (
+        <div className="h-20 animate-pulse rounded-card bg-surface-3" aria-busy="true" />
+      ) : isError ? (
+        <p className="text-sm text-danger" role="alert">
+          Chargement impossible. Vérifiez votre code PIN puis rechargez la page.
+        </p>
+      ) : data.length ? (
+        <ul className="divide-y divide-border rounded-card border border-border bg-card">
+          {data.map((item) => (
+            <li key={item.price_id} className="flex flex-wrap items-start justify-between gap-3 p-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-ink-900">
+                  {item.product_name} · {formatXOF(item.amount)}
+                </p>
+                <p className="text-sm text-ink-600">{item.vendor_name}</p>
+                {item.description ? <p className="mt-1 line-clamp-2 text-sm text-ink-800">{item.description}</p> : null}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" disabled={decide.isPending} onClick={() => decide.mutate({ priceId: item.price_id, approve: true })}>
+                  Valider (numérique)
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={decide.isPending}
+                  onClick={() => decide.mutate({ priceId: item.price_id, approve: false })}
+                >
+                  Refuser (à livrer)
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-ink-600">Aucun produit numérique en attente.</p>
+      )}
+    </section>
+  );
+}
+
 export default function AdminModerationPage() {
   return (
     <div className="space-y-6">
@@ -133,6 +197,7 @@ export default function AdminModerationPage() {
         <h1 className="text-2xl font-semibold text-ink-900">Modération</h1>
         <p className="mt-1 text-sm text-ink-600">Signalements des utilisateurs, avis sur les établissements et avis sur AMAZER.</p>
       </header>
+      <DigitalProductsSection />
       <ReportsSection />
       <ReviewsSection />
       <PlatformFeedbackSection />

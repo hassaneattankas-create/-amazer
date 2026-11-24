@@ -305,7 +305,16 @@ function ProductEditor({
       <SingleMediaField label="Photo" value={draft.image} onChange={set("image")} emptyMessage="Choisissez une photo" />
       <label className="flex min-h-11 items-center gap-2 text-sm font-medium text-ink-800">
         <input type="checkbox" className="h-5 w-5" checked={draft.digital} onChange={(e) => setDraft((prev) => ({ ...prev, digital: e.target.checked }))} />
-        Produit numérique : pas de frais de livraison
+        <span>
+          Produit numérique : pas de frais de livraison
+          {item.is_digital ? (
+            <span className={`block text-xs font-normal ${item.digital_verified ? "text-success" : "text-ink-600"}`}>
+              {item.digital_verified
+                ? "Validé par AMAZER."
+                : "En attente de validation par AMAZER : livré normalement en attendant."}
+            </span>
+          ) : null}
+        </span>
       </label>
       <div className="flex flex-wrap gap-2">
         <Button

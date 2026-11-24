@@ -158,6 +158,8 @@ export type SellerInventoryItem = {
   /** Prix normal (hors promo). Pendant une promo, « amount » vaut le prix promo. */
   regular_amount?: number | null;
   is_digital?: boolean;
+  /** Numérique validé par AMAZER (sinon livré comme un objet). */
+  digital_verified?: boolean;
 };
 
 export type SellerShopOrderItem = {
@@ -195,6 +197,8 @@ export type SellerStorefrontProduct = {
   currency: string;
   main_image_url: string | null;
   is_digital?: boolean;
+  /** Numérique validé par AMAZER (sinon livré comme un objet). */
+  digital_verified?: boolean;
 };
 
 export type SellerStorefront = {

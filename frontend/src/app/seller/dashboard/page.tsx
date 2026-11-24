@@ -643,7 +643,12 @@ export default function SellerDashboardPage() {
                   checked={productForm.is_digital}
                   onChange={(event) => setProductForm((prev) => ({ ...prev, is_digital: event.target.checked }))}
                 />
-                Produit numérique (e-book, formation, code…) : pas de frais de livraison
+                <span>
+                  Produit numérique (e-book, formation, code…) : pas de frais de livraison
+                  <span className="block text-xs font-normal text-ink-600">
+                    AMAZER vérifie d&apos;abord : jusque-là, le produit est livré normalement. Un objet (téléphone, vêtement…) n&apos;est jamais numérique.
+                  </span>
+                </span>
               </label>
             </div>
             <Button

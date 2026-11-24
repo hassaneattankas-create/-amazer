@@ -180,3 +180,111 @@ def set_product_visibility(
             except Exception:  # pragma: no cover - la notification ne doit pas annuler la moderation
                 db.rollback()
     return _product_item(price)
+
+
+# ------------------------------------------------------------------ produits numériques à valider
+
+from app.services import digital_products  # noqa: E402
+
+
+class DigitalProductItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    price_id: str
+    product_name: str
+    description: str | None
+    vendor_name: str
+    amount: float
+    image_url: str | None
+    verified: bool
+
+
+class DigitalDecisionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    approve: bool
+    reason: str = Field(default="", max_length=300)
+
+
+def _digital_item(price: Price) -> DigitalProductItem:
+    product = price.product
+    return DigitalProductItem(
+        price_id=price.id,
+        product_name=product.name if product else "Produit",
+        description=(product.description or None) if product else None,
+        vendor_name=price.vendor.name if price.vendor else "Boutique",
+        amount=float(price.amount),
+        image_url=product.main_image_url if product else None,
+        verified=digital_products.is_digital(product.specs if product else None),
+    )
+
+
+@router.get("/digital-products", response_model=list[DigitalProductItem])
+def list_digital_products(
+    db: Annotated[Session, Depends(get_db)],
+    _admin: Annotated[User, Depends(get_admin_user)],
+    pending_only: bool = Query(default=True),
+) -> list[DigitalProductItem]:
+    """Produits que le vendeur a déclarés « numériques » : à valider (sans livraison) ou à refuser."""
+    prices = db.scalars(
+        select(Price).options(selectinload(Price.product), selectinload(Price.vendor)).order_by(Price.created_at.desc()).limit(500)
+    ).all()
+    keep = digital_products.is_pending if pending_only else digital_products.is_requested
+    return [_digital_item(price) for price in prices if price.product is not None and keep(price.product.specs)]
+
+
+@router.post("/digital-products/{price_id}", response_model=DigitalProductItem)
+def decide_digital_product(
+    price_id: str,
+    payload: DigitalDecisionRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    admin_user: Annotated[User, Depends(get_admin_user)],
+) -> DigitalProductItem:
+    """Valider : produit numérique sans livraison. Refuser : il redevient un objet physique livré par AMAZER."""
+    enforce_csrf(request)
+    price = db.get(Price, price_id)
+    if price is None or price.product is None:
+        raise NotFoundError("Annonce introuvable")
+    specs = dict(price.product.specs or {})
+    if payload.approve:
+        specs[digital_products.REQUESTED] = True
+        specs[digital_products.VERIFIED] = True
+    else:
+        digital_products.apply_seller_choice(specs, False)
+    price.product.specs = specs
+    append_audit_log(
+        db,
+        event_type="admin_digital_product_decided",
+        actor=admin_user,
+        ip_address=client_ip(request),
+        path=str(request.url.path),
+        entity_type="price",
+        entity_id=price.id,
+        details={"approve": payload.approve, "reason": payload.reason},
+    )
+    db.commit()
+    db.refresh(price)
+    cache_delete_prefixes("catalog:", "content:")
+    seller_user_id = db.scalar(select(SellerProfile.user_id).where(SellerProfile.vendor_id == price.vendor_id))
+    if seller_user_id:
+        name = price.product.name
+        body = (
+            f"« {name} » est validé comme produit numérique : pas de frais de livraison, vous l'envoyez au client après le paiement."
+            if payload.approve
+            else f"« {name} » n'est pas un produit numérique : il sera livré par AMAZER, avec les frais de livraison habituels."
+            + (f" Motif : {payload.reason}" if payload.reason else "")
+        )
+        try:
+            NotificationService(db).send_to_user(
+                user_id=seller_user_id,
+                payload=NotificationPayload(
+                    title="Produit numérique validé" if payload.approve else "Produit numérique refusé",
+                    body=body[:300],
+                    data={"tag": f"digital-{price.id}", "href": "/seller/dashboard"},
+                ),
+            )
+            db.commit()
+        except Exception:  # noqa: BLE001 - la décision est enregistrée même si la notification échoue
+            db.rollback()
+    return _digital_item(price)
