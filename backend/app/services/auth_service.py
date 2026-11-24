@@ -209,7 +209,6 @@ class AuthService:
         return tokens
 
     def close_account(self, user: User, password: str) -> None:
-        settings = get_settings()
         if is_admin(user):
             raise ForbiddenError(
                 "Le compte administrateur ne peut pas etre supprime depuis l'application."

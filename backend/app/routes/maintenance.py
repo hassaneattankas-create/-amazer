@@ -14,20 +14,13 @@ from __future__ import annotations
 
 import hmac
 
-from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException
-from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import get_db
-from app.models.login_verification_code import LoginVerificationCode
-from app.models.seller_profile import SellerProfile
-from app.services.seller_subscription_reminder_service import (
-    maybe_send_seller_subscription_reminders,
-)
 
 router = APIRouter(prefix="/maintenance", tags=["maintenance"])
 settings = get_settings()
@@ -47,34 +40,7 @@ def run_maintenance(
     x_cron_secret: Annotated[str | None, Header(alias="X-Cron-Secret")] = None,
 ) -> dict[str, object]:
     _require_cron_secret(x_cron_secret)
-    now = datetime.now(UTC)
-    summary: dict[str, object] = {"ran_at": now.isoformat()}
+    # Même entretien que celui lancé chaque heure par le serveur (services/daily_maintenance).
+    from app.services import daily_maintenance
 
-    # 1) Rappels d'abonnement vendeur (la fonction dedup via le tag de notification).
-    reminders_checked = 0
-    profiles = db.scalars(
-        select(SellerProfile).where(
-            SellerProfile.subscription_paid_until.is_not(None),
-            SellerProfile.onboarding_fee_paid_at.is_not(None),
-        )
-    ).all()
-    for profile in profiles:
-        try:
-            maybe_send_seller_subscription_reminders(db, user_id=profile.user_id, profile=profile)
-            reminders_checked += 1
-        except Exception:
-            db.rollback()
-    summary["subscription_profiles_checked"] = reminders_checked
-
-    # 2) Nettoyage des codes de verification expires.
-    try:
-        result = db.execute(
-            delete(LoginVerificationCode).where(LoginVerificationCode.expires_at < now)
-        )
-        db.commit()
-        summary["verification_codes_deleted"] = int(result.rowcount or 0)
-    except Exception:
-        db.rollback()
-        summary["verification_codes_deleted"] = "error"
-
-    return summary
+    return daily_maintenance.run(db, force=True)

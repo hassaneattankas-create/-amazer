@@ -33,3 +33,9 @@ motion/remotion/out/
 # Tests de bout en bout : modules installes localement ou en CI
 tools/e2e/node_modules/
 tools/e2e/explainer/.work/
+
+# Archives et copies locales (jamais sur le dépôt public : 24 nov. 2026)
+*.bundle
+*.tar.gz
+amazer-main-3bfa/
+amazer-production-*/

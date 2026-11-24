@@ -4,6 +4,7 @@
  *   node scripts/make-splash.cjs          -> android/app/src/main/res/drawable*\/splash.png + public/splash/motif.svg
  * Puppeteer : celui de tools/e2e (aucune dépendance ajoutée au site).
  */
+/* eslint-disable @typescript-eslint/no-require-imports -- script Node (CommonJS), hors du site */
 const fs = require("fs");
 const path = require("path");
 const { pathToFileURL } = require("url");
@@ -39,6 +40,7 @@ function motif() {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${cols * step}" height="${rows * step}" viewBox="0 0 ${cols * step} ${rows * step}">${out}</svg>`;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- logo gardé pour une variante de l'écran
 const MARK = `<svg viewBox="96 100 320 310" xmlns="http://www.w3.org/2000/svg"><path d="M128 390L245 122H275L389 390H332L308 331H206L183 390H128Z" fill="#FF4D00"/><path d="M252 208L286 286H218L252 208Z" fill="#fff"/></svg>`;
 
 (async () => {

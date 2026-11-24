@@ -1106,7 +1106,6 @@ def get_restaurant_secure_receipt(
     else:
         token = create_receipt_access_token(order_id=order.id, digest=digest)
 
-    reference = order.payment_reference or _build_payment_reference(order.id)
     payment_url = build_payment_page_url(order.id, restaurant=True)
     wallet_phone = _resolve_platform_wallet_phone(db)
 

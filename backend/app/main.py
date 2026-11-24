@@ -541,9 +541,11 @@ def _station_tasks_once_per_hour() -> None:
         if claimed.rowcount:
             run_station_tasks(db, now)
             # Résumé du matin de l'admin (une fois par jour, après 7 h à Niamey).
-            from app.services import admin_brief
+            from app.services import admin_brief, daily_maintenance
 
             admin_brief.maybe_send(db, now)
+            # Rappels d'abonnement aux vendeurs (en journée) et nettoyage : plus besoin du cron GitHub.
+            daily_maintenance.run(db, now)
     except Exception:  # noqa: BLE001 - une tache ratee ne doit jamais casser /ping
         db.rollback()
         logger.exception("Taches des stations impossibles.")

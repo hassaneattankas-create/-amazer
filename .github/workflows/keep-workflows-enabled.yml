@@ -1,0 +1,30 @@
+name: Garder les tâches automatiques actives
+
+# GitHub désactive les tâches planifiées d'un dépôt resté 60 jours sans activité (c'est arrivé à la
+# maintenance en août). Chaque mois, ce job redemande à GitHub de garder actives les tâches vitales :
+# sauvegarde de la base, maintien en éveil du serveur, test du parcours client, et lui-même.
+on:
+  schedule:
+    - cron: "17 5 1,15 * *" # le 1er et le 15 de chaque mois, 05:17 UTC
+  workflow_dispatch: {}
+
+permissions:
+  actions: write
+
+jobs:
+  garder-actives:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Réactiver les tâches vitales
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          for wf in db-backup.yml keep-backend-alive.yml e2e-smoke.yml keep-workflows-enabled.yml; do
+            if gh api -X PUT "repos/$REPO/actions/workflows/$wf/enable" >/dev/null 2>&1; then
+              echo "✔ $wf actif" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              echo "✖ $wf : réactivation impossible" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          done

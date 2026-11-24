@@ -1,10 +1,11 @@
-fastapi==0.116.1
+fastapi==0.165.0
 uvicorn[standard]==0.35.0
 gunicorn==23.0.0
 sqlalchemy==2.0.43
 alembic==1.18.4
 psycopg[binary]==3.3.3
-python-jose[cryptography]==3.5.0
+PyJWT==2.15.1
+cryptography>=45
 passlib[bcrypt]==1.7.4
 bcrypt==4.3.0
 pydantic-settings==2.10.1
@@ -14,4 +15,4 @@ boto3==1.35.24
 python-multipart==0.0.31
 firebase-admin==7.1.0
 httpx==0.28.1
-Pillow>=10.4,<12
+Pillow>=13,<14

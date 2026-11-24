@@ -120,4 +120,16 @@ declare module "lucide-react" {
   export const PartyPopper: LucideIcon;
   export const LayoutList: LucideIcon;
   export const MapPinned: LucideIcon;
+  export const ArrowRight: LucideIcon;
+  export const ArrowLeftRight: LucideIcon;
+  export const Ticket: LucideIcon;
+  export const Info: LucideIcon;
+  export const Banknote: LucideIcon;
+  export const HandCoins: LucideIcon;
+  export const Shield: LucideIcon;
+  export const ShieldAlert: LucideIcon;
+  export const ListChecks: LucideIcon;
+  export const Quote: LucideIcon;
+  export const MessageSquareWarning: LucideIcon;
+  export const Route: LucideIcon;
 }

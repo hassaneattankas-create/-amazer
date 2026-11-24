@@ -532,7 +532,6 @@ def checkout(
     cart = _price_cart(db, payload.items, lock=True)
     validated_items = cart.validated_items
     order_currency = cart.currency
-    vendor_ids = cart.vendor_ids
     encrypted_code: str | None = None
     code_hash: str | None = None
     payment_status = "pending"
@@ -899,7 +898,6 @@ def get_secure_receipt(
     else:
         token = create_receipt_access_token(order_id=order.id, digest=digest)
 
-    reference = order.payment_reference or _build_payment_reference(order.id)
     payment_url = build_payment_page_url(order.id)
     wallet_phone = _resolve_platform_wallet_phone(db)
 
