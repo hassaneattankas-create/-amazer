@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, ShoppingCart, User } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -32,6 +33,7 @@ import {
   setPendingSellerPreReg,
   type PendingSellerPreReg,
 } from "@/lib/pending-seller";
+import { BackButton } from "@/components/layout/BackButton";
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 import { useT } from "@/lib/i18n";
 import { useAuthStore } from "@/store/auth-store";
@@ -84,6 +86,8 @@ const SESSION_DRAFT_KEYS = [
 
 export function FloatingNavbar() {
   const t = useT();
+  const pathname = usePathname();
+  const showBack = Boolean(pathname && pathname !== "/");
   const isClient = useClientMounted();
   const queryClient = useQueryClient();
   const items = useCartStore((state) => state.items);
@@ -395,9 +399,11 @@ export function FloatingNavbar() {
       className="sticky top-0 z-dropdown w-full border-b border-border bg-background/95 backdrop-blur"
     >
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-gutter sm:h-16 sm:gap-3">
+        <BackButton />
         <Link href="/" className="mr-auto inline-flex shrink-0 items-center gap-2 md:mr-2" aria-label="AMAZER, accueil">
           <Image src="/logo-amazer-mark-128.png" alt="" width={36} height={36} priority className="h-9 w-9" />
-          <span className="text-xl font-extrabold tracking-display text-ink-900">AMAZER</span>
+          {/* Avec la flèche Retour (toutes les pages sauf l'accueil), le nom se cache sur petit écran pour tenir en 360 px. */}
+          <span className={`text-xl font-extrabold tracking-display text-ink-900 ${showBack ? "hidden sm:inline" : ""}`}>AMAZER</span>
         </Link>
 
         <div className="relative">
