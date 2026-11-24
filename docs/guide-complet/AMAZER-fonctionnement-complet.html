@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>AMAZER — Fonctionnement complet de la plateforme</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  :root { --brand: #FF4D00; --brand-dark: #C93D00; --ink: #1A1A2E; --navy: #1E1B4B; --muted: #5B6475; --line: #E3E6EC; --soft: #FFF3EC; --soft2: #F5F6F9; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, Helvetica, sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.5; margin: 0; }
+  h1, h2, h3 { color: var(--navy); line-height: 1.2; }
+  h2 { font-size: 20pt; margin: 0 0 4mm; padding-bottom: 2.5mm; border-bottom: 3px solid var(--brand); }
+  h3 { font-size: 13pt; margin: 6mm 0 2mm; color: var(--brand-dark); break-after: avoid; }
+  h4 { font-size: 11pt; margin: 4mm 0 1.5mm; color: var(--navy); break-after: avoid; }
+  p { margin: 0 0 2.5mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1.2mm; }
+  .part { break-before: page; }
+  .lead { font-size: 11.5pt; color: var(--muted); margin-bottom: 5mm; }
+  .box { background: var(--soft2); border-left: 4px solid var(--navy); padding: 3mm 4mm; border-radius: 2mm; margin: 3mm 0; break-inside: avoid; }
+  .tip { background: var(--soft); border-left: 4px solid var(--brand); padding: 3mm 4mm; border-radius: 2mm; margin: 3mm 0; break-inside: avoid; }
+  .tip b:first-child, .box b:first-child { color: var(--brand-dark); }
+  .path { font-family: Consolas, "Courier New", monospace; background: #EEF0F5; padding: 0.3mm 1.5mm; border-radius: 1mm; font-size: 9.5pt; white-space: nowrap; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 9.8pt; break-inside: avoid; }
+  th { background: var(--navy); color: #fff; text-align: left; padding: 2mm 2.5mm; font-weight: 600; }
+  td { padding: 1.8mm 2.5mm; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:nth-child(even) td { background: #FAFBFC; }
+  .steps { counter-reset: s; list-style: none; padding-left: 0; }
+  .steps li { counter-increment: s; position: relative; padding-left: 9mm; }
+  .steps li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 6mm; height: 6mm; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 700; font-size: 9pt; text-align: center; line-height: 6mm; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .card { border: 1px solid var(--line); border-radius: 2.5mm; padding: 3mm 4mm; break-inside: avoid; }
+  .card h4 { margin-top: 0; }
+  /* Couverture */
+  .cover { height: 255mm; display: flex; flex-direction: column; justify-content: space-between; background: var(--navy); color: #fff; margin: -18mm -16mm 0; padding: 30mm 22mm 22mm; }
+  .cover .logo { display: inline-flex; align-items: center; gap: 4mm; }
+  .cover .mark { width: 18mm; height: 18mm; border-radius: 4mm; background: #fff; color: var(--brand); font-weight: 900; font-size: 26pt; display: grid; place-items: center; }
+  .cover .name { font-size: 30pt; font-weight: 800; letter-spacing: 1px; }
+  .cover h1 { color: #fff; font-size: 34pt; margin: 0 0 6mm; }
+  .cover h1 span { color: var(--brand); }
+  .cover p { font-size: 13pt; color: #D6D8EA; max-width: 150mm; }
+  .cover .meta { font-size: 10.5pt; color: #AEB2CF; border-top: 1px solid #3A3768; padding-top: 5mm; }
+  /* Sommaire */
+  .toc ol { list-style: none; padding: 0; counter-reset: t; }
+  .toc li { counter-increment: t; display: flex; gap: 3mm; padding: 2.2mm 0; border-bottom: 1px dashed var(--line); font-size: 11.5pt; }
+  .toc li::before { content: counter(t); min-width: 8mm; height: 8mm; border-radius: 2mm; background: var(--soft); color: var(--brand-dark); font-weight: 800; text-align: center; line-height: 8mm; }
+  .toc li span { color: var(--muted); font-size: 10pt; display: block; }
+  .small { font-size: 9pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ============================ COUVERTURE ============================ -->
+<section class="cover">
+  <div class="logo"><div class="mark">A</div><div class="name">AMAZER</div></div>
+  <div>
+    <h1>Fonctionnement complet<br><span>de la plateforme</span></h1>
+    <p>Tout ce qui existe sur AMAZER, expliqué simplement : les clients, les commerçants, les restaurants, les hôtels et compagnies de transport, les pharmacies, les stations-essence, ceux qui gagnent de l'argent avec AMAZER, l'administration et l'Assistant.</p>
+  </div>
+  <div class="meta">amazer.store · application Android · Niamey, Niger<br>Contact : amazer.niger2@gmail.com · Tél. 96 95 31 63<br>Version du 24 novembre 2026 — les montants indiqués sont les réglages en vigueur à cette date ; ils se changent dans Admin › Vendeurs et tarifs.</div>
+</section>
+
+<!-- ============================ SOMMAIRE ============================ -->
+<section class="part toc">
+  <h2>Sommaire</h2>
+  <ol>
+    <li><div>AMAZER en bref<span>Ce qu'est AMAZER, qui l'utilise, les grandes règles</span></div></li>
+    <li><div>Formules et prix<span>Ce que paie chaque type de vendeur, et ce que gagne AMAZER</span></div></li>
+    <li><div>Le client<span>Compte, commande, paiement, livraison, reçu, restaurants, réservations, billets de bus, pharmacies, stations, aide</span></div></li>
+    <li><div>Le commerçant (boutique)<span>Inscription, espace vendeur, produits, promotions, commandes, argent des ventes, abonnement</span></div></li>
+    <li><div>Les restaurants<span>Menu, commandes, réservations de tables, horaires</span></div></li>
+    <li><div>Hôtels et compagnies de transport<span>Chambres, trajets, billets à QR code, facturation des compagnies</span></div></li>
+    <li><div>Les pharmacies<span>Garde, liste officielle, position, livraison</span></div></li>
+    <li><div>Les stations-essence<span>Propriétaire de la marque, responsables de ville, gérants, compteurs, prix</span></div></li>
+    <li><div>Gagner de l'argent avec AMAZER<span>Revendeurs, affiliés, ambassadeurs, livreurs</span></div></li>
+    <li><div>L'administration<span>Accès, routine du jour, argent, vendeurs, réglages, contenus, modération</span></div></li>
+    <li><div>L'Assistant AMAZER<span>Ce qu'il fait pour l'admin, les vendeurs et les clients</span></div></li>
+    <li><div>Plan du site et démarchage<span>Toutes les adresses du site, et comment convaincre un commerçant</span></div></li>
+  </ol>
+</section>
+
+<!-- ============================ 1. EN BREF ============================ -->
+<section class="part">
+  <h2>1. AMAZER en bref</h2>
+  <p class="lead">AMAZER est une plateforme de commerce en ligne née au Niger, qui vise l'Afrique puis l'international. On y achète, on y vend, on y réserve et on y trouve les services utiles du quotidien.</p>
+
+  <h3>Où l'on trouve AMAZER</h3>
+  <ul>
+    <li><b>Le site</b> : amazer.store, sur téléphone comme sur ordinateur.</li>
+    <li><b>L'application Android</b> : bandeau « Installez l'application AMAZER » › « Installer ». Sur iPhone : Partager, puis « Sur l'écran d'accueil ». Elle est gratuite, légère et s'installe sans passer par le Play Store.</li>
+  </ul>
+
+  <h3>Qui utilise AMAZER</h3>
+  <div class="cols">
+    <div class="card"><h4>Ceux qui achètent</h4><ul><li><b>Clients</b> : achètent, commandent des repas, réservent une chambre ou un billet de bus, trouvent une pharmacie de garde ou de l'essence.</li></ul></div>
+    <div class="card"><h4>Ceux qui vendent</h4><ul><li><b>Boutiques</b> (produits)</li><li><b>Restaurants</b> (menu, livraison, tables)</li><li><b>Premium</b> : hôtels, compagnies de transport, entreprises, pharmacies, stations-essence</li></ul></div>
+    <div class="card"><h4>Ceux qui gagnent avec AMAZER</h4><ul><li><b>Revendeurs</b> : vendent des produits AMAZER sans stock et gardent la marge</li><li><b>Affiliés et ambassadeurs</b> : amènent des vendeurs et des clients</li><li><b>Livreurs</b></li></ul></div>
+    <div class="card"><h4>Ceux qui gèrent</h4><ul><li><b>L'administration AMAZER</b> (espace admin protégé par code PIN)</li><li><b>L'Assistant AMAZER</b> : aide, prépare, fabrique affiches et vidéos</li></ul></div>
+  </div>
+
+  <h3>Les grandes règles</h3>
+  <ul>
+    <li><b>Le client paie avant.</b> Il paie par mobile money : Nita et Amana, avec Wave et Airtel Money quand l'admin les active. AMAZER vérifie chaque paiement <b>avant</b> que la boutique prépare la commande. Il n'y a plus de commande fantôme.</li>
+    <li><b>AMAZER encaisse, puis reverse.</b> Les clients des boutiques paient sur le compte AMAZER. Quand la commande est livrée, AMAZER reverse sa part à la boutique.</li>
+    <li><b>AMAZER livre.</b> Ses livreurs font la livraison standard et express à Niamey. Le client confirme la réception, et le livreur scanne le QR code de son reçu.</li>
+    <li><b>Exceptions.</b> Pour les réservations d'hôtel, de table et de billet de bus, le client paie directement l'établissement. L'établissement vérifie le paiement avant de confirmer.</li>
+    <li><b>Sécurité.</b> AMAZER ne demande jamais le code secret Nita ou Amana, ni par SMS ni par appel.</li>
+  </ul>
+
+  <div class="tip"><b>La phrase d'offre d'AMAZER pour les vendeurs</b><br>« Vendez en ligne avec AMAZER : commencez gratuitement, le client paie avant, AMAZER livre. »<br><span class="small">Dans les pubs, les affiches et les présentations, on dit seulement qu'on peut commencer gratuitement, sans détailler les conditions ni les prix. Les détails sont dans les guides et sur la page Vendre.</span></div>
+</section>
+
+<!-- ============================ 2. FORMULES ============================ -->
+<section class="part">
+  <h2>2. Formules et prix</h2>
+  <p class="lead">Tout nouveau vendeur a <b>14 jours d'essai gratuit, avec tout</b>. Ensuite, chaque type de vendeur a sa formule. Tous les montants se règlent dans Admin › Vendeurs et tarifs › « Tarifs, frais et réglages ».</p>
+
+  <table>
+    <tr><th style="width:24%">Type de vendeur</th><th style="width:22%">Prix</th><th>Ce que ça donne</th></tr>
+    <tr><td><b>Boutique sans abonnement</b> (formule gratuite)</td><td>0 F par mois<br>AMAZER garde 5 % de chaque vente</td><td>La boutique reste toujours en ligne, avec 5 produits visibles au maximum. Les autres produits sont mis de côté, jamais supprimés, et le vendeur choisit lesquels montrer.</td></tr>
+    <tr><td><b>Abonnement Boutique</b></td><td>2 000 F par mois</td><td>Produits illimités, 0 % de commission. À l'échéance sans renouvellement, la boutique repasse en formule gratuite : elle ne disparaît pas.</td></tr>
+    <tr><td><b>Restaurant</b></td><td>5 000 F par mois</td><td>Menu en ligne, commandes livrées, réservation de tables. Sans paiement, le restaurant n'est plus visible jusqu'au paiement ; menu et données sont gardés.</td></tr>
+    <tr><td><b>Premium</b> : hôtels, entreprises, pharmacies</td><td>10 000 F par mois</td><td>Mini-site, réservations de chambres, services. Même règle de visibilité que les restaurants.</td></tr>
+    <tr><td><b>Stations-essence</b> (par marque)</td><td>10 000 F avec 3 stations comprises, puis par station en plus : 2 000 F (4e à 10e), 1 500 F (11e à 30e), 1 000 F (31e et au-delà)</td><td>Exemples : 5 stations = 14 000 F, 12 stations = 27 000 F, 40 stations = 64 000 F par mois.</td></tr>
+    <tr><td><b>Compagnies de transport</b></td><td>Au choix de l'admin, pour chaque compagnie</td><td><b>Abonnement</b> : 15 000 F par mois avec 5 lignes comprises, puis 1 000 F par ligne en plus.<br><b>Commission</b> : un pourcentage de chaque billet confirmé, sans abonnement (8 % par défaut).<br><b>Ou les deux.</b> Exemple en abonnement : 12 lignes = 22 000 F par mois.</td></tr>
+    <tr><td><b>Revendeur</b></td><td>Gratuit, sans abonnement</td><td>AMAZER garde une commission sur chaque marge gagnée : 5 % aujourd'hui, réglable.</td></tr>
+  </table>
+
+  <h3>Les autres réglages d'argent (valeurs actuelles)</h3>
+  <table>
+    <tr><th>Réglage</th><th style="width:28%">Valeur actuelle</th></tr>
+    <tr><td>Commission AMAZER sur les ventes (hors formule gratuite) / frais plateforme</td><td>0 % / 0 F (mode lancement)</td></tr>
+    <tr><td>Livraison par défaut / urbaine / périphérique (et frais par quartier possibles)</td><td>1 000 F / 1 000 F / 2 000 F</td></tr>
+    <tr><td>Essai gratuit à l'inscription d'un vendeur</td><td>14 jours</td></tr>
+    <tr><td>Réception confirmée automatiquement si le client ne confirme pas</td><td>72 heures après « En livraison »</td></tr>
+    <tr><td>Affiliés : part des abonnements des vendeurs amenés</td><td>20 % pendant 6 mois</td></tr>
+    <tr><td>Affiliés : bonus par nouveau client (après sa 1re commande livrée)</td><td>250 F</td></tr>
+    <tr><td>Affiliés : délai de sécurité / minimum de paiement</td><td>30 jours / 2 000 F</td></tr>
+    <tr><td>Affiliés : plafond des nouveaux comptes (3 premiers mois) / inscriptions par jour avant vérification</td><td>25 000 F par mois / 15 par jour</td></tr>
+    <tr><td>Ambassadeurs : prime sur le 1er mois d'abonnement d'une boutique recrutée</td><td>50 %</td></tr>
+    <tr><td>Ambassadeurs : palier Argent / palier Or</td><td>10 boutiques payantes → 25 % / 25 boutiques → 30 %</td></tr>
+    <tr><td>Ambassadeurs : prime du n°1 du mois</td><td>10 000 F</td></tr>
+  </table>
+  <div class="box"><b>Prix négocié.</b> Pour un gros partenaire, l'admin peut fixer sur sa fiche un prix mensuel propre, qui remplace tout le calcul. Il peut aussi fixer une commission ou des frais propres à ce vendeur, par exemple un abonnement réduit plus 3 % des ventes.</div>
+</section>
+
+<!-- ============================ 3. CLIENT ============================ -->
+<section class="part">
+  <h2>3. Le client</h2>
+  <p class="lead">Le client n'a besoin que d'un téléphone. Il crée son compte en un instant : après « Créer mon compte », il est connecté tout de suite, sans code. Le code à 6 chiffres ne sert que pour « Mot de passe oublié ».</p>
+
+  <h3>Acheter dans une boutique : le parcours complet</h3>
+  <ol class="steps">
+    <li><b>Trouver</b> : recherche, bonnes affaires, catégories, boutiques à la une, promotions. Un produit en promo affiche son prix normal barré.</li>
+    <li><b>Commander</b> : panier, adresse avec un repère, téléphone. « Utiliser ma position » enregistre la position GPS exacte pour le livreur. Puis « Commander ».</li>
+    <li><b>Payer</b> : sur la page « Payer ma commande », 1) envoyer le montant exact au numéro AMAZER affiché, 2) mettre le motif indiqué dans le transfert, 3) écrire si possible la « Référence reçue par SMS », puis toucher « J'ai payé ».</li>
+    <li><b>Vérification</b> : la commande reste « Paiement en attente » jusqu'à ce qu'AMAZER vérifie. Amana peut se vérifier automatiquement ; sinon, c'est l'admin qui vérifie. Ensuite seulement, la boutique prépare.</li>
+    <li><b>Suivi</b> : Commande → Préparation → En livraison → Reçue. Le client peut annuler tant que le paiement n'est pas confirmé.</li>
+    <li><b>Livraison</b> : le livreur prend en charge la commande, passe à la boutique puis chez le client. Le client montre le QR code de son reçu, et le livreur le scanne. Ce QR code ne sert qu'une fois.</li>
+    <li><b>Réception</b> : le client touche « J'ai reçu ma commande ». Sinon, la commande passe « Reçue » toute seule après 72 h.</li>
+    <li><b>Avis</b> : seul un client qui a reçu le produit peut le noter.</li>
+  </ol>
+
+  <h3>Le reçu</h3>
+  <p>Chaque commande a un reçu sécurisé avec un QR code. On peut le « Télécharger (PDF) », l'« Enregistrer en image » ou le « Partager ».</p>
+
+  <h3>Commander un repas</h3>
+  <p>Sur la page Restaurants, le client choisit ses plats et leurs options (ex. « Supplément viande », « Sans piment »), donne son adresse ou sa position, puis paie. Il suit sa commande dans « Mes commandes restaurant » et retrouve son reçu. Il peut aussi réserver une table, avec un acompte si le restaurant en demande un.</p>
+
+  <h3>Réserver une chambre d'hôtel</h3>
+  <p>Sur la page de l'hôtel, le client choisit ses dates, voit les chambres libres, réserve et paie l'hôtel par Nita ou Amana. L'hôtel confirme après avoir vérifié le paiement.</p>
+
+  <h3>Billets de bus (amazer.store/transport)</h3>
+  <ul>
+    <li>Le client choisit <b>départ, arrivée et date</b>, avec les raccourcis « Aujourd'hui », « Demain » ou « Après-demain ». Il voit les départs de <b>toutes les compagnies sur une seule page</b>, du moins cher au plus cher, avec les heures et les places restantes.</li>
+    <li>Les villes desservies en route comptent aussi : un bus Niamey – Diffa qui s'arrête à Zinder apparaît pour « Niamey → Zinder ».</li>
+    <li>Il touche une heure de départ et arrive directement sur la réservation. Il paie la compagnie, puis la compagnie confirme.</li>
+    <li>Son <b>billet à QR code</b> est dans « Mes réservations ». Le chauffeur le scanne à l'embarquement. Le billet ne peut pas être falsifié ni servir deux fois.</li>
+    <li><b>Changer la date</b> ou <b>annuler le billet</b> : c'est possible jusqu'à 2 h avant le départ. La compagnie est prévenue, et le QR code reste le même. Un remboursement se règle avec la compagnie.</li>
+  </ul>
+
+  <h3>Pharmacies (amazer.store/pharmacies)</h3>
+  <ul>
+    <li>La <b>liste officielle de garde de la semaine</b> (affiche du ministère, du samedi 8 h au samedi 8 h) : recherche par nom ou quartier, filtre par commune, appel en un geste, itinéraire, semaine suivante si elle est publiée, partage WhatsApp.</li>
+    <li>La <b>carte</b> est en haut de la page. Les pharmacies de garde sont en vert. Les petits points gris sont toutes les autres pharmacies du Niger, avec leurs horaires habituels. Une pastille entourée de pointillés signifie que la position est approximative : il vaut mieux appeler avant de se déplacer.</li>
+    <li>« Près de moi », une recherche sur la carte (nom, quartier, ville) et « Vue satellite » dans Google Maps.</li>
+    <li>« Se faire livrer » : livraison depuis la pharmacie, dans les villes où AMAZER livre.</li>
+  </ul>
+
+  <h3>Stations-essence (amazer.store/stations)</h3>
+  <ul>
+    <li>« Où trouver de l'essence » : la carte montre les stations inscrites, colorées selon le carburant disponible (super, gasoil, gaz). Un cercle signale une station de garde. Les stations approvisionnées du jour, d'après les communiqués, apparaissent aussi.</li>
+    <li>« Vous y êtes ? » : n'importe quel client, même sans compte, peut dire en un geste « il y en a », « plus rien » ou « longue file ». C'est affiché 2 heures, avec la mention « selon des clients ».</li>
+    <li>« Me prévenir quand il y en a » (avec un compte) : une alerte dès qu'une station indique le carburant ou qu'un communiqué est publié, pour une station ou pour toute la ville.</li>
+    <li>« Commander du gaz » : livraison de gaz quand la station en indique.</li>
+  </ul>
+
+  <h3>Le tableau de bord du client</h3>
+  <ul>
+    <li><b>Mes commandes</b> (suivi et reçu), <b>Mes commandes restaurant</b>, <b>Mes réservations</b> (billets à QR code, changer la date, annuler).</li>
+    <li><b>Préférences</b> : pays et région, devise d'affichage, langue, son des notifications.</li>
+    <li><b>Notifications</b> (commandes, paiements, messages, livraisons), aussi envoyées par e-mail ; « Tout marquer comme lu », « Vider ».</li>
+    <li><b>Supprimer mon compte</b> : avec le mot de passe. Les données personnelles sont effacées, l'historique des commandes est gardé.</li>
+  </ul>
+
+  <h3>Messages, avis et aide</h3>
+  <ul>
+    <li>« Écrire à la boutique » depuis sa page. Les échanges sont dans « Messages ». « Signaler » une conversation prévient l'équipe AMAZER.</li>
+    <li>Avis sur un établissement après une commande livrée, un séjour ou un voyage ; l'établissement peut répondre. Avis sur AMAZER : page « Avis ».</li>
+    <li>La bulle <b>Assistant AMAZER</b>, en bas de l'écran, se présente quelques secondes après l'arrivée et répond en étapes avec les noms exacts des boutons. « Besoin d'une personne ? » ouvre le WhatsApp d'AMAZER. Il y a aussi une page « Comment ça marche ? ».</li>
+    <li>Chaque nouveau compte reçoit un <b>message de bienvenue</b>, avec les liens du groupe et de la chaîne WhatsApp d'AMAZER.</li>
+  </ul>
+</section>
+
+<!-- ============================ 4. COMMERÇANT ============================ -->
+<section class="part">
+  <h2>4. Le commerçant (boutique)</h2>
+  <p class="lead">Ouvrir sa boutique prend environ 10 minutes depuis un téléphone. La page <b>amazer.store/vendre</b> présente l'offre et permet de s'inscrire.</p>
+
+  <h3>S'inscrire et démarrer</h3>
+  <ol class="steps">
+    <li>Sur /vendre, « Créer ma boutique » : le compte est actif tout de suite.</li>
+    <li>14 jours d'essai avec tout, puis formule gratuite ou abonnement Boutique (voir partie 2).</li>
+    <li>Compléter le profil : logo, couverture, contacts, horaires, ville, quartier, description, et le <b>numéro de reversement</b> sur lequel AMAZER envoie l'argent des ventes.</li>
+    <li>Ajouter les premiers produits avec de belles photos, puis partager le lien de la boutique (statut WhatsApp, Facebook).</li>
+  </ol>
+
+  <h3>L'espace vendeur</h3>
+  <p>Accès : Menu › « Ma Boutique ». Il est rangé en sections déroulantes : <b>Accueil, Commandes, Produits, Ajouter, Réglages</b>. En haut, deux boutons : « Voir ma boutique » et « Profil et abonnement ».</p>
+  <div class="cols">
+    <div class="card"><h4>Accueil</h4><ul><li>Chiffres : à préparer, ventes sur 30 jours, produits en ligne, stock faible</li><li>« Ma formule » : essai, date de fin, prix, et ce qui suit</li><li>Mes chiffres, l'argent de mes ventes, mes statistiques, avis de mes clients</li><li>Partager ma boutique, guide du vendeur, formations gratuites</li></ul></div>
+    <div class="card"><h4>Commandes</h4><ul><li>Filtres : À traiter, En cours, Terminées, Paiement en attente</li><li>États : Paiement en vérification → À préparer → En préparation → En livraison → Livrée (ou Annulée)</li><li>Boutons : « Préparer la commande », « Remise au livreur », « Marquer livrée »</li></ul></div>
+    <div class="card"><h4>Produits</h4><ul><li>Recherche ; filtres En ligne / Masqués / Stock faible</li><li>« Modifier » (marque, prix, stock, description, photo), « Remettre en ligne », « Supprimer »</li></ul></div>
+    <div class="card"><h4>Ajouter un produit</h4><ul><li>Nom, marque (facultative), catégorie, prix en XOF, stock, photo (appareil ou galerie), description</li><li>Case « Produit numérique » (e-book, formation, code…) : pas de frais de livraison ; le vendeur l'envoie après le paiement</li></ul></div>
+  </div>
+
+  <h3>Les promotions</h3>
+  <p>Dans « Modifier », on met un prix promo plus bas et une durée. Le produit apparaît dans « Promotions » avec son prix normal barré, puis revient seul à son prix normal. « Arrêter la promo » la termine avant la fin.</p>
+
+  <h3>Formule gratuite : la règle des 5 produits</h3>
+  <p>Sans abonnement, une boutique a au maximum <b>5 produits visibles</b>. Un 6e produit est refusé avec un message clair. Le vendeur peut masquer un produit pour en afficher un autre, ou prendre l'abonnement. Un import de fichier ne contourne pas cette limite : les produits en trop arrivent masqués. Avec l'abonnement, tout est illimité.</p>
+
+  <h3>L'argent des ventes</h3>
+  <ul>
+    <li>Les clients paient AMAZER. Dès qu'une commande est <b>livrée et payée</b>, AMAZER reverse la part de la boutique sur son numéro de reversement (Nita, Amana, Wave ou Airtel Money). Ce numéro n'est jamais montré aux clients.</li>
+    <li>La section « L'argent de mes ventes » montre ce qui est à recevoir, ce qui n'est pas encore livré, et la commission (5 % en formule gratuite, 0 % avec l'abonnement).</li>
+  </ul>
+
+  <h3>Statistiques et avis</h3>
+  <ul>
+    <li><b>Mes statistiques</b> (7 jours) : visites de la vitrine, contacts (appel, WhatsApp, message), commandes, et « sur 100 visiteurs, environ X commandent ».</li>
+    <li><b>Avis de mes clients</b> : « Répondre », puis « Publier la réponse ».</li>
+  </ul>
+
+  <h3>Payer son abonnement</h3>
+  <p>Dans « Profil et abonnement », le vendeur choisit la durée et le moyen de paiement, paie, saisit la « Référence du paiement (reçue par SMS) », puis « J'ai payé, envoyer ». AMAZER vérifie et prévient. « Prolonger mon abonnement » permet de payer d'avance.</p>
+
+  <h3>Outils Premium</h3>
+  <p>« Importer des produits » (fichier CSV), « Import rapide par photos » (un produit brouillon par photo, à compléter) et « Exporter mes ventes ».</p>
+
+  <h3>Réglages</h3>
+  <p>« Compléter mon profil » et « Supprimer mon compte ». La suppression est irréversible : la boutique est fermée et les données anonymisées.</p>
+</section>
+
+<!-- ============================ 5. RESTAURANTS ============================ -->
+<section class="part">
+  <h2>5. Les restaurants</h2>
+  <p class="lead">Le restaurant reçoit ses commandes en direct, avec un son à chaque nouvelle commande, et les fait livrer à moto dans Niamey.</p>
+  <h3>Chiffres du jour</h3>
+  <p>Commandes du jour, ventes du jour, commandes à accepter, plats épuisés.</p>
+  <h3>Les commandes</h3>
+  <ul>
+    <li>Onglets : Nouvelles, En cuisine, En livraison, Terminées.</li>
+    <li>Boutons : « Accepter et préparer », « Refuser » (le client est prévenu et AMAZER le rembourse), « Prête : envoyer », « Marquer livrée », « Appeler », « Itinéraire exact » (quand le client a donné sa position).</li>
+    <li>« Paiement en vérification » : attendre la confirmation d'AMAZER.</li>
+  </ul>
+  <h3>Mon menu</h3>
+  <p>« Ajouter un plat » : nom, prix, rubrique du menu, temps de préparation, description, photo, « Plat du jour » (mis en avant), options et suppléments (ex. « Supplément viande » 500 F, « Sans piment » 0 F), puis « Publier au menu ». Un plat peut être « Retiré du menu (temporaire) », puis « Remis au menu », ou supprimé.</p>
+  <h3>Réservations de tables</h3>
+  <p>États : À confirmer, Confirmée, Refusée. Boutons : « Confirmer », « Refuser », « Appeler ». Le restaurant peut demander un acompte, payé sur son propre numéro.</p>
+  <h3>Horaires et pause</h3>
+  <ul>
+    <li>« Mettre en pause » bloque les nouvelles commandes sans toucher au menu ; « Reprendre les commandes » les rouvre.</li>
+    <li>Horaires par jour, avec « Appliquer les horaires du lundi à toute la semaine ». Une ouverture après minuit est possible (ex. 18:00 → 02:00).</li>
+    <li>« Fermer automatiquement en dehors de mes horaires ». Sans horaires saisis, le restaurant est ouvert en permanence.</li>
+  </ul>
+</section>
+
+<!-- ============================ 6. HÔTELS ET TRANSPORT ============================ -->
+<section class="part">
+  <h2>6. Hôtels et compagnies de transport</h2>
+  <p class="lead">Ce sont des formules Premium. AMAZER active la fonction « hôtel » ou « transport » après avoir vérifié l'établissement. Le client paie l'établissement directement.</p>
+
+  <h3>L'hôtel</h3>
+  <ul>
+    <li><b>Chiffres</b> : arrivées et départs du jour, occupation cette nuit, réservations à confirmer.</li>
+    <li><b>Onglets</b> : Arrivées, En séjour, À venir, Historique.</li>
+    <li><b>Boutons</b> : « Confirmer » (après avoir vérifié le paiement), « Refuser », « Client arrivé », « Absent » (chambre libérée), « Annuler », « Client parti », « Appeler ».</li>
+    <li><b>Chambres</b> (dans Profil et abonnement) : nom, capacité, nombre de chambres de ce type, description, options, photos, prix par nuit. AMAZER ne montre que les chambres libres et empêche la surréservation.</li>
+  </ul>
+
+  <h3>La compagnie de transport</h3>
+  <ul>
+    <li><b>Trajets</b> (dans Profil et abonnement) : nom (ex. « Niamey - Maradi »), <b>villes desservies en route</b> (ex. Dosso, Konni), durée, nombre de places, options (climatisé, Wi-Fi, bagages), jours de départ, heures de départ, prix par place.</li>
+    <li><b>« Départs et passagers »</b> : départs à venir ou passés, avec les boutons « Confirmer », « Refuser », « Embarqué », « Absent » et l'appel au passager.</li>
+    <li><b>« Scanner un billet »</b> : à l'embarquement, le QR code du voyageur est vérifié. Un billet ne peut pas être falsifié ni servir deux fois.</li>
+    <li>La compagnie est prévenue quand un client <b>reporte</b> ou <b>annule</b> son billet (possible jusqu'à 2 h avant le départ). La place est alors libérée automatiquement.</li>
+    <li>Toutes les compagnies apparaissent sur la page <b>« Billets de bus »</b> (amazer.store/transport), qui les compare par prix, heure et places restantes. C'est un avantage que les compagnies n'ont pas sur leurs propres sites.</li>
+  </ul>
+
+  <h3>Comment une compagnie paie AMAZER</h3>
+  <p>Sur la fiche de la compagnie (Admin › Vendeurs et tarifs), l'admin choisit l'un de ces trois modes :</p>
+  <table>
+    <tr><th style="width:26%">Mode</th><th>Fonctionnement</th></tr>
+    <tr><td><b>Abonnement</b></td><td>15 000 F par mois avec 5 lignes comprises, puis 1 000 F par ligne en plus. Aucune part sur les billets.</td></tr>
+    <tr><td><b>Commission par billet</b></td><td>Pas d'abonnement. AMAZER touche un pourcentage de chaque billet confirmé : 8 % par défaut, ou un taux propre à la compagnie. L'espace de la compagnie reste ouvert sans paiement mensuel.</td></tr>
+    <tr><td><b>Les deux</b></td><td>Abonnement mensuel, plus commission sur chaque billet.</td></tr>
+  </table>
+  <p>Comme le client paie la compagnie, c'est la compagnie qui doit sa commission à AMAZER. La page <b>Admin › « Commissions transport »</b> calcule chaque mois les billets confirmés, les ventes, la commission due, ce qui est déjà encaissé et le reste à encaisser. L'admin y enregistre chaque encaissement avec sa référence.</p>
+</section>
+
+<!-- ============================ 7. PHARMACIES ============================ -->
+<section class="part">
+  <h2>7. Les pharmacies</h2>
+  <p class="lead">Les clients doivent savoir, à toute heure, quelle pharmacie est ouverte et comment s'y rendre.</p>
+  <h3>Être de garde</h3>
+  <ul>
+    <li>« Je suis de garde maintenant » / « Terminer ma garde ».</li>
+    <li>Garde rapide : « Cette nuit », « Ce week-end », « Toute la semaine ».</li>
+    <li>« Programmer une garde » (date de début et de fin) : elle s'active et s'arrête toute seule.</li>
+    <li><b>Liste officielle</b> : si la pharmacie figure sur l'affiche de garde de la semaine, publiée chaque samedi par l'admin, AMAZER l'affiche de garde automatiquement. Une pharmacie de garde apparaît en vert sur la carte et en premier dans la liste.</li>
+  </ul>
+  <h3>Position et livraison</h3>
+  <ul>
+    <li>« Enregistrer ma position » depuis la pharmacie : le bouton « Itinéraire » mène alors les clients jusqu'à elle dans Google Maps.</li>
+    <li>Dans les villes où AMAZER livre, les clients peuvent « Se faire livrer » depuis la pharmacie, via le numéro AMAZER.</li>
+  </ul>
+  <h3>L'annuaire</h3>
+  <p>Toutes les pharmacies connues du Niger sont sur la carte, avec leur position et leur numéro, même quand elles ne sont pas inscrites. AMAZER corrige les positions approximatives (Admin › Gardes › Annuaire des pharmacies).</p>
+</section>
+
+<!-- ============================ 8. STATIONS ============================ -->
+<section class="part">
+  <h2>8. Les stations-essence</h2>
+  <p class="lead">Une marque de carburant gère tout son réseau sur AMAZER, avec trois niveaux de personnes : le propriétaire, les responsables de ville et les gérants.</p>
+
+  <h3>Le propriétaire de la marque</h3>
+  <p>Son espace vendeur contient les sections Vue d'ensemble, Responsables par ville, Stations par ville, Ventes de carburant, Activité, Retours clients, Livraisons, Abonnement et export, Vitrine, avis et parrainage.</p>
+  <ul>
+    <li><b>Vue d'ensemble</b> : stations à jour, à renseigner, sans gérant, retours ouverts ; trafic sur 30 jours (itinéraires, appels, commandes de gaz, livraisons) ; alertes (ruptures depuis plus de 24 h).</li>
+    <li><b>Responsables par ville</b> : il désigne un ou plusieurs responsables par ville, avec l'e-mail de leur compte AMAZER (gratuit pour eux).</li>
+    <li><b>Stations par ville</b> : « Ajouter une station » (nom, ville, repère, téléphone ; le supplément de prix éventuel est affiché) ; « Mise à jour groupée » (ex. gaz en rupture dans toutes les stations d'une ville). Chaque station a ses disponibilités, ses gérants, ses infos et horaires, sa garde, sa position Google Maps, ses livraisons, et les boutons fermer, rouvrir ou supprimer.</li>
+    <li><b>Ventes de carburant</b> : litres de super et de gasoil vendus par jour et par station, d'après les compteurs relevés par les gérants.</li>
+    <li><b>Activité</b> : tout ce que font responsables et gérants sur 90 jours. <b>Retours clients</b> et <b>livraisons</b> : 30 derniers jours.</li>
+    <li><b>Abonnement et export</b> : palier de la marque (Essentiel, Réseau, Entreprise), prix mensuel, historique et statistiques sur 12 mois.</li>
+  </ul>
+
+  <h3>Le responsable de ville</h3>
+  <p>Accès : Menu › « Espace station » (amazer.store/gerant-station). Il voit le résumé de sa ville (à jour, à renseigner, en rupture, sans gérant, retours ouverts). Il nomme les gérants, gère les stations de la ville et peut ajouter une station ; le propriétaire est alors prévenu, car elle compte dans son abonnement. Il suit aussi l'activité des gérants et les retours clients.</p>
+
+  <h3>Le gérant de station</h3>
+  <ul>
+    <li><b>Disponibilités</b> : super, gasoil, gaz, avec trois états (Disponible, Stock faible, Rupture). « Rien n'a changé » confirme que l'information est toujours vraie.</li>
+    <li><b>Informations et horaires</b>, <b>Garde</b> (jusqu'à nouvel ordre ou jusqu'à une date), <b>Position</b> (« Je suis à la station : enregistrer la position »).</li>
+    <li><b>Ventes (compteurs)</b> : il ajoute ses pompes, puis recopie chaque soir le chiffre du compteur. AMAZER calcule les litres vendus. Une case existe pour signaler un compteur remis à zéro.</li>
+    <li><b>Livraisons</b> (carburant, litres, n° de bon ou de camion), <b>Retours clients</b> (« Marquer traité »), <b>Historique</b>.</li>
+  </ul>
+  <div class="box"><b>Mises à jour suspendues ?</b> La station est fermée, ou l'abonnement de la marque a expiré : il faut prévenir le responsable.</div>
+</section>
+
+<!-- ============================ 9. GAGNER ============================ -->
+<section class="part">
+  <h2>9. Gagner de l'argent avec AMAZER</h2>
+
+  <h3>Les revendeurs (amazer.store/revendre)</h3>
+  <ul>
+    <li>Un revendeur vend des produits AMAZER <b>sans stock</b>, <b>à son prix</b>, et garde la marge.</li>
+    <li>C'est <b>gratuit, sans abonnement</b>. AMAZER garde seulement sa commission sur chaque marge (5 % aujourd'hui), sur les articles vendus et livrés.</li>
+    <li>Il a sa propre boutique de revendeur à partager. L'admin lui verse ses gains.</li>
+  </ul>
+
+  <h3>Les affiliés (amazer.store/affiliation)</h3>
+  <ul>
+    <li>L'affilié partage son lien. Il touche <b>20 % de l'abonnement de chaque vendeur amené, chaque mois, pendant 6 mois</b>, plus <b>250 F pour chaque nouveau client</b> après sa 1re commande livrée.</li>
+    <li>Exemple avec 100 vendeurs parrainés : jusqu'à 40 000 F par mois (boutiques), 100 000 F (restaurants) ou 200 000 F (Premium). Ce sont des gains potentiels, à condition que les vendeurs restent abonnés.</li>
+    <li>États des gains : « En délai » (30 jours, pour repérer annulations et fraudes), « À vérifier », « Disponible », « Demandé », « Payé ». L'affilié demande son paiement dès 2 000 F.</li>
+    <li>Son espace contient un <b>kit pour convaincre les vendeurs</b> : la phrase à retenir, les arguments, les réponses aux objections et des messages prêts à envoyer sur WhatsApp, avec son lien déjà dedans.</li>
+  </ul>
+  <div class="tip"><b>La méthode des 100 contacts</b> (dans l'espace Affiliation)
+    <ol>
+      <li>Écrire une liste de 100 personnes : contacts du téléphone, groupes WhatsApp, famille, voisins, commerçants du quartier.</li>
+      <li>Demander « <b>tu connais quelqu'un qui…</b> ? » plutôt que « tu veux vendre ? ». La personne intéressée le dira, les autres donneront un nom.</li>
+      <li>Envoyer 20 messages par jour pendant 5 jours, puis relancer au bout de 2 ou 3 jours.</li>
+      <li>Quand un commerçant dit oui, l'aider à publier ses 5 premiers produits.</li>
+    </ol>
+  </div>
+
+  <h3>Les ambassadeurs</h3>
+  <ul>
+    <li>Un affilié peut <b>poser sa candidature</b> pour devenir ambassadeur. L'admin l'accepte ou la refuse (Admin › Affiliés › Candidatures).</li>
+    <li>Un ambassadeur touche une prime de 50 % sur le 1er mois d'abonnement de chaque boutique recrutée. Ensuite, sa part passe à 25 % (palier Argent, à partir de 10 boutiques payantes), puis à 30 % (palier Or, à partir de 25 boutiques).</li>
+    <li>Le n°1 du mois touche une prime de 10 000 F, versée par l'admin.</li>
+  </ul>
+
+  <h3>Les livreurs (amazer.store/livreur)</h3>
+  <ul>
+    <li>Un livreur est nommé par l'admin (Utilisateurs › « Nommer livreur »).</li>
+    <li>Il voit les commandes payées à livrer et les « Prend en charge ». Il a l'itinéraire de la boutique, puis celui du client ; l'adresse exacte n'est visible qu'après la prise en charge.</li>
+    <li>À la remise, il « Scanne le reçu du client », ou « Marque livrée sans scan ». S'il ne peut pas livrer : « Je ne peux pas la livrer ».</li>
+    <li>Si la commande est déjà payée, il n'encaisse rien.</li>
+  </ul>
+</section>
+
+<!-- ============================ 10. ADMIN ============================ -->
+<section class="part">
+  <h2>10. L'administration</h2>
+  <p class="lead">L'espace admin (amazer.store/admin) est réservé aux comptes administrateurs. Toutes les actions d'argent et de gestion y sont protégées par un code PIN.</p>
+
+  <h3>Accès et sécurité</h3>
+  <ul>
+    <li>Se connecter avec le compte administrateur, puis Menu › « Espace Admin ». Ce lien n'apparaît que pour un administrateur.</li>
+    <li>À la première ouverture sur un appareil : saisir le <b>PIN</b> et la <b>date secondaire</b>. Une seule saisie suffit, l'espace reste ouvert sur cet appareil.</li>
+    <li>Ne jamais donner le PIN à personne, ni par WhatsApp ni à l'Assistant. Il se change dans les réglages du serveur.</li>
+    <li>Chaque action sensible (paiement validé, tarif changé, compte supprimé, connexion…) est notée dans l'<b>Historique des modifications</b>, qu'on peut exporter en CSV.</li>
+  </ul>
+
+  <h3>Le menu admin</h3>
+  <table>
+    <tr><th style="width:24%">Groupe</th><th>Pages</th></tr>
+    <tr><td><b>Au quotidien</b></td><td>À traiter · Commandes et paiements · Confirmer une livraison · Modération</td></tr>
+    <tr><td><b>Argent à verser</b></td><td>Affiliés · Boutiques (reversements) · Commissions transport · Revendeurs · Remboursements</td></tr>
+    <tr><td><b>Gestion</b></td><td>Vendeurs et tarifs · Moyens de paiement · Utilisateurs · Messages · Catégories · Sections de l'accueil · Gardes et approvisionnements</td></tr>
+  </table>
+
+  <h3>La routine du jour : « À traiter »</h3>
+  <p>C'est la première page de l'admin. Elle a deux sections déroulantes, avec une tuile par sujet. Chaque tuile montre son nombre et ouvre la bonne page quand on la touche.</p>
+  <div class="cols">
+    <div class="card"><h4>Actions à faire</h4><ul><li>Paiements de commandes à valider</li><li>Commandes payées à livrer</li><li>Inscriptions vendeurs à valider</li><li>Abonnements vendeurs à valider</li><li>Candidatures d'ambassadeur</li><li>Retraits d'affiliés demandés</li><li>Gains d'affiliés à vérifier (sécurité)</li><li>Argent à reverser aux boutiques</li><li>Gains de revendeurs à verser</li><li>Commissions transport à encaisser</li><li>Remboursements à faire</li><li>Pharmacies de garde de la semaine à publier</li></ul></div>
+    <div class="card"><h4>À contrôler et à savoir</h4><ul><li>Signalements (7 derniers jours)</li><li>Avis à 1 ou 2 étoiles sur des boutiques</li><li>Vendeurs pas encore vérifiés</li><li>Abonnements qui expirent dans 7 jours</li><li>Nouveaux vendeurs de la semaine</li></ul></div>
+  </div>
+  <div class="tip"><b>Le résumé du matin.</b> Chaque jour après 7 h, l'admin reçoit une notification, avec une copie par e-mail ou WhatsApp. Exemple : « 4 choses vous attendent : 2 paiements à valider, 1 inscription, 1 candidature d'ambassadeur. Hier : 5 commandes, 42 500 F encaissés, 3 nouveaux vendeurs. »</div>
+  <p><b>Ordre conseillé chaque jour</b> : 1) valider les paiements ; 2) suivre les livraisons ; 3) valider les abonnements ; 4) verser l'argent dû (boutiques, revendeurs, affiliés, remboursements) ; 5) regarder la modération. <b>Chaque samedi</b> : publier l'affiche des pharmacies de garde.</p>
+
+  <h3>Commandes et paiements</h3>
+  <ul>
+    <li><b>Valider le paiement d'une commande</b> : filtre « Paiements à valider ». On compare la référence du client avec le relevé Nita ou Amana, puis on touche « Valider le paiement ». Le vendeur et les livreurs sont prévenus aussitôt. <b>Ne jamais valider sans voir l'argent sur le compte.</b></li>
+    <li>Amana peut se valider automatiquement si ce moyen est réglé en paiement automatique.</li>
+    <li><b>À livrer</b> : « Envoyer en livraison », « Marquer livrée » si besoin. <b>Annuler</b> une commande ; si elle était payée, enregistrer ensuite le remboursement.</li>
+    <li><b>Abonnements des vendeurs</b> (« Validations paiements vendeurs ») : « Valider » démarre l'abonnement ; « Refuser » demande une note.</li>
+    <li><b>Chiffres</b> : flux Nita et Amana, total encaissé, commission, frais, part des vendeurs, revenus sur 30 jours, historique. La zone sensible « Remettre les compteurs à zéro » ne doit servir que volontairement, par exemple après des tests.</li>
+  </ul>
+
+  <h3>Confirmer une livraison</h3>
+  <p>« Scanner le QR code » du reçu du client, ou coller le lien du reçu, puis « Confirmer la livraison ». C'est le même écran que pour les vendeurs et les livreurs.</p>
+
+  <h3>Argent à verser</h3>
+  <ul>
+    <li><b>Boutiques</b> : pour chaque boutique, ce qui est à reverser (commandes livrées et payées, commission déduite). On envoie l'argent au numéro de reversement, puis on touche « Reversé » avec la référence. Si le numéro manque, un bouton WhatsApp permet de le demander.</li>
+    <li><b>Remboursements</b> : commandes payées puis annulées ou refusées. On rembourse par Nita ou Amana, on saisit la référence, puis « Remboursé ». Sinon, « Pas nécessaire » avec un motif.</li>
+    <li><b>Revendeurs</b> : on verse la marge, puis « Enregistrer un versement ». La liste des revendeurs se cherche par nom, e-mail ou téléphone.</li>
+    <li><b>Affiliés</b> : onglets Paiements à faire, Affiliés, Candidatures. On paie, on saisit la référence, puis « Marquer comme payé ». En cas de refus : « Refuser (gains rendus) » ou « Refuser et annuler (fraude) ». En cas de faux comptes : « Fraude : tout annuler ». Pour les ambassadeurs : « Nommer ambassadeur » ou « Retirer ambassadeur ».</li>
+    <li><b>Commissions transport</b> : par mois et par compagnie, la commission due, ce qui est encaissé et le reste à encaisser ; « Encaissé » avec la référence.</li>
+  </ul>
+
+  <h3>Vendeurs et tarifs</h3>
+  <p>Trois onglets : <b>Vendeurs</b>, <b>Tarifs, frais et réglages</b>, <b>Historique</b>.</p>
+  <ul>
+    <li><b>Fiche d'un vendeur</b> :
+      <ul>
+        <li>son activité : Boutique, Restaurant, ou Premium (Entreprise / Hôtel, Transport, Pharmacie, Station-essence) ;</li>
+        <li>le badge « Vérifié » ;</li>
+        <li>l'état de son abonnement ;</li>
+        <li>« Offrir 1 mois » et « Activer 12 mois » (abonnement d'un an payé à part, en espèces ou par virement) ;</li>
+        <li>« À la une » ;</li>
+        <li>le tarif personnalisé ;</li>
+        <li>pour une compagnie de transport : sa <b>facturation</b> (abonnement, commission ou les deux, et son taux).</li>
+      </ul>
+    </li>
+    <li><b>« À la une »</b> : pendant 7, 30 ou 90 jours, l'établissement passe en tête des listes et dans « À la une » de l'accueil, avec un badge. C'est AMAZER qui choisit : offre partenaire ou service payant.</li>
+    <li><b>Prix négocié</b> : « Prix négocié par mois (XOF) » remplace le tarif normal. On peut aussi fixer une commission et des frais propres au vendeur. « Revenir au tarif global » annule.</li>
+    <li><b>Tarifs, frais et réglages</b> : abonnements, essai, réduction de lancement, commission et frais, livraison et frais par quartier, formule gratuite (nombre de produits, part retenue), affiliés et ambassadeurs, revendeurs, délai de réception automatique, contacts (numéro général, e-mail, téléphone, WhatsApp), numéros de livraison des pharmacies et du gaz, villes livrées, paliers des stations, prix du transport. <b>Toujours finir par « Enregistrer ».</b> Si l'enregistrement est refusé, la page affiche la vraie raison.</li>
+  </ul>
+
+  <h3>Moyens de paiement</h3>
+  <p>« Ajouter un moyen » : nom affiché aux clients (ex. Wave), numéro qui reçoit l'argent, au nom de, ordre d'affichage, instructions « Comment payer ». Si « Proposé aux clients » est coché, le moyen apparaît aussitôt au paiement. On choisit aussi « Validation automatique » (Amana) ou « Vérifié par AMAZER ».</p>
+
+  <h3>Utilisateurs</h3>
+  <ul>
+    <li>Tous les comptes : clients, vendeurs, livreurs, admins. Chiffres et recherche.</li>
+    <li>« Retirer » désactive le compte ; « Restaurer » le rétablit ; la suppression définitive est irréversible.</li>
+    <li>« Nommer livreur », « Nommer admin » (tous les droits : à réserver aux personnes de totale confiance). Le compte administrateur principal est protégé.</li>
+  </ul>
+
+  <h3>Messages</h3>
+  <p>« Envoyer un message » à tout le monde, aux clients, aux vendeurs, aux livreurs ou à une personne : notification sur le site plus e-mail (environ 300 e-mails par jour avec la formule gratuite). Le <b>message de bienvenue</b> se règle ici : titre, texte avec le prénom, liens du groupe et de la chaîne WhatsApp.</p>
+
+  <h3>Catégories et sections de l'accueil</h3>
+  <p>Créer et modifier les catégories (nom, identifiant, parent, active). Créer des rangées de l'accueil comme « Meilleures ventes » (type Produits, Restaurants ou Mixte) et choisir leur contenu.</p>
+
+  <h3>Gardes et approvisionnements</h3>
+  <ul>
+    <li><b>Pharmacies de garde</b>, chaque samedi : 1) « Choisir la photo » de l'affiche, celle reçue sur WhatsApp suffit, et AMAZER lit la liste ; 2) vérifier la ville, les dates et les lignes ; 3) « Publier ». Les pharmacies inscrites qui y figurent passent de garde automatiquement.</li>
+    <li><b>Annuaire des pharmacies</b> : corriger une position (coller le lien ou les coordonnées Google Maps). Une position corrigée n'est plus jamais remplacée automatiquement.</li>
+    <li><b>Stations approvisionnées</b> : publier le communiqué d'une marque (carburant, horaires, liste des stations). Les stations apparaissent sur la carte, et les clients abonnés de la ville reçoivent une alerte.</li>
+  </ul>
+
+  <h3>Modération</h3>
+  <p>Signalements de conversations, avis sur les établissements, avis sur AMAZER. Un avis insultant ou faux peut être masqué. Un compte qui abuse se retire dans Utilisateurs.</p>
+</section>
+
+<!-- ============================ 11. ASSISTANT ============================ -->
+<section class="part">
+  <h2>11. L'Assistant AMAZER</h2>
+  <p class="lead">L'Assistant est un ensemble d'agents d'intelligence artificielle au service d'AMAZER. Il reste gratuit.</p>
+  <h3>Pour l'admin</h3>
+  <ul>
+    <li>Il connaît chaque page de l'admin. On peut lui demander « où je valide un paiement ? », « comment offrir un mois à une boutique ? » ou « que dois-je faire aujourd'hui ? ». Il donne le chemin exact et les étapes.</li>
+    <li>Il n'a <b>jamais</b> le PIN ni le mot de passe : c'est toujours l'admin qui touche le dernier bouton.</li>
+    <li>Il prépare tout le reste : textes des messages à tous, réponses aux vendeurs, comptes rendus.</li>
+  </ul>
+  <h3>Ce qu'il fabrique</h3>
+  <ul>
+    <li>L'<b>affiche de chaque nouvelle boutique</b> (nom, logo, QR code de la vitrine, modèle Boutique, Restaurant ou Premium), avec le lien WhatsApp pour l'envoyer.</li>
+    <li>Des <b>pubs en dessin animé à personnages</b> pour les clients et pour les vendeurs, avec les vrais écrans du site, la voix de Denise et les contacts à la fin. Le texte est toujours validé par le propriétaire avant fabrication.</li>
+    <li>Des <b>tutoriels vidéo</b> sur les vraies pages, des <b>documents PDF</b> et des <b>présentations PowerPoint</b> aux couleurs d'AMAZER, avec leur version vidéo et voix off.</li>
+    <li>Un mode vocal (« Jarvis ») sur l'ordinateur, des routines et des messages Telegram.</li>
+  </ul>
+  <h3>Sur le site (pour les clients)</h3>
+  <p>La bulle d'aide, avec la mascotte AMAZER, répond aux questions des clients et des vendeurs avec les noms exacts des boutons. Elle ne connaît rien de l'administration.</p>
+  <div class="box"><b>Toujours à jour.</b> À chaque changement du site, la base de connaissances de l'Assistant est mise à jour : il décrit ce qui existe vraiment.</div>
+</section>
+
+<!-- ============================ 12. PLAN ET DÉMARCHAGE ============================ -->
+<section class="part">
+  <h2>12. Plan du site et démarchage</h2>
+  <h3>Toutes les adresses du site</h3>
+  <table>
+    <tr><th style="width:26%">Rubrique</th><th>Adresses</th></tr>
+    <tr><td><b>Découvrir</b></td><td>Accueil <span class="path">/</span> · Boutiques <span class="path">/boutiques</span> · Restaurants <span class="path">/restaurant</span> · Hôtels et Premium <span class="path">/hotels</span> · Promotions <span class="path">/promotions</span> · Catégories <span class="path">/category</span> · Recherche <span class="path">/search</span></td></tr>
+    <tr><td><b>Services</b></td><td>Pharmacies <span class="path">/pharmacies</span> · Stations-essence <span class="path">/stations</span> · Billets de bus <span class="path">/transport</span></td></tr>
+    <tr><td><b>Acheter</b></td><td>Panier <span class="path">/cart</span> · Paiement <span class="path">/order/pay</span> · Reçu <span class="path">/order/receipt</span> · Mes commandes <span class="path">/dashboard</span></td></tr>
+    <tr><td><b>Compte</b></td><td>Connexion <span class="path">/login</span> · Inscription <span class="path">/register</span> · Mot de passe oublié <span class="path">/forgot-password</span> · Profil <span class="path">/profile</span> · Messages <span class="path">/messages</span> · Notifications <span class="path">/notifications</span></td></tr>
+    <tr><td><b>Vendre</b></td><td>Présentation et inscription <span class="path">/vendre</span> · Espace vendeur <span class="path">/seller/dashboard</span> · Confirmer une livraison <span class="path">/seller/delivery-scan</span></td></tr>
+    <tr><td><b>Gagner avec AMAZER</b></td><td>Revendre <span class="path">/revendre</span> · Affiliation <span class="path">/affiliation</span> · Formations gratuites <span class="path">/formations</span> · Livreurs <span class="path">/livreur</span> · Espace station <span class="path">/gerant-station</span></td></tr>
+    <tr><td><b>Aide et légal</b></td><td>Comment ça marche <span class="path">/comment-ca-marche</span> · Avis <span class="path">/avis</span> · Conditions <span class="path">/legal/terms</span> · Confidentialité <span class="path">/legal/privacy</span> · Suppression de compte <span class="path">/legal/account-deletion</span></td></tr>
+    <tr><td><b>Administration</b></td><td>Espace admin <span class="path">/admin</span> (compte administrateur et PIN)</td></tr>
+  </table>
+
+  <h3>Démarcher un commerçant ou une marque</h3>
+  <ol class="steps">
+    <li><b>Préparer</b> : savoir qui décide, son activité, ses points de vente, comment il vend aujourd'hui. Garder amazer.store ouvert sur le téléphone pour montrer une vraie boutique.</li>
+    <li><b>Ouvrir</b> avec la phrase d'offre : « Vendez en ligne avec AMAZER : commencez gratuitement, le client paie avant, AMAZER livre. »</li>
+    <li><b>Montrer ce qu'il gagne</b> : vitrine en ligne et dans l'application, paiement vérifié, livraison, revendeurs et affiliés qui font sa promotion, « À la une » au lancement.</li>
+    <li><b>Répondre aux objections</b> :
+      <ul>
+        <li>« C'est trop cher » : il peut commencer gratuitement ;</li>
+        <li>« Je vends déjà sur WhatsApp » : il garde WhatsApp, et AMAZER lui amène de nouveaux clients ;</li>
+        <li>« Je n'ai pas le temps » : 10 minutes suffisent ;</li>
+        <li>« Et si on ne me paie pas ? » : le client paie avant.</li>
+      </ul>
+    </li>
+    <li><b>Conclure sur place</b> : créer son compte avec lui (/vendre), mettre son logo et ses premiers produits. Dans les 48 h : tout son catalogue, « À la une » et une annonce sur la chaîne WhatsApp. Vers le 10e jour : le rappeler avec ses vrais résultats.</li>
+    <li><b>Grande marque</b> : proposer un prix négocié, ou un paiement d'avance sur 6 ou 12 mois (ex. 12 mois au prix de 10), ou un abonnement réduit avec un petit pourcentage sur les ventes. Mettre l'accord par écrit sur une page.</li>
+  </ol>
+  <div class="tip"><b>Règle d'or.</b> Ne donner que des chiffres vrais, ceux de l'admin, et ne jamais promettre de ventes.</div>
+
+  <p class="small" style="margin-top:8mm">Document préparé pour AMAZER — version du 24 novembre 2026. Contact : amazer.niger2@gmail.com · Tél. 96 95 31 63.</p>
+</section>
+
+</body>
+</html>
